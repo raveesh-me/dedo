@@ -12,7 +12,7 @@
 
 **First-class lint guidance.** A Buf check plugin turns the standard into findings in your editor as you type, each linked to an explanation in [HOUSE_RULES.md](HOUSE_RULES.md). The same `buf lint` gates CI. Handlers carry business logic only.
 
-New here? Read [guideline.md](guideline.md). It walks through building a service in a new repository.
+New here? [install.md](install.md) builds a new product from scratch, step by step. [guideline.md](guideline.md) explains the reasoning.
 
 Contract rules come from Google's AIPs. Operational rules (audience, ownership, scopes, caching, deprecation, error reasons) come from Zalando's guidelines. Both live in the schema.
 
@@ -159,9 +159,11 @@ Lint rule tests live in `lint/rules/testdata/<rule>/{pass,fail}`. A pass fixture
 
 ## Releasing
 
-Pushing a `v*` tag runs `.github/workflows/ci.yaml`, which publishes one version everywhere:
+To release, tag the merge commit on `main` with `lint/vX.Y.Z`, `openapi/vX.Y.Z` and `mcp/vX.Y.Z` (so `go get` works for the nested modules) and push those first. Then push `vX.Y.Z` **on its own**: GitHub starts no workflow when more than three tags arrive in one push.
 
-- `buf push` of the options module with the tag as label
+The `v*` tag runs `.github/workflows/ci.yaml`, which publishes one version everywhere:
+
+- `buf push` of the options module with the tag and `main` as labels; `main` is the default label that unpinned dependencies resolve to
 - `buf plugin push` of `buf.build/cookytech-in/http-proto-lint-plugin` and `buf.build/cookytech-in/buf-plugin-aip`
 - a GitHub release carrying both plugins as native binaries for macOS and Linux (arm64 and amd64), which `make tools` downloads, and as `.wasm` files
 

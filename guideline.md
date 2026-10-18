@@ -1,5 +1,7 @@
 # Building an API with http-proto-lint
 
+This guide explains how the pieces fit and why. For a copy-paste walkthrough of a new product, follow [install.md](install.md).
+
 This guide takes you from an empty repository to a running service. Read it once end to end before you start. `examples/todo` is the reference: every step below exists there in working form.
 
 ## What you get
@@ -29,7 +31,7 @@ Decide two names with your team:
 | Proto package | `acme.products.v1` | You. Use `<org>.<platform>.v<major>`. |
 | REST root | `/commerce/products` or `/commerce/pim` | You. The linter does not care what it is. |
 
-Every REST path is `<root>/v<major>/<resource path>`, for example `/commerce/pim/v1/products/{product}`. The version segment is mandatory and must match the package version. The root must be the same for every RPC of a service.
+Every REST path is `<root>/v<major>/<resource path>`, for example `/commerce/pim/v1/products/{product}`. The version segment is mandatory and must match the package version. The root must be the same for every RPC of a service. Each root segment is one lowercase or lowerCamelCase word: `/commerce/timeCounter` works, and `/commerce/time-counter` fails AIP-127's path syntax check.
 
 ## 2. Create the repository
 
@@ -52,8 +54,10 @@ my-service/
    go get -tool google.golang.org/protobuf/cmd/protoc-gen-go
    go get -tool connectrpc.com/connect/cmd/protoc-gen-connect-go
    go get -tool github.com/redpanda-data/protoc-gen-go-mcp/cmd/protoc-gen-go-mcp
-   go get -tool github.com/raveesh-me/http-proto-lint/openapi/cmd/protoc-gen-rest-openapi
+   go get -tool github.com/raveesh-me/http-proto-lint/openapi/cmd/protoc-gen-rest-openapi@v0.1.1
    ```
+
+   Pin the http-proto-lint modules to the latest release explicitly. Go's module proxy can lag behind a new tag.
 
    Then point the `buf.gen.yaml` plugins at them with `local: ["go", "tool", "<generator>"]`, as `examples/todo/buf.gen.yaml` does.
 3. Run `make tools` to download the native lint plugins for your machine into `.tools/`, and add `.tools/` to `.gitignore`. Run `make api-update` (`buf dep update`) and commit `buf.lock`.
