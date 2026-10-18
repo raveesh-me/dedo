@@ -12,13 +12,13 @@ import (
 const moneyType = "google.type.Money"
 
 var noJSONName = lintRule(
-	"HOUSE_NO_JSON_NAME",
+	idNoJSONName,
 	"Checks that no field sets json_name.",
 	checkutil.NewFieldRuleHandler(checkJSONName, checkutil.WithoutImports()),
 )
 
 var moneyFieldType = lintRule(
-	"HOUSE_MONEY_FIELD_TYPE",
+	idMoneyFieldType,
 	"Checks that fields named price, amount, *_price or *_amount use google.type.Money.",
 	checkutil.NewFieldRuleHandler(checkMoneyField, checkutil.WithoutImports()),
 )
@@ -31,7 +31,7 @@ func checkJSONName(_ context.Context, w check.ResponseWriter, _ check.Request, f
 	}
 	if f.JSONName() != defaultJSONName(string(f.Name())) {
 		w.AddAnnotation(check.WithDescriptor(f),
-			check.WithMessagef("Field %q sets json_name %q; use the protojson default.", f.Name(), f.JSONName()))
+			messagef(idNoJSONName, "Field %q sets json_name %q; use the protojson default.", f.Name(), f.JSONName()))
 	}
 	return nil
 }
@@ -42,7 +42,7 @@ func checkMoneyField(_ context.Context, w check.ResponseWriter, _ check.Request,
 	}
 	if f.Message() == nil || f.Message().FullName() != moneyType || f.IsMap() {
 		w.AddAnnotation(check.WithDescriptor(f),
-			check.WithMessagef("Field %q must use %s.", f.Name(), moneyType))
+			messagef(idMoneyFieldType, "Field %q must use %s.", f.Name(), moneyType))
 	}
 	return nil
 }

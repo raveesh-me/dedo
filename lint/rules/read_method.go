@@ -11,7 +11,7 @@ import (
 )
 
 var readMethodNoSideEffects = lintRule(
-	"HOUSE_READ_METHOD_NO_SIDE_EFFECTS",
+	idReadMethodNoSideEffects,
 	"Checks that unary Get and List RPCs set idempotency_level = NO_SIDE_EFFECTS.",
 	checkutil.NewMethodRuleHandler(checkReadMethod, checkutil.WithoutImports()),
 )
@@ -22,7 +22,7 @@ func checkReadMethod(_ context.Context, w check.ResponseWriter, _ check.Request,
 	}
 	if idempotency(m) != descriptorpb.MethodOptions_NO_SIDE_EFFECTS {
 		w.AddAnnotation(check.WithDescriptor(m),
-			check.WithMessagef("RPC %q must set idempotency_level = NO_SIDE_EFFECTS.", m.Name()))
+			messagef(idReadMethodNoSideEffects, "RPC %q must set idempotency_level = NO_SIDE_EFFECTS.", m.Name()))
 	}
 	return nil
 }

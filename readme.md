@@ -67,6 +67,8 @@ See `examples/library/proto` for a complete module.
 | `HOUSE_TOOL_REQUIRED` | Every unary RPC declares a tool title and description for MCP and the REST docs. Delete and Remove RPCs are marked destructive. |
 | `HOUSE_MESSAGE_DESCRIPTION_REQUIRED` | Every message declares a consumer-facing description |
 
+[HOUSE_RULES.md](HOUSE_RULES.md) explains each rule with examples. Every finding ends with a link to its section, pinned to the plugin's release tag.
+
 Suppress one finding with `// buf:lint:ignore HOUSE_MONEY_FIELD_TYPE` above the element, followed by the reason.
 
 ## Using it in a service repository

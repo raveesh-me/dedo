@@ -12,13 +12,13 @@ import (
 )
 
 var httpResponseBody = lintRule(
-	"HOUSE_HTTP_RESPONSE_BODY",
+	idHTTPResponseBody,
 	"Checks that HTTP rules of Get, Create and Update RPCs set response_body.",
 	checkutil.NewMethodRuleHandler(checkResponseBody, checkutil.WithoutImports()),
 )
 
 var httpPathVersion = lintRule(
-	"HOUSE_HTTP_PATH_VERSION",
+	idHTTPPathVersion,
 	"Checks that every HTTP path contains the package version, such as /v1/, after a fixed root shared by the whole service.",
 	checkutil.NewMethodRuleHandler(checkPathVersion, checkutil.WithoutImports()),
 )
@@ -32,7 +32,7 @@ func checkResponseBody(_ context.Context, w check.ResponseWriter, _ check.Reques
 	}
 	if rule.GetResponseBody() == "" {
 		w.AddAnnotation(check.WithDescriptor(m),
-			check.WithMessagef("RPC %q HTTP rule must set response_body.", m.Name()))
+			messagef(idHTTPResponseBody, "RPC %q HTTP rule must set response_body.", m.Name()))
 	}
 	return nil
 }
@@ -52,13 +52,13 @@ func checkPathVersion(_ context.Context, w check.ResponseWriter, _ check.Request
 		switch {
 		case !ok:
 			w.AddAnnotation(check.WithDescriptor(m),
-				check.WithMessagef("RPC %q HTTP path %q must contain the package version as a segment, such as \"/%s/\".", m.Name(), path, version))
+				messagef(idHTTPPathVersion, "RPC %q HTTP path %q must contain the package version as a segment, such as \"/%s/\".", m.Name(), path, version))
 		case strings.Contains(root, "{"):
 			w.AddAnnotation(check.WithDescriptor(m),
-				check.WithMessagef("RPC %q HTTP path %q must not use variables before \"/%s/\".", m.Name(), path, version))
+				messagef(idHTTPPathVersion, "RPC %q HTTP path %q must not use variables before \"/%s/\".", m.Name(), path, version))
 		case root != want:
 			w.AddAnnotation(check.WithDescriptor(m),
-				check.WithMessagef("RPC %q HTTP path root %q differs from %q, used by %s.", m.Name(), root, want, wantFrom))
+				messagef(idHTTPPathVersion, "RPC %q HTTP path root %q differs from %q, used by %s.", m.Name(), root, want, wantFrom))
 		}
 	}
 	return nil

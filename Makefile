@@ -2,6 +2,9 @@
 AIP_PLUGIN_REPO   := https://github.com/hestiatechnology/buf-plugin-aip.git
 AIP_PLUGIN_COMMIT := 5158ec0f16f3
 DIST              := dist
+# The git ref that lint findings link to in HOUSE_RULES.md. Releases pass
+# their tag, so each plugin version links to its own rule docs.
+DOCS_REF          ?= main
 
 .PHONY: all check generate format lint breaking test plugin aip-plugin plugins examples example-todo example-bad-todo vendored-options clean
 
@@ -37,7 +40,9 @@ plugin: $(DIST)/buf-plugin-raveesh-me-api.wasm
 
 $(DIST)/buf-plugin-raveesh-me-api.wasm: $(shell find lint gen -name '*.go') lint/go.mod lint/go.sum
 	mkdir -p $(DIST)
-	cd lint && GOOS=wasip1 GOARCH=wasm go build -trimpath -o ../$@ ./cmd/buf-plugin-raveesh-me-api
+	cd lint && GOOS=wasip1 GOARCH=wasm go build -trimpath \
+		-ldflags "-X github.com/raveesh-me/http-proto-lint/lint/rules.DocsRef=$(DOCS_REF)" \
+		-o ../$@ ./cmd/buf-plugin-raveesh-me-api
 
 ## aip-plugin: build buf-plugin-aip at the pinned commit as WebAssembly
 aip-plugin: $(DIST)/buf-plugin-aip.wasm

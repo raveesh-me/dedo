@@ -42,7 +42,8 @@ jobs:
       - uses: bufbuild/buf-action@v1
         with:
           setup_only: true
-      - run: make plugins
+      - name: Build both Wasm plugins, linking findings to this tag's HOUSE_RULES.md
+        run: make plugins DOCS_REF="$GITHUB_REF_NAME"
       - name: Push the options module
         run: >-
           buf push proto
