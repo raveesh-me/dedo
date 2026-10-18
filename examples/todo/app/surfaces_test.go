@@ -93,9 +93,9 @@ func mcpSession(t *testing.T, e env, token string) *mcp.ClientSession {
 }
 
 const (
-	getTool    = "raveesh_me_todo_v1_TodoService_GetTodo"
-	createTool = "raveesh_me_todo_v1_TodoService_CreateTodo"
-	deleteTool = "raveesh_me_todo_v1_TodoService_DeleteTodo"
+	getTool    = "get_todo"
+	createTool = "create_todo"
+	deleteTool = "delete_todo"
 )
 
 // MCP tools carry the declared title, description and behaviour hints.

@@ -12,13 +12,13 @@ import (
 )
 
 var httpResponseBody = lintRule(
-	"RAVEESH_ME_HTTP_RESPONSE_BODY",
+	"HOUSE_HTTP_RESPONSE_BODY",
 	"Checks that HTTP rules of Get, Create and Update RPCs set response_body.",
 	checkutil.NewMethodRuleHandler(checkResponseBody, checkutil.WithoutImports()),
 )
 
 var httpPathVersion = lintRule(
-	"RAVEESH_ME_HTTP_PATH_VERSION",
+	"HOUSE_HTTP_PATH_VERSION",
 	"Checks that every HTTP path contains the package version, such as /v1/, after a fixed root shared by the whole service.",
 	checkutil.NewMethodRuleHandler(checkPathVersion, checkutil.WithoutImports()),
 )

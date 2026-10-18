@@ -1,11 +1,11 @@
 // Package rules holds the house lint rules. Every rule ID starts with
-// RAVEESH_ME_, so it never collides with Buf or AIP rule IDs.
+// HOUSE_, so it never collides with Buf or AIP rule IDs.
 package rules
 
 import "buf.build/go/bufplugin/check"
 
 // Category groups every house rule under one name for buf.yaml.
-const Category = "RAVEESH_ME"
+const Category = "HOUSE"
 
 // All lists every house rule the plugin registers.
 var All = []*check.RuleSpec{
@@ -28,7 +28,7 @@ var All = []*check.RuleSpec{
 var Spec = &check.Spec{
 	Rules: All,
 	Categories: []*check.CategorySpec{
-		{ID: Category, Purpose: "Checks raveesh-me public API rules."},
+		{ID: Category, Purpose: "Checks the house rules for public APIs."},
 	},
 }
 

@@ -11,7 +11,7 @@ import (
 )
 
 var serviceRulesRequired = lintRule(
-	"RAVEESH_ME_SERVICE_RULES_REQUIRED",
+	"HOUSE_SERVICE_RULES_REQUIRED",
 	"Checks that every service declares raveesh_me.http_proto_lint.v1.service with an audience and an owner team.",
 	checkutil.NewServiceRuleHandler(checkServiceRules, checkutil.WithoutImports()),
 )

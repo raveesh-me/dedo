@@ -10,7 +10,7 @@ import (
 )
 
 var deprecationConsistent = lintRule(
-	"RAVEESH_ME_DEPRECATION_CONSISTENT",
+	"HOUSE_DEPRECATION_CONSISTENT",
 	"Checks that deprecated = true and a Deprecation option appear together, sunset follows deprecation, and the successor exists.",
 	checkutil.NewMethodRuleHandler(checkDeprecation, checkutil.WithoutImports()),
 )

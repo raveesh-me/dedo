@@ -17,7 +17,7 @@ lint:
   use:
     - STANDARD
     - COMMENTS
-    - RAVEESH_ME
+    - HOUSE
   enum_zero_value_suffix: _UNSPECIFIED
   service_suffix: Service
   rpc_allow_google_protobuf_empty_requests: false

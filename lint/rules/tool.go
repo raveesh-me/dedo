@@ -12,13 +12,13 @@ import (
 )
 
 var toolRequired = lintRule(
-	"RAVEESH_ME_TOOL_REQUIRED",
+	"HOUSE_TOOL_REQUIRED",
 	"Checks that every unary RPC declares a tool title and description, and that Delete and Remove RPCs are marked destructive.",
 	checkutil.NewMethodRuleHandler(checkTool, checkutil.WithoutImports()),
 )
 
 var messageDescriptionRequired = lintRule(
-	"RAVEESH_ME_MESSAGE_DESCRIPTION_REQUIRED",
+	"HOUSE_MESSAGE_DESCRIPTION_REQUIRED",
 	"Checks that every message declares raveesh_me.http_proto_lint.v1.message with a description.",
 	checkutil.NewMessageRuleHandler(checkMessageDescription, checkutil.WithoutImports()),
 )

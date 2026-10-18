@@ -12,7 +12,7 @@ import (
 )
 
 var cacheRequiresNoSideEffects = lintRule(
-	"RAVEESH_ME_CACHE_REQUIRES_NO_SIDE_EFFECTS",
+	"HOUSE_CACHE_REQUIRES_NO_SIDE_EFFECTS",
 	"Checks that a cache policy appears only on NO_SIDE_EFFECTS methods, with a visibility and a max age.",
 	checkutil.NewMethodRuleHandler(checkCache, checkutil.WithoutImports()),
 )

@@ -13,7 +13,7 @@ import (
 var reasonPattern = regexp.MustCompile(`^[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$`)
 
 var errorReasonFormat = lintRule(
-	"RAVEESH_ME_ERROR_REASON_FORMAT",
+	"HOUSE_ERROR_REASON_FORMAT",
 	"Checks that error reasons are UPPER_SNAKE_CASE and their codes are neither OK nor UNKNOWN.",
 	checkutil.NewMethodRuleHandler(checkErrorReasons, checkutil.WithoutImports()),
 )

@@ -12,7 +12,7 @@ import (
 var scopePattern = regexp.MustCompile(`^[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*\.(read|write)$`)
 
 var scopeNameFormat = lintRule(
-	"RAVEESH_ME_SCOPE_NAME_FORMAT",
+	"HOUSE_SCOPE_NAME_FORMAT",
 	"Checks that scopes are named <app>.<resource>.<read|write>.",
 	checkutil.NewMethodRuleHandler(checkScopeNames, checkutil.WithoutImports()),
 )
