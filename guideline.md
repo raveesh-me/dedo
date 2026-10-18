@@ -128,7 +128,7 @@ make api-check     # format, lint, breaking-change check
 
 The same findings appear in VS Code as you type. To suppress one, put `// buf:lint:ignore <RULE_ID>` above the element, followed by the reason. Reviewers treat every suppression as a decision to justify.
 
-House rules:
+House rules (each finding links to its section in [HOUSE_RULES.md](HOUSE_RULES.md), which explains the rule with examples):
 
 | Rule | Fix |
 | --- | --- |

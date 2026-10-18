@@ -11,7 +11,7 @@ import (
 )
 
 var serviceRulesRequired = lintRule(
-	"HOUSE_SERVICE_RULES_REQUIRED",
+	idServiceRulesRequired,
 	"Checks that every service declares raveesh_me.http_proto_lint.v1.service with an audience and an owner team.",
 	checkutil.NewServiceRuleHandler(checkServiceRules, checkutil.WithoutImports()),
 )
@@ -21,13 +21,13 @@ func checkServiceRules(_ context.Context, w check.ResponseWriter, _ check.Reques
 	switch {
 	case rules == nil:
 		w.AddAnnotation(check.WithDescriptor(s),
-			check.WithMessagef("Service %q has no raveesh_me.http_proto_lint.v1.service option.", s.Name()))
+			messagef(idServiceRulesRequired, "Service %q has no raveesh_me.http_proto_lint.v1.service option.", s.Name()))
 	case rules.GetAudience() == hplv1.Audience_AUDIENCE_UNSPECIFIED:
 		w.AddAnnotation(check.WithDescriptor(s),
-			check.WithMessagef("Service %q declares no audience.", s.Name()))
+			messagef(idServiceRulesRequired, "Service %q declares no audience.", s.Name()))
 	case rules.GetOwnerTeam() == "":
 		w.AddAnnotation(check.WithDescriptor(s),
-			check.WithMessagef("Service %q declares no owner team.", s.Name()))
+			messagef(idServiceRulesRequired, "Service %q declares no owner team.", s.Name()))
 	}
 	return nil
 }

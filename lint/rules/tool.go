@@ -12,13 +12,13 @@ import (
 )
 
 var toolRequired = lintRule(
-	"HOUSE_TOOL_REQUIRED",
+	idToolRequired,
 	"Checks that every unary RPC declares a tool title and description, and that Delete and Remove RPCs are marked destructive.",
 	checkutil.NewMethodRuleHandler(checkTool, checkutil.WithoutImports()),
 )
 
 var messageDescriptionRequired = lintRule(
-	"HOUSE_MESSAGE_DESCRIPTION_REQUIRED",
+	idMessageDescriptionRequired,
 	"Checks that every message declares raveesh_me.http_proto_lint.v1.message with a description.",
 	checkutil.NewMessageRuleHandler(checkMessageDescription, checkutil.WithoutImports()),
 )
@@ -34,20 +34,20 @@ func checkTool(_ context.Context, w check.ResponseWriter, _ check.Request, m pro
 	switch {
 	case tool == nil:
 		w.AddAnnotation(check.WithDescriptor(m),
-			check.WithMessagef("RPC %q declares no tool; set tool.title and tool.description in raveesh_me.http_proto_lint.v1.method.", m.Name()))
+			messagef(idToolRequired, "RPC %q declares no tool; set tool.title and tool.description in raveesh_me.http_proto_lint.v1.method.", m.Name()))
 	case title == "":
 		w.AddAnnotation(check.WithDescriptor(m),
-			check.WithMessagef("RPC %q declares no tool title.", m.Name()))
+			messagef(idToolRequired, "RPC %q declares no tool title.", m.Name()))
 	case description == "":
 		w.AddAnnotation(check.WithDescriptor(m),
-			check.WithMessagef("RPC %q declares no tool description.", m.Name()))
+			messagef(idToolRequired, "RPC %q declares no tool description.", m.Name()))
 	case strings.EqualFold(description, title) || strings.EqualFold(description, string(m.Name())):
 		w.AddAnnotation(check.WithDescriptor(m),
-			check.WithMessagef("RPC %q tool description repeats its name; say what it does and when to use it.", m.Name()))
+			messagef(idToolRequired, "RPC %q tool description repeats its name; say what it does and when to use it.", m.Name()))
 	}
 	if hasVerb(m, "Delete", "Remove") && tool != nil && !tool.GetDestructive() {
 		w.AddAnnotation(check.WithDescriptor(m),
-			check.WithMessagef("RPC %q deletes data, so its tool must set destructive: true.", m.Name()))
+			messagef(idToolRequired, "RPC %q deletes data, so its tool must set destructive: true.", m.Name()))
 	}
 	return nil
 }
@@ -58,7 +58,7 @@ func checkMessageDescription(_ context.Context, w check.ResponseWriter, _ check.
 	}
 	if strings.TrimSpace(messageRules(msg).GetDescription()) == "" {
 		w.AddAnnotation(check.WithDescriptor(msg),
-			check.WithMessagef("Message %q declares no raveesh_me.http_proto_lint.v1.message description.", msg.Name()))
+			messagef(idMessageDescriptionRequired, "Message %q declares no raveesh_me.http_proto_lint.v1.message description.", msg.Name()))
 	}
 	return nil
 }

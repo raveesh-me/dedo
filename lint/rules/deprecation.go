@@ -10,7 +10,7 @@ import (
 )
 
 var deprecationConsistent = lintRule(
-	"HOUSE_DEPRECATION_CONSISTENT",
+	idDeprecationConsistent,
 	"Checks that deprecated = true and a Deprecation option appear together, sunset follows deprecation, and the successor exists.",
 	checkutil.NewMethodRuleHandler(checkDeprecation, checkutil.WithoutImports()),
 )
@@ -21,25 +21,25 @@ func checkDeprecation(_ context.Context, w check.ResponseWriter, req check.Reque
 	switch {
 	case deprecated && dep == nil:
 		w.AddAnnotation(check.WithDescriptor(m),
-			check.WithMessagef("RPC %q is deprecated but declares no deprecation schedule.", m.Name()))
+			messagef(idDeprecationConsistent, "RPC %q is deprecated but declares no deprecation schedule.", m.Name()))
 		return nil
 	case !deprecated && dep != nil:
 		w.AddAnnotation(check.WithDescriptor(m),
-			check.WithMessagef("RPC %q declares a deprecation schedule but does not set deprecated = true.", m.Name()))
+			messagef(idDeprecationConsistent, "RPC %q declares a deprecation schedule but does not set deprecated = true.", m.Name()))
 		return nil
 	case dep == nil:
 		return nil
 	}
 	if dep.GetDeprecationTime() == nil || dep.GetSunsetTime() == nil {
 		w.AddAnnotation(check.WithDescriptor(m),
-			check.WithMessagef("RPC %q deprecation schedule needs both a deprecation and a sunset time.", m.Name()))
+			messagef(idDeprecationConsistent, "RPC %q deprecation schedule needs both a deprecation and a sunset time.", m.Name()))
 	} else if !dep.GetSunsetTime().AsTime().After(dep.GetDeprecationTime().AsTime()) {
 		w.AddAnnotation(check.WithDescriptor(m),
-			check.WithMessagef("RPC %q sunset time must follow its deprecation time.", m.Name()))
+			messagef(idDeprecationConsistent, "RPC %q sunset time must follow its deprecation time.", m.Name()))
 	}
 	if successor := dep.GetSuccessor(); successor != "" && !methodExists(req, protoreflect.FullName(successor)) {
 		w.AddAnnotation(check.WithDescriptor(m),
-			check.WithMessagef("RPC %q names successor %q, which does not exist.", m.Name(), successor))
+			messagef(idDeprecationConsistent, "RPC %q names successor %q, which does not exist.", m.Name(), successor))
 	}
 	return nil
 }

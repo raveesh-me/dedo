@@ -74,6 +74,9 @@ func annotationLines(t *testing.T, ruleID, dir string) []string {
 	}
 	var lines []string
 	for _, a := range response.Annotations() {
+		if link := " (" + rules.DocsURL(a.RuleID()) + ")"; !strings.HasSuffix(a.Message(), link) {
+			t.Errorf("message %q does not end with its docs link%s", a.Message(), link)
+		}
 		loc := a.FileLocation()
 		if loc == nil {
 			t.Fatalf("annotation without location: %s", a.Message())
@@ -120,4 +123,31 @@ func protoFiles(t *testing.T, dir string) []string {
 func location(file string, line int) string {
 	// Zero-padded so lexical order matches line order.
 	return fmt.Sprintf("%s:%04d", file, line)
+}
+
+// TestRulesDocumented keeps HOUSE_RULES.md in step with the rules: every
+// rule's docs link must land on a heading, and every heading on a rule.
+func TestRulesDocumented(t *testing.T) {
+	doc, err := os.ReadFile("../../HOUSE_RULES.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	headings := map[string]bool{}
+	for _, line := range strings.Split(string(doc), "\n") {
+		if id, ok := strings.CutPrefix(line, "## "); ok {
+			headings[id] = true
+		}
+	}
+	for _, rule := range rules.All {
+		if !headings[rule.ID] {
+			t.Errorf("HOUSE_RULES.md has no \"## %s\" heading", rule.ID)
+		}
+		if want := "/HOUSE_RULES.md#" + strings.ToLower(rule.ID); !strings.HasSuffix(rules.DocsURL(rule.ID), want) {
+			t.Errorf("DocsURL(%s) = %s", rule.ID, rules.DocsURL(rule.ID))
+		}
+		delete(headings, rule.ID)
+	}
+	for id := range headings {
+		t.Errorf("HOUSE_RULES.md documents %q, which is not a rule", id)
+	}
 }

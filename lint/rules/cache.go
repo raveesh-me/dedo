@@ -12,7 +12,7 @@ import (
 )
 
 var cacheRequiresNoSideEffects = lintRule(
-	"HOUSE_CACHE_REQUIRES_NO_SIDE_EFFECTS",
+	idCacheRequiresNoSideEffects,
 	"Checks that a cache policy appears only on NO_SIDE_EFFECTS methods, with a visibility and a max age.",
 	checkutil.NewMethodRuleHandler(checkCache, checkutil.WithoutImports()),
 )
@@ -24,15 +24,15 @@ func checkCache(_ context.Context, w check.ResponseWriter, _ check.Request, m pr
 	}
 	if idempotency(m) != descriptorpb.MethodOptions_NO_SIDE_EFFECTS {
 		w.AddAnnotation(check.WithDescriptor(m),
-			check.WithMessagef("RPC %q declares a cache policy but is not NO_SIDE_EFFECTS.", m.Name()))
+			messagef(idCacheRequiresNoSideEffects, "RPC %q declares a cache policy but is not NO_SIDE_EFFECTS.", m.Name()))
 	}
 	if cache.GetVisibility() == hplv1.CachePolicy_VISIBILITY_UNSPECIFIED {
 		w.AddAnnotation(check.WithDescriptor(m),
-			check.WithMessagef("RPC %q cache policy declares no visibility.", m.Name()))
+			messagef(idCacheRequiresNoSideEffects, "RPC %q cache policy declares no visibility.", m.Name()))
 	}
 	if cache.GetMaxAge().AsDuration() <= 0 {
 		w.AddAnnotation(check.WithDescriptor(m),
-			check.WithMessagef("RPC %q cache policy declares no positive max age.", m.Name()))
+			messagef(idCacheRequiresNoSideEffects, "RPC %q cache policy declares no positive max age.", m.Name()))
 	}
 	return nil
 }
