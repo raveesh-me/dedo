@@ -5,7 +5,7 @@ go 1.26.1
 require (
 	connectrpc.com/connect v1.21.1
 	github.com/modelcontextprotocol/go-sdk v1.8.0
-	github.com/raveesh-me/http-proto-lint v0.0.0
+	github.com/raveesh-me/http-proto-lint v0.1.0
 	github.com/redpanda-data/protoc-gen-go-mcp v0.0.0-20260729122341-6334690a62b6
 	google.golang.org/protobuf v1.36.12
 )
