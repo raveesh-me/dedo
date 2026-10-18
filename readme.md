@@ -122,7 +122,7 @@ make aip-plugin   # build buf-plugin-aip at the pinned commit as Wasm
 make breaking     # options module against main
 ```
 
-`make check` needs `buf`, `jq`, `protoc-gen-go` and `protoc-gen-connect-go`. The root `buf.yaml` lints the options module and the example with the locally built plugin from `dist/`.
+`make check` needs `buf` and `jq`. Code generators are pinned in each `go.mod` as Go tools and run through `go tool`. The root `buf.yaml` lints the options module and the example with the locally built plugin from `dist/`.
 
 Lint rule tests live in `lint/rules/testdata/<rule>/{pass,fail}`. A pass fixture must produce no finding. A fail fixture marks each line that must produce one with `// want`.
 

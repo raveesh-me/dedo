@@ -1,4 +1,5 @@
-# Mirrors templates/buf.gen.yaml, with local plugins so CI needs no BSR access.
+# Mirrors templates/buf.gen.yaml, with generators pinned in go.mod (go tool) so
+# every machine produces identical code without BSR access.
 version: v2
 managed:
   enabled: true
@@ -13,10 +14,10 @@ managed:
   disable:
     - module: buf.build/googleapis/googleapis
 plugins:
-  - local: protoc-gen-go
+  - local: ["go", "tool", "protoc-gen-go"]
     out: gen/go
     opt: paths=source_relative
-  - local: protoc-gen-connect-go
+  - local: ["go", "tool", "protoc-gen-connect-go"]
     out: gen/go
     opt: paths=source_relative
 inputs:

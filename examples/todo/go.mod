@@ -13,3 +13,8 @@ require (
 )
 
 replace github.com/raveesh-me/http-proto-lint => ../..
+
+tool (
+	connectrpc.com/connect/cmd/protoc-gen-connect-go
+	google.golang.org/protobuf/cmd/protoc-gen-go
+)
