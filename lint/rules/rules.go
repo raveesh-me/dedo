@@ -20,6 +20,8 @@ var All = []*check.RuleSpec{
 	httpPathVersion,
 	noJSONName,
 	moneyFieldType,
+	toolRequired,
+	messageDescriptionRequired,
 }
 
 // Spec is the plugin specification.

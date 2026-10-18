@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package raveesh_me.library.v1;
+
+import "google/protobuf/empty.proto";
+import "raveesh_me/http_proto_lint/v1/options.proto";
+
+message Book {
+  option (raveesh_me.http_proto_lint.v1.message) = {description: "A book on a shelf."};
+
+  message Edition {
+    option (raveesh_me.http_proto_lint.v1.message) = {description: "One printing of a book."};
+  }
+
+  map<string, string> labels = 1;
+}

@@ -4,6 +4,12 @@ version: v2
 modules:
   - path: proto
     name: buf.build/cookytech-in/http-proto-lint
+    # The options module defines the extensions; it is not an API, so the
+    # house rules do not apply to it.
+    lint:
+      use:
+        - STANDARD
+        - COMMENTS
   - path: examples/library/proto
 deps:
   - buf.build/googleapis/googleapis

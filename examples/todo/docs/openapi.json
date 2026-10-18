@@ -1,0 +1,663 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Todo API",
+    "version": "v1"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8080"
+    }
+  ],
+  "tags": [
+    {
+      "name": "TodoService",
+      "description": "TodoService manages a to-do list.",
+      "x-audience": "AUDIENCE_EXTERNAL_PUBLIC",
+      "x-owner-team": "todo-team"
+    }
+  ],
+  "paths": {
+    "/commerce/todo/v1/todos": {
+      "get": {
+        "operationId": "TodoService_ListTodos",
+        "summary": "List to-dos",
+        "description": "Returns to-dos oldest first, one page at a time. Pass next_page_token back as page_token to read the next page.\n\nRequires one of the token scopes: `todo.todo.read`.",
+        "tags": [
+          "TodoService"
+        ],
+        "parameters": [
+          {
+            "name": "pageSize",
+            "in": "query",
+            "description": "The maximum number of to-dos to return. The server caps it at 100.",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "pageToken",
+            "in": "query",
+            "description": "The next_page_token of a previous call.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "X-Flow-ID": {
+                "description": "Correlates the call across services. Send one to set it.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListTodosResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request. Reasons: `INVALID_PAGE_TOKEN`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Status"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden. The token lacks every required scope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Status"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": [
+              "todo.todo.read"
+            ]
+          }
+        ],
+        "x-rpc-procedure": "/raveesh_me.todo.v1.TodoService/ListTodos",
+        "x-error-reasons": [
+          "INVALID_PAGE_TOKEN"
+        ]
+      },
+      "post": {
+        "operationId": "TodoService_CreateTodo",
+        "summary": "Create a to-do",
+        "description": "Adds a to-do with a title, and optionally a budget and an assignee. Pass todo_id to choose its ID; otherwise the server picks one.\n\nRequires one of the token scopes: `todo.todo.write`.",
+        "tags": [
+          "TodoService"
+        ],
+        "parameters": [
+          {
+            "name": "todoId",
+            "in": "query",
+            "description": "The ID to give the to-do, which becomes the last segment of its name.\nThe server picks one when it is empty.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Todo"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "X-Flow-ID": {
+                "description": "Correlates the call across services. Send one to set it.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Todo"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request. Reasons: `TITLE_REQUIRED`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Status"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden. The token lacks every required scope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Status"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict. Reasons: `TODO_ALREADY_EXISTS`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Status"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": [
+              "todo.todo.write"
+            ]
+          }
+        ],
+        "x-rpc-procedure": "/raveesh_me.todo.v1.TodoService/CreateTodo",
+        "x-error-reasons": [
+          "TITLE_REQUIRED",
+          "TODO_ALREADY_EXISTS"
+        ]
+      }
+    },
+    "/commerce/todo/v1/todos/{todo}": {
+      "get": {
+        "operationId": "TodoService_GetTodo",
+        "summary": "Get a to-do",
+        "description": "Returns one to-do by its resource name, such as todos/1. Use it when you already know which to-do you want.\n\nRequires one of the token scopes: `todo.todo.read`.",
+        "tags": [
+          "TodoService"
+        ],
+        "parameters": [
+          {
+            "name": "todo",
+            "in": "path",
+            "description": "Part of `name`, which has the form `todos/{todo}`.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "Cache-Control": {
+                "description": "How long the response may be cached.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Flow-ID": {
+                "description": "Correlates the call across services. Send one to set it.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Todo"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden. The token lacks every required scope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Status"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found. Reasons: `TODO_NOT_FOUND`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Status"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": [
+              "todo.todo.read"
+            ]
+          }
+        ],
+        "x-rpc-procedure": "/raveesh_me.todo.v1.TodoService/GetTodo",
+        "x-error-reasons": [
+          "TODO_NOT_FOUND"
+        ]
+      },
+      "delete": {
+        "operationId": "TodoService_DeleteTodo",
+        "summary": "Delete a to-do",
+        "description": "Removes a to-do for good. It cannot be recovered.\n\nRequires one of the token scopes: `todo.todo.write`.",
+        "tags": [
+          "TodoService"
+        ],
+        "parameters": [
+          {
+            "name": "todo",
+            "in": "path",
+            "description": "Part of `name`, which has the form `todos/{todo}`.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "X-Flow-ID": {
+                "description": "Correlates the call across services. Send one to set it.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteTodoResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden. The token lacks every required scope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Status"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found. Reasons: `TODO_NOT_FOUND`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Status"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": [
+              "todo.todo.write"
+            ]
+          }
+        ],
+        "x-destructive": true,
+        "x-rpc-procedure": "/raveesh_me.todo.v1.TodoService/DeleteTodo",
+        "x-error-reasons": [
+          "TODO_NOT_FOUND"
+        ]
+      },
+      "patch": {
+        "operationId": "TodoService_UpdateTodo",
+        "summary": "Update a to-do",
+        "description": "Changes the fields of an existing to-do named in update_mask, such as done or title. Leave update_mask empty to replace every mutable field.\n\nRequires one of the token scopes: `todo.todo.write`.",
+        "tags": [
+          "TodoService"
+        ],
+        "parameters": [
+          {
+            "name": "todo",
+            "in": "path",
+            "description": "Part of `todo.name`, which has the form `todos/{todo}`.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "updateMask",
+            "in": "query",
+            "description": "The fields to update.",
+            "schema": {
+              "type": "string",
+              "description": "Comma-separated lowerCamelCase field paths."
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Todo"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "X-Flow-ID": {
+                "description": "Correlates the call across services. Send one to set it.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Todo"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request. Reasons: `TITLE_REQUIRED`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Status"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden. The token lacks every required scope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Status"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found. Reasons: `TODO_NOT_FOUND`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Status"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": [
+              "todo.todo.write"
+            ]
+          }
+        ],
+        "x-rpc-procedure": "/raveesh_me.todo.v1.TodoService/UpdateTodo",
+        "x-error-reasons": [
+          "TODO_NOT_FOUND",
+          "TITLE_REQUIRED"
+        ]
+      }
+    },
+    "/commerce/todo/v1/todos/{todo}:remove": {
+      "post": {
+        "operationId": "TodoService_RemoveTodo",
+        "summary": "Remove a to-do (deprecated)",
+        "description": "Deprecated: use DeleteTodo. Removes a to-do for good.\n\nRequires one of the token scopes: `todo.todo.write`.",
+        "tags": [
+          "TodoService"
+        ],
+        "parameters": [
+          {
+            "name": "todo",
+            "in": "path",
+            "description": "Part of `name`, which has the form `todos/{todo}`.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "description": "Which to-do to remove."
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "Deprecation": {
+                "description": "When the operation was deprecated (RFC 9745).",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Sunset": {
+                "description": "When the operation stops working (RFC 8594).",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Flow-ID": {
+                "description": "Correlates the call across services. Send one to set it.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RemoveTodoResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden. The token lacks every required scope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Status"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found. Reasons: `TODO_NOT_FOUND`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Status"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": [
+              "todo.todo.write"
+            ]
+          }
+        ],
+        "deprecated": true,
+        "x-sunset": "2027-01-01",
+        "x-successor": "raveesh_me.todo.v1.TodoService.DeleteTodo",
+        "x-destructive": true,
+        "x-rpc-procedure": "/raveesh_me.todo.v1.TodoService/RemoveTodo",
+        "x-error-reasons": [
+          "TODO_NOT_FOUND"
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "DeleteTodoResponse": {
+        "type": "object",
+        "description": "Empty on success."
+      },
+      "ListTodosResponse": {
+        "type": "object",
+        "description": "One page of to-dos.",
+        "properties": {
+          "nextPageToken": {
+            "type": "string",
+            "description": "The token of the next page, or empty on the last page."
+          },
+          "todos": {
+            "type": "array",
+            "description": "The to-dos.",
+            "items": {
+              "$ref": "#/components/schemas/Todo"
+            }
+          }
+        }
+      },
+      "Money": {
+        "type": "object",
+        "description": "Represents an amount of money with its currency type.",
+        "properties": {
+          "currencyCode": {
+            "type": "string",
+            "description": "The three-letter currency code defined in ISO 4217."
+          },
+          "nanos": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Number of nano (10^-9) units of the amount.\nThe value must be between -999,999,999 and +999,999,999 inclusive.\nIf `units` is positive, `nanos` must be positive or zero.\nIf `units` is zero, `nanos` can be positive, zero, or negative.\nIf `units` is negative, `nanos` must be negative or zero.\nFor example $-1.75 is represented as `units`=-1 and `nanos`=-750,000,000."
+          },
+          "units": {
+            "type": "string",
+            "format": "int64",
+            "description": "The whole units of the amount.\nFor example if `currencyCode` is `\"USD\"`, then 1 unit is one US dollar."
+          }
+        }
+      },
+      "RemoveTodoResponse": {
+        "type": "object",
+        "description": "Empty on success."
+      },
+      "Status": {
+        "type": "object",
+        "description": "An error. details holds a google.rpc.ErrorInfo whose reason is one of the operation's declared reasons.",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "format": "int32",
+            "description": "The google.rpc.Code."
+          },
+          "details": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "@type": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": {}
+            }
+          },
+          "message": {
+            "type": "string",
+            "description": "A developer-facing explanation."
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ]
+      },
+      "Todo": {
+        "type": "object",
+        "description": "One item on the to-do list.",
+        "properties": {
+          "assigneeEmail": {
+            "type": "string",
+            "description": "The email of the person it is assigned to.",
+            "x-sensitive": true
+          },
+          "budgetAmount": {
+            "$ref": "#/components/schemas/Money",
+            "description": "What doing it may cost."
+          },
+          "createTime": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When it was created.",
+            "readOnly": true
+          },
+          "done": {
+            "type": "boolean",
+            "description": "Whether it is done."
+          },
+          "name": {
+            "type": "string",
+            "description": "The resource name, such as todos/abc."
+          },
+          "title": {
+            "type": "string",
+            "description": "What needs doing."
+          }
+        },
+        "required": [
+          "title"
+        ]
+      }
+    },
+    "securitySchemes": {
+      "bearer": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "An access token carrying the operation's scopes."
+      }
+    }
+  }
+}

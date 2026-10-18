@@ -1,0 +1,8 @@
+# Copy to .github/CODEOWNERS. Everything under proto/ and the Buf
+# configuration is published as the API, its docs and its MCP tools, so a
+# change needs an API reviewer as well as the owning team.
+* @YOUR_ORG/YOUR_TEAM
+/proto/ @YOUR_ORG/YOUR_TEAM @YOUR_ORG/api-reviewers
+/buf.yaml @YOUR_ORG/api-reviewers
+/buf.lock @YOUR_ORG/api-reviewers
+/buf.gen.yaml @YOUR_ORG/api-reviewers

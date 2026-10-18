@@ -19,8 +19,14 @@ service LibraryService {
   }
   rpc GetOtherBook(google.protobuf.Empty) returns (GetBookResponse) { // want
     option (google.api.http) = {
-      get: "/v1/books/2"
-      additional_bindings: {get: "/v2/books/2"}
+      get: "/commerce/library/v1/books/2"
+      additional_bindings: {get: "/commerce/library/v2/books/2"}
     };
+  }
+  rpc DeleteBook(google.protobuf.Empty) returns (google.protobuf.Empty) { // want
+    option (google.api.http) = {delete: "/commerce/books/v1/books/1"};
+  }
+  rpc ListBooks(google.protobuf.Empty) returns (google.protobuf.Empty) { // want
+    option (google.api.http) = {get: "/commerce/{tenant}/v1/books"};
   }
 }

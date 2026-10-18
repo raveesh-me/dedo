@@ -2,6 +2,8 @@
 
 A proto-first standard for public ConnectRPC APIs. The `.proto` file declares the contract and its operational rules. A Buf check plugin enforces both before merge, and a small Go runtime applies the operational rules on every call.
 
+New here? Read [guideline.md](guideline.md). It walks through building a service in a new repository.
+
 Contract rules come from Google's AIPs. Operational rules (audience, ownership, scopes, caching, deprecation, error reasons) come from Zalando's guidelines. Both live in the schema.
 
 ## What is in this repository
@@ -9,14 +11,16 @@ Contract rules come from Google's AIPs. Operational rules (audience, ownership, 
 | Component | Path | Job |
 | --- | --- | --- |
 | Options module | `proto/raveesh_me/http_proto_lint/v1/options.proto` | Declares audience, owner, scopes, cache policy, deprecation, error reasons and sensitive fields. Published as `buf.build/cookytech-in/http-proto-lint`. |
-| House lint plugin | `lint/` | Eleven `RAVEESH_ME_*` rules. Published as the Wasm check plugin `buf.build/cookytech-in/http-proto-lint-plugin`. |
+| House lint plugin | `lint/` | Thirteen `RAVEESH_ME_*` rules. Published as the Wasm check plugin `buf.build/cookytech-in/http-proto-lint-plugin`. |
 | Policy table | `policy/` | Reads the options from descriptors at startup. Fails on a missing declaration. |
 | Flow ID | `flowid/` | Reads or creates `X-Flow-ID` and propagates it on outbound calls. |
 | Policy interceptor | `interceptor/` | Checks scopes, sets `Cache-Control`, `Deprecation` and `Sunset`, and logs undeclared error reasons. |
+| REST doc generator | `openapi/` | `protoc-gen-rest-openapi`: an OpenAPI 3.1 document from the `google.api.http` bindings, with scopes, error reasons, deprecation and the declared descriptions. Connect routes are left out. |
+| MCP adapter | `mcp/` | Serves the tools that `protoc-gen-go-mcp` generates with the declared title, description and behaviour hints. Tool calls run through the same auth and policy as REST. |
 | Templates | `templates/` | `buf.yaml`, `buf.gen.yaml`, `Makefile.api`, VS Code settings, a Jenkins stage and a policy-table test for service repositories. |
 | Examples | `examples/` | `library`: a contract-only module. `todo` and `bad-todo`: two runnable services with the same interface, one compliant and one breaking every rule. |
 
-There are two Go modules. The root module (`github.com/raveesh-me/http-proto-lint`) holds the runtime and the generated options code. The `lint/` module holds the plugin, so services that import the runtime do not pull in the plugin SDK.
+The root Go module (`github.com/raveesh-me/http-proto-lint`) holds the runtime and the generated options code. `lint/`, `openapi/` and `mcp/` are separate modules, so services pull in only what they use.
 
 ## Declaring a contract
 
@@ -57,9 +61,11 @@ See `examples/library/proto` for a complete module.
 | `RAVEESH_ME_DEPRECATION_CONSISTENT` | `deprecated = true` and a deprecation schedule appear together, sunset follows deprecation, and the successor exists |
 | `RAVEESH_ME_READ_METHOD_NO_SIDE_EFFECTS` | Unary `Get*` and `List*` RPCs set `idempotency_level = NO_SIDE_EFFECTS` |
 | `RAVEESH_ME_HTTP_RESPONSE_BODY` | HTTP rules of `Get*`, `Create*` and `Update*` RPCs set `response_body` |
-| `RAVEESH_ME_HTTP_PATH_VERSION` | Every HTTP path, additional bindings included, starts with the package version, such as `/v1/` |
+| `RAVEESH_ME_HTTP_PATH_VERSION` | Every HTTP path, additional bindings included, contains the package version, such as `/v1/`, after a root that is the same for the whole service. The root itself, such as `/commerce/pim`, is the owner's choice. |
 | `RAVEESH_ME_NO_JSON_NAME` | No field overrides the protojson default name |
 | `RAVEESH_ME_MONEY_FIELD_TYPE` | Fields named `price`, `amount`, `*_price` or `*_amount` use `google.type.Money` |
+| `RAVEESH_ME_TOOL_REQUIRED` | Every unary RPC declares a tool title and description for MCP and the REST docs. Delete and Remove RPCs are marked destructive. |
+| `RAVEESH_ME_MESSAGE_DESCRIPTION_REQUIRED` | Every message declares a consumer-facing description |
 
 Suppress one finding with `// buf:lint:ignore RAVEESH_ME_MONEY_FIELD_TYPE` above the element, followed by the reason.
 
@@ -103,15 +109,16 @@ Known v1 gaps: error responses carry no deprecation headers, and streaming calls
 
 Two Go services, each laid out like a service repository built from `templates/`, with its own `buf.yaml`, `buf.gen.yaml`, `go.mod` and proto files. Both serve the same `TodoService` over Connect, gRPC and REST (through Vanguard), with the same server code and the full runtime: policy table, scope interceptor, flow IDs and error audit.
 
-- `examples/todo` follows the standard. `buf lint` is clean, and `app/app_test.go` checks scopes, CRUD, pagination, cache and deprecation headers, REST unwrapping and the error audit end to end.
-- `examples/bad-todo` breaks all eleven house rules, plus one Buf and one AIP rule. Open `proto/raveesh_me/todo/v1/todo.proto` in VS Code to see the findings. `expected-lint.txt` lists them, and `app/app_test.go` shows what each mistake does at runtime: a misnamed scope locks out writers, an unversioned path moves the endpoint, undeclared reasons show up in logs, and a custom `json_name` renames the field for every JSON client.
+- `examples/todo` follows the standard. `buf lint` is clean. Its tests check scopes, CRUD, pagination, cache and deprecation headers, REST unwrapping and the error audit end to end. It also serves the REST reference at `/docs` and an MCP server at `/mcp`, and its tests check that MCP tools carry the declared text and enforce the same scopes.
+- `examples/bad-todo` breaks all thirteen house rules, plus one Buf and one AIP rule. Open `proto/raveesh_me/todo/v1/todo.proto` in VS Code to see the findings. `expected-lint.txt` lists them, and `app/app_test.go` shows what each mistake does at runtime: a misnamed scope locks out writers, an unversioned path moves the endpoint, undeclared reasons show up in logs, and a custom `json_name` renames the field for every JSON client.
 
 Until the options module and plugins are published, each example vendors `options.proto` under `third_party/` and loads the plugins from `dist/`. Run `make plugins` once so the editor finds them, then `make examples`.
 
 ```sh
 cd examples/todo && go run . &
-curl -H 'Authorization: Bearer writer' -H 'Content-Type: application/json' -d '{"title":"try it"}' localhost:8080/v1/todos
-curl -i -H 'Authorization: Bearer reader' localhost:8080/v1/todos/1
+curl -H 'Authorization: Bearer writer' -H 'Content-Type: application/json' -d '{"title":"try it"}' localhost:8080/commerce/todo/v1/todos
+curl -i -H 'Authorization: Bearer reader' localhost:8080/commerce/todo/v1/todos/1
+open http://localhost:8080/docs
 ```
 
 ## Developing

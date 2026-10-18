@@ -20,5 +20,15 @@ plugins:
   - local: ["go", "tool", "protoc-gen-connect-go"]
     out: gen/go
     opt: paths=source_relative
+  - local: ["go", "tool", "protoc-gen-go-mcp"]
+    out: gen/go
+    opt: paths=source_relative
+  # REST docs: one OpenAPI document for every service, served at /docs.
+  - local: ["go", "tool", "protoc-gen-rest-openapi"]
+    out: docs
+    strategy: all
+    opt:
+      - title=Todo API
+      - server=http://localhost:8080
 inputs:
   - directory: proto

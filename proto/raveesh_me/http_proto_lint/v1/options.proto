@@ -66,6 +66,18 @@ message ErrorReason {
   google.rpc.Code code = 2;
 }
 
+// Tool is how an RPC is presented to consumers: as an MCP tool, and as an
+// operation in the REST docs. The text is written for people and models
+// choosing between operations, not for the implementers.
+message Tool {
+  // A short human-readable name, such as "Get a to-do".
+  string title = 1;
+  // What the operation does and when to use it.
+  string description = 2;
+  // The operation may destroy data, so clients should confirm it first.
+  bool destructive = 3;
+}
+
 // MethodRules is the operational contract of one RPC.
 message MethodRules {
   // Token scopes that grant access. A caller needs at least one.
@@ -76,6 +88,15 @@ message MethodRules {
   Deprecation deprecation = 3;
   // Every error reason the method returns.
   repeated ErrorReason errors = 4;
+  // How the RPC is presented as an MCP tool and in the REST docs.
+  Tool tool = 5;
+}
+
+// MessageRules documents a message for API consumers and models.
+message MessageRules {
+  // What the message represents. MCP tool input schemas and the REST docs
+  // show it.
+  string description = 1;
 }
 
 // FieldRules classifies the data in a field.
@@ -92,6 +113,11 @@ extend google.protobuf.ServiceOptions {
 extend google.protobuf.MethodOptions {
   // The operational contract of the RPC.
   MethodRules method = 50101;
+}
+
+extend google.protobuf.MessageOptions {
+  // The consumer-facing documentation of the message.
+  MessageRules message = 50104;
 }
 
 extend google.protobuf.FieldOptions {

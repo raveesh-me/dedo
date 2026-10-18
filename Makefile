@@ -26,11 +26,11 @@ lint: plugin
 breaking:
 	buf breaking proto --against '.git#branch=main,subdir=proto'
 
-## test: run both Go modules' tests
+## test: run every Go module's tests
 test:
 	go vet ./...
 	go test -race -cover ./...
-	cd lint && go vet ./... && go test -race -cover ./...
+	for mod in lint openapi mcp; do (cd $$mod && go vet ./... && go test -race -cover ./...) || exit 1; done
 
 ## plugin: build the house plugin as WebAssembly
 plugin: $(DIST)/buf-plugin-raveesh-me-api.wasm
@@ -62,7 +62,7 @@ vendored-options:
 ## example-todo: the compliant service lints clean and passes its tests
 example-todo: plugins
 	cd examples/todo && buf format --diff --exit-code && buf lint proto
-	cd examples/todo && buf generate && git diff --exit-code gen/
+	cd examples/todo && buf generate && git diff --exit-code gen/ docs/
 	cd examples/todo && go vet ./... && go test -race ./...
 
 ## example-bad-todo: the rule-breaking service reports exactly the expected findings
