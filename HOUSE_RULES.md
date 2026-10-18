@@ -192,7 +192,7 @@ get: "/commerce/pim/v1/{name=products/*}"     // Passes.
 delete: "/commerce/products/v1/{name=products/*}"  // Fails in the same service: different root.
 ```
 
-**Fix.** Put `/<version>/` after the root, and use the same root for every RPC of the service.
+**Fix.** Put `/<version>/` after the root, and use the same root for every RPC of the service. Write each root segment as one lowercase or lowerCamelCase word, such as `/commerce/timeCounter`: AIP-127's path syntax check rejects hyphens.
 
 ## HOUSE_NO_JSON_NAME
 

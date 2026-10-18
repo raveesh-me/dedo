@@ -12,7 +12,7 @@
 
 **First-class lint guidance.** A Buf check plugin turns the standard into findings in your editor as you type, each linked to an explanation in [HOUSE_RULES.md](HOUSE_RULES.md). The same `buf lint` gates CI. Handlers carry business logic only.
 
-New here? Read [guideline.md](guideline.md). It walks through building a service in a new repository.
+New here? [install.md](install.md) builds a new product from scratch, step by step. [guideline.md](guideline.md) explains the reasoning.
 
 Contract rules come from Google's AIPs. Operational rules (audience, ownership, scopes, caching, deprecation, error reasons) come from Zalando's guidelines. Both live in the schema.
 
