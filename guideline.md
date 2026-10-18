@@ -56,7 +56,7 @@ my-service/
    ```
 
    Then point the `buf.gen.yaml` plugins at them with `local: ["go", "tool", "<generator>"]`, as `examples/todo/buf.gen.yaml` does.
-3. Run `make api-update` (`buf dep update` and `buf plugin update`) and commit `buf.lock`.
+3. Run `make tools` to download the native lint plugins for your machine into `.tools/`, and add `.tools/` to `.gitignore`. Run `make api-update` (`buf dep update`) and commit `buf.lock`.
 4. Pin `connectrpc.com/vanguard` to `v0.4.0`. Later versions need connect-go v2.
 
 ## 3. Write the contract
@@ -253,4 +253,8 @@ Point an MCP client at `http://localhost:8080/mcp`, with the header `Authorizati
 
 **Why both a proto comment and a `tool.description`?** The comment is for people who maintain the API. The description is published to API readers and AI agents, and the lint makes sure it exists.
 
-**Where do the options and plugins come from until they are on the BSR?** The examples vendor `options.proto` under `third_party/` and load the plugins from `dist/`. After the first release, use `buf.build/cookytech-in/http-proto-lint` and the BSR plugins in `templates/buf.yaml`.
+**Where do the options and plugins come from until the first release?** The examples vendor `options.proto` under `third_party/` and load the plugins from `dist/`. After the first release, depend on `buf.build/cookytech-in/http-proto-lint` and run `make tools`.
+
+**Why native plugin binaries instead of the BSR plugins?** Speed in the editor. One lint takes about 0.3 s with native plugins and about 6 s with the WebAssembly ones, and the editor reruns it as you type. The BSR plugins (`buf.build/cookytech-in/http-proto-lint-plugin` and `buf.build/cookytech-in/buf-plugin-aip`) need no download and work on Windows. Use them there.
+
+**How do I update the lint rules?** Bump `HTTP_PROTO_LINT_VERSION` in `Makefile.api` and run `make tools`. CI does the same, so the editor and CI always run the same version.

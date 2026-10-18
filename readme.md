@@ -21,7 +21,7 @@ Contract rules come from Google's AIPs. Operational rules (audience, ownership, 
 | Component | Path | Job |
 | --- | --- | --- |
 | Options module | `proto/raveesh_me/http_proto_lint/v1/options.proto` | Declares audience, owner, scopes, cache policy, deprecation, error reasons and sensitive fields. Published as `buf.build/cookytech-in/http-proto-lint`. |
-| House lint plugin | `lint/` | Thirteen house rules, `HOUSE_*` in the `HOUSE` category. Published as the Wasm check plugin `buf.build/cookytech-in/http-proto-lint-plugin`. |
+| House lint plugin | `lint/` | Thirteen house rules, `HOUSE_*` in the `HOUSE` category. Released as native binaries per platform (fast in editors) and as the Wasm check plugin `buf.build/cookytech-in/http-proto-lint-plugin`. |
 | Policy table | `policy/` | Reads the options from descriptors at startup. Fails on a missing declaration. |
 | Flow ID | `flowid/` | Reads or creates `X-Flow-ID` and propagates it on outbound calls. |
 | Policy interceptor | `interceptor/` | Checks scopes, sets `Cache-Control`, `Deprecation` and `Sunset`, and logs undeclared error reasons. |
@@ -84,7 +84,7 @@ Suppress one finding with `// buf:lint:ignore HOUSE_MONEY_FIELD_TYPE` above the 
 ## Using it in a service repository
 
 1. Copy `templates/buf.yaml`, `templates/buf.gen.yaml`, `templates/Makefile.api` and `templates/vscode/*` (into `.vscode/`). Replace `YOUR_ORG/YOUR_REPO`.
-2. Run `make api-update` (`buf dep update` and `buf plugin update`). Commit `buf.lock`. It pins the options module and both check plugins.
+2. Run `make tools` to download the native lint plugins for your machine into `.tools/` (gitignored), and `make api-update` (`buf dep update`). Commit `buf.lock`.
 3. Run `make api-check`. VS Code shows the same findings through the Buf extension (`buf lsp serve`).
 4. Wire the runtime:
 
@@ -124,7 +124,7 @@ Two Go services, each laid out like a service repository built from `templates/`
 - `examples/todo` follows the standard. `buf lint` is clean. Its tests check scopes, CRUD, pagination, cache and deprecation headers, REST unwrapping and the error audit end to end. It also serves the REST reference at `/docs` and an MCP server at `/mcp`, and its tests check that MCP tools carry the declared text and enforce the same scopes.
 - `examples/bad-todo` breaks all thirteen house rules, plus one Buf and one AIP rule. Open `proto/raveesh_me/todo/v1/todo.proto` in VS Code to see the findings. `expected-lint.txt` lists them, and `app/app_test.go` shows what each mistake does at runtime: a misnamed scope locks out writers, an unversioned path moves the endpoint, undeclared reasons show up in logs, and a custom `json_name` renames the field for every JSON client.
 
-Until the options module and plugins are published, each example vendors `options.proto` under `third_party/` and loads the plugins from `dist/`. Run `make plugins` once so the editor finds them, then `make examples`.
+Until the options module and plugins are published, each example vendors `options.proto` under `third_party/` and loads the native plugins from `dist/`. Run `make plugins` once so the editor finds them, then `make examples`. Rerun `make plugins` after changing a rule.
 
 ```sh
 cd examples/todo && go run . &
@@ -133,11 +133,23 @@ curl -i -H 'Authorization: Bearer reader' localhost:8080/commerce/todo/v1/todos/
 open http://localhost:8080/docs
 ```
 
+## Lint performance
+
+The plugins run natively wherever they can. On `examples/todo`, one `buf lint` with both plugins takes:
+
+| Plugin form | Time |
+| --- | --- |
+| Native binaries (default) | 0.34 s |
+| WebAssembly | 6.0 s |
+
+The editor reruns the lint as you type, so this is the difference between findings that keep up and findings that lag. Most of the WebAssembly time is the AIP plugin: a 45 MB module. Buf caches the compiled module, so the cost is in running it, and a smaller build does not help. `buf.yaml` refers to the native binaries by path, so an editor started outside a shell finds them too. The WebAssembly plugins on the BSR stay available for setups that cannot download binaries, such as Windows.
+
 ## Developing
 
 ```sh
-make check        # format, generate, Go tests, Wasm builds, buf lint, examples
-make aip-plugin   # build buf-plugin-aip at the pinned commit as Wasm
+make check          # format, generate, Go tests, plugin builds, buf lint, examples
+make plugins        # both lint plugins, natively for this machine, into dist/
+make wasm-plugins   # both lint plugins as WebAssembly, for the BSR
 make breaking     # options module against main
 ```
 
@@ -151,7 +163,7 @@ Pushing a `v*` tag runs `.github/workflows/ci.yaml`, which publishes one version
 
 - `buf push` of the options module with the tag as label
 - `buf plugin push` of `buf.build/cookytech-in/http-proto-lint-plugin` and `buf.build/cookytech-in/buf-plugin-aip`
-- a GitHub release carrying both `.wasm` files
+- a GitHub release carrying both plugins as native binaries for macOS and Linux (arm64 and amd64), which `make tools` downloads, and as `.wasm` files
 
 The Go module version is the same tag. The job reads a `BUF_KEY` repository secret: a Buf token for the `cookytech-in` organization with module and plugin create and push scopes.
 

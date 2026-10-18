@@ -6,7 +6,7 @@ DIST              := dist
 # their tag, so each plugin version links to its own rule docs.
 DOCS_REF          ?= main
 
-.PHONY: all check generate format lint breaking test plugin aip-plugin plugins examples example-todo example-bad-todo vendored-options clean
+.PHONY: all check generate format lint breaking test plugin aip-plugin plugins wasm-plugins release-binaries examples example-todo example-bad-todo vendored-options clean
 
 all: check
 
@@ -35,27 +35,56 @@ test:
 	go test -race -cover ./...
 	for mod in lint openapi mcp; do (cd $$mod && go vet ./... && go test -race -cover ./...) || exit 1; done
 
-## plugin: build the house plugin as WebAssembly
-plugin: $(DIST)/buf-plugin-raveesh-me-api.wasm
+# Lint plugins run natively: about 17 times faster per `buf lint` than the
+# same plugins as WebAssembly, which matters in the editor. buf.yaml refers
+# to them by path, so editors started outside a shell still find them.
+HOUSE_CMD     := ./cmd/buf-plugin-raveesh-me-api
+HOUSE_LDFLAGS := -X github.com/raveesh-me/http-proto-lint/lint/rules.DocsRef=$(DOCS_REF)
+LINT_SRC      := $(shell find lint gen -name '*.go') lint/go.mod lint/go.sum
+AIP_SRC       := $(DIST)/aip-src/.pinned-$(AIP_PLUGIN_COMMIT)
+# Platforms the release ships native plugins for. Windows users can use the
+# WebAssembly plugins on the BSR.
+RELEASE_PLATFORMS := darwin/arm64 darwin/amd64 linux/arm64 linux/amd64
 
-$(DIST)/buf-plugin-raveesh-me-api.wasm: $(shell find lint gen -name '*.go') lint/go.mod lint/go.sum
+## plugin: build the house plugin for this machine
+plugin: $(DIST)/buf-plugin-raveesh-me-api
+
+$(DIST)/buf-plugin-raveesh-me-api: $(LINT_SRC)
 	mkdir -p $(DIST)
-	cd lint && GOOS=wasip1 GOARCH=wasm go build -trimpath \
-		-ldflags "-X github.com/raveesh-me/http-proto-lint/lint/rules.DocsRef=$(DOCS_REF)" \
-		-o ../$@ ./cmd/buf-plugin-raveesh-me-api
+	cd lint && go build -trimpath -ldflags "$(HOUSE_LDFLAGS)" -o ../$@ $(HOUSE_CMD)
 
-## aip-plugin: build buf-plugin-aip at the pinned commit as WebAssembly
-aip-plugin: $(DIST)/buf-plugin-aip.wasm
+## aip-plugin: build buf-plugin-aip at the pinned commit for this machine
+aip-plugin: $(DIST)/buf-plugin-aip
 
-$(DIST)/buf-plugin-aip.wasm:
+$(DIST)/buf-plugin-aip: $(AIP_SRC)
+	cd $(DIST)/aip-src && go build -trimpath -o ../buf-plugin-aip .
+
+$(AIP_SRC):
 	rm -rf $(DIST)/aip-src
 	git clone --quiet $(AIP_PLUGIN_REPO) $(DIST)/aip-src
 	git -C $(DIST)/aip-src checkout --quiet $(AIP_PLUGIN_COMMIT)
-	cd $(DIST)/aip-src && GOOS=wasip1 GOARCH=wasm go build -trimpath -o ../buf-plugin-aip.wasm .
-	rm -rf $(DIST)/aip-src
+	touch $@
 
-## plugins: both release assets
+## plugins: both plugins for this machine, as buf.yaml in this repository uses them
 plugins: plugin aip-plugin
+
+## wasm-plugins: both plugins as WebAssembly, for the BSR
+wasm-plugins: $(LINT_SRC) $(AIP_SRC)
+	mkdir -p $(DIST)/wasm
+	cd lint && GOOS=wasip1 GOARCH=wasm go build -trimpath -ldflags "$(HOUSE_LDFLAGS)" \
+		-o ../$(DIST)/wasm/buf-plugin-raveesh-me-api.wasm $(HOUSE_CMD)
+	cd $(DIST)/aip-src && GOOS=wasip1 GOARCH=wasm go build -trimpath -o ../wasm/buf-plugin-aip.wasm .
+
+## release-binaries: both plugins natively for every release platform
+release-binaries: $(LINT_SRC) $(AIP_SRC)
+	mkdir -p $(DIST)/release
+	for platform in $(RELEASE_PLATFORMS); do \
+		os=$${platform%/*}; arch=$${platform#*/}; \
+		(cd lint && GOOS=$$os GOARCH=$$arch go build -trimpath -ldflags "$(HOUSE_LDFLAGS)" \
+			-o ../$(DIST)/release/buf-plugin-raveesh-me-api_$${os}_$${arch} $(HOUSE_CMD)) || exit 1; \
+		(cd $(DIST)/aip-src && GOOS=$$os GOARCH=$$arch go build -trimpath \
+			-o ../release/buf-plugin-aip_$${os}_$${arch} .) || exit 1; \
+	done
 
 ## examples: run both example services as consumer repositories
 examples: vendored-options example-todo example-bad-todo

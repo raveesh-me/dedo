@@ -1,13 +1,28 @@
 # Include from a service Makefile: `include Makefile.api`.
-# Deps and check plugins are pinned in buf.lock; commit it.
-.PHONY: api-update api-check api-generate
+# Deps are pinned in buf.lock; commit it. Add .tools/ to .gitignore.
+HTTP_PROTO_LINT_VERSION ?= v0.1.0
+HTTP_PROTO_LINT_RELEASE := https://github.com/raveesh-me/http-proto-lint/releases/download/$(HTTP_PROTO_LINT_VERSION)
+TOOLS_PLATFORM          := $(shell go env GOOS)_$(shell go env GOARCH)
+TOOLS_STAMP             := .tools/$(HTTP_PROTO_LINT_VERSION)
 
-## api-update: move deps and check plugins to their latest versions
+.PHONY: tools api-update api-check api-generate
+
+## tools: download the native lint plugins for this machine, once per version
+tools: $(TOOLS_STAMP)
+
+$(TOOLS_STAMP):
+	rm -rf .tools && mkdir -p .tools
+	for plugin in buf-plugin-raveesh-me-api buf-plugin-aip; do \
+		curl -fsSL -o .tools/$$plugin $(HTTP_PROTO_LINT_RELEASE)/$${plugin}_$(TOOLS_PLATFORM) && \
+		chmod +x .tools/$$plugin || exit 1; \
+	done
+	touch $@
+
+## api-update: move deps to their latest versions
 api-update:
 	buf dep update
-	buf plugin update
 
-api-check:
+api-check: tools
 	buf format --diff --exit-code
 	buf lint
 	buf breaking --against '.git#branch=main'

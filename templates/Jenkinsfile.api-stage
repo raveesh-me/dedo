@@ -2,6 +2,7 @@ stage('API contract') {
   steps {
     // buf breaking needs main; Jenkins clones are often shallow.
     sh 'git fetch --no-tags origin +refs/heads/main:refs/heads/main'
+    sh 'make tools'
     sh 'buf format --diff --exit-code'
     sh 'buf lint --error-format=junit > buf-lint.xml || (cat buf-lint.xml; exit 1)'
     sh "buf breaking --against '.git#branch=main'"
