@@ -25,8 +25,11 @@ jobs:
         run: buf breaking proto --against "https://github.com/${{ github.repository }}.git#branch=main,subdir=proto"
   release:
     # Publishes one version everywhere: the options module and both check
-    # plugins (as WebAssembly) on the BSR under the tag's label, and native
-    # plugin binaries for each platform on the GitHub release.
+    # plugins (as WebAssembly) on the BSR under the tag's label and main, the
+    # default label that unpinned dependencies resolve to; and native plugin
+    # binaries for each platform on the GitHub release. Push the release tag
+    # on its own: GitHub creates no events when more than three tags are
+    # pushed at once.
     if: startsWith(github.ref, 'refs/tags/v')
     needs: check
     runs-on: ubuntu-latest
@@ -48,19 +51,19 @@ jobs:
       - name: Push the options module
         run: >-
           buf push proto --exclude-unnamed
-          --label "$GITHUB_REF_NAME" --source-control-url "$SOURCE_URL"
+          --label "$GITHUB_REF_NAME" --label main --source-control-url "$SOURCE_URL"
           --create --create-visibility public
       - name: Push the house plugin
         run: >-
           buf plugin push buf.build/cookytech-in/http-proto-lint-plugin
           --binary dist/wasm/buf-plugin-raveesh-me-api.wasm
-          --label "$GITHUB_REF_NAME" --source-control-url "$SOURCE_URL"
+          --label "$GITHUB_REF_NAME" --label main --source-control-url "$SOURCE_URL"
           --create --create-type check --create-visibility public
       - name: Push the pinned AIP plugin
         run: >-
           buf plugin push buf.build/cookytech-in/buf-plugin-aip
           --binary dist/wasm/buf-plugin-aip.wasm
-          --label "$GITHUB_REF_NAME" --source-control-url "$SOURCE_URL"
+          --label "$GITHUB_REF_NAME" --label main --source-control-url "$SOURCE_URL"
           --create --create-type check --create-visibility public
       - name: Attach the native and Wasm plugins to the GitHub release
         env:

@@ -54,8 +54,10 @@ my-service/
    go get -tool google.golang.org/protobuf/cmd/protoc-gen-go
    go get -tool connectrpc.com/connect/cmd/protoc-gen-connect-go
    go get -tool github.com/redpanda-data/protoc-gen-go-mcp/cmd/protoc-gen-go-mcp
-   go get -tool github.com/raveesh-me/http-proto-lint/openapi/cmd/protoc-gen-rest-openapi
+   go get -tool github.com/raveesh-me/http-proto-lint/openapi/cmd/protoc-gen-rest-openapi@v0.1.1
    ```
+
+   Pin the http-proto-lint modules to the latest release explicitly. Go's module proxy can lag behind a new tag.
 
    Then point the `buf.gen.yaml` plugins at them with `local: ["go", "tool", "<generator>"]`, as `examples/todo/buf.gen.yaml` does.
 3. Run `make tools` to download the native lint plugins for your machine into `.tools/`, and add `.tools/` to `.gitignore`. Run `make api-update` (`buf dep update`) and commit `buf.lock`.

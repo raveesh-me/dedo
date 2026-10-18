@@ -159,9 +159,11 @@ Lint rule tests live in `lint/rules/testdata/<rule>/{pass,fail}`. A pass fixture
 
 ## Releasing
 
-Pushing a `v*` tag runs `.github/workflows/ci.yaml`, which publishes one version everywhere:
+To release, tag the merge commit on `main` with `lint/vX.Y.Z`, `openapi/vX.Y.Z` and `mcp/vX.Y.Z` (so `go get` works for the nested modules) and push those first. Then push `vX.Y.Z` **on its own**: GitHub starts no workflow when more than three tags arrive in one push.
 
-- `buf push` of the options module with the tag as label
+The `v*` tag runs `.github/workflows/ci.yaml`, which publishes one version everywhere:
+
+- `buf push` of the options module with the tag and `main` as labels; `main` is the default label that unpinned dependencies resolve to
 - `buf plugin push` of `buf.build/cookytech-in/http-proto-lint-plugin` and `buf.build/cookytech-in/buf-plugin-aip`
 - a GitHub release carrying both plugins as native binaries for macOS and Linux (arm64 and amd64), which `make tools` downloads, and as `.wasm` files
 
