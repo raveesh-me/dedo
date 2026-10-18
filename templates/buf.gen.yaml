@@ -1,5 +1,7 @@
 # Copy into a service repository. Replace the YOUR_* placeholders.
-# Pin the generators run through `go tool` in go.mod:
+# Pin the generators in go.mod (see install.md):
+#   go get -tool google.golang.org/protobuf/cmd/protoc-gen-go
+#   go get -tool connectrpc.com/connect/cmd/protoc-gen-connect-go
 #   go get -tool github.com/redpanda-data/protoc-gen-go-mcp/cmd/protoc-gen-go-mcp
 #   go get -tool github.com/raveesh-me/http-proto-lint/openapi/cmd/protoc-gen-rest-openapi
 version: v2
@@ -20,11 +22,12 @@ managed:
     - module: buf.build/googleapis/googleapis
     - module: buf.build/bufbuild/protovalidate
 plugins:
-  # Pin both remote plugins to explicit versions when you adopt the template.
-  - remote: buf.build/protocolbuffers/go
+  # Every generator runs through `go tool`, pinned in go.mod, so every
+  # machine and CI generate identical code without BSR access.
+  - local: ["go", "tool", "protoc-gen-go"]
     out: gen/go
     opt: paths=source_relative
-  - remote: buf.build/connectrpc/go
+  - local: ["go", "tool", "protoc-gen-connect-go"]
     out: gen/go
     opt: paths=source_relative
   # MCP tools for every unary RPC. Register them with

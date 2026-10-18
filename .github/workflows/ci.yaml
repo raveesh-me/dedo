@@ -47,7 +47,7 @@ jobs:
         run: make wasm-plugins release-binaries DOCS_REF="$GITHUB_REF_NAME"
       - name: Push the options module
         run: >-
-          buf push proto
+          buf push proto --exclude-unnamed
           --label "$GITHUB_REF_NAME" --source-control-url "$SOURCE_URL"
           --create --create-visibility public
       - name: Push the house plugin
