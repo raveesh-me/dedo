@@ -1,0 +1,278 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Library API",
+    "version": "v1"
+  },
+  "servers": [
+    {
+      "url": "https://api.example.com"
+    }
+  ],
+  "tags": [
+    {
+      "name": "LibraryService",
+      "description": "LibraryService manages books on shelves.",
+      "x-audience": "AUDIENCE_EXTERNAL_PUBLIC",
+      "x-owner-team": "library-team"
+    }
+  ],
+  "paths": {
+    "/v1/shelves/{shelf}/books/{book}": {
+      "get": {
+        "operationId": "LibraryService_GetBook",
+        "summary": "Get a book",
+        "description": "Returns one book by its resource name, such as shelves/1/books/2.\n\nRequires one of the token scopes: `library.book.read`.",
+        "tags": [
+          "LibraryService"
+        ],
+        "parameters": [
+          {
+            "name": "shelf",
+            "in": "path",
+            "description": "Part of `name`, which has the form `shelves/{shelf}/books/{book}`.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "book",
+            "in": "path",
+            "description": "Part of `name`, which has the form `shelves/{shelf}/books/{book}`.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "Cache-Control": {
+                "description": "How long the response may be cached.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Flow-ID": {
+                "description": "Correlates the call across services. Send one to set it.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Book"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden. The token lacks every required scope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Status"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found. Reasons: `BOOK_NOT_FOUND`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Status"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": [
+              "library.book.read"
+            ]
+          }
+        ],
+        "x-rpc-procedure": "/raveesh_me.library.v1.LibraryService/GetBook",
+        "x-error-reasons": [
+          "BOOK_NOT_FOUND"
+        ]
+      },
+      "delete": {
+        "operationId": "LibraryService_DeleteBook",
+        "summary": "Delete a book",
+        "description": "Removes a book from its shelf for good.\n\nRequires one of the token scopes: `library.book.write`.",
+        "tags": [
+          "LibraryService"
+        ],
+        "parameters": [
+          {
+            "name": "shelf",
+            "in": "path",
+            "description": "Part of `name`, which has the form `shelves/{shelf}/books/{book}`.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "book",
+            "in": "path",
+            "description": "Part of `name`, which has the form `shelves/{shelf}/books/{book}`.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "X-Flow-ID": {
+                "description": "Correlates the call across services. Send one to set it.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteBookResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden. The token lacks every required scope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Status"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found. Reasons: `BOOK_NOT_FOUND`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Status"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": [
+              "library.book.write"
+            ]
+          }
+        ],
+        "x-destructive": true,
+        "x-rpc-procedure": "/raveesh_me.library.v1.LibraryService/DeleteBook",
+        "x-error-reasons": [
+          "BOOK_NOT_FOUND"
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Book": {
+        "type": "object",
+        "description": "A book on a shelf.",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "The resource name, such as shelves/1/books/2."
+          },
+          "price": {
+            "$ref": "#/components/schemas/Money",
+            "description": "The retail price."
+          },
+          "reserverEmail": {
+            "type": "string",
+            "description": "The email of the reader who reserved the book.",
+            "x-sensitive": true
+          },
+          "title": {
+            "type": "string",
+            "description": "The title shown to readers."
+          }
+        }
+      },
+      "DeleteBookResponse": {
+        "type": "object",
+        "description": "Empty on success."
+      },
+      "Money": {
+        "type": "object",
+        "description": "Represents an amount of money with its currency type.",
+        "properties": {
+          "currencyCode": {
+            "type": "string",
+            "description": "The three-letter currency code defined in ISO 4217."
+          },
+          "nanos": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Number of nano (10^-9) units of the amount.\nThe value must be between -999,999,999 and +999,999,999 inclusive.\nIf `units` is positive, `nanos` must be positive or zero.\nIf `units` is zero, `nanos` can be positive, zero, or negative.\nIf `units` is negative, `nanos` must be negative or zero.\nFor example $-1.75 is represented as `units`=-1 and `nanos`=-750,000,000."
+          },
+          "units": {
+            "type": "string",
+            "format": "int64",
+            "description": "The whole units of the amount.\nFor example if `currencyCode` is `\"USD\"`, then 1 unit is one US dollar."
+          }
+        }
+      },
+      "Status": {
+        "type": "object",
+        "description": "An error. details holds a google.rpc.ErrorInfo whose reason is one of the operation's declared reasons.",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "format": "int32",
+            "description": "The google.rpc.Code."
+          },
+          "details": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "@type": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": {}
+            }
+          },
+          "message": {
+            "type": "string",
+            "description": "A developer-facing explanation."
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ]
+      }
+    },
+    "securitySchemes": {
+      "bearer": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "An access token carrying the operation's scopes."
+      }
+    }
+  }
+}

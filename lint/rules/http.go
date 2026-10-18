@@ -19,7 +19,7 @@ var httpResponseBody = lintRule(
 
 var httpPathVersion = lintRule(
 	"RAVEESH_ME_HTTP_PATH_VERSION",
-	"Checks that every HTTP path starts with the package's major version, such as /v1/.",
+	"Checks that every HTTP path contains the package version, such as /v1/, after a fixed root shared by the whole service.",
 	checkutil.NewMethodRuleHandler(checkPathVersion, checkutil.WithoutImports()),
 )
 
@@ -37,24 +37,63 @@ func checkResponseBody(_ context.Context, w check.ResponseWriter, _ check.Reques
 	return nil
 }
 
+// checkPathVersion leaves the root before the version to the owning platform,
+// such as /commerce/pim. It only requires the root to be fixed and the same
+// for every RPC of the service, so one service never spreads over two roots.
 func checkPathVersion(_ context.Context, w check.ResponseWriter, _ check.Request, m protoreflect.MethodDescriptor) error {
 	rule := httpRule(m)
 	version := packageVersion(m.ParentFile().Package())
 	if rule == nil || version == "" {
 		return nil
 	}
-	prefix := "/" + version + "/"
+	want, wantFrom := serviceRoot(m.Parent().(protoreflect.ServiceDescriptor), version)
 	for _, path := range httpPaths(rule) {
-		if !strings.HasPrefix(path, prefix) {
+		root, ok := pathRoot(path, version)
+		switch {
+		case !ok:
 			w.AddAnnotation(check.WithDescriptor(m),
-				check.WithMessagef("RPC %q HTTP path %q must start with %q.", m.Name(), path, prefix))
+				check.WithMessagef("RPC %q HTTP path %q must contain the package version as a segment, such as \"/%s/\".", m.Name(), path, version))
+		case strings.Contains(root, "{"):
+			w.AddAnnotation(check.WithDescriptor(m),
+				check.WithMessagef("RPC %q HTTP path %q must not use variables before \"/%s/\".", m.Name(), path, version))
+		case root != want:
+			w.AddAnnotation(check.WithDescriptor(m),
+				check.WithMessagef("RPC %q HTTP path root %q differs from %q, used by %s.", m.Name(), root, want, wantFrom))
 		}
 	}
 	return nil
 }
 
+// serviceRoot returns the root of the first HTTP path in the service, and the
+// RPC that declares it. Every other path of the service must use the same one.
+func serviceRoot(svc protoreflect.ServiceDescriptor, version string) (string, protoreflect.Name) {
+	methods := svc.Methods()
+	for i := 0; i < methods.Len(); i++ {
+		rule := httpRule(methods.Get(i))
+		if rule == nil {
+			continue
+		}
+		for _, path := range httpPaths(rule) {
+			if root, ok := pathRoot(path, version); ok {
+				return root, methods.Get(i).Name()
+			}
+		}
+	}
+	return "", ""
+}
+
+// pathRoot returns the part of path before its first "/<version>/" segment.
+func pathRoot(path, version string) (string, bool) {
+	i := strings.Index(path+"/", "/"+version+"/")
+	if i < 0 {
+		return "", false
+	}
+	return path[:i], true
+}
+
 // packageVersion returns the version component of a package such as
-// raveesh_me.library.v1, or "" when the package is unversioned.
+// raveesh_me.library.v1, or "" when the package is unversioned. The
+// unversioned case is left to Buf's PACKAGE_VERSION_SUFFIX rule.
 func packageVersion(pkg protoreflect.FullName) string {
 	last := string(pkg.Name())
 	if versionPattern.MatchString(last) {

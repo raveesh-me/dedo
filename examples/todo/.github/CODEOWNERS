@@ -1,0 +1,9 @@
+# Everything under proto/ and the Buf configuration is published as the API,
+# its docs and its MCP tools, so a change needs an API reviewer as well as
+# the owning team. (GitHub reads this file only at a repository root; it is
+# here to show the setup for a service repository.)
+* @raveesh-me
+/proto/ @raveesh-me
+/buf.yaml @raveesh-me
+/buf.lock @raveesh-me
+/buf.gen.yaml @raveesh-me

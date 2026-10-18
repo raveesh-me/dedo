@@ -25,10 +25,14 @@ service TodoService {
   rpc GetTodo(GetTodoRequest) returns (GetTodoResponse) {
     option idempotency_level = NO_SIDE_EFFECTS;
     option (google.api.http) = {
-      get: "/v1/{name=todos/*}"
+      get: "/commerce/todo/v1/{name=todos/*}"
       response_body: "todo"
     };
     option (raveesh_me.http_proto_lint.v1.method) = {
+      tool: {
+        title: "Get a to-do"
+        description: "Returns one to-do by its resource name, such as todos/1. Use it when you already know which to-do you want."
+      }
       scopes: "todo.todo.read"
       cache: {
         visibility: VISIBILITY_PRIVATE
@@ -46,8 +50,12 @@ service TodoService {
   // Errors: INVALID_PAGE_TOKEN.
   rpc ListTodos(ListTodosRequest) returns (ListTodosResponse) {
     option idempotency_level = NO_SIDE_EFFECTS;
-    option (google.api.http) = {get: "/v1/todos"};
+    option (google.api.http) = {get: "/commerce/todo/v1/todos"};
     option (raveesh_me.http_proto_lint.v1.method) = {
+      tool: {
+        title: "List to-dos"
+        description: "Returns to-dos oldest first, one page at a time. Pass next_page_token back as page_token to read the next page."
+      }
       scopes: "todo.todo.read"
       errors: {
         reason: "INVALID_PAGE_TOKEN"
@@ -61,11 +69,15 @@ service TodoService {
   // Errors: TITLE_REQUIRED, TODO_ALREADY_EXISTS.
   rpc CreateTodo(CreateTodoRequest) returns (CreateTodoResponse) {
     option (google.api.http) = {
-      post: "/v1/todos"
+      post: "/commerce/todo/v1/todos"
       body: "todo"
       response_body: "todo"
     };
     option (raveesh_me.http_proto_lint.v1.method) = {
+      tool: {
+        title: "Create a to-do"
+        description: "Adds a to-do with a title, and optionally a budget and an assignee. Pass todo_id to choose its ID; otherwise the server picks one."
+      }
       scopes: "todo.todo.write"
       errors: {
         reason: "TITLE_REQUIRED"
@@ -83,11 +95,15 @@ service TodoService {
   // Errors: TODO_NOT_FOUND, TITLE_REQUIRED.
   rpc UpdateTodo(UpdateTodoRequest) returns (UpdateTodoResponse) {
     option (google.api.http) = {
-      patch: "/v1/{todo.name=todos/*}"
+      patch: "/commerce/todo/v1/{todo.name=todos/*}"
       body: "todo"
       response_body: "todo"
     };
     option (raveesh_me.http_proto_lint.v1.method) = {
+      tool: {
+        title: "Update a to-do"
+        description: "Changes the fields of an existing to-do named in update_mask, such as done or title. Leave update_mask empty to replace every mutable field."
+      }
       scopes: "todo.todo.write"
       errors: {
         reason: "TODO_NOT_FOUND"
@@ -104,8 +120,13 @@ service TodoService {
   //
   // Errors: TODO_NOT_FOUND.
   rpc DeleteTodo(DeleteTodoRequest) returns (DeleteTodoResponse) {
-    option (google.api.http) = {delete: "/v1/{name=todos/*}"};
+    option (google.api.http) = {delete: "/commerce/todo/v1/{name=todos/*}"};
     option (raveesh_me.http_proto_lint.v1.method) = {
+      tool: {
+        title: "Delete a to-do"
+        description: "Removes a to-do for good. It cannot be recovered."
+        destructive: true
+      }
       scopes: "todo.todo.write"
       errors: {
         reason: "TODO_NOT_FOUND"
@@ -122,10 +143,15 @@ service TodoService {
   rpc RemoveTodo(RemoveTodoRequest) returns (RemoveTodoResponse) {
     option deprecated = true;
     option (google.api.http) = {
-      post: "/v1/{name=todos/*}:remove"
+      post: "/commerce/todo/v1/{name=todos/*}:remove"
       body: "*"
     };
     option (raveesh_me.http_proto_lint.v1.method) = {
+      tool: {
+        title: "Remove a to-do (deprecated)"
+        description: "Deprecated: use DeleteTodo. Removes a to-do for good."
+        destructive: true
+      }
       scopes: "todo.todo.write"
       deprecation: {
         deprecation_time: {seconds: 1767225600}
@@ -142,6 +168,8 @@ service TodoService {
 
 // Todo is one item on the list.
 message Todo {
+  option (raveesh_me.http_proto_lint.v1.message) = {description: "One item on the to-do list."};
+
   option (google.api.resource) = {
     type: "todo.raveesh.me/Todo"
     pattern: "todos/{todo}"
@@ -168,6 +196,8 @@ message Todo {
 
 // GetTodoRequest is the request of GetTodo.
 message GetTodoRequest {
+  option (raveesh_me.http_proto_lint.v1.message) = {description: "Which to-do to get."};
+
   // The resource name of the to-do.
   string name = 1 [
     (google.api.field_behavior) = REQUIRED,
@@ -177,12 +207,16 @@ message GetTodoRequest {
 
 // GetTodoResponse is the response of GetTodo.
 message GetTodoResponse {
+  option (raveesh_me.http_proto_lint.v1.message) = {description: "The requested to-do."};
+
   // The to-do.
   Todo todo = 1;
 }
 
 // ListTodosRequest is the request of ListTodos.
 message ListTodosRequest {
+  option (raveesh_me.http_proto_lint.v1.message) = {description: "Which page of to-dos to list."};
+
   // The maximum number of to-dos to return. The server caps it at 100.
   int32 page_size = 1 [(google.api.field_behavior) = OPTIONAL];
   // The next_page_token of a previous call.
@@ -191,6 +225,8 @@ message ListTodosRequest {
 
 // ListTodosResponse is the response of ListTodos.
 message ListTodosResponse {
+  option (raveesh_me.http_proto_lint.v1.message) = {description: "One page of to-dos."};
+
   // The to-dos.
   repeated Todo todos = 1;
   // The token of the next page, or empty on the last page.
@@ -199,6 +235,8 @@ message ListTodosResponse {
 
 // CreateTodoRequest is the request of CreateTodo.
 message CreateTodoRequest {
+  option (raveesh_me.http_proto_lint.v1.message) = {description: "The to-do to create, and optionally its ID."};
+
   // The to-do to create.
   Todo todo = 1 [(google.api.field_behavior) = REQUIRED];
   // The ID to give the to-do, which becomes the last segment of its name.
@@ -208,12 +246,16 @@ message CreateTodoRequest {
 
 // CreateTodoResponse is the response of CreateTodo.
 message CreateTodoResponse {
+  option (raveesh_me.http_proto_lint.v1.message) = {description: "The created to-do."};
+
   // The created to-do.
   Todo todo = 1;
 }
 
 // UpdateTodoRequest is the request of UpdateTodo.
 message UpdateTodoRequest {
+  option (raveesh_me.http_proto_lint.v1.message) = {description: "The new field values of a to-do, and which fields to change."};
+
   // The to-do to update. Its name selects it.
   Todo todo = 1 [(google.api.field_behavior) = REQUIRED];
   // The fields to update.
@@ -222,12 +264,16 @@ message UpdateTodoRequest {
 
 // UpdateTodoResponse is the response of UpdateTodo.
 message UpdateTodoResponse {
+  option (raveesh_me.http_proto_lint.v1.message) = {description: "The updated to-do."};
+
   // The updated to-do.
   Todo todo = 1;
 }
 
 // DeleteTodoRequest is the request of DeleteTodo.
 message DeleteTodoRequest {
+  option (raveesh_me.http_proto_lint.v1.message) = {description: "Which to-do to delete."};
+
   // The resource name of the to-do.
   string name = 1 [
     (google.api.field_behavior) = REQUIRED,
@@ -236,10 +282,14 @@ message DeleteTodoRequest {
 }
 
 // DeleteTodoResponse is the response of DeleteTodo.
-message DeleteTodoResponse {}
+message DeleteTodoResponse {
+  option (raveesh_me.http_proto_lint.v1.message) = {description: "Empty on success."};
+}
 
 // RemoveTodoRequest is the request of RemoveTodo.
 message RemoveTodoRequest {
+  option (raveesh_me.http_proto_lint.v1.message) = {description: "Which to-do to remove."};
+
   // The resource name of the to-do.
   string name = 1 [
     (google.api.field_behavior) = REQUIRED,
@@ -248,4 +298,6 @@ message RemoveTodoRequest {
 }
 
 // RemoveTodoResponse is the response of RemoveTodo.
-message RemoveTodoResponse {}
+message RemoveTodoResponse {
+  option (raveesh_me.http_proto_lint.v1.message) = {description: "Empty on success."};
+}

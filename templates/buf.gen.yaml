@@ -1,4 +1,7 @@
-# Copy into a service repository. Replace YOUR_ORG/YOUR_REPO.
+# Copy into a service repository. Replace the YOUR_* placeholders.
+# Pin the generators run through `go tool` in go.mod:
+#   go get -tool github.com/redpanda-data/protoc-gen-go-mcp/cmd/protoc-gen-go-mcp
+#   go get -tool github.com/raveesh-me/http-proto-lint/openapi/cmd/protoc-gen-rest-openapi
 version: v2
 managed:
   enabled: true
@@ -24,5 +27,17 @@ plugins:
   - remote: buf.build/connectrpc/go
     out: gen/go
     opt: paths=source_relative
+  # MCP tools for every unary RPC. Register them with
+  # github.com/raveesh-me/http-proto-lint/mcp/mcpserver.Wrap.
+  - local: ["go", "tool", "protoc-gen-go-mcp"]
+    out: gen/go
+    opt: paths=source_relative
+  # REST reference: one OpenAPI 3.1 document from the google.api.http bindings.
+  - local: ["go", "tool", "protoc-gen-rest-openapi"]
+    out: docs
+    strategy: all
+    opt:
+      - title=YOUR_API_TITLE
+      - server=https://YOUR_HOST
 inputs:
   - directory: proto

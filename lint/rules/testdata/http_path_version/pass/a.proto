@@ -16,9 +16,19 @@ message GetBookResponse {
 service LibraryService {
   rpc GetBook(google.protobuf.Empty) returns (GetBookResponse) {
     option (google.api.http) = {
-      get: "/v1/books/1"
+      get: "/commerce/library/v1/books/1"
       response_body: "book"
-      additional_bindings: {get: "/v1/shelves/1/books/1"}
+      additional_bindings: {get: "/commerce/library/v1/shelves/1/books/1"}
     };
+  }
+  rpc DeleteBook(google.protobuf.Empty) returns (google.protobuf.Empty) {
+    option (google.api.http) = {delete: "/commerce/library/v1/books/1"};
+  }
+  rpc NoBinding(google.protobuf.Empty) returns (google.protobuf.Empty);
+}
+
+service RootlessService {
+  rpc GetBook(google.protobuf.Empty) returns (GetBookResponse) {
+    option (google.api.http) = {get: "/v1/books/1"};
   }
 }

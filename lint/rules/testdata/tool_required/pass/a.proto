@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package raveesh_me.library.v1;
+
+import "google/protobuf/empty.proto";
+import "raveesh_me/http_proto_lint/v1/options.proto";
+
+service LibraryService {
+  rpc GetBook(google.protobuf.Empty) returns (google.protobuf.Empty) {
+    option (raveesh_me.http_proto_lint.v1.method) = {
+      tool: {
+        title: "Get a book"
+        description: "Returns one book by its resource name."
+      }
+    };
+  }
+  rpc DeleteBook(google.protobuf.Empty) returns (google.protobuf.Empty) {
+    option (raveesh_me.http_proto_lint.v1.method) = {
+      tool: {
+        title: "Delete a book"
+        description: "Removes a book for good."
+        destructive: true
+      }
+    };
+  }
+  rpc WatchBooks(google.protobuf.Empty) returns (stream google.protobuf.Empty);
+}

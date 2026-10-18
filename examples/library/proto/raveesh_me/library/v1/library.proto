@@ -25,6 +25,10 @@ service LibraryService {
       response_body: "book"
     };
     option (raveesh_me.http_proto_lint.v1.method) = {
+      tool: {
+        title: "Get a book"
+        description: "Returns one book by its resource name, such as shelves/1/books/2."
+      }
       scopes: "library.book.read"
       cache: {
         visibility: VISIBILITY_PRIVATE
@@ -43,6 +47,11 @@ service LibraryService {
   rpc DeleteBook(DeleteBookRequest) returns (DeleteBookResponse) {
     option (google.api.http) = {delete: "/v1/{name=shelves/*/books/*}"};
     option (raveesh_me.http_proto_lint.v1.method) = {
+      tool: {
+        title: "Delete a book"
+        description: "Removes a book from its shelf for good."
+        destructive: true
+      }
       scopes: "library.book.write"
       errors: {
         reason: "BOOK_NOT_FOUND"
@@ -59,6 +68,11 @@ service LibraryService {
   rpc RemoveBook(RemoveBookRequest) returns (RemoveBookResponse) {
     option deprecated = true;
     option (raveesh_me.http_proto_lint.v1.method) = {
+      tool: {
+        title: "Remove a book (deprecated)"
+        description: "Deprecated: use DeleteBook. Removes a book from its shelf for good."
+        destructive: true
+      }
       scopes: "library.book.write"
       deprecation: {
         deprecation_time: {seconds: 1767225600}
@@ -75,6 +89,8 @@ service LibraryService {
 
 // Book is one book on a shelf.
 message Book {
+  option (raveesh_me.http_proto_lint.v1.message) = {description: "A book on a shelf."};
+
   option (google.api.resource) = {
     type: "library.raveesh.me/Book"
     pattern: "shelves/{shelf}/books/{book}"
@@ -94,6 +110,8 @@ message Book {
 
 // GetBookRequest is the request of GetBook.
 message GetBookRequest {
+  option (raveesh_me.http_proto_lint.v1.message) = {description: "Which book to get."};
+
   // The resource name of the book.
   string name = 1 [
     (google.api.field_behavior) = REQUIRED,
@@ -103,12 +121,16 @@ message GetBookRequest {
 
 // GetBookResponse is the response of GetBook.
 message GetBookResponse {
+  option (raveesh_me.http_proto_lint.v1.message) = {description: "The requested book."};
+
   // The book.
   Book book = 1;
 }
 
 // DeleteBookRequest is the request of DeleteBook.
 message DeleteBookRequest {
+  option (raveesh_me.http_proto_lint.v1.message) = {description: "Which book to delete."};
+
   // The resource name of the book.
   string name = 1 [
     (google.api.field_behavior) = REQUIRED,
@@ -117,10 +139,14 @@ message DeleteBookRequest {
 }
 
 // DeleteBookResponse is the response of DeleteBook.
-message DeleteBookResponse {}
+message DeleteBookResponse {
+  option (raveesh_me.http_proto_lint.v1.message) = {description: "Empty on success."};
+}
 
 // RemoveBookRequest is the request of RemoveBook.
 message RemoveBookRequest {
+  option (raveesh_me.http_proto_lint.v1.message) = {description: "Which book to remove."};
+
   // The resource name of the book.
   string name = 1 [
     (google.api.field_behavior) = REQUIRED,
@@ -129,4 +155,6 @@ message RemoveBookRequest {
 }
 
 // RemoveBookResponse is the response of RemoveBook.
-message RemoveBookResponse {}
+message RemoveBookResponse {
+  option (raveesh_me.http_proto_lint.v1.message) = {description: "Empty on success."};
+}

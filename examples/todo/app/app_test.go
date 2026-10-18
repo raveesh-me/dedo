@@ -198,12 +198,12 @@ func TestDeprecationHeaders(t *testing.T) {
 
 func TestRESTUnwrapsResponseBody(t *testing.T) {
 	e := newEnv(t)
-	res, body := e.rest(t, http.MethodPost, "/v1/todos?todoId=r", app.WriterToken,
+	res, body := e.rest(t, http.MethodPost, "/commerce/todo/v1/todos?todoId=r", app.WriterToken,
 		`{"title":"via rest","budgetAmount":{"currencyCode":"EUR","units":"3"}}`)
 	if res.StatusCode != http.StatusOK {
 		t.Fatalf("create: %d %s", res.StatusCode, body)
 	}
-	res, body = e.rest(t, http.MethodGet, "/v1/todos/r", app.ReaderToken, "")
+	res, body = e.rest(t, http.MethodGet, "/commerce/todo/v1/todos/r", app.ReaderToken, "")
 	if res.StatusCode != http.StatusOK {
 		t.Fatalf("get: %d %s", res.StatusCode, body)
 	}
@@ -223,11 +223,11 @@ func TestRESTUnwrapsResponseBody(t *testing.T) {
 
 func TestRESTErrors(t *testing.T) {
 	e := newEnv(t)
-	res, body := e.rest(t, http.MethodGet, "/v1/todos/missing", app.ReaderToken, "")
+	res, body := e.rest(t, http.MethodGet, "/commerce/todo/v1/todos/missing", app.ReaderToken, "")
 	if res.StatusCode != http.StatusNotFound || !strings.Contains(body, "TODO_NOT_FOUND") {
 		t.Errorf("missing: %d %s", res.StatusCode, body)
 	}
-	res, _ = e.rest(t, http.MethodDelete, "/v1/todos/missing", app.ReaderToken, "")
+	res, _ = e.rest(t, http.MethodDelete, "/commerce/todo/v1/todos/missing", app.ReaderToken, "")
 	if res.StatusCode != http.StatusForbidden {
 		t.Errorf("reader delete: %d, want 403", res.StatusCode)
 	}
@@ -235,7 +235,7 @@ func TestRESTErrors(t *testing.T) {
 
 func TestFlowIDAndErrorAudit(t *testing.T) {
 	e := newEnv(t)
-	res, _ := e.rest(t, http.MethodGet, "/v1/todos/missing", app.ReaderToken, "")
+	res, _ := e.rest(t, http.MethodGet, "/commerce/todo/v1/todos/missing", app.ReaderToken, "")
 	if res.Header.Get(flowid.Header) == "" {
 		t.Error("no flow ID on response")
 	}
@@ -244,7 +244,7 @@ func TestFlowIDAndErrorAudit(t *testing.T) {
 		t.Errorf("declared reason logged as undeclared: %s", e.log.String())
 	}
 	// Scope denials in enforce mode are not audit-logged either.
-	e.rest(t, http.MethodDelete, "/v1/todos/missing", app.ReaderToken, "")
+	e.rest(t, http.MethodDelete, "/commerce/todo/v1/todos/missing", app.ReaderToken, "")
 	if strings.Contains(e.log.String(), "audit mode") {
 		t.Errorf("unexpected audit log: %s", e.log.String())
 	}
