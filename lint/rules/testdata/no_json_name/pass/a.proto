@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+package raveesh_me.library.v1;
+
+import "google/type/money.proto";
+
+message Book {
+  string display_name = 1;
+  string isbn_13 = 2;
+}

@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+package raveesh_me.library.v1;
+
+import "google/protobuf/empty.proto";
+import "raveesh_me/http_proto_lint/v1/options.proto";
+
+service LibraryService {
+  rpc FlagOnly(google.protobuf.Empty) returns (google.protobuf.Empty) { // want
+    option deprecated = true;
+  }
+  rpc ScheduleOnly(google.protobuf.Empty) returns (google.protobuf.Empty) { // want
+    option (raveesh_me.http_proto_lint.v1.method) = {
+      deprecation: {deprecation_time: {seconds: 1767225600}, sunset_time: {seconds: 1798761600}}
+    };
+  }
+  rpc SunsetFirst(google.protobuf.Empty) returns (google.protobuf.Empty) { // want
+    option deprecated = true;
+    option (raveesh_me.http_proto_lint.v1.method) = {
+      deprecation: {deprecation_time: {seconds: 1798761600}, sunset_time: {seconds: 1767225600}}
+    };
+  }
+  rpc NoSunset(google.protobuf.Empty) returns (google.protobuf.Empty) { // want
+    option deprecated = true;
+    option (raveesh_me.http_proto_lint.v1.method) = {
+      deprecation: {deprecation_time: {seconds: 1767225600}}
+    };
+  }
+  rpc MissingSuccessor(google.protobuf.Empty) returns (google.protobuf.Empty) { // want
+    option deprecated = true;
+    option (raveesh_me.http_proto_lint.v1.method) = {
+      deprecation: {
+        deprecation_time: {seconds: 1767225600}
+        sunset_time: {seconds: 1798761600}
+        successor: "raveesh_me.library.v1.LibraryService.Nope"
+      }
+    };
+  }
+}

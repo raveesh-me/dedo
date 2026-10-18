@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package raveesh_me.library.v1;
+
+import "google/protobuf/empty.proto";
+import "raveesh_me/http_proto_lint/v1/options.proto";
+
+service LibraryService {
+  rpc GetBook(google.protobuf.Empty) returns (google.protobuf.Empty); // want
+  rpc ListBooks(google.protobuf.Empty) returns (google.protobuf.Empty) { // want
+    option idempotency_level = IDEMPOTENT;
+  }
+}

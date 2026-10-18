@@ -1,0 +1,100 @@
+syntax = "proto3";
+
+package raveesh_me.http_proto_lint.v1;
+
+import "google/protobuf/descriptor.proto";
+import "google/protobuf/duration.proto";
+import "google/protobuf/timestamp.proto";
+import "google/rpc/code.proto";
+
+// Audience is who may call an API. Mirrors Zalando rule 219.
+enum Audience {
+  // The audience is unset. Lint rejects it.
+  AUDIENCE_UNSPECIFIED = 0;
+  // Callers inside the owning service only.
+  AUDIENCE_COMPONENT_INTERNAL = 1;
+  // Callers inside the owning business unit.
+  AUDIENCE_BUSINESS_UNIT_INTERNAL = 2;
+  // Any caller inside the company.
+  AUDIENCE_COMPANY_INTERNAL = 3;
+  // Named external partners.
+  AUDIENCE_EXTERNAL_PARTNER = 4;
+  // Anyone on the internet.
+  AUDIENCE_EXTERNAL_PUBLIC = 5;
+}
+
+// ServiceRules is the ownership and audience of a service.
+message ServiceRules {
+  // Who may call the service.
+  Audience audience = 1;
+  // The team that owns the service, as named in the team registry.
+  string owner_team = 2;
+}
+
+// CachePolicy is the HTTP cache behaviour of a read-only method.
+message CachePolicy {
+  // Visibility is who may store a cached response.
+  enum Visibility {
+    // Unset. Lint rejects it when a cache policy is present.
+    VISIBILITY_UNSPECIFIED = 0;
+    // Only the caller's own cache may store the response.
+    VISIBILITY_PRIVATE = 1;
+    // Shared caches may store the response.
+    VISIBILITY_PUBLIC = 2;
+  }
+  // Who may store the response.
+  Visibility visibility = 1;
+  // How long a stored response stays fresh.
+  google.protobuf.Duration max_age = 2;
+}
+
+// Deprecation is the retirement schedule of a method.
+message Deprecation {
+  // When the method became deprecated.
+  google.protobuf.Timestamp deprecation_time = 1;
+  // When the method stops working.
+  google.protobuf.Timestamp sunset_time = 2;
+  // The fully qualified name of the replacement method.
+  string successor = 3;
+}
+
+// ErrorReason is one error a method may return.
+message ErrorReason {
+  // The ErrorInfo reason, in UPPER_SNAKE_CASE.
+  string reason = 1;
+  // The status code returned with this reason.
+  google.rpc.Code code = 2;
+}
+
+// MethodRules is the operational contract of one RPC.
+message MethodRules {
+  // Token scopes that grant access. A caller needs at least one.
+  repeated string scopes = 1;
+  // HTTP caching. Only valid on NO_SIDE_EFFECTS methods.
+  CachePolicy cache = 2;
+  // Retirement schedule. Present only on deprecated methods.
+  Deprecation deprecation = 3;
+  // Every error reason the method returns.
+  repeated ErrorReason errors = 4;
+}
+
+// FieldRules classifies the data in a field.
+message FieldRules {
+  // The field holds personal or secret data.
+  bool sensitive = 1;
+}
+
+extend google.protobuf.ServiceOptions {
+  // The ownership and audience of the service.
+  ServiceRules service = 50100;
+}
+
+extend google.protobuf.MethodOptions {
+  // The operational contract of the RPC.
+  MethodRules method = 50101;
+}
+
+extend google.protobuf.FieldOptions {
+  // The data classification of the field.
+  FieldRules field = 50103;
+}

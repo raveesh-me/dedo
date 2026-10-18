@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package raveesh_me.library.v1;
+
+import "google/protobuf/empty.proto";
+import "raveesh_me/http_proto_lint/v1/options.proto";
+
+service LibraryService {
+  option (raveesh_me.http_proto_lint.v1.service) = {
+    audience: AUDIENCE_EXTERNAL_PUBLIC
+    owner_team: "library-team"
+  };
+}

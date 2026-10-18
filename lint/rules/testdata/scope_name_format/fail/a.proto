@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package raveesh_me.library.v1;
+
+import "google/protobuf/empty.proto";
+import "raveesh_me/http_proto_lint/v1/options.proto";
+
+service LibraryService {
+  rpc BadVerb(google.protobuf.Empty) returns (google.protobuf.Empty) { // want
+    option (raveesh_me.http_proto_lint.v1.method) = {scopes: "library.book.delete"};
+  }
+  rpc BadCase(google.protobuf.Empty) returns (google.protobuf.Empty) { // want
+    option (raveesh_me.http_proto_lint.v1.method) = {scopes: "Library.book.read"};
+  }
+  rpc TooShort(google.protobuf.Empty) returns (google.protobuf.Empty) { // want
+    option (raveesh_me.http_proto_lint.v1.method) = {scopes: "library.read"};
+  }
+}

@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package raveesh_me.library.v1;
+
+import "google/type/money.proto";
+
+message Book {
+  double price = 1; // want
+  int64 total_amount = 2; // want
+  Book amount = 3; // want
+}

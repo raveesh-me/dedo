@@ -1,0 +1,132 @@
+syntax = "proto3";
+
+package raveesh_me.library.v1;
+
+import "google/api/annotations.proto";
+import "google/api/field_behavior.proto";
+import "google/api/resource.proto";
+import "google/type/money.proto";
+import "raveesh_me/http_proto_lint/v1/options.proto";
+
+// LibraryService manages books on shelves.
+service LibraryService {
+  option (raveesh_me.http_proto_lint.v1.service) = {
+    audience: AUDIENCE_EXTERNAL_PUBLIC
+    owner_team: "library-team"
+  };
+
+  // GetBook returns one book.
+  //
+  // Errors: BOOK_NOT_FOUND.
+  rpc GetBook(GetBookRequest) returns (GetBookResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+    option (google.api.http) = {
+      get: "/v1/{name=shelves/*/books/*}"
+      response_body: "book"
+    };
+    option (raveesh_me.http_proto_lint.v1.method) = {
+      scopes: "library.book.read"
+      cache: {
+        visibility: VISIBILITY_PRIVATE
+        max_age: {seconds: 30}
+      }
+      errors: {
+        reason: "BOOK_NOT_FOUND"
+        code: NOT_FOUND
+      }
+    };
+  }
+
+  // DeleteBook removes one book.
+  //
+  // Errors: BOOK_NOT_FOUND.
+  rpc DeleteBook(DeleteBookRequest) returns (DeleteBookResponse) {
+    option (google.api.http) = {delete: "/v1/{name=shelves/*/books/*}"};
+    option (raveesh_me.http_proto_lint.v1.method) = {
+      scopes: "library.book.write"
+      errors: {
+        reason: "BOOK_NOT_FOUND"
+        code: NOT_FOUND
+      }
+    };
+  }
+
+  // Deprecated: Use DeleteBook.
+  //
+  // RemoveBook removes one book.
+  //
+  // Errors: BOOK_NOT_FOUND.
+  rpc RemoveBook(RemoveBookRequest) returns (RemoveBookResponse) {
+    option deprecated = true;
+    option (raveesh_me.http_proto_lint.v1.method) = {
+      scopes: "library.book.write"
+      deprecation: {
+        deprecation_time: {seconds: 1767225600}
+        sunset_time: {seconds: 1798761600}
+        successor: "raveesh_me.library.v1.LibraryService.DeleteBook"
+      }
+      errors: {
+        reason: "BOOK_NOT_FOUND"
+        code: NOT_FOUND
+      }
+    };
+  }
+}
+
+// Book is one book on a shelf.
+message Book {
+  option (google.api.resource) = {
+    type: "library.raveesh.me/Book"
+    pattern: "shelves/{shelf}/books/{book}"
+    singular: "book"
+    plural: "books"
+  };
+
+  // The resource name, such as shelves/1/books/2.
+  string name = 1 [(google.api.field_behavior) = IDENTIFIER];
+  // The title shown to readers.
+  string title = 2;
+  // The retail price.
+  google.type.Money price = 3;
+  // The email of the reader who reserved the book.
+  string reserver_email = 4 [(raveesh_me.http_proto_lint.v1.field) = {sensitive: true}];
+}
+
+// GetBookRequest is the request of GetBook.
+message GetBookRequest {
+  // The resource name of the book.
+  string name = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference) = {type: "library.raveesh.me/Book"}
+  ];
+}
+
+// GetBookResponse is the response of GetBook.
+message GetBookResponse {
+  // The book.
+  Book book = 1;
+}
+
+// DeleteBookRequest is the request of DeleteBook.
+message DeleteBookRequest {
+  // The resource name of the book.
+  string name = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference) = {type: "library.raveesh.me/Book"}
+  ];
+}
+
+// DeleteBookResponse is the response of DeleteBook.
+message DeleteBookResponse {}
+
+// RemoveBookRequest is the request of RemoveBook.
+message RemoveBookRequest {
+  // The resource name of the book.
+  string name = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference) = {type: "library.raveesh.me/Book"}
+  ];
+}
+
+// RemoveBookResponse is the response of RemoveBook.
+message RemoveBookResponse {}

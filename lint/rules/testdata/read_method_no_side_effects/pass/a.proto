@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package raveesh_me.library.v1;
+
+import "google/protobuf/empty.proto";
+import "raveesh_me/http_proto_lint/v1/options.proto";
+
+service LibraryService {
+  rpc GetBook(google.protobuf.Empty) returns (google.protobuf.Empty) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+  rpc ListBooks(google.protobuf.Empty) returns (google.protobuf.Empty) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+  rpc Getaway(google.protobuf.Empty) returns (google.protobuf.Empty);
+  rpc ListenBooks(google.protobuf.Empty) returns (stream google.protobuf.Empty);
+  rpc GetStream(google.protobuf.Empty) returns (stream google.protobuf.Empty);
+}

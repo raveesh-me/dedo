@@ -1,0 +1,28 @@
+# Copy into a service repository. Replace YOUR_ORG/YOUR_REPO.
+version: v2
+managed:
+  enabled: true
+  override:
+    # Your own API modules.
+    - file_option: go_package_prefix
+      value: github.com/YOUR_ORG/YOUR_REPO/gen/go
+    # The options module ships its generated Go code in its own Go module.
+    # The last matching override wins, so this one must stay below the
+    # catch-all above.
+    - file_option: go_package_prefix
+      module: buf.build/cookytech-in/http-proto-lint
+      value: github.com/raveesh-me/http-proto-lint/gen/go
+  disable:
+    # These modules set go_package themselves and ship their own Go code.
+    - module: buf.build/googleapis/googleapis
+    - module: buf.build/bufbuild/protovalidate
+plugins:
+  # Pin both remote plugins to explicit versions when you adopt the template.
+  - remote: buf.build/protocolbuffers/go
+    out: gen/go
+    opt: paths=source_relative
+  - remote: buf.build/connectrpc/go
+    out: gen/go
+    opt: paths=source_relative
+inputs:
+  - directory: proto

@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package raveesh_me.library.v1;
+
+import "google/api/annotations.proto";
+import "google/protobuf/empty.proto";
+
+message Book {
+  string name = 1;
+}
+
+message GetBookResponse {
+  Book book = 1;
+}
+
+service LibraryService {
+  rpc GetBook(google.protobuf.Empty) returns (GetBookResponse) {
+    option (google.api.http) = {
+      get: "/v1/books/1"
+      response_body: "book"
+      additional_bindings: {get: "/v1/shelves/1/books/1"}
+    };
+  }
+}

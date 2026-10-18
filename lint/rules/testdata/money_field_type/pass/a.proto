@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package raveesh_me.library.v1;
+
+import "google/type/money.proto";
+
+message Book {
+  google.type.Money price = 1;
+  google.type.Money list_price = 2;
+  repeated google.type.Money tax_amount = 3;
+  string pricing_note = 4;
+}

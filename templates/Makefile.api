@@ -1,0 +1,16 @@
+# Include from a service Makefile: `include Makefile.api`.
+# Deps and check plugins are pinned in buf.lock; commit it.
+.PHONY: api-update api-check api-generate
+
+## api-update: move deps and check plugins to their latest versions
+api-update:
+	buf dep update
+	buf plugin update
+
+api-check:
+	buf format --diff --exit-code
+	buf lint
+	buf breaking --against '.git#branch=main'
+
+api-generate:
+	buf generate

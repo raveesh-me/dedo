@@ -1,0 +1,17 @@
+package main
+
+import (
+	"testing"
+
+	"github.com/raveesh-me/http-proto-lint/policy"
+	// Replace with your generated connect package.
+	libraryv1connect "github.com/YOUR_ORG/YOUR_REPO/gen/go/raveesh_me/library/v1/libraryv1connect"
+)
+
+// TestPolicyTable fails before deploy when a service or method lacks its
+// declared operational contract.
+func TestPolicyTable(t *testing.T) {
+	if _, err := policy.Build(libraryv1connect.LibraryServiceName); err != nil {
+		t.Fatal(err)
+	}
+}

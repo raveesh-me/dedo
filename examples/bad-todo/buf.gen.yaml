@@ -1,0 +1,23 @@
+# Mirrors templates/buf.gen.yaml, with local plugins so CI needs no BSR access.
+version: v2
+managed:
+  enabled: true
+  override:
+    - file_option: go_package_prefix
+      value: github.com/raveesh-me/http-proto-lint/examples/bad-todo/gen/go
+    # The vendored options module has no BSR name yet, so match it by path.
+    # Its Go code ships in the http-proto-lint Go module.
+    - file_option: go_package_prefix
+      path: raveesh_me/http_proto_lint
+      value: github.com/raveesh-me/http-proto-lint/gen/go
+  disable:
+    - module: buf.build/googleapis/googleapis
+plugins:
+  - local: protoc-gen-go
+    out: gen/go
+    opt: paths=source_relative
+  - local: protoc-gen-connect-go
+    out: gen/go
+    opt: paths=source_relative
+inputs:
+  - directory: proto

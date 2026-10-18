@@ -1,0 +1,45 @@
+# Mirrors templates/buf.yaml. Until the options module and plugins are on the
+# BSR, the options module is a vendored copy under third_party/ (`make examples`
+# at the repository root fails if it drifts from proto/), and the plugins come
+# from dist/ (built by `make plugins`).
+version: v2
+modules:
+  - path: proto
+  - path: third_party/http-proto-lint
+deps:
+  - buf.build/googleapis/googleapis
+lint:
+  use:
+    - STANDARD
+    - COMMENTS
+    - AIP_NOLANG
+    - RAVEESH_ME
+  except:
+    # Every response is a unique <Rpc>Response; REST unwraps it with response_body.
+    - AIP_0131_RESPONSE_MESSAGE_NAME
+    - AIP_0132_RESPONSE_MESSAGE_NAME
+    - AIP_0133_RESPONSE_MESSAGE_NAME
+    - AIP_0134_RESPONSE_MESSAGE_NAME
+    - AIP_0135_RESPONSE_MESSAGE_NAME
+    # The same wrapping hides the resource from AIP's standard-method detection.
+    - AIP_0121_RESOURCE_MUST_SUPPORT_GET
+    - AIP_0134_REQUEST_REQUIRED_FIELDS
+    # method_signature drives Google's client generator; connect-go ignores it.
+    - AIP_0131_METHOD_SIGNATURE
+    - AIP_0132_METHOD_SIGNATURE
+    - AIP_0133_METHOD_SIGNATURE
+    - AIP_0134_METHOD_SIGNATURE
+    - AIP_0135_METHOD_SIGNATURE
+    # Buf COMMENTS already reports missing comments.
+    - AIP_0192_HAS_COMMENTS
+  enum_zero_value_suffix: _UNSPECIFIED
+  service_suffix: Service
+  rpc_allow_google_protobuf_empty_requests: false
+  rpc_allow_google_protobuf_empty_responses: false
+breaking:
+  use:
+    - FILE
+  ignore_unstable_packages: true
+plugins:
+  - plugin: ../../dist/buf-plugin-aip.wasm
+  - plugin: ../../dist/buf-plugin-raveesh-me-api.wasm

@@ -1,0 +1,6 @@
+{
+  "[proto]": {
+    "editor.defaultFormatter": "bufbuild.vscode-buf",
+    "editor.formatOnSave": true
+  }
+}
