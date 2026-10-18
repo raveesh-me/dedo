@@ -1,6 +1,16 @@
 # http-proto-lint
 
-A proto-first standard for public ConnectRPC APIs. The `.proto` file declares the contract and its operational rules. A Buf check plugin enforces both before merge, and a small Go runtime applies the operational rules on every call.
+**Author one `.proto`, ship it everywhere.** The same contract serves your API as RPC (Connect and gRPC), REST and MCP tools for AI agents, with the same auth, documentation and behaviour on every transport:
+
+| From one `.proto` you get | How |
+| --- | --- |
+| RPC over Connect and gRPC | connect-go |
+| REST, with resource-style URLs | `google.api.http` annotations, served by Vanguard |
+| REST reference docs (OpenAPI 3.1) | `protoc-gen-rest-openapi` |
+| MCP tools for AI agents | `protoc-gen-go-mcp` with the `mcpserver` adapter |
+| Authorization, cache and deprecation headers, flow IDs, error audit | The policy runtime, read from options in the `.proto` |
+
+**First-class lint guidance.** A Buf check plugin turns the standard into findings in your editor as you type, each linked to an explanation in [HOUSE_RULES.md](HOUSE_RULES.md). The same `buf lint` gates CI. Handlers carry business logic only.
 
 New here? Read [guideline.md](guideline.md). It walks through building a service in a new repository.
 
