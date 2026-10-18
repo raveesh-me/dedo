@@ -25,7 +25,8 @@ jobs:
         run: buf breaking proto --against "https://github.com/${{ github.repository }}.git#branch=main,subdir=proto"
   release:
     # Publishes one version everywhere: the options module and both check
-    # plugins on the BSR under the tag's label, and the Wasm files on GitHub.
+    # plugins (as WebAssembly) on the BSR under the tag's label, and native
+    # plugin binaries for each platform on the GitHub release.
     if: startsWith(github.ref, 'refs/tags/v')
     needs: check
     runs-on: ubuntu-latest
@@ -42,8 +43,8 @@ jobs:
       - uses: bufbuild/buf-action@v1
         with:
           setup_only: true
-      - name: Build both Wasm plugins, linking findings to this tag's HOUSE_RULES.md
-        run: make plugins DOCS_REF="$GITHUB_REF_NAME"
+      - name: Build both plugins, linking findings to this tag's HOUSE_RULES.md
+        run: make wasm-plugins release-binaries DOCS_REF="$GITHUB_REF_NAME"
       - name: Push the options module
         run: >-
           buf push proto
@@ -52,16 +53,16 @@ jobs:
       - name: Push the house plugin
         run: >-
           buf plugin push buf.build/cookytech-in/http-proto-lint-plugin
-          --binary dist/buf-plugin-raveesh-me-api.wasm
+          --binary dist/wasm/buf-plugin-raveesh-me-api.wasm
           --label "$GITHUB_REF_NAME" --source-control-url "$SOURCE_URL"
           --create --create-type check --create-visibility public
       - name: Push the pinned AIP plugin
         run: >-
           buf plugin push buf.build/cookytech-in/buf-plugin-aip
-          --binary dist/buf-plugin-aip.wasm
+          --binary dist/wasm/buf-plugin-aip.wasm
           --label "$GITHUB_REF_NAME" --source-control-url "$SOURCE_URL"
           --create --create-type check --create-visibility public
-      - name: Attach both Wasm plugins to the GitHub release
+      - name: Attach the native and Wasm plugins to the GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" --generate-notes dist/buf-plugin-raveesh-me-api.wasm dist/buf-plugin-aip.wasm
+        run: gh release create "$GITHUB_REF_NAME" --generate-notes dist/release/* dist/wasm/*.wasm

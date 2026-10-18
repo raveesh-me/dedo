@@ -39,7 +39,11 @@ breaking:
     - FILE
   ignore_unstable_packages: true
 plugins:
-  # Wasm check plugins on the BSR, pinned in buf.lock by `buf plugin update`.
-  # Buf runs them itself, so the editor and CI behave the same regardless of PATH.
-  - plugin: buf.build/cookytech-in/buf-plugin-aip
-  - plugin: buf.build/cookytech-in/http-proto-lint-plugin
+  # Native plugin binaries for this machine, fetched by `make tools`. They are
+  # referred to by path, so editors started outside a shell find them too.
+  # They lint about 17 times faster than the WebAssembly versions on the BSR
+  # (buf.build/cookytech-in/buf-plugin-aip and
+  # buf.build/cookytech-in/http-proto-lint-plugin), which need no download
+  # and also work on Windows.
+  - plugin: .tools/buf-plugin-aip
+  - plugin: .tools/buf-plugin-raveesh-me-api

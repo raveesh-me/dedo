@@ -1,7 +1,7 @@
 # Mirrors templates/buf.yaml. Until the options module and plugins are on the
 # BSR, the options module is a vendored copy under third_party/ (`make examples`
 # at the repository root fails if it drifts from proto/), and the plugins come
-# from dist/ (built by `make plugins`).
+# from dist/, built natively by `make plugins`.
 version: v2
 modules:
   - path: proto
@@ -41,5 +41,5 @@ breaking:
     - FILE
   ignore_unstable_packages: true
 plugins:
-  - plugin: ../../dist/buf-plugin-aip.wasm
-  - plugin: ../../dist/buf-plugin-raveesh-me-api.wasm
+  - plugin: ../../dist/buf-plugin-aip
+  - plugin: ../../dist/buf-plugin-raveesh-me-api

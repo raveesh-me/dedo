@@ -26,5 +26,5 @@ breaking:
   use:
     - FILE
 plugins:
-  # Built by `make plugin`.
-  - plugin: dist/buf-plugin-raveesh-me-api.wasm
+  # Built natively by `make plugin`.
+  - plugin: dist/buf-plugin-raveesh-me-api
