@@ -9,7 +9,7 @@ import (
 )
 
 var methodRulesRequired = lintRule(
-	"RAVEESH_ME_METHOD_RULES_REQUIRED",
+	"HOUSE_METHOD_RULES_REQUIRED",
 	"Checks that every RPC declares raveesh_me.http_proto_lint.v1.method with a scope and an error reason.",
 	checkutil.NewMethodRuleHandler(checkMethodRules, checkutil.WithoutImports()),
 )

@@ -11,7 +11,7 @@ lint:
     - STANDARD
     - COMMENTS
     - AIP_NOLANG
-    - RAVEESH_ME
+    - HOUSE
   except:
     # Every response is a unique <Rpc>Response; REST unwraps it with response_body.
     - AIP_0131_RESPONSE_MESSAGE_NAME

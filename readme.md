@@ -11,12 +11,12 @@ Contract rules come from Google's AIPs. Operational rules (audience, ownership, 
 | Component | Path | Job |
 | --- | --- | --- |
 | Options module | `proto/raveesh_me/http_proto_lint/v1/options.proto` | Declares audience, owner, scopes, cache policy, deprecation, error reasons and sensitive fields. Published as `buf.build/cookytech-in/http-proto-lint`. |
-| House lint plugin | `lint/` | Thirteen `RAVEESH_ME_*` rules. Published as the Wasm check plugin `buf.build/cookytech-in/http-proto-lint-plugin`. |
+| House lint plugin | `lint/` | Thirteen house rules, `HOUSE_*` in the `HOUSE` category. Published as the Wasm check plugin `buf.build/cookytech-in/http-proto-lint-plugin`. |
 | Policy table | `policy/` | Reads the options from descriptors at startup. Fails on a missing declaration. |
 | Flow ID | `flowid/` | Reads or creates `X-Flow-ID` and propagates it on outbound calls. |
 | Policy interceptor | `interceptor/` | Checks scopes, sets `Cache-Control`, `Deprecation` and `Sunset`, and logs undeclared error reasons. |
 | REST doc generator | `openapi/` | `protoc-gen-rest-openapi`: an OpenAPI 3.1 document from the `google.api.http` bindings, with scopes, error reasons, deprecation and the declared descriptions. Connect routes are left out. |
-| MCP adapter | `mcp/` | Serves the tools that `protoc-gen-go-mcp` generates with the declared title, description and behaviour hints. Tool calls run through the same auth and policy as REST. |
+| MCP adapter | `mcp/` | Serves the tools that `protoc-gen-go-mcp` generates under short snake_case names (`get_todo`), with the declared title, description and behaviour hints. Tool calls run through the same auth and policy as REST. |
 | Templates | `templates/` | `buf.yaml`, `buf.gen.yaml`, `Makefile.api`, VS Code settings, a Jenkins stage and a policy-table test for service repositories. |
 | Examples | `examples/` | `library`: a contract-only module. `todo` and `bad-todo`: two runnable services with the same interface, one compliant and one breaking every rule. |
 
@@ -53,21 +53,21 @@ See `examples/library/proto` for a complete module.
 
 | Rule ID | Checks |
 | --- | --- |
-| `RAVEESH_ME_SERVICE_RULES_REQUIRED` | Every service declares the service option with an audience and an owner team |
-| `RAVEESH_ME_METHOD_RULES_REQUIRED` | Every RPC declares the method option with at least one scope and one error reason |
-| `RAVEESH_ME_SCOPE_NAME_FORMAT` | Scopes match `<app>.<resource>.<read\|write>` |
-| `RAVEESH_ME_ERROR_REASON_FORMAT` | Reasons are UPPER_SNAKE_CASE. Codes are neither `OK` nor `UNKNOWN`. |
-| `RAVEESH_ME_CACHE_REQUIRES_NO_SIDE_EFFECTS` | A cache policy appears only on `NO_SIDE_EFFECTS` methods, with a visibility and a positive max age |
-| `RAVEESH_ME_DEPRECATION_CONSISTENT` | `deprecated = true` and a deprecation schedule appear together, sunset follows deprecation, and the successor exists |
-| `RAVEESH_ME_READ_METHOD_NO_SIDE_EFFECTS` | Unary `Get*` and `List*` RPCs set `idempotency_level = NO_SIDE_EFFECTS` |
-| `RAVEESH_ME_HTTP_RESPONSE_BODY` | HTTP rules of `Get*`, `Create*` and `Update*` RPCs set `response_body` |
-| `RAVEESH_ME_HTTP_PATH_VERSION` | Every HTTP path, additional bindings included, contains the package version, such as `/v1/`, after a root that is the same for the whole service. The root itself, such as `/commerce/pim`, is the owner's choice. |
-| `RAVEESH_ME_NO_JSON_NAME` | No field overrides the protojson default name |
-| `RAVEESH_ME_MONEY_FIELD_TYPE` | Fields named `price`, `amount`, `*_price` or `*_amount` use `google.type.Money` |
-| `RAVEESH_ME_TOOL_REQUIRED` | Every unary RPC declares a tool title and description for MCP and the REST docs. Delete and Remove RPCs are marked destructive. |
-| `RAVEESH_ME_MESSAGE_DESCRIPTION_REQUIRED` | Every message declares a consumer-facing description |
+| `HOUSE_SERVICE_RULES_REQUIRED` | Every service declares the service option with an audience and an owner team |
+| `HOUSE_METHOD_RULES_REQUIRED` | Every RPC declares the method option with at least one scope and one error reason |
+| `HOUSE_SCOPE_NAME_FORMAT` | Scopes match `<app>.<resource>.<read\|write>` |
+| `HOUSE_ERROR_REASON_FORMAT` | Reasons are UPPER_SNAKE_CASE. Codes are neither `OK` nor `UNKNOWN`. |
+| `HOUSE_CACHE_REQUIRES_NO_SIDE_EFFECTS` | A cache policy appears only on `NO_SIDE_EFFECTS` methods, with a visibility and a positive max age |
+| `HOUSE_DEPRECATION_CONSISTENT` | `deprecated = true` and a deprecation schedule appear together, sunset follows deprecation, and the successor exists |
+| `HOUSE_READ_METHOD_NO_SIDE_EFFECTS` | Unary `Get*` and `List*` RPCs set `idempotency_level = NO_SIDE_EFFECTS` |
+| `HOUSE_HTTP_RESPONSE_BODY` | HTTP rules of `Get*`, `Create*` and `Update*` RPCs set `response_body` |
+| `HOUSE_HTTP_PATH_VERSION` | Every HTTP path, additional bindings included, contains the package version, such as `/v1/`, after a root that is the same for the whole service. The root itself, such as `/commerce/pim`, is the owner's choice. |
+| `HOUSE_NO_JSON_NAME` | No field overrides the protojson default name |
+| `HOUSE_MONEY_FIELD_TYPE` | Fields named `price`, `amount`, `*_price` or `*_amount` use `google.type.Money` |
+| `HOUSE_TOOL_REQUIRED` | Every unary RPC declares a tool title and description for MCP and the REST docs. Delete and Remove RPCs are marked destructive. |
+| `HOUSE_MESSAGE_DESCRIPTION_REQUIRED` | Every message declares a consumer-facing description |
 
-Suppress one finding with `// buf:lint:ignore RAVEESH_ME_MONEY_FIELD_TYPE` above the element, followed by the reason.
+Suppress one finding with `// buf:lint:ignore HOUSE_MONEY_FIELD_TYPE` above the element, followed by the reason.
 
 ## Using it in a service repository
 

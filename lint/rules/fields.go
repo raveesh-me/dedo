@@ -12,13 +12,13 @@ import (
 const moneyType = "google.type.Money"
 
 var noJSONName = lintRule(
-	"RAVEESH_ME_NO_JSON_NAME",
+	"HOUSE_NO_JSON_NAME",
 	"Checks that no field sets json_name.",
 	checkutil.NewFieldRuleHandler(checkJSONName, checkutil.WithoutImports()),
 )
 
 var moneyFieldType = lintRule(
-	"RAVEESH_ME_MONEY_FIELD_TYPE",
+	"HOUSE_MONEY_FIELD_TYPE",
 	"Checks that fields named price, amount, *_price or *_amount use google.type.Money.",
 	checkutil.NewFieldRuleHandler(checkMoneyField, checkutil.WithoutImports()),
 )

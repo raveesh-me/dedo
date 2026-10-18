@@ -9,8 +9,8 @@ You write one `.proto` file per API. From it you get:
 - **Three transports with one behaviour.** Connect, gRPC and REST serve the same handlers. REST paths come from `google.api.http` annotations.
 - **Authorization without code.** Each RPC declares its scopes. The runtime rejects callers without one, on every transport.
 - **REST docs.** `protoc-gen-rest-openapi` writes an OpenAPI 3.1 document of the REST API only. Connect's own routes stay out of it.
-- **MCP tools.** Every unary RPC becomes an MCP tool for AI agents. Tool calls pass through the same scope checks as REST calls.
-- **A blocking review gate.** `buf lint` runs Buf's rules, Google's AIP rules and 13 house rules, in your editor and in CI.
+- **MCP tools.** Every unary RPC becomes an MCP tool for AI agents, named after the RPC in snake_case (`GetProduct` becomes `get_product`). Tool calls pass through the same scope checks as REST calls.
+- **A blocking review gate.** `buf lint` runs Buf's rules, Google's AIP rules and 13 house rules (category `HOUSE`), in your editor and in CI.
 
 Your handlers contain business logic only. Scope checks, cache and deprecation headers, flow IDs and error auditing come from the runtime.
 
@@ -132,19 +132,19 @@ House rules:
 
 | Rule | Fix |
 | --- | --- |
-| `RAVEESH_ME_SERVICE_RULES_REQUIRED` | Add the service option with an audience and an owner team. |
-| `RAVEESH_ME_METHOD_RULES_REQUIRED` | Add the method option with a scope and an error reason. |
-| `RAVEESH_ME_SCOPE_NAME_FORMAT` | Name scopes `<app>.<resource>.<read\|write>`. |
-| `RAVEESH_ME_ERROR_REASON_FORMAT` | Use UPPER_SNAKE_CASE reasons. Do not use the codes `OK` or `UNKNOWN`. |
-| `RAVEESH_ME_CACHE_REQUIRES_NO_SIDE_EFFECTS` | Cache only `NO_SIDE_EFFECTS` RPCs, with a visibility and a max age. |
-| `RAVEESH_ME_DEPRECATION_CONSISTENT` | Set `deprecated = true` and a deprecation schedule together. Sunset after deprecation. Name a successor that exists. |
-| `RAVEESH_ME_READ_METHOD_NO_SIDE_EFFECTS` | Set `idempotency_level = NO_SIDE_EFFECTS` on unary `Get*` and `List*`. |
-| `RAVEESH_ME_HTTP_RESPONSE_BODY` | Set `response_body` on `Get*`, `Create*` and `Update*` HTTP rules. |
-| `RAVEESH_ME_HTTP_PATH_VERSION` | Put `/v<major>/` in every path, after the same root for the whole service. |
-| `RAVEESH_ME_NO_JSON_NAME` | Remove `json_name`. JSON uses the protojson default, lowerCamelCase. |
-| `RAVEESH_ME_MONEY_FIELD_TYPE` | Use `google.type.Money` for `price`, `amount`, `*_price` and `*_amount`. |
-| `RAVEESH_ME_TOOL_REQUIRED` | Give every unary RPC a tool title and description. Mark Delete and Remove RPCs `destructive: true`. |
-| `RAVEESH_ME_MESSAGE_DESCRIPTION_REQUIRED` | Give every message a `message.description`. |
+| `HOUSE_SERVICE_RULES_REQUIRED` | Add the service option with an audience and an owner team. |
+| `HOUSE_METHOD_RULES_REQUIRED` | Add the method option with a scope and an error reason. |
+| `HOUSE_SCOPE_NAME_FORMAT` | Name scopes `<app>.<resource>.<read\|write>`. |
+| `HOUSE_ERROR_REASON_FORMAT` | Use UPPER_SNAKE_CASE reasons. Do not use the codes `OK` or `UNKNOWN`. |
+| `HOUSE_CACHE_REQUIRES_NO_SIDE_EFFECTS` | Cache only `NO_SIDE_EFFECTS` RPCs, with a visibility and a max age. |
+| `HOUSE_DEPRECATION_CONSISTENT` | Set `deprecated = true` and a deprecation schedule together. Sunset after deprecation. Name a successor that exists. |
+| `HOUSE_READ_METHOD_NO_SIDE_EFFECTS` | Set `idempotency_level = NO_SIDE_EFFECTS` on unary `Get*` and `List*`. |
+| `HOUSE_HTTP_RESPONSE_BODY` | Set `response_body` on `Get*`, `Create*` and `Update*` HTTP rules. |
+| `HOUSE_HTTP_PATH_VERSION` | Put `/v<major>/` in every path, after the same root for the whole service. |
+| `HOUSE_NO_JSON_NAME` | Remove `json_name`. JSON uses the protojson default, lowerCamelCase. |
+| `HOUSE_MONEY_FIELD_TYPE` | Use `google.type.Money` for `price`, `amount`, `*_price` and `*_amount`. |
+| `HOUSE_TOOL_REQUIRED` | Give every unary RPC a tool title and description. Mark Delete and Remove RPCs `destructive: true`. |
+| `HOUSE_MESSAGE_DESCRIPTION_REQUIRED` | Give every message a `message.description`. |
 
 `examples/bad-todo` breaks every rule once. Its `expected-lint.txt` lists the findings, and its tests show what each mistake does at runtime.
 
@@ -183,7 +183,8 @@ api := flowid.Middleware(auth.Middleware(transcoder))
 mcpServer := mcp.NewServer(&mcp.Implementation{Name: "products", Version: "v1"}, nil)
 client := productsv1connect.NewProductServiceClient(mcpserver.InProcessClient(api), "http://in-process",
 	connect.WithInterceptors(mcpserver.ForwardHeaders(), flowid.ClientInterceptor()))
-productsv1mcp.ForwardToConnectProductServiceClient(mcpserver.Wrap(mcpServer, serviceDescriptor), client)
+tools, err := mcpserver.Wrap(mcpServer, serviceDescriptor) // fails if two RPCs share a tool name
+productsv1mcp.ForwardToConnectProductServiceClient(tools, client)
 
 mux := http.NewServeMux()
 mux.Handle("GET /openapi.json", docs.Spec()) // embeds docs/openapi.json

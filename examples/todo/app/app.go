@@ -40,10 +40,14 @@ func NewHandler(cfg Config) (http.Handler, error) {
 	if err != nil {
 		return nil, err
 	}
+	tools, err := newMCP(api)
+	if err != nil {
+		return nil, err
+	}
 	mux := http.NewServeMux()
 	mux.Handle("GET /openapi.json", docs.Spec())
 	mux.Handle("GET /docs", docs.Page())
-	mux.Handle("/mcp", flowid.Middleware(newMCP(api)))
+	mux.Handle("/mcp", flowid.Middleware(tools))
 	mux.Handle("/", api)
 	return mux, nil
 }

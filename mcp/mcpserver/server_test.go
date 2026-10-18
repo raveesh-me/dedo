@@ -104,3 +104,47 @@ func TestForwardHeadersInProcess(t *testing.T) {
 		t.Errorf("forwarded headers = %v", seen)
 	}
 }
+
+func TestToolName(t *testing.T) {
+	svc := service(t)
+	if got := ToolName(svc.Methods().ByName("GetThing")); got != "get_thing" {
+		t.Errorf("ToolName(GetThing) = %q", got)
+	}
+	for in, want := range map[string]string{
+		"GetHTTPRule": "get_http_rule", "ListV2Items": "list_v2_items", "Echo": "echo", "BatchGetTodos": "batch_get_todos",
+	} {
+		m := methodNamed(t, in)
+		if got := ToolName(m); got != want {
+			t.Errorf("ToolName(%s) = %q, want %q", in, got, want)
+		}
+	}
+}
+
+func TestWrapRejectsDuplicateToolNames(t *testing.T) {
+	svc := service(t)
+	if _, err := Wrap(nil, svc); err != nil {
+		t.Fatalf("one service: %v", err)
+	}
+	if _, err := Wrap(nil, svc, svc); err == nil {
+		t.Fatal("want an error when two RPCs map to the same tool name")
+	}
+}
+
+// methodNamed returns a method descriptor with the given name.
+func methodNamed(t *testing.T, name string) protoreflect.MethodDescriptor {
+	t.Helper()
+	fd, err := protodesc.NewFile(&descriptorpb.FileDescriptorProto{
+		Name:        proto.String("n/" + name + ".proto"),
+		Package:     proto.String("n"),
+		Syntax:      proto.String("proto3"),
+		MessageType: []*descriptorpb.DescriptorProto{{Name: proto.String("M")}},
+		Service: []*descriptorpb.ServiceDescriptorProto{{
+			Name:   proto.String("S"),
+			Method: []*descriptorpb.MethodDescriptorProto{{Name: proto.String(name), InputType: proto.String(".n.M"), OutputType: proto.String(".n.M")}},
+		}},
+	}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return fd.Services().Get(0).Methods().Get(0)
+}

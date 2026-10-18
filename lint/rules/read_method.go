@@ -11,7 +11,7 @@ import (
 )
 
 var readMethodNoSideEffects = lintRule(
-	"RAVEESH_ME_READ_METHOD_NO_SIDE_EFFECTS",
+	"HOUSE_READ_METHOD_NO_SIDE_EFFECTS",
 	"Checks that unary Get and List RPCs set idempotency_level = NO_SIDE_EFFECTS.",
 	checkutil.NewMethodRuleHandler(checkReadMethod, checkutil.WithoutImports()),
 )
