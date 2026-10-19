@@ -135,6 +135,26 @@ service TodoService {
     };
   }
 
+  // WatchTodos streams every change to the to-do list as it happens, so a
+  // UI can show changes made anywhere: in another browser, over REST, or by
+  // an agent through MCP.
+  //
+  // REST has no form for server streaming, so the RPC has no HTTP binding;
+  // Connect and gRPC clients call it.
+  //
+  // Errors: SERVER_SHUTTING_DOWN.
+  //
+  // buf:lint:ignore AIP_0127_HTTP_ANNOTATION Server streaming has no REST form.
+  rpc WatchTodos(WatchTodosRequest) returns (stream WatchTodosResponse) {
+    option (raveesh_me.http_proto_lint.v1.method) = {
+      scopes: "todo.todo.read"
+      errors: {
+        reason: "SERVER_SHUTTING_DOWN"
+        code: UNAVAILABLE
+      }
+    };
+  }
+
   // Deprecated: Use DeleteTodo.
   //
   // RemoveTodo removes a to-do.
@@ -300,4 +320,31 @@ message RemoveTodoRequest {
 // RemoveTodoResponse is the response of RemoveTodo.
 message RemoveTodoResponse {
   option (raveesh_me.http_proto_lint.v1.message) = {description: "Empty on success."};
+}
+
+// WatchTodosRequest is the request of WatchTodos.
+message WatchTodosRequest {
+  option (raveesh_me.http_proto_lint.v1.message) = {description: "Starts a stream of changes to the to-do list."};
+}
+
+// WatchTodosResponse is one change to the to-do list.
+message WatchTodosResponse {
+  option (raveesh_me.http_proto_lint.v1.message) = {description: "One change to the to-do list, and the to-do it changed."};
+
+  // Change is what happened to the to-do.
+  enum Change {
+    // The change is unset.
+    CHANGE_UNSPECIFIED = 0;
+    // The to-do was created.
+    CHANGE_CREATED = 1;
+    // The to-do was updated.
+    CHANGE_UPDATED = 2;
+    // The to-do was deleted.
+    CHANGE_DELETED = 3;
+  }
+
+  // What happened.
+  Change change = 1;
+  // The to-do after the change. A deleted to-do carries its last state.
+  Todo todo = 2;
 }

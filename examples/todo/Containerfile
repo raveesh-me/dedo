@@ -1,0 +1,14 @@
+# The todo service. Build from the repository root, since the example builds
+# against this repository's modules:
+#   podman build -f examples/todo/Containerfile -t todo-example .
+FROM docker.io/library/golang:1.26.6-alpine AS build
+WORKDIR /src
+COPY . .
+WORKDIR /src/examples/todo
+RUN --mount=type=cache,target=/root/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
+    CGO_ENABLED=0 go build -trimpath -o /out/todo .
+
+FROM gcr.io/distroless/static-debian12:nonroot
+COPY --from=build /out/todo /todo
+EXPOSE 8080
+ENTRYPOINT ["/todo", "-addr", ":8080"]

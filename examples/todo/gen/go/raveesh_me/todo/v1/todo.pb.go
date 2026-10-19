@@ -26,6 +26,63 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// Change is what happened to the to-do.
+type WatchTodosResponse_Change int32
+
+const (
+	// The change is unset.
+	WatchTodosResponse_CHANGE_UNSPECIFIED WatchTodosResponse_Change = 0
+	// The to-do was created.
+	WatchTodosResponse_CHANGE_CREATED WatchTodosResponse_Change = 1
+	// The to-do was updated.
+	WatchTodosResponse_CHANGE_UPDATED WatchTodosResponse_Change = 2
+	// The to-do was deleted.
+	WatchTodosResponse_CHANGE_DELETED WatchTodosResponse_Change = 3
+)
+
+// Enum value maps for WatchTodosResponse_Change.
+var (
+	WatchTodosResponse_Change_name = map[int32]string{
+		0: "CHANGE_UNSPECIFIED",
+		1: "CHANGE_CREATED",
+		2: "CHANGE_UPDATED",
+		3: "CHANGE_DELETED",
+	}
+	WatchTodosResponse_Change_value = map[string]int32{
+		"CHANGE_UNSPECIFIED": 0,
+		"CHANGE_CREATED":     1,
+		"CHANGE_UPDATED":     2,
+		"CHANGE_DELETED":     3,
+	}
+)
+
+func (x WatchTodosResponse_Change) Enum() *WatchTodosResponse_Change {
+	p := new(WatchTodosResponse_Change)
+	*p = x
+	return p
+}
+
+func (x WatchTodosResponse_Change) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (WatchTodosResponse_Change) Descriptor() protoreflect.EnumDescriptor {
+	return file_raveesh_me_todo_v1_todo_proto_enumTypes[0].Descriptor()
+}
+
+func (WatchTodosResponse_Change) Type() protoreflect.EnumType {
+	return &file_raveesh_me_todo_v1_todo_proto_enumTypes[0]
+}
+
+func (x WatchTodosResponse_Change) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use WatchTodosResponse_Change.Descriptor instead.
+func (WatchTodosResponse_Change) EnumDescriptor() ([]byte, []int) {
+	return file_raveesh_me_todo_v1_todo_proto_rawDescGZIP(), []int{14, 0}
+}
+
 // Todo is one item on the list.
 type Todo struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -688,6 +745,98 @@ func (*RemoveTodoResponse) Descriptor() ([]byte, []int) {
 	return file_raveesh_me_todo_v1_todo_proto_rawDescGZIP(), []int{12}
 }
 
+// WatchTodosRequest is the request of WatchTodos.
+type WatchTodosRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *WatchTodosRequest) Reset() {
+	*x = WatchTodosRequest{}
+	mi := &file_raveesh_me_todo_v1_todo_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WatchTodosRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WatchTodosRequest) ProtoMessage() {}
+
+func (x *WatchTodosRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_raveesh_me_todo_v1_todo_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WatchTodosRequest.ProtoReflect.Descriptor instead.
+func (*WatchTodosRequest) Descriptor() ([]byte, []int) {
+	return file_raveesh_me_todo_v1_todo_proto_rawDescGZIP(), []int{13}
+}
+
+// WatchTodosResponse is one change to the to-do list.
+type WatchTodosResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// What happened.
+	Change WatchTodosResponse_Change `protobuf:"varint,1,opt,name=change,proto3,enum=raveesh_me.todo.v1.WatchTodosResponse_Change" json:"change,omitempty"`
+	// The to-do after the change. A deleted to-do carries its last state.
+	Todo          *Todo `protobuf:"bytes,2,opt,name=todo,proto3" json:"todo,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *WatchTodosResponse) Reset() {
+	*x = WatchTodosResponse{}
+	mi := &file_raveesh_me_todo_v1_todo_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WatchTodosResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WatchTodosResponse) ProtoMessage() {}
+
+func (x *WatchTodosResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_raveesh_me_todo_v1_todo_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WatchTodosResponse.ProtoReflect.Descriptor instead.
+func (*WatchTodosResponse) Descriptor() ([]byte, []int) {
+	return file_raveesh_me_todo_v1_todo_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *WatchTodosResponse) GetChange() WatchTodosResponse_Change {
+	if x != nil {
+		return x.Change
+	}
+	return WatchTodosResponse_CHANGE_UNSPECIFIED
+}
+
+func (x *WatchTodosResponse) GetTodo() *Todo {
+	if x != nil {
+		return x.Todo
+	}
+	return nil
+}
+
 var File_raveesh_me_todo_v1_todo_proto protoreflect.FileDescriptor
 
 const file_raveesh_me_todo_v1_todo_proto_rawDesc = "" +
@@ -746,7 +895,18 @@ const file_raveesh_me_todo_v1_todo_proto_rawDesc = "" +
 	"\x14todo.raveesh.me/TodoR\x04name:\x1c»\x18\x18\n" +
 	"\x16Which to-do to remove.\"-\n" +
 	"\x12RemoveTodoResponse:\x17»\x18\x13\n" +
-	"\x11Empty on success.2\xc4\x0f\n" +
+	"\x11Empty on success.\"H\n" +
+	"\x11WatchTodosRequest:3»\x18/\n" +
+	"-Starts a stream of changes to the to-do list.\"\xa6\x02\n" +
+	"\x12WatchTodosResponse\x12E\n" +
+	"\x06change\x18\x01 \x01(\x0e2-.raveesh_me.todo.v1.WatchTodosResponse.ChangeR\x06change\x12,\n" +
+	"\x04todo\x18\x02 \x01(\v2\x18.raveesh_me.todo.v1.TodoR\x04todo\"\\\n" +
+	"\x06Change\x12\x16\n" +
+	"\x12CHANGE_UNSPECIFIED\x10\x00\x12\x12\n" +
+	"\x0eCHANGE_CREATED\x10\x01\x12\x12\n" +
+	"\x0eCHANGE_UPDATED\x10\x02\x12\x12\n" +
+	"\x0eCHANGE_DELETED\x10\x03:=»\x189\n" +
+	"7One change to the to-do list, and the to-do it changed.2\xd4\x10\n" +
 	"\vTodoService\x12\xb3\x02\n" +
 	"\aGetTodo\x12\".raveesh_me.todo.v1.GetTodoRequest\x1a#.raveesh_me.todo.v1.GetTodoResponse\"\xde\x01\xaa\xbb\x18\xa8\x01\n" +
 	"\x0etodo.todo.read\x12\x06\b\x01\x12\x02\b\n" +
@@ -773,7 +933,11 @@ const file_raveesh_me_todo_v1_todo_proto_rawDesc = "" +
 	"DeleteTodo\x12%.raveesh_me.todo.v1.DeleteTodoRequest\x1a&.raveesh_me.todo.v1.DeleteTodoResponse\"\x98\x01\xaa\xbb\x18l\n" +
 	"\x0ftodo.todo.write\"\x12\n" +
 	"\x0eTODO_NOT_FOUND\x10\x05*E\n" +
-	"\x0eDelete a to-do\x121Removes a to-do for good. It cannot be recovered.\x18\x01\x82\xd3\xe4\x93\x02\"* /commerce/todo/v1/{name=todos/*}\x12\xd2\x02\n" +
+	"\x0eDelete a to-do\x121Removes a to-do for good. It cannot be recovered.\x18\x01\x82\xd3\xe4\x93\x02\"* /commerce/todo/v1/{name=todos/*}\x12\x8d\x01\n" +
+	"\n" +
+	"WatchTodos\x12%.raveesh_me.todo.v1.WatchTodosRequest\x1a&.raveesh_me.todo.v1.WatchTodosResponse\".\xaa\xbb\x18*\n" +
+	"\x0etodo.todo.read\"\x18\n" +
+	"\x14SERVER_SHUTTING_DOWN\x10\x0e0\x01\x12\xd2\x02\n" +
 	"\n" +
 	"RemoveTodo\x12%.raveesh_me.todo.v1.RemoveTodoRequest\x1a&.raveesh_me.todo.v1.RemoveTodoResponse\"\xf4\x01\xaa\xbb\x18\xba\x01\n" +
 	"\x0ftodo.todo.write\x1a;\n" +
@@ -794,52 +958,60 @@ func file_raveesh_me_todo_v1_todo_proto_rawDescGZIP() []byte {
 	return file_raveesh_me_todo_v1_todo_proto_rawDescData
 }
 
-var file_raveesh_me_todo_v1_todo_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
+var file_raveesh_me_todo_v1_todo_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_raveesh_me_todo_v1_todo_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
 var file_raveesh_me_todo_v1_todo_proto_goTypes = []any{
-	(*Todo)(nil),                  // 0: raveesh_me.todo.v1.Todo
-	(*GetTodoRequest)(nil),        // 1: raveesh_me.todo.v1.GetTodoRequest
-	(*GetTodoResponse)(nil),       // 2: raveesh_me.todo.v1.GetTodoResponse
-	(*ListTodosRequest)(nil),      // 3: raveesh_me.todo.v1.ListTodosRequest
-	(*ListTodosResponse)(nil),     // 4: raveesh_me.todo.v1.ListTodosResponse
-	(*CreateTodoRequest)(nil),     // 5: raveesh_me.todo.v1.CreateTodoRequest
-	(*CreateTodoResponse)(nil),    // 6: raveesh_me.todo.v1.CreateTodoResponse
-	(*UpdateTodoRequest)(nil),     // 7: raveesh_me.todo.v1.UpdateTodoRequest
-	(*UpdateTodoResponse)(nil),    // 8: raveesh_me.todo.v1.UpdateTodoResponse
-	(*DeleteTodoRequest)(nil),     // 9: raveesh_me.todo.v1.DeleteTodoRequest
-	(*DeleteTodoResponse)(nil),    // 10: raveesh_me.todo.v1.DeleteTodoResponse
-	(*RemoveTodoRequest)(nil),     // 11: raveesh_me.todo.v1.RemoveTodoRequest
-	(*RemoveTodoResponse)(nil),    // 12: raveesh_me.todo.v1.RemoveTodoResponse
-	(*money.Money)(nil),           // 13: google.type.Money
-	(*timestamppb.Timestamp)(nil), // 14: google.protobuf.Timestamp
-	(*fieldmaskpb.FieldMask)(nil), // 15: google.protobuf.FieldMask
+	(WatchTodosResponse_Change)(0), // 0: raveesh_me.todo.v1.WatchTodosResponse.Change
+	(*Todo)(nil),                   // 1: raveesh_me.todo.v1.Todo
+	(*GetTodoRequest)(nil),         // 2: raveesh_me.todo.v1.GetTodoRequest
+	(*GetTodoResponse)(nil),        // 3: raveesh_me.todo.v1.GetTodoResponse
+	(*ListTodosRequest)(nil),       // 4: raveesh_me.todo.v1.ListTodosRequest
+	(*ListTodosResponse)(nil),      // 5: raveesh_me.todo.v1.ListTodosResponse
+	(*CreateTodoRequest)(nil),      // 6: raveesh_me.todo.v1.CreateTodoRequest
+	(*CreateTodoResponse)(nil),     // 7: raveesh_me.todo.v1.CreateTodoResponse
+	(*UpdateTodoRequest)(nil),      // 8: raveesh_me.todo.v1.UpdateTodoRequest
+	(*UpdateTodoResponse)(nil),     // 9: raveesh_me.todo.v1.UpdateTodoResponse
+	(*DeleteTodoRequest)(nil),      // 10: raveesh_me.todo.v1.DeleteTodoRequest
+	(*DeleteTodoResponse)(nil),     // 11: raveesh_me.todo.v1.DeleteTodoResponse
+	(*RemoveTodoRequest)(nil),      // 12: raveesh_me.todo.v1.RemoveTodoRequest
+	(*RemoveTodoResponse)(nil),     // 13: raveesh_me.todo.v1.RemoveTodoResponse
+	(*WatchTodosRequest)(nil),      // 14: raveesh_me.todo.v1.WatchTodosRequest
+	(*WatchTodosResponse)(nil),     // 15: raveesh_me.todo.v1.WatchTodosResponse
+	(*money.Money)(nil),            // 16: google.type.Money
+	(*timestamppb.Timestamp)(nil),  // 17: google.protobuf.Timestamp
+	(*fieldmaskpb.FieldMask)(nil),  // 18: google.protobuf.FieldMask
 }
 var file_raveesh_me_todo_v1_todo_proto_depIdxs = []int32{
-	13, // 0: raveesh_me.todo.v1.Todo.budget_amount:type_name -> google.type.Money
-	14, // 1: raveesh_me.todo.v1.Todo.create_time:type_name -> google.protobuf.Timestamp
-	0,  // 2: raveesh_me.todo.v1.GetTodoResponse.todo:type_name -> raveesh_me.todo.v1.Todo
-	0,  // 3: raveesh_me.todo.v1.ListTodosResponse.todos:type_name -> raveesh_me.todo.v1.Todo
-	0,  // 4: raveesh_me.todo.v1.CreateTodoRequest.todo:type_name -> raveesh_me.todo.v1.Todo
-	0,  // 5: raveesh_me.todo.v1.CreateTodoResponse.todo:type_name -> raveesh_me.todo.v1.Todo
-	0,  // 6: raveesh_me.todo.v1.UpdateTodoRequest.todo:type_name -> raveesh_me.todo.v1.Todo
-	15, // 7: raveesh_me.todo.v1.UpdateTodoRequest.update_mask:type_name -> google.protobuf.FieldMask
-	0,  // 8: raveesh_me.todo.v1.UpdateTodoResponse.todo:type_name -> raveesh_me.todo.v1.Todo
-	1,  // 9: raveesh_me.todo.v1.TodoService.GetTodo:input_type -> raveesh_me.todo.v1.GetTodoRequest
-	3,  // 10: raveesh_me.todo.v1.TodoService.ListTodos:input_type -> raveesh_me.todo.v1.ListTodosRequest
-	5,  // 11: raveesh_me.todo.v1.TodoService.CreateTodo:input_type -> raveesh_me.todo.v1.CreateTodoRequest
-	7,  // 12: raveesh_me.todo.v1.TodoService.UpdateTodo:input_type -> raveesh_me.todo.v1.UpdateTodoRequest
-	9,  // 13: raveesh_me.todo.v1.TodoService.DeleteTodo:input_type -> raveesh_me.todo.v1.DeleteTodoRequest
-	11, // 14: raveesh_me.todo.v1.TodoService.RemoveTodo:input_type -> raveesh_me.todo.v1.RemoveTodoRequest
-	2,  // 15: raveesh_me.todo.v1.TodoService.GetTodo:output_type -> raveesh_me.todo.v1.GetTodoResponse
-	4,  // 16: raveesh_me.todo.v1.TodoService.ListTodos:output_type -> raveesh_me.todo.v1.ListTodosResponse
-	6,  // 17: raveesh_me.todo.v1.TodoService.CreateTodo:output_type -> raveesh_me.todo.v1.CreateTodoResponse
-	8,  // 18: raveesh_me.todo.v1.TodoService.UpdateTodo:output_type -> raveesh_me.todo.v1.UpdateTodoResponse
-	10, // 19: raveesh_me.todo.v1.TodoService.DeleteTodo:output_type -> raveesh_me.todo.v1.DeleteTodoResponse
-	12, // 20: raveesh_me.todo.v1.TodoService.RemoveTodo:output_type -> raveesh_me.todo.v1.RemoveTodoResponse
-	15, // [15:21] is the sub-list for method output_type
-	9,  // [9:15] is the sub-list for method input_type
-	9,  // [9:9] is the sub-list for extension type_name
-	9,  // [9:9] is the sub-list for extension extendee
-	0,  // [0:9] is the sub-list for field type_name
+	16, // 0: raveesh_me.todo.v1.Todo.budget_amount:type_name -> google.type.Money
+	17, // 1: raveesh_me.todo.v1.Todo.create_time:type_name -> google.protobuf.Timestamp
+	1,  // 2: raveesh_me.todo.v1.GetTodoResponse.todo:type_name -> raveesh_me.todo.v1.Todo
+	1,  // 3: raveesh_me.todo.v1.ListTodosResponse.todos:type_name -> raveesh_me.todo.v1.Todo
+	1,  // 4: raveesh_me.todo.v1.CreateTodoRequest.todo:type_name -> raveesh_me.todo.v1.Todo
+	1,  // 5: raveesh_me.todo.v1.CreateTodoResponse.todo:type_name -> raveesh_me.todo.v1.Todo
+	1,  // 6: raveesh_me.todo.v1.UpdateTodoRequest.todo:type_name -> raveesh_me.todo.v1.Todo
+	18, // 7: raveesh_me.todo.v1.UpdateTodoRequest.update_mask:type_name -> google.protobuf.FieldMask
+	1,  // 8: raveesh_me.todo.v1.UpdateTodoResponse.todo:type_name -> raveesh_me.todo.v1.Todo
+	0,  // 9: raveesh_me.todo.v1.WatchTodosResponse.change:type_name -> raveesh_me.todo.v1.WatchTodosResponse.Change
+	1,  // 10: raveesh_me.todo.v1.WatchTodosResponse.todo:type_name -> raveesh_me.todo.v1.Todo
+	2,  // 11: raveesh_me.todo.v1.TodoService.GetTodo:input_type -> raveesh_me.todo.v1.GetTodoRequest
+	4,  // 12: raveesh_me.todo.v1.TodoService.ListTodos:input_type -> raveesh_me.todo.v1.ListTodosRequest
+	6,  // 13: raveesh_me.todo.v1.TodoService.CreateTodo:input_type -> raveesh_me.todo.v1.CreateTodoRequest
+	8,  // 14: raveesh_me.todo.v1.TodoService.UpdateTodo:input_type -> raveesh_me.todo.v1.UpdateTodoRequest
+	10, // 15: raveesh_me.todo.v1.TodoService.DeleteTodo:input_type -> raveesh_me.todo.v1.DeleteTodoRequest
+	14, // 16: raveesh_me.todo.v1.TodoService.WatchTodos:input_type -> raveesh_me.todo.v1.WatchTodosRequest
+	12, // 17: raveesh_me.todo.v1.TodoService.RemoveTodo:input_type -> raveesh_me.todo.v1.RemoveTodoRequest
+	3,  // 18: raveesh_me.todo.v1.TodoService.GetTodo:output_type -> raveesh_me.todo.v1.GetTodoResponse
+	5,  // 19: raveesh_me.todo.v1.TodoService.ListTodos:output_type -> raveesh_me.todo.v1.ListTodosResponse
+	7,  // 20: raveesh_me.todo.v1.TodoService.CreateTodo:output_type -> raveesh_me.todo.v1.CreateTodoResponse
+	9,  // 21: raveesh_me.todo.v1.TodoService.UpdateTodo:output_type -> raveesh_me.todo.v1.UpdateTodoResponse
+	11, // 22: raveesh_me.todo.v1.TodoService.DeleteTodo:output_type -> raveesh_me.todo.v1.DeleteTodoResponse
+	15, // 23: raveesh_me.todo.v1.TodoService.WatchTodos:output_type -> raveesh_me.todo.v1.WatchTodosResponse
+	13, // 24: raveesh_me.todo.v1.TodoService.RemoveTodo:output_type -> raveesh_me.todo.v1.RemoveTodoResponse
+	18, // [18:25] is the sub-list for method output_type
+	11, // [11:18] is the sub-list for method input_type
+	11, // [11:11] is the sub-list for extension type_name
+	11, // [11:11] is the sub-list for extension extendee
+	0,  // [0:11] is the sub-list for field type_name
 }
 
 func init() { file_raveesh_me_todo_v1_todo_proto_init() }
@@ -852,13 +1024,14 @@ func file_raveesh_me_todo_v1_todo_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_raveesh_me_todo_v1_todo_proto_rawDesc), len(file_raveesh_me_todo_v1_todo_proto_rawDesc)),
-			NumEnums:      0,
-			NumMessages:   13,
+			NumEnums:      1,
+			NumMessages:   15,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
 		GoTypes:           file_raveesh_me_todo_v1_todo_proto_goTypes,
 		DependencyIndexes: file_raveesh_me_todo_v1_todo_proto_depIdxs,
+		EnumInfos:         file_raveesh_me_todo_v1_todo_proto_enumTypes,
 		MessageInfos:      file_raveesh_me_todo_v1_todo_proto_msgTypes,
 	}.Build()
 	File_raveesh_me_todo_v1_todo_proto = out.File

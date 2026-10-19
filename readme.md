@@ -124,6 +124,17 @@ Two Go services, each laid out like a service repository built from `templates/`
 - `examples/todo` follows the standard. `buf lint` is clean. Its tests check scopes, CRUD, pagination, cache and deprecation headers, REST unwrapping and the error audit end to end. It also serves the REST reference at `/docs` and an MCP server at `/mcp`, and its tests check that MCP tools carry the declared text and enforce the same scopes.
 - `examples/bad-todo` breaks all thirteen house rules, plus one Buf and one AIP rule. Open `proto/raveesh_me/todo/v1/todo.proto` in VS Code to see the findings. `expected-lint.txt` lists them, and `app/app_test.go` shows what each mistake does at runtime: a misnamed scope locks out writers, an unversioned path moves the endpoint, undeclared reasons show up in logs, and a custom `json_name` renames the field for every JSON client.
 
+`examples/todo` also runs as a deployment, with everything built in containers (podman, kind and kubectl are the only host tools):
+
+```sh
+cd examples/todo
+make up      # kind cluster "todo-example": the service and a live Vue UI at http://localhost:8090
+make e2e     # Playwright: an agent adds a to-do over MCP and the open UI shows it without a reload
+make down
+```
+
+The UI (`web/`) uses TanStack Query through [connect-tan-vue](https://github.com/raveesh-me/connect-tan-vue)'s `createClientWithQuery`, and stays live through the `WatchTodos` server stream. [examples/todo/MCP.md](examples/todo/MCP.md) shows how to connect Claude Code or Claude Desktop to the service's MCP endpoint.
+
 Until the options module and plugins are published, each example vendors `options.proto` under `third_party/` and loads the native plugins from `dist/`. Run `make plugins` once so the editor finds them, then `make examples`. Rerun `make plugins` after changing a rule.
 
 ```sh

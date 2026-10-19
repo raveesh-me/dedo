@@ -1,0 +1,11 @@
+# A single-node kind cluster for the todo example. The web Service's
+# NodePort (30080) is published on the host at HOST_PORT, which the
+# Makefile fills in.
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+nodes:
+  - role: control-plane
+    extraPortMappings:
+      - containerPort: 30080
+        hostPort: HOST_PORT
+        listenAddress: 127.0.0.1
