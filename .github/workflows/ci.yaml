@@ -6,6 +6,7 @@ on:
   pull_request:
 permissions:
   contents: read
+  pull-requests: read
 jobs:
   check:
     runs-on: ubuntu-latest
@@ -20,9 +21,20 @@ jobs:
         with:
           setup_only: true
       - run: make check
+      # A deliberate breaking change needs the allow-breaking label on the PR.
+      # The label is read when the step runs, so adding it later and
+      # re-running the job works.
       - name: Breaking change check
         if: github.event_name == 'pull_request'
-        run: buf breaking proto --against "https://github.com/${{ github.repository }}.git#branch=main,subdir=proto"
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh pr view "${{ github.event.pull_request.number }}" --repo "${{ github.repository }}" \
+              --json labels -q '.labels[].name' | grep -qx allow-breaking; then
+            echo "Labelled allow-breaking: skipping buf breaking."
+            exit 0
+          fi
+          buf breaking proto --against "https://github.com/${{ github.repository }}.git#branch=main,subdir=proto"
   release:
     # Publishes one version everywhere: the options module and both check
     # plugins (as WebAssembly) on the BSR under the tag's label and main, the
