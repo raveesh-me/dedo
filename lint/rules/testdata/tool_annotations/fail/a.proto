@@ -11,14 +11,6 @@ service LibraryService {
       tool: {title: "x"}
     };
   }
-  rpc DeprecatedFlag(google.protobuf.Empty) returns (google.protobuf.Empty) { // want
-    option (raveesh_me.http_proto_lint.v1.method) = {
-      tool: {
-        destructive: true
-        annotations: {read_only_hint: false, destructive_hint: true, idempotent_hint: false, open_world_hint: false}
-      }
-    };
-  }
   rpc GetBook(google.protobuf.Empty) returns (google.protobuf.Empty) { // want
     option idempotency_level = NO_SIDE_EFFECTS;
     option (raveesh_me.http_proto_lint.v1.method) = {

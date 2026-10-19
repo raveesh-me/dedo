@@ -248,7 +248,6 @@ option (raveesh_me.http_proto_lint.v1.method) = {
 - `destructive_hint` and `idempotent_hint` are declared exactly when the tool is not read-only. The specification says they mean nothing otherwise.
 - `idempotent_hint` is true exactly when `idempotency_level = IDEMPOTENT`.
 - RPCs named `Delete*` or `Remove*` set `destructive_hint: true`.
-- The deprecated `tool.destructive` is not used.
 
 **Why.** MCP clients use the hints to decide, for example, whether to ask the user before a call. The specification's defaults surprise people: a tool that declares nothing is assumed to be destructive (`destructiveHint` defaults to true) and to reach the outside world (`openWorldHint` defaults to true). So every hint is stated, and the hints that the proto already implies (read-only, idempotent) must agree with it.
 

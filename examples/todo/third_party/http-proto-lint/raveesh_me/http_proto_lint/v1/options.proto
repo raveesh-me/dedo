@@ -78,11 +78,8 @@ message Tool {
   // one field every client passes to the model: put anything the model must
   // know to act safely here, such as "cannot be undone".
   string description = 2;
-  // Deprecated: use annotations.destructive_hint. Its default was the
-  // opposite of the MCP specification's.
-  bool destructive = 3 [deprecated = true];
   // Behaviour hints for MCP clients.
-  ToolAnnotations annotations = 4;
+  ToolAnnotations annotations = 3;
 }
 
 // ToolAnnotations mirrors ToolAnnotations in the MCP specification

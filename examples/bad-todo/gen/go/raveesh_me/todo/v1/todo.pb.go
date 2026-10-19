@@ -749,7 +749,7 @@ const file_raveesh_me_todo_v1_todo_proto_rawDesc = "" +
 	"\x0etodo.todo.read\x12\x06\b\x01\x12\x02\b\n" +
 	"\"\x12\n" +
 	"\x0eTODO_NOT_FOUND\x10\x05*M\n" +
-	"\vGet a to-do\x128Returns one to-do by its resource name, such as todos/1.\"\x04\b\x01 \x00\x82\xd3\xe4\x93\x02\x17b\x04todo\x12\x0f/{name=todos/*}\x90\x02\x01\x12\x97\x01\n" +
+	"\vGet a to-do\x128Returns one to-do by its resource name, such as todos/1.\x1a\x04\b\x01 \x00\x82\xd3\xe4\x93\x02\x17b\x04todo\x12\x0f/{name=todos/*}\x90\x02\x01\x12\x97\x01\n" +
 	"\tListTodos\x12$.raveesh_me.todo.v1.ListTodosRequest\x1a%.raveesh_me.todo.v1.ListTodosResponse\"=\xaa\xbb\x18(\n" +
 	"\x0etodo.todo.read\"\x16\n" +
 	"\x12invalid_page_token\x10\x03\x82\xd3\xe4\x93\x02\v\x12\t/v1/todos\x12\xa2\x02\n" +
@@ -759,23 +759,23 @@ const file_raveesh_me_todo_v1_todo_proto_rawDesc = "" +
 	"todo.write\x12\x06\b\x02\x12\x02\b<\"\x12\n" +
 	"\x0eTITLE_REQUIRED\x10\x03\"\x17\n" +
 	"\x13TODO_ALREADY_EXISTS\x10\x06*_\n" +
-	"\x0eCreate a to-do\x12CAdds a to-do with a title, and optionally a budget and an assignee.\"\b\b\x00\x10\x00\x18\x00 \x00\x82\xd3\xe4\x93\x02\x17:\x04todob\x04todo\"\t/v1/todos\x12\x9f\x02\n" +
+	"\x0eCreate a to-do\x12CAdds a to-do with a title, and optionally a budget and an assignee.\x1a\b\b\x00\x10\x00\x18\x00 \x00\x82\xd3\xe4\x93\x02\x17:\x04todob\x04todo\"\t/v1/todos\x12\x9f\x02\n" +
 	"\n" +
 	"UpdateTodo\x12%.raveesh_me.todo.v1.UpdateTodoRequest\x1a&.raveesh_me.todo.v1.UpdateTodoResponse\"\xc1\x01\xaa\xbb\x18\x94\x01\n" +
 	"\x0ftodo.todo.write\"\x12\n" +
 	"\x0eTODO_NOT_FOUND\x10\x05\"\x12\n" +
 	"\x0eTITLE_REQUIRED\x10\x03*Y\n" +
-	"\x0eUpdate a to-do\x12=Changes the fields of an existing to-do named in update_mask.\"\b\b\x00\x10\x01\x18\x01 \x00\x82\xd3\xe4\x93\x02\x1f:\x04todo2\x17/v1/{todo.name=todos/*}\x90\x02\x02\x12\xc6\x01\n" +
+	"\x0eUpdate a to-do\x12=Changes the fields of an existing to-do named in update_mask.\x1a\b\b\x00\x10\x01\x18\x01 \x00\x82\xd3\xe4\x93\x02\x1f:\x04todo2\x17/v1/{todo.name=todos/*}\x90\x02\x02\x12\xc6\x01\n" +
 	"\n" +
 	"DeleteTodo\x12%.raveesh_me.todo.v1.DeleteTodoRequest\x1a&.raveesh_me.todo.v1.DeleteTodoResponse\"i\xaa\xbb\x18H\n" +
 	"\x0ftodo.todo.write*5\n" +
-	"\x0eDelete a to-do\x12\x19Removes a to-do for good.\"\b\b\x00\x10\x00\x18\x01 \x00\x82\xd3\xe4\x93\x02\x14*\x12/v1/{name=todos/*}\x90\x02\x02\x12\xd0\x02\n" +
+	"\x0eDelete a to-do\x12\x19Removes a to-do for good.\x1a\b\b\x00\x10\x00\x18\x01 \x00\x82\xd3\xe4\x93\x02\x14*\x12/v1/{name=todos/*}\x90\x02\x02\x12\xd0\x02\n" +
 	"\n" +
 	"RemoveTodo\x12%.raveesh_me.todo.v1.RemoveTodoRequest\x1a&.raveesh_me.todo.v1.RemoveTodoResponse\"\xf2\x01\xaa\xbb\x18\xc3\x01\n" +
 	"\x0ftodo.todo.write\x1a<\n" +
 	"\x06\b\x80\xf2\xd6\xca\x06\x12\x06\b\x80\xd9\xdb\xd9\x06\x1a*raveesh_me.todo.v1.TodoService.DeleteTodos\"\x12\n" +
 	"\x0eTODO_NOT_FOUND\x10\x05*^\n" +
-	"\x1bRemove a to-do (deprecated)\x125Deprecated: use DeleteTodo. Removes a to-do for good.\"\b\b\x00\x10\x01\x18\x01 \x00\x82\xd3\xe4\x93\x02\x1e:\x01*\"\x19/v1/{name=todos/*}:remove\x88\x02\x01\x90\x02\x02\x1a\x18\xcaA\x0ftodo.raveesh.me\xa2\xbb\x18\x02\b\x05B\xe3\x01\n" +
+	"\x1bRemove a to-do (deprecated)\x125Deprecated: use DeleteTodo. Removes a to-do for good.\x1a\b\b\x00\x10\x01\x18\x01 \x00\x82\xd3\xe4\x93\x02\x1e:\x01*\"\x19/v1/{name=todos/*}:remove\x88\x02\x01\x90\x02\x02\x1a\x18\xcaA\x0ftodo.raveesh.me\xa2\xbb\x18\x02\b\x05B\xe3\x01\n" +
 	"\x16com.raveesh_me.todo.v1B\tTodoProtoP\x01ZXgithub.com/raveesh-me/http-proto-lint/examples/bad-todo/gen/go/raveesh_me/todo/v1;todov1\xa2\x02\x03RTX\xaa\x02\x11RaveeshMe.Todo.V1\xca\x02\x11RaveeshMe\\Todo\\V1\xe2\x02\x1dRaveeshMe\\Todo\\V1\\GPBMetadata\xea\x02\x13RaveeshMe::Todo::V1b\x06proto3"
 
 var (

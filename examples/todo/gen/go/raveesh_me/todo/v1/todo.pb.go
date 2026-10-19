@@ -912,28 +912,28 @@ const file_raveesh_me_todo_v1_todo_proto_rawDesc = "" +
 	"\x0etodo.todo.read\x12\x06\b\x01\x12\x02\b\n" +
 	"\"\x12\n" +
 	"\x0eTODO_NOT_FOUND\x10\x05*\x80\x01\n" +
-	"\vGet a to-do\x12kReturns one to-do by its resource name, such as todos/1. Use it when you already know which to-do you want.\"\x04\b\x01 \x00\x82\xd3\xe4\x93\x02(b\x04todo\x12 /commerce/todo/v1/{name=todos/*}\x90\x02\x01\x12\xb1\x02\n" +
+	"\vGet a to-do\x12kReturns one to-do by its resource name, such as todos/1. Use it when you already know which to-do you want.\x1a\x04\b\x01 \x00\x82\xd3\xe4\x93\x02(b\x04todo\x12 /commerce/todo/v1/{name=todos/*}\x90\x02\x01\x12\xb1\x02\n" +
 	"\tListTodos\x12$.raveesh_me.todo.v1.ListTodosRequest\x1a%.raveesh_me.todo.v1.ListTodosResponse\"\xd6\x01\xaa\xbb\x18\xaf\x01\n" +
 	"\x0etodo.todo.read\"\x16\n" +
 	"\x12INVALID_PAGE_TOKEN\x10\x03*\x84\x01\n" +
-	"\vList to-dos\x12oReturns to-dos oldest first, one page at a time. Pass next_page_token back as page_token to read the next page.\"\x04\b\x01 \x00\x82\xd3\xe4\x93\x02\x19\x12\x17/commerce/todo/v1/todos\x90\x02\x01\x12\xee\x02\n" +
+	"\vList to-dos\x12oReturns to-dos oldest first, one page at a time. Pass next_page_token back as page_token to read the next page.\x1a\x04\b\x01 \x00\x82\xd3\xe4\x93\x02\x19\x12\x17/commerce/todo/v1/todos\x90\x02\x01\x12\xee\x02\n" +
 	"\n" +
 	"CreateTodo\x12%.raveesh_me.todo.v1.CreateTodoRequest\x1a&.raveesh_me.todo.v1.CreateTodoResponse\"\x90\x02\xaa\xbb\x18\xe0\x01\n" +
 	"\x0ftodo.todo.write\"\x12\n" +
 	"\x0eTITLE_REQUIRED\x10\x03\"\x17\n" +
 	"\x13TODO_ALREADY_EXISTS\x10\x06*\x9f\x01\n" +
-	"\x0eCreate a to-do\x12\x82\x01Adds a to-do with a title, and optionally a budget and an assignee. Pass todo_id to choose its ID; otherwise the server picks one.\"\b\b\x00\x10\x00\x18\x00 \x00\x82\xd3\xe4\x93\x02%:\x04todob\x04todo\"\x17/commerce/todo/v1/todos\x12\x84\x03\n" +
+	"\x0eCreate a to-do\x12\x82\x01Adds a to-do with a title, and optionally a budget and an assignee. Pass todo_id to choose its ID; otherwise the server picks one.\x1a\b\b\x00\x10\x00\x18\x00 \x00\x82\xd3\xe4\x93\x02%:\x04todob\x04todo\"\x17/commerce/todo/v1/todos\x12\x84\x03\n" +
 	"\n" +
 	"UpdateTodo\x12%.raveesh_me.todo.v1.UpdateTodoRequest\x1a&.raveesh_me.todo.v1.UpdateTodoResponse\"\xa6\x02\xaa\xbb\x18\xe5\x01\n" +
 	"\x0ftodo.todo.write\"\x12\n" +
 	"\x0eTODO_NOT_FOUND\x10\x05\"\x12\n" +
 	"\x0eTITLE_REQUIRED\x10\x03*\xa9\x01\n" +
-	"\x0eUpdate a to-do\x12\x8c\x01Changes the fields of an existing to-do named in update_mask, such as done or title. Leave update_mask empty to replace every mutable field.\"\b\b\x00\x10\x01\x18\x01 \x00\x82\xd3\xe4\x93\x023:\x04todob\x04todo2%/commerce/todo/v1/{todo.name=todos/*}\x90\x02\x02\x12\x81\x02\n" +
+	"\x0eUpdate a to-do\x12\x8c\x01Changes the fields of an existing to-do named in update_mask, such as done or title. Leave update_mask empty to replace every mutable field.\x1a\b\b\x00\x10\x01\x18\x01 \x00\x82\xd3\xe4\x93\x023:\x04todob\x04todo2%/commerce/todo/v1/{todo.name=todos/*}\x90\x02\x02\x12\x81\x02\n" +
 	"\n" +
 	"DeleteTodo\x12%.raveesh_me.todo.v1.DeleteTodoRequest\x1a&.raveesh_me.todo.v1.DeleteTodoResponse\"\xa3\x01\xaa\xbb\x18t\n" +
 	"\x0ftodo.todo.write\"\x12\n" +
 	"\x0eTODO_NOT_FOUND\x10\x05*M\n" +
-	"\x0eDelete a to-do\x121Removes a to-do for good. It cannot be recovered.\"\b\b\x00\x10\x01\x18\x01 \x00\x82\xd3\xe4\x93\x02\"* /commerce/todo/v1/{name=todos/*}\x90\x02\x02\x12\x8d\x01\n" +
+	"\x0eDelete a to-do\x121Removes a to-do for good. It cannot be recovered.\x1a\b\b\x00\x10\x01\x18\x01 \x00\x82\xd3\xe4\x93\x02\"* /commerce/todo/v1/{name=todos/*}\x90\x02\x02\x12\x8d\x01\n" +
 	"\n" +
 	"WatchTodos\x12%.raveesh_me.todo.v1.WatchTodosRequest\x1a&.raveesh_me.todo.v1.WatchTodosResponse\".\xaa\xbb\x18*\n" +
 	"\x0etodo.todo.read\"\x18\n" +
@@ -943,7 +943,7 @@ const file_raveesh_me_todo_v1_todo_proto_rawDesc = "" +
 	"\x0ftodo.todo.write\x1a;\n" +
 	"\x06\b\x80\xf2\xd6\xca\x06\x12\x06\b\x80\xd9\xdb\xd9\x06\x1a)raveesh_me.todo.v1.TodoService.DeleteTodo\"\x12\n" +
 	"\x0eTODO_NOT_FOUND\x10\x05*^\n" +
-	"\x1bRemove a to-do (deprecated)\x125Deprecated: use DeleteTodo. Removes a to-do for good.\"\b\b\x00\x10\x01\x18\x01 \x00\x82\xd3\xe4\x93\x02,:\x01*\"'/commerce/todo/v1/{name=todos/*}:remove\x88\x02\x01\x90\x02\x02\x1a#\xcaA\x0ftodo.raveesh.me\xa2\xbb\x18\r\b\x05\x12\ttodo-teamB\xdf\x01\n" +
+	"\x1bRemove a to-do (deprecated)\x125Deprecated: use DeleteTodo. Removes a to-do for good.\x1a\b\b\x00\x10\x01\x18\x01 \x00\x82\xd3\xe4\x93\x02,:\x01*\"'/commerce/todo/v1/{name=todos/*}:remove\x88\x02\x01\x90\x02\x02\x1a#\xcaA\x0ftodo.raveesh.me\xa2\xbb\x18\r\b\x05\x12\ttodo-teamB\xdf\x01\n" +
 	"\x16com.raveesh_me.todo.v1B\tTodoProtoP\x01ZTgithub.com/raveesh-me/http-proto-lint/examples/todo/gen/go/raveesh_me/todo/v1;todov1\xa2\x02\x03RTX\xaa\x02\x11RaveeshMe.Todo.V1\xca\x02\x11RaveeshMe\\Todo\\V1\xe2\x02\x1dRaveeshMe\\Todo\\V1\\GPBMetadata\xea\x02\x13RaveeshMe::Todo::V1b\x06proto3"
 
 var (

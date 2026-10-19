@@ -24,11 +24,7 @@ func checkToolAnnotations(_ context.Context, w check.ResponseWriter, _ check.Req
 	report := func(format string, args ...any) {
 		w.AddAnnotation(check.WithDescriptor(m), messagef(idToolAnnotations, format, args...))
 	}
-	tool := methodRules(m).GetTool()
-	if tool.GetDestructive() {
-		report("RPC %q sets the deprecated tool.destructive; set tool.annotations.destructive_hint instead.", m.Name())
-	}
-	a := tool.GetAnnotations()
+	a := methodRules(m).GetTool().GetAnnotations()
 	if a == nil {
 		report("RPC %q declares no tool.annotations; declare read_only_hint and open_world_hint, and for writes destructive_hint and idempotent_hint.", m.Name())
 		return nil
