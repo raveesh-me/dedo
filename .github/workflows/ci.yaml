@@ -54,6 +54,8 @@ jobs:
       SOURCE_URL: https://github.com/${{ github.repository }}/tree/${{ github.sha }}
     steps:
       - uses: actions/checkout@v4
+      - name: Check the versions users copy name this release
+        run: scripts/check-release-versions.sh "$GITHUB_REF_NAME"
       - uses: actions/setup-go@v5
         with:
           # The latest 1.26 patch: some modules need a newer patch than the
