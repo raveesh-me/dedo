@@ -7,8 +7,8 @@ require (
 	connectrpc.com/vanguard v0.4.0
 	github.com/modelcontextprotocol/go-sdk v1.8.0
 	github.com/pb33f/libopenapi v0.38.7
-	github.com/raveesh-me/dedo v0.4.0
-	github.com/raveesh-me/dedo/mcp v0.4.0
+	github.com/raveesh-me/dedo v0.5.0
+	github.com/raveesh-me/dedo/mcp v0.5.0
 	github.com/raveesh-me/http-proto-lint v0.2.0
 	github.com/raveesh-me/http-proto-lint/examples/todo v0.0.0-20261019230733-c7db126b3080
 	github.com/redpanda-data/protoc-gen-go-mcp v0.0.0-20260729122341-6334690a62b6
@@ -27,7 +27,7 @@ require (
 	github.com/google/jsonschema-go v0.4.3 // indirect
 	github.com/pb33f/jsonpath v0.8.2 // indirect
 	github.com/pb33f/ordered-map/v2 v2.3.1 // indirect
-	github.com/raveesh-me/dedo/openapi v0.4.0 // indirect
+	github.com/raveesh-me/dedo/openapi v0.5.0 // indirect
 	github.com/redpanda-data/common-go/api v0.0.0-20250801174835-9eea07f1ea06 // indirect
 	github.com/segmentio/asm v1.2.1 // indirect
 	github.com/segmentio/encoding v0.5.4 // indirect
@@ -41,16 +41,10 @@ require (
 	golang.org/x/time v0.15.0 // indirect
 )
 
-replace (
-	github.com/raveesh-me/dedo => ../..
-	github.com/raveesh-me/dedo/mcp => ../../mcp
-	github.com/raveesh-me/dedo/openapi => ../../openapi
-)
-
 tool (
 	connectrpc.com/connect/cmd/protoc-gen-connect-go
-	github.com/raveesh-me/dedo/mcp/cmd/protoc-gen-mcp-schema
-	github.com/raveesh-me/dedo/openapi/cmd/protoc-gen-rest-openapi
+	github.com/raveesh-me/dedo/mcp/cmd/protoc-gen-dedo-mcp
+	github.com/raveesh-me/dedo/openapi/cmd/protoc-gen-dedo-openapi
 	github.com/redpanda-data/protoc-gen-go-mcp/cmd/protoc-gen-go-mcp
 	google.golang.org/protobuf/cmd/protoc-gen-go
 )

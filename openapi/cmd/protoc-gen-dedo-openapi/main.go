@@ -1,4 +1,4 @@
-// Command protoc-gen-rest-openapi generates an OpenAPI 3.1 document from the
+// Command protoc-gen-dedo-openapi generates an OpenAPI 3.1 document from the
 // google.api.http bindings and dedo.v1 options of
 // protobuf services. Run it with strategy: all.
 package main

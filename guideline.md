@@ -10,7 +10,7 @@ You write one `.proto` file per API. From it you get:
 
 - **Three transports with one behaviour.** Connect, gRPC and REST serve the same handlers. REST paths come from `google.api.http` annotations.
 - **Authorization without code.** Each RPC declares its scopes. The runtime rejects callers without one, on every transport.
-- **REST docs.** `protoc-gen-rest-openapi` writes an OpenAPI 3.1 document of the REST API only. Connect's own routes stay out of it.
+- **REST docs.** `protoc-gen-dedo-openapi` writes an OpenAPI 3.1 document of the REST API only. Connect's own routes stay out of it.
 - **MCP tools.** Every unary RPC becomes an MCP tool for AI agents, named after the RPC in snake_case (`GetProduct` becomes `get_product`). Tool calls pass through the same scope checks as REST calls.
 - **A blocking review gate.** `buf lint` runs Buf's rules, Google's AIP rules and 14 house rules (category `HOUSE`), in your editor and in CI.
 
@@ -54,8 +54,8 @@ my-service/
    go get -tool google.golang.org/protobuf/cmd/protoc-gen-go
    go get -tool connectrpc.com/connect/cmd/protoc-gen-connect-go
    go get -tool github.com/redpanda-data/protoc-gen-go-mcp/cmd/protoc-gen-go-mcp
-   go get -tool github.com/raveesh-me/dedo/mcp/cmd/protoc-gen-mcp-schema@v0.4.1
-   go get -tool github.com/raveesh-me/dedo/openapi/cmd/protoc-gen-rest-openapi@v0.4.1
+   go get -tool github.com/raveesh-me/dedo/mcp/cmd/protoc-gen-dedo-mcp@v0.5.0
+   go get -tool github.com/raveesh-me/dedo/openapi/cmd/protoc-gen-dedo-openapi@v0.5.0
    ```
 
    Pin the dedo modules to the latest release explicitly. Go's module proxy can lag behind a new tag.
@@ -197,7 +197,7 @@ client := productsv1connect.NewProductServiceClient(mcpserver.InProcessClient(ap
 	connect.WithInterceptors(mcpserver.ForwardHeaders(), flowid.ClientInterceptor()))
 tools, err := mcpserver.New(mcpServer, mcpserver.Config{
 	Services:     []protoreflect.ServiceDescriptor{serviceDescriptor},
-	InputSchemas: productsv1.MCPInputSchemas, // from protoc-gen-mcp-schema
+	InputSchemas: productsv1.MCPInputSchemas, // from protoc-gen-dedo-mcp
 }) // fails if two RPCs share a tool name
 productsv1mcp.ForwardToConnectProductServiceClient(tools, client)
 
@@ -271,5 +271,13 @@ Point an MCP client at `http://localhost:8080/mcp`, with the header `Authorizati
 **Where do the options and plugins come from?** A service depends on `buf.build/r-a/dedo` in `buf.yaml` and gets the lint plugins with `make tools`. The examples in this repository are the exception: they test the working tree, so they vendor `options.proto` under `third_party/` and load the plugins from `dist/`.
 
 **Why native plugin binaries instead of the BSR plugins?** Speed in the editor. One lint takes about 0.3 s with native plugins and about 6 s with the WebAssembly ones, and the editor reruns it as you type. The BSR plugins (`buf.build/r-a/dedo-lint` and `buf.build/r-a/buf-plugin-aip`) need no download and work on Windows. Use them there.
+
+**How do I run the generators, `protoc-gen-dedo-mcp` and `protoc-gen-dedo-openapi`?** They run on your machine, the same way in the editor, locally and in CI. Pick one:
+
+- **Go repositories:** pin them with `go get -tool ...@vX.Y.Z` and refer to them in `buf.gen.yaml` as `local: ["go", "tool", "protoc-gen-dedo-mcp"]`. This is the default in `templates/` and `install.md`.
+- **Any repository, without Go:** download the binary for your platform from the GitHub release (`protoc-gen-dedo-openapi_darwin_arm64` and so on) into `.tools/`, and refer to it as `local: .tools/protoc-gen-dedo-openapi`.
+- **Installed on your PATH:** `go install github.com/raveesh-me/dedo/openapi/cmd/protoc-gen-dedo-openapi@vX.Y.Z`, then `local: protoc-gen-dedo-openapi`.
+
+If they join Buf's plugin catalog, `remote: buf.build/community/...` becomes a fourth option that needs no install.
 
 **How do I update the lint rules?** Bump `DEDO_VERSION` in `Makefile.api` and run `make tools`. CI does the same, so the editor and CI always run the same version.

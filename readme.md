@@ -6,7 +6,7 @@
 | --- | --- |
 | RPC over Connect and gRPC | connect-go |
 | REST, with resource-style URLs | `google.api.http` annotations, served by Vanguard |
-| REST reference docs (OpenAPI 3.1) | `protoc-gen-rest-openapi` |
+| REST reference docs (OpenAPI 3.1) | `protoc-gen-dedo-openapi` |
 | MCP tools for AI agents | `protoc-gen-go-mcp` with the `mcpserver` adapter |
 | Authorization, cache and deprecation headers, flow IDs, error audit | The policy runtime, read from options in the `.proto` |
 
@@ -14,7 +14,7 @@
 
 New here? [install.md](install.md) builds a new product from scratch, step by step. [guideline.md](guideline.md) explains the reasoning.
 
-**Latest release: [v0.4.1](https://github.com/raveesh-me/dedo/releases/tag/v0.4.1).** The options module is [`buf.build/r-a/dedo`](https://buf.build/r-a/dedo). The lint plugins come as native binaries on the GitHub release (`make tools`) and as Wasm plugins on the BSR. The Go modules are `github.com/raveesh-me/dedo/...@v0.4.1`.
+**Latest release: [v0.5.0](https://github.com/raveesh-me/dedo/releases/tag/v0.5.0).** The options module is [`buf.build/r-a/dedo`](https://buf.build/r-a/dedo). The lint plugins come as native binaries on the GitHub release (`make tools`) and as Wasm plugins on the BSR. The Go modules are `github.com/raveesh-me/dedo/...@v0.5.0`.
 
 Contract rules come from Google's AIPs. Operational rules (audience, ownership, scopes, caching, deprecation, error reasons) come from Zalando's guidelines. Both live in the schema.
 
@@ -27,12 +27,12 @@ Contract rules come from Google's AIPs. Operational rules (audience, ownership, 
 | Policy table | `policy/` | Reads the options from descriptors at startup. Fails on a missing declaration. |
 | Flow ID | `flowid/` | Reads or creates `X-Flow-ID` and propagates it on outbound calls. |
 | Policy interceptor | `interceptor/` | Checks scopes, sets `Cache-Control`, `Deprecation` and `Sunset`, and logs undeclared error reasons. |
-| REST doc generator | `openapi/` | `protoc-gen-rest-openapi`: an OpenAPI 3.1 document from the `google.api.http` bindings, with scopes, error reasons, deprecation and the declared descriptions. Connect routes are left out. |
-| MCP adapter and schemas | `mcp/` | `protoc-gen-mcp-schema` writes each tool's input schema at code-generation time: field descriptions from comments, `OUTPUT_ONLY` fields left out, partial-update and create semantics from AIP. `mcpserver` serves the tools `protoc-gen-go-mcp` generates under short snake_case names (`get_todo`), with those schemas, the declared title, description, `ToolAnnotations` and error reasons, and without deprecated RPCs. Tool calls run through the same auth and policy as REST. |
+| REST doc generator | `openapi/` | `protoc-gen-dedo-openapi`: an OpenAPI 3.1 document from the `google.api.http` bindings, with scopes, error reasons, deprecation and the declared descriptions. Connect routes are left out. |
+| MCP adapter and schemas | `mcp/` | `protoc-gen-dedo-mcp` writes each tool's input schema at code-generation time: field descriptions from comments, `OUTPUT_ONLY` fields left out, partial-update and create semantics from AIP. `mcpserver` serves the tools `protoc-gen-go-mcp` generates under short snake_case names (`get_todo`), with those schemas, the declared title, description, `ToolAnnotations` and error reasons, and without deprecated RPCs. Tool calls run through the same auth and policy as REST. |
 | Templates | `templates/` | `buf.yaml`, `buf.gen.yaml`, `Makefile.api`, VS Code settings, a Jenkins stage and a policy-table test for service repositories. |
 | Examples | `examples/` | `library`: a contract-only module. `todo` and `bad-todo`: two runnable services with the same interface, one compliant and one breaking every rule. |
 
-The root Go module (`github.com/raveesh-me/dedo`) holds the runtime and the generated options code. `lint/`, `openapi/` and `mcp/` are separate modules, so services pull in only what they use.
+The root Go module (`github.com/raveesh-me/dedo`) holds the runtime and the generated options code. `lint/`, `openapi/` and `mcp/` are separate modules, so services pull in only what they use. A `go.work` workspace builds them against each other locally, so no `go.mod` carries a `replace` and `go install <module>@<version>` works.
 
 ## Declaring a contract
 
@@ -190,7 +190,7 @@ The `v*` tag runs `.github/workflows/ci.yaml`, which publishes one version every
 
 - `buf push` of the options module with the tag and `main` as labels; `main` is the default label that unpinned dependencies resolve to
 - `buf plugin push` of `buf.build/r-a/dedo-lint` and `buf.build/r-a/buf-plugin-aip`
-- a GitHub release carrying both plugins as native binaries for macOS and Linux (arm64 and amd64), which `make tools` downloads, and as `.wasm` files
+- a GitHub release carrying both lint plugins and both generators (`protoc-gen-dedo-mcp`, `protoc-gen-dedo-openapi`) as native binaries for macOS and Linux (arm64 and amd64), and the lint plugins as `.wasm` files. `make tools` downloads the lint plugins.
 
 The Go module version is the same tag. The job reads a `BUF_KEY` repository secret: a Buf token for the `r-a` organization with module and plugin create and push scopes.
 
