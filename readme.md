@@ -1,6 +1,6 @@
-# http-proto-lint
+# dedo
 
-**Author one `.proto`, ship it everywhere.** The same contract serves your API as RPC (Connect and gRPC), REST and MCP tools for AI agents, with the same auth, documentation and behaviour on every transport:
+**Define once, deploy everywhere.** Author one `.proto`, ship it everywhere. The same contract serves your API as RPC (Connect and gRPC), REST and MCP tools for AI agents, with the same auth, documentation and behaviour on every transport:
 
 | From one `.proto` you get | How |
 | --- | --- |
@@ -14,7 +14,7 @@
 
 New here? [install.md](install.md) builds a new product from scratch, step by step. [guideline.md](guideline.md) explains the reasoning.
 
-**Latest release: [v0.3.0](https://github.com/raveesh-me/http-proto-lint/releases/tag/v0.3.0).** The options module is [`buf.build/cookytech-in/http-proto-lint`](https://buf.build/cookytech-in/http-proto-lint). The lint plugins come as native binaries on the GitHub release (`make tools`) and as Wasm plugins on the BSR. The Go modules are `github.com/raveesh-me/http-proto-lint/...@v0.3.0`.
+**Latest release: [v0.3.0](https://github.com/raveesh-me/dedo/releases/tag/v0.3.0).** The options module is [`buf.build/r-a/dedo`](https://buf.build/r-a/dedo). The lint plugins come as native binaries on the GitHub release (`make tools`) and as Wasm plugins on the BSR. The Go modules are `github.com/raveesh-me/dedo/...@v0.3.0`.
 
 Contract rules come from Google's AIPs. Operational rules (audience, ownership, scopes, caching, deprecation, error reasons) come from Zalando's guidelines. Both live in the schema.
 
@@ -22,8 +22,8 @@ Contract rules come from Google's AIPs. Operational rules (audience, ownership, 
 
 | Component | Path | Job |
 | --- | --- | --- |
-| Options module | `proto/raveesh_me/http_proto_lint/v1/options.proto` | Declares audience, owner, scopes, cache policy, deprecation, error reasons, sensitive fields, message descriptions, and how each RPC appears as an MCP tool (title, description and the MCP specification's `ToolAnnotations`). Published as `buf.build/cookytech-in/http-proto-lint`. |
-| House lint plugin | `lint/` | Fourteen house rules, `HOUSE_*` in the `HOUSE` category. Released as native binaries per platform (fast in editors) and as the Wasm check plugin `buf.build/cookytech-in/http-proto-lint-plugin`. |
+| Options module | `proto/dedo/v1/options.proto` | Declares audience, owner, scopes, cache policy, deprecation, error reasons, sensitive fields, message descriptions, and how each RPC appears as an MCP tool (title, description and the MCP specification's `ToolAnnotations`). Published as `buf.build/r-a/dedo`. |
+| House lint plugin | `lint/` | Fourteen house rules, `HOUSE_*` in the `HOUSE` category. Released as native binaries per platform (fast in editors) and as the Wasm check plugin `buf.build/r-a/dedo-lint`. |
 | Policy table | `policy/` | Reads the options from descriptors at startup. Fails on a missing declaration. |
 | Flow ID | `flowid/` | Reads or creates `X-Flow-ID` and propagates it on outbound calls. |
 | Policy interceptor | `interceptor/` | Checks scopes, sets `Cache-Control`, `Deprecation` and `Sunset`, and logs undeclared error reasons. |
@@ -32,7 +32,7 @@ Contract rules come from Google's AIPs. Operational rules (audience, ownership, 
 | Templates | `templates/` | `buf.yaml`, `buf.gen.yaml`, `Makefile.api`, VS Code settings, a Jenkins stage and a policy-table test for service repositories. |
 | Examples | `examples/` | `library`: a contract-only module. `todo` and `bad-todo`: two runnable services with the same interface, one compliant and one breaking every rule. |
 
-The root Go module (`github.com/raveesh-me/http-proto-lint`) holds the runtime and the generated options code. `lint/`, `openapi/` and `mcp/` are separate modules, so services pull in only what they use.
+The root Go module (`github.com/raveesh-me/dedo`) holds the runtime and the generated options code. `lint/`, `openapi/` and `mcp/` are separate modules, so services pull in only what they use.
 
 ## Declaring a contract
 
@@ -40,7 +40,7 @@ One RPC with every declaration the standard asks for, from `examples/library` (w
 
 ```protobuf
 service LibraryService {
-  option (raveesh_me.http_proto_lint.v1.service) = {
+  option (dedo.v1.service) = {
     audience: AUDIENCE_EXTERNAL_PUBLIC
     owner_team: "library-team"
   };
@@ -54,7 +54,7 @@ service LibraryService {
       get: "/v1/{name=shelves/*/books/*}"
       response_body: "book"
     };
-    option (raveesh_me.http_proto_lint.v1.method) = {
+    option (dedo.v1.method) = {
       tool: {
         title: "Get a book"
         description: "Returns one book by its resource name, such as shelves/1/books/2."
@@ -78,7 +78,7 @@ service LibraryService {
 
 // GetBookRequest is the request of GetBook.
 message GetBookRequest {
-  option (raveesh_me.http_proto_lint.v1.message) = {description: "Which book to get."};
+  option (dedo.v1.message) = {description: "Which book to get."};
 
   // The resource name of the book.
   string name = 1 [
@@ -187,9 +187,9 @@ To release, tag the merge commit on `main` with `lint/vX.Y.Z`, `openapi/vX.Y.Z` 
 The `v*` tag runs `.github/workflows/ci.yaml`, which publishes one version everywhere:
 
 - `buf push` of the options module with the tag and `main` as labels; `main` is the default label that unpinned dependencies resolve to
-- `buf plugin push` of `buf.build/cookytech-in/http-proto-lint-plugin` and `buf.build/cookytech-in/buf-plugin-aip`
+- `buf plugin push` of `buf.build/r-a/dedo-lint` and `buf.build/r-a/buf-plugin-aip`
 - a GitHub release carrying both plugins as native binaries for macOS and Linux (arm64 and amd64), which `make tools` downloads, and as `.wasm` files
 
-The Go module version is the same tag. The job reads a `BUF_KEY` repository secret: a Buf token for the `cookytech-in` organization with module and plugin create and push scopes.
+The Go module version is the same tag. The job reads a `BUF_KEY` repository secret: a Buf token for the `r-a` organization with module and plugin create and push scopes.
 
 `buf-plugin-aip` is a young third-party project ([hestiatechnology/buf-plugin-aip](https://github.com/hestiatechnology/buf-plugin-aip), Apache-2.0). It is pinned to commit `5158ec0f16f3` and republished from that commit.

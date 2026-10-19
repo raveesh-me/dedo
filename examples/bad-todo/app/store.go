@@ -7,7 +7,7 @@ import (
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	todov1 "github.com/raveesh-me/http-proto-lint/examples/bad-todo/gen/go/raveesh_me/todo/v1"
+	todov1 "github.com/raveesh-me/dedo/examples/bad-todo/gen/go/raveesh_me/todo/v1"
 )
 
 // store keeps to-dos in creation order. It hands out clones, so callers can

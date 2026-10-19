@@ -6,7 +6,7 @@ import (
 
 	"connectrpc.com/connect"
 
-	todov1 "github.com/raveesh-me/http-proto-lint/examples/todo/gen/go/raveesh_me/todo/v1"
+	todov1 "github.com/raveesh-me/dedo/examples/todo/gen/go/raveesh_me/todo/v1"
 )
 
 // subscriberBuffer is how many changes a slow subscriber may fall behind

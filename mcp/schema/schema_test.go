@@ -26,7 +26,7 @@ func methods(t *testing.T) map[string]*protogen.Method {
 		Resolver: protocompile.WithStandardImports(&protocompile.SourceResolver{
 			ImportPaths: []string{
 				"../../examples/todo/proto",
-				"../../examples/todo/third_party/http-proto-lint",
+				"../../examples/todo/third_party/dedo",
 				"../../openapi/restdoc/testdata/deps",
 			},
 		}),

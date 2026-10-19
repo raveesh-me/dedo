@@ -1,5 +1,5 @@
 // Command protoc-gen-rest-openapi generates an OpenAPI 3.1 document from the
-// google.api.http bindings and raveesh_me.http_proto_lint.v1 options of
+// google.api.http bindings and dedo.v1 options of
 // protobuf services. Run it with strategy: all.
 package main
 
@@ -7,7 +7,7 @@ import (
 	"google.golang.org/protobuf/compiler/protogen"
 	"google.golang.org/protobuf/types/pluginpb"
 
-	"github.com/raveesh-me/http-proto-lint/openapi/restdoc"
+	"github.com/raveesh-me/dedo/openapi/restdoc"
 )
 
 func main() {

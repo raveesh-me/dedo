@@ -3,22 +3,22 @@ syntax = "proto3";
 package raveesh_me.library.v1;
 
 import "google/protobuf/empty.proto";
-import "raveesh_me/http_proto_lint/v1/options.proto";
+import "dedo/v1/options.proto";
 
 service LibraryService {
   rpc NoTool(google.protobuf.Empty) returns (google.protobuf.Empty); // want
   rpc NoTitle(google.protobuf.Empty) returns (google.protobuf.Empty) { // want
-    option (raveesh_me.http_proto_lint.v1.method) = {
+    option (dedo.v1.method) = {
       tool: {description: "Does a thing."}
     };
   }
   rpc NoDescription(google.protobuf.Empty) returns (google.protobuf.Empty) { // want
-    option (raveesh_me.http_proto_lint.v1.method) = {
+    option (dedo.v1.method) = {
       tool: {title: "No description"}
     };
   }
   rpc Echo(google.protobuf.Empty) returns (google.protobuf.Empty) { // want
-    option (raveesh_me.http_proto_lint.v1.method) = {
+    option (dedo.v1.method) = {
       tool: {
         title: "Echo"
         description: "echo"

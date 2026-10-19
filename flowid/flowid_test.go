@@ -9,7 +9,7 @@ import (
 	"connectrpc.com/connect"
 	"google.golang.org/protobuf/types/known/emptypb"
 
-	"github.com/raveesh-me/http-proto-lint/flowid"
+	"github.com/raveesh-me/dedo/flowid"
 )
 
 func serve(t *testing.T, inbound string) (seen, echoed string) {

@@ -4,9 +4,9 @@ import (
 	"strings"
 	"testing"
 
-	hplv1 "github.com/raveesh-me/http-proto-lint/gen/go/raveesh_me/http_proto_lint/v1"
-	"github.com/raveesh-me/http-proto-lint/internal/testsvc"
-	"github.com/raveesh-me/http-proto-lint/policy"
+	dedov1 "github.com/raveesh-me/dedo/gen/go/dedo/v1"
+	"github.com/raveesh-me/dedo/internal/testsvc"
+	"github.com/raveesh-me/dedo/policy"
 )
 
 func TestBuildFrom(t *testing.T) {
@@ -28,7 +28,7 @@ func TestBuildFrom(t *testing.T) {
 	if m.Procedure != testsvc.GetThing {
 		t.Errorf("procedure = %q", m.Procedure)
 	}
-	if m.Audience != hplv1.Audience_AUDIENCE_EXTERNAL_PUBLIC {
+	if m.Audience != dedov1.Audience_AUDIENCE_EXTERNAL_PUBLIC {
 		t.Errorf("audience = %v", m.Audience)
 	}
 	if got := m.Rules.GetScopes(); len(got) != 1 || got[0] != testsvc.ReadScope {
@@ -46,7 +46,7 @@ func TestBuildFromFailures(t *testing.T) {
 		{name: "no services", want: "no services named"},
 		{name: "unknown service", service: "raveesh_me.test.v1.Missing", want: "raveesh_me.test.v1.Missing"},
 		{name: "not a service", service: "google.protobuf.Empty", want: "is not a service"},
-		{name: "no service rules", edits: []testsvc.Edit{testsvc.WithoutServiceRules}, service: testsvc.Service, want: "no raveesh_me.http_proto_lint.v1.service option"},
+		{name: "no service rules", edits: []testsvc.Edit{testsvc.WithoutServiceRules}, service: testsvc.Service, want: "no dedo.v1.service option"},
 		{name: "no scopes", edits: []testsvc.Edit{testsvc.WithoutScopes}, service: testsvc.Service, want: "DeleteThing declares no scopes"},
 	}
 	for _, tt := range tests {

@@ -1,6 +1,6 @@
 # House rules
 
-The house rules are the lint rules the Buf built-ins and the AIP linter lack. They run under the `HOUSE` category of the `buf-plugin-raveesh-me-api` check plugin:
+The house rules are the lint rules the Buf built-ins and the AIP linter lack. They run under the `HOUSE` category of the `buf-plugin-dedo` check plugin:
 
 ```yaml
 lint:
@@ -33,7 +33,7 @@ To suppress one finding, put `// buf:lint:ignore <RULE_ID>` above the element, f
 
 ## HOUSE_SERVICE_RULES_REQUIRED
 
-**Checks** that every service sets `raveesh_me.http_proto_lint.v1.service` with an `audience` other than `AUDIENCE_UNSPECIFIED` and a non-empty `owner_team`.
+**Checks** that every service sets `dedo.v1.service` with an `audience` other than `AUDIENCE_UNSPECIFIED` and a non-empty `owner_team`.
 
 **Why.** Every API has an owner and an intended audience. The REST docs publish both, and the runtime refuses to start a service without the option.
 
@@ -43,7 +43,7 @@ service ProductService {}
 
 // Passes.
 service ProductService {
-  option (raveesh_me.http_proto_lint.v1.service) = {
+  option (dedo.v1.service) = {
     audience: AUDIENCE_EXTERNAL_PUBLIC
     owner_team: "pim-team"
   };
@@ -54,7 +54,7 @@ service ProductService {
 
 ## HOUSE_METHOD_RULES_REQUIRED
 
-**Checks** that every RPC sets `raveesh_me.http_proto_lint.v1.method` with at least one scope and at least one error reason.
+**Checks** that every RPC sets `dedo.v1.method` with at least one scope and at least one error reason.
 
 **Why.** Scopes are the RPC's authorization: without one, the endpoint would be open. The runtime fails closed and will not start. Error reasons are the RPC's error contract: the docs list them, and the runtime logs any reason the RPC returns without declaring it.
 
@@ -64,7 +64,7 @@ rpc GetProduct(GetProductRequest) returns (GetProductResponse);
 
 // Passes.
 rpc GetProduct(GetProductRequest) returns (GetProductResponse) {
-  option (raveesh_me.http_proto_lint.v1.method) = {
+  option (dedo.v1.method) = {
     scopes: "pim.product.read"
     errors: {reason: "PRODUCT_NOT_FOUND", code: NOT_FOUND}
   };
@@ -110,7 +110,7 @@ errors: {reason: "PRODUCT_NOT_FOUND", code: NOT_FOUND}  // Passes.
 ```protobuf
 // Fails: CreateProduct changes state.
 rpc CreateProduct(CreateProductRequest) returns (CreateProductResponse) {
-  option (raveesh_me.http_proto_lint.v1.method) = {
+  option (dedo.v1.method) = {
     cache: {visibility: VISIBILITY_PUBLIC, max_age: {seconds: 60}}
   };
 }
@@ -118,7 +118,7 @@ rpc CreateProduct(CreateProductRequest) returns (CreateProductResponse) {
 // Passes.
 rpc GetProduct(GetProductRequest) returns (GetProductResponse) {
   option idempotency_level = NO_SIDE_EFFECTS;
-  option (raveesh_me.http_proto_lint.v1.method) = {
+  option (dedo.v1.method) = {
     cache: {visibility: VISIBILITY_PRIVATE, max_age: {seconds: 30}}
   };
 }
@@ -136,7 +136,7 @@ rpc GetProduct(GetProductRequest) returns (GetProductResponse) {
 // Passes.
 rpc RemoveProduct(RemoveProductRequest) returns (RemoveProductResponse) {
   option deprecated = true;
-  option (raveesh_me.http_proto_lint.v1.method) = {
+  option (dedo.v1.method) = {
     deprecation: {
       deprecation_time: {seconds: 1767225600}
       sunset_time: {seconds: 1798761600}
@@ -229,7 +229,7 @@ google.type.Money price = 1;  // Passes.
 
 ```protobuf
 // Passes.
-option (raveesh_me.http_proto_lint.v1.method) = {
+option (dedo.v1.method) = {
   tool: {
     title: "Delete a product"
     description: "Removes a product and its variants for good. It cannot be undone."
@@ -257,7 +257,7 @@ Hints are not a safety mechanism. Clients must treat them as untrusted unless th
 // A read. Only the two hints that apply.
 rpc GetProduct(GetProductRequest) returns (GetProductResponse) {
   option idempotency_level = NO_SIDE_EFFECTS;
-  option (raveesh_me.http_proto_lint.v1.method) = {
+  option (dedo.v1.method) = {
     tool: {
       annotations: {read_only_hint: true, open_world_hint: false}
     }
@@ -267,7 +267,7 @@ rpc GetProduct(GetProductRequest) returns (GetProductResponse) {
 // A delete: destructive, and idempotent because repeating it changes nothing more.
 rpc DeleteProduct(DeleteProductRequest) returns (DeleteProductResponse) {
   option idempotency_level = IDEMPOTENT;
-  option (raveesh_me.http_proto_lint.v1.method) = {
+  option (dedo.v1.method) = {
     tool: {
       annotations: {read_only_hint: false, destructive_hint: true, idempotent_hint: true, open_world_hint: false}
     }
@@ -286,14 +286,14 @@ rpc DeleteProduct(DeleteProductRequest) returns (DeleteProductResponse) {
 
 ## HOUSE_MESSAGE_DESCRIPTION_REQUIRED
 
-**Checks** that every message, nested ones included, sets `raveesh_me.http_proto_lint.v1.message` with a non-empty `description`. Map entries are exempt.
+**Checks** that every message, nested ones included, sets `dedo.v1.message` with a non-empty `description`. Map entries are exempt.
 
 **Why.** Request messages are the input schemas of MCP tools, and every message is a schema in the REST docs. The description is what agents and API readers see. Proto comments stay for the people who maintain the API.
 
 ```protobuf
 // Passes.
 message GetProductRequest {
-  option (raveesh_me.http_proto_lint.v1.message) = {description: "Which product to get."};
+  option (dedo.v1.message) = {description: "Which product to get."};
 }
 ```
 

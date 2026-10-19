@@ -9,7 +9,7 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/descriptorpb"
 
-	hplv1 "github.com/raveesh-me/http-proto-lint/gen/go/raveesh_me/http_proto_lint/v1"
+	dedov1 "github.com/raveesh-me/dedo/gen/go/dedo/v1"
 )
 
 // schemas builds component schemas on demand, following the proto3 JSON
@@ -192,7 +192,7 @@ func applyFieldOptions(s *Schema, fd protoreflect.FieldDescriptor) {
 	s.Deprecated = opts.GetDeprecated()
 	s.ReadOnly = hasBehavior(fd, annotations.FieldBehavior_OUTPUT_ONLY)
 	s.WriteOnly = hasBehavior(fd, annotations.FieldBehavior_INPUT_ONLY)
-	rules, _ := proto.GetExtension(fd.Options(), hplv1.E_Field).(*hplv1.FieldRules)
+	rules, _ := proto.GetExtension(fd.Options(), dedov1.E_Field).(*dedov1.FieldRules)
 	s.Sensitive = rules.GetSensitive()
 	if s.Ref != "" {
 		// A $ref sibling only keeps its description in OpenAPI 3.1; keep
@@ -214,7 +214,7 @@ func hasBehavior(fd protoreflect.FieldDescriptor, want annotations.FieldBehavior
 // messageDescription prefers the consumer-facing message option and falls
 // back to the leading comment.
 func messageDescription(m *protogen.Message) string {
-	rules, _ := proto.GetExtension(m.Desc.Options(), hplv1.E_Message).(*hplv1.MessageRules)
+	rules, _ := proto.GetExtension(m.Desc.Options(), dedov1.E_Message).(*dedov1.MessageRules)
 	if d := strings.TrimSpace(rules.GetDescription()); d != "" {
 		return d
 	}

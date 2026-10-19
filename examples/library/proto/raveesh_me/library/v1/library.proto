@@ -2,15 +2,15 @@ syntax = "proto3";
 
 package raveesh_me.library.v1;
 
+import "dedo/v1/options.proto";
 import "google/api/annotations.proto";
 import "google/api/field_behavior.proto";
 import "google/api/resource.proto";
 import "google/type/money.proto";
-import "raveesh_me/http_proto_lint/v1/options.proto";
 
 // LibraryService manages books on shelves.
 service LibraryService {
-  option (raveesh_me.http_proto_lint.v1.service) = {
+  option (dedo.v1.service) = {
     audience: AUDIENCE_EXTERNAL_PUBLIC
     owner_team: "library-team"
   };
@@ -24,7 +24,7 @@ service LibraryService {
       get: "/v1/{name=shelves/*/books/*}"
       response_body: "book"
     };
-    option (raveesh_me.http_proto_lint.v1.method) = {
+    option (dedo.v1.method) = {
       tool: {
         title: "Get a book"
         description: "Returns one book by its resource name, such as shelves/1/books/2."
@@ -51,7 +51,7 @@ service LibraryService {
   rpc DeleteBook(DeleteBookRequest) returns (DeleteBookResponse) {
     option idempotency_level = IDEMPOTENT;
     option (google.api.http) = {delete: "/v1/{name=shelves/*/books/*}"};
-    option (raveesh_me.http_proto_lint.v1.method) = {
+    option (dedo.v1.method) = {
       tool: {
         title: "Delete a book"
         description: "Removes a book from its shelf for good."
@@ -78,7 +78,7 @@ service LibraryService {
   rpc RemoveBook(RemoveBookRequest) returns (RemoveBookResponse) {
     option idempotency_level = IDEMPOTENT;
     option deprecated = true;
-    option (raveesh_me.http_proto_lint.v1.method) = {
+    option (dedo.v1.method) = {
       tool: {
         title: "Remove a book (deprecated)"
         description: "Deprecated: use DeleteBook. Removes a book from its shelf for good."
@@ -105,7 +105,7 @@ service LibraryService {
 
 // Book is one book on a shelf.
 message Book {
-  option (raveesh_me.http_proto_lint.v1.message) = {description: "A book on a shelf."};
+  option (dedo.v1.message) = {description: "A book on a shelf."};
 
   option (google.api.resource) = {
     type: "library.raveesh.me/Book"
@@ -121,12 +121,12 @@ message Book {
   // The retail price.
   google.type.Money price = 3;
   // The email of the reader who reserved the book.
-  string reserver_email = 4 [(raveesh_me.http_proto_lint.v1.field) = {sensitive: true}];
+  string reserver_email = 4 [(dedo.v1.field) = {sensitive: true}];
 }
 
 // GetBookRequest is the request of GetBook.
 message GetBookRequest {
-  option (raveesh_me.http_proto_lint.v1.message) = {description: "Which book to get."};
+  option (dedo.v1.message) = {description: "Which book to get."};
 
   // The resource name of the book.
   string name = 1 [
@@ -137,7 +137,7 @@ message GetBookRequest {
 
 // GetBookResponse is the response of GetBook.
 message GetBookResponse {
-  option (raveesh_me.http_proto_lint.v1.message) = {description: "The requested book."};
+  option (dedo.v1.message) = {description: "The requested book."};
 
   // The book.
   Book book = 1;
@@ -145,7 +145,7 @@ message GetBookResponse {
 
 // DeleteBookRequest is the request of DeleteBook.
 message DeleteBookRequest {
-  option (raveesh_me.http_proto_lint.v1.message) = {description: "Which book to delete."};
+  option (dedo.v1.message) = {description: "Which book to delete."};
 
   // The resource name of the book.
   string name = 1 [
@@ -156,12 +156,12 @@ message DeleteBookRequest {
 
 // DeleteBookResponse is the response of DeleteBook.
 message DeleteBookResponse {
-  option (raveesh_me.http_proto_lint.v1.message) = {description: "Empty on success."};
+  option (dedo.v1.message) = {description: "Empty on success."};
 }
 
 // RemoveBookRequest is the request of RemoveBook.
 message RemoveBookRequest {
-  option (raveesh_me.http_proto_lint.v1.message) = {description: "Which book to remove."};
+  option (dedo.v1.message) = {description: "Which book to remove."};
 
   // The resource name of the book.
   string name = 1 [
@@ -172,5 +172,5 @@ message RemoveBookRequest {
 
 // RemoveBookResponse is the response of RemoveBook.
 message RemoveBookResponse {
-  option (raveesh_me.http_proto_lint.v1.message) = {description: "Empty on success."};
+  option (dedo.v1.message) = {description: "Empty on success."};
 }

@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package raveesh_me.http_proto_lint.v1;
+package dedo.v1;
 
 import "google/protobuf/descriptor.proto";
 import "google/protobuf/duration.proto";

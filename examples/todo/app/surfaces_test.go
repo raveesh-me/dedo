@@ -11,7 +11,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/pb33f/libopenapi"
 
-	"github.com/raveesh-me/http-proto-lint/examples/todo/app"
+	"github.com/raveesh-me/dedo/examples/todo/app"
 )
 
 func get(t *testing.T, url string) string {

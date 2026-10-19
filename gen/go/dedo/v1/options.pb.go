@@ -2,9 +2,9 @@
 // versions:
 // 	protoc-gen-go v1.36.12
 // 	protoc        (unknown)
-// source: raveesh_me/http_proto_lint/v1/options.proto
+// source: dedo/v1/options.proto
 
-package http_proto_lintv1
+package dedov1
 
 import (
 	code "google.golang.org/genproto/googleapis/rpc/code"
@@ -74,11 +74,11 @@ func (x Audience) String() string {
 }
 
 func (Audience) Descriptor() protoreflect.EnumDescriptor {
-	return file_raveesh_me_http_proto_lint_v1_options_proto_enumTypes[0].Descriptor()
+	return file_dedo_v1_options_proto_enumTypes[0].Descriptor()
 }
 
 func (Audience) Type() protoreflect.EnumType {
-	return &file_raveesh_me_http_proto_lint_v1_options_proto_enumTypes[0]
+	return &file_dedo_v1_options_proto_enumTypes[0]
 }
 
 func (x Audience) Number() protoreflect.EnumNumber {
@@ -87,7 +87,7 @@ func (x Audience) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use Audience.Descriptor instead.
 func (Audience) EnumDescriptor() ([]byte, []int) {
-	return file_raveesh_me_http_proto_lint_v1_options_proto_rawDescGZIP(), []int{0}
+	return file_dedo_v1_options_proto_rawDescGZIP(), []int{0}
 }
 
 // Visibility is who may store a cached response.
@@ -127,11 +127,11 @@ func (x CachePolicy_Visibility) String() string {
 }
 
 func (CachePolicy_Visibility) Descriptor() protoreflect.EnumDescriptor {
-	return file_raveesh_me_http_proto_lint_v1_options_proto_enumTypes[1].Descriptor()
+	return file_dedo_v1_options_proto_enumTypes[1].Descriptor()
 }
 
 func (CachePolicy_Visibility) Type() protoreflect.EnumType {
-	return &file_raveesh_me_http_proto_lint_v1_options_proto_enumTypes[1]
+	return &file_dedo_v1_options_proto_enumTypes[1]
 }
 
 func (x CachePolicy_Visibility) Number() protoreflect.EnumNumber {
@@ -140,14 +140,14 @@ func (x CachePolicy_Visibility) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use CachePolicy_Visibility.Descriptor instead.
 func (CachePolicy_Visibility) EnumDescriptor() ([]byte, []int) {
-	return file_raveesh_me_http_proto_lint_v1_options_proto_rawDescGZIP(), []int{1, 0}
+	return file_dedo_v1_options_proto_rawDescGZIP(), []int{1, 0}
 }
 
 // ServiceRules is the ownership and audience of a service.
 type ServiceRules struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Who may call the service.
-	Audience Audience `protobuf:"varint,1,opt,name=audience,proto3,enum=raveesh_me.http_proto_lint.v1.Audience" json:"audience,omitempty"`
+	Audience Audience `protobuf:"varint,1,opt,name=audience,proto3,enum=dedo.v1.Audience" json:"audience,omitempty"`
 	// The team that owns the service, as named in the team registry.
 	OwnerTeam     string `protobuf:"bytes,2,opt,name=owner_team,json=ownerTeam,proto3" json:"owner_team,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -156,7 +156,7 @@ type ServiceRules struct {
 
 func (x *ServiceRules) Reset() {
 	*x = ServiceRules{}
-	mi := &file_raveesh_me_http_proto_lint_v1_options_proto_msgTypes[0]
+	mi := &file_dedo_v1_options_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -168,7 +168,7 @@ func (x *ServiceRules) String() string {
 func (*ServiceRules) ProtoMessage() {}
 
 func (x *ServiceRules) ProtoReflect() protoreflect.Message {
-	mi := &file_raveesh_me_http_proto_lint_v1_options_proto_msgTypes[0]
+	mi := &file_dedo_v1_options_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -181,7 +181,7 @@ func (x *ServiceRules) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ServiceRules.ProtoReflect.Descriptor instead.
 func (*ServiceRules) Descriptor() ([]byte, []int) {
-	return file_raveesh_me_http_proto_lint_v1_options_proto_rawDescGZIP(), []int{0}
+	return file_dedo_v1_options_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *ServiceRules) GetAudience() Audience {
@@ -202,7 +202,7 @@ func (x *ServiceRules) GetOwnerTeam() string {
 type CachePolicy struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Who may store the response.
-	Visibility CachePolicy_Visibility `protobuf:"varint,1,opt,name=visibility,proto3,enum=raveesh_me.http_proto_lint.v1.CachePolicy_Visibility" json:"visibility,omitempty"`
+	Visibility CachePolicy_Visibility `protobuf:"varint,1,opt,name=visibility,proto3,enum=dedo.v1.CachePolicy_Visibility" json:"visibility,omitempty"`
 	// How long a stored response stays fresh.
 	MaxAge        *durationpb.Duration `protobuf:"bytes,2,opt,name=max_age,json=maxAge,proto3" json:"max_age,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -211,7 +211,7 @@ type CachePolicy struct {
 
 func (x *CachePolicy) Reset() {
 	*x = CachePolicy{}
-	mi := &file_raveesh_me_http_proto_lint_v1_options_proto_msgTypes[1]
+	mi := &file_dedo_v1_options_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -223,7 +223,7 @@ func (x *CachePolicy) String() string {
 func (*CachePolicy) ProtoMessage() {}
 
 func (x *CachePolicy) ProtoReflect() protoreflect.Message {
-	mi := &file_raveesh_me_http_proto_lint_v1_options_proto_msgTypes[1]
+	mi := &file_dedo_v1_options_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -236,7 +236,7 @@ func (x *CachePolicy) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CachePolicy.ProtoReflect.Descriptor instead.
 func (*CachePolicy) Descriptor() ([]byte, []int) {
-	return file_raveesh_me_http_proto_lint_v1_options_proto_rawDescGZIP(), []int{1}
+	return file_dedo_v1_options_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *CachePolicy) GetVisibility() CachePolicy_Visibility {
@@ -268,7 +268,7 @@ type Deprecation struct {
 
 func (x *Deprecation) Reset() {
 	*x = Deprecation{}
-	mi := &file_raveesh_me_http_proto_lint_v1_options_proto_msgTypes[2]
+	mi := &file_dedo_v1_options_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -280,7 +280,7 @@ func (x *Deprecation) String() string {
 func (*Deprecation) ProtoMessage() {}
 
 func (x *Deprecation) ProtoReflect() protoreflect.Message {
-	mi := &file_raveesh_me_http_proto_lint_v1_options_proto_msgTypes[2]
+	mi := &file_dedo_v1_options_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -293,7 +293,7 @@ func (x *Deprecation) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Deprecation.ProtoReflect.Descriptor instead.
 func (*Deprecation) Descriptor() ([]byte, []int) {
-	return file_raveesh_me_http_proto_lint_v1_options_proto_rawDescGZIP(), []int{2}
+	return file_dedo_v1_options_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *Deprecation) GetDeprecationTime() *timestamppb.Timestamp {
@@ -330,7 +330,7 @@ type ErrorReason struct {
 
 func (x *ErrorReason) Reset() {
 	*x = ErrorReason{}
-	mi := &file_raveesh_me_http_proto_lint_v1_options_proto_msgTypes[3]
+	mi := &file_dedo_v1_options_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -342,7 +342,7 @@ func (x *ErrorReason) String() string {
 func (*ErrorReason) ProtoMessage() {}
 
 func (x *ErrorReason) ProtoReflect() protoreflect.Message {
-	mi := &file_raveesh_me_http_proto_lint_v1_options_proto_msgTypes[3]
+	mi := &file_dedo_v1_options_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -355,7 +355,7 @@ func (x *ErrorReason) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ErrorReason.ProtoReflect.Descriptor instead.
 func (*ErrorReason) Descriptor() ([]byte, []int) {
-	return file_raveesh_me_http_proto_lint_v1_options_proto_rawDescGZIP(), []int{3}
+	return file_dedo_v1_options_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *ErrorReason) GetReason() string {
@@ -393,7 +393,7 @@ type Tool struct {
 
 func (x *Tool) Reset() {
 	*x = Tool{}
-	mi := &file_raveesh_me_http_proto_lint_v1_options_proto_msgTypes[4]
+	mi := &file_dedo_v1_options_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -405,7 +405,7 @@ func (x *Tool) String() string {
 func (*Tool) ProtoMessage() {}
 
 func (x *Tool) ProtoReflect() protoreflect.Message {
-	mi := &file_raveesh_me_http_proto_lint_v1_options_proto_msgTypes[4]
+	mi := &file_dedo_v1_options_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -418,7 +418,7 @@ func (x *Tool) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Tool.ProtoReflect.Descriptor instead.
 func (*Tool) Descriptor() ([]byte, []int) {
-	return file_raveesh_me_http_proto_lint_v1_options_proto_rawDescGZIP(), []int{4}
+	return file_dedo_v1_options_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *Tool) GetTitle() string {
@@ -469,7 +469,7 @@ type ToolAnnotations struct {
 
 func (x *ToolAnnotations) Reset() {
 	*x = ToolAnnotations{}
-	mi := &file_raveesh_me_http_proto_lint_v1_options_proto_msgTypes[5]
+	mi := &file_dedo_v1_options_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -481,7 +481,7 @@ func (x *ToolAnnotations) String() string {
 func (*ToolAnnotations) ProtoMessage() {}
 
 func (x *ToolAnnotations) ProtoReflect() protoreflect.Message {
-	mi := &file_raveesh_me_http_proto_lint_v1_options_proto_msgTypes[5]
+	mi := &file_dedo_v1_options_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -494,7 +494,7 @@ func (x *ToolAnnotations) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ToolAnnotations.ProtoReflect.Descriptor instead.
 func (*ToolAnnotations) Descriptor() ([]byte, []int) {
-	return file_raveesh_me_http_proto_lint_v1_options_proto_rawDescGZIP(), []int{5}
+	return file_dedo_v1_options_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *ToolAnnotations) GetReadOnlyHint() bool {
@@ -544,7 +544,7 @@ type MethodRules struct {
 
 func (x *MethodRules) Reset() {
 	*x = MethodRules{}
-	mi := &file_raveesh_me_http_proto_lint_v1_options_proto_msgTypes[6]
+	mi := &file_dedo_v1_options_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -556,7 +556,7 @@ func (x *MethodRules) String() string {
 func (*MethodRules) ProtoMessage() {}
 
 func (x *MethodRules) ProtoReflect() protoreflect.Message {
-	mi := &file_raveesh_me_http_proto_lint_v1_options_proto_msgTypes[6]
+	mi := &file_dedo_v1_options_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -569,7 +569,7 @@ func (x *MethodRules) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MethodRules.ProtoReflect.Descriptor instead.
 func (*MethodRules) Descriptor() ([]byte, []int) {
-	return file_raveesh_me_http_proto_lint_v1_options_proto_rawDescGZIP(), []int{6}
+	return file_dedo_v1_options_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *MethodRules) GetScopes() []string {
@@ -619,7 +619,7 @@ type MessageRules struct {
 
 func (x *MessageRules) Reset() {
 	*x = MessageRules{}
-	mi := &file_raveesh_me_http_proto_lint_v1_options_proto_msgTypes[7]
+	mi := &file_dedo_v1_options_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -631,7 +631,7 @@ func (x *MessageRules) String() string {
 func (*MessageRules) ProtoMessage() {}
 
 func (x *MessageRules) ProtoReflect() protoreflect.Message {
-	mi := &file_raveesh_me_http_proto_lint_v1_options_proto_msgTypes[7]
+	mi := &file_dedo_v1_options_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -644,7 +644,7 @@ func (x *MessageRules) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MessageRules.ProtoReflect.Descriptor instead.
 func (*MessageRules) Descriptor() ([]byte, []int) {
-	return file_raveesh_me_http_proto_lint_v1_options_proto_rawDescGZIP(), []int{7}
+	return file_dedo_v1_options_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *MessageRules) GetDescription() string {
@@ -665,7 +665,7 @@ type FieldRules struct {
 
 func (x *FieldRules) Reset() {
 	*x = FieldRules{}
-	mi := &file_raveesh_me_http_proto_lint_v1_options_proto_msgTypes[8]
+	mi := &file_dedo_v1_options_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -677,7 +677,7 @@ func (x *FieldRules) String() string {
 func (*FieldRules) ProtoMessage() {}
 
 func (x *FieldRules) ProtoReflect() protoreflect.Message {
-	mi := &file_raveesh_me_http_proto_lint_v1_options_proto_msgTypes[8]
+	mi := &file_dedo_v1_options_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -690,7 +690,7 @@ func (x *FieldRules) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FieldRules.ProtoReflect.Descriptor instead.
 func (*FieldRules) Descriptor() ([]byte, []int) {
-	return file_raveesh_me_http_proto_lint_v1_options_proto_rawDescGZIP(), []int{8}
+	return file_dedo_v1_options_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *FieldRules) GetSensitive() bool {
@@ -700,38 +700,38 @@ func (x *FieldRules) GetSensitive() bool {
 	return false
 }
 
-var file_raveesh_me_http_proto_lint_v1_options_proto_extTypes = []protoimpl.ExtensionInfo{
+var file_dedo_v1_options_proto_extTypes = []protoimpl.ExtensionInfo{
 	{
 		ExtendedType:  (*descriptorpb.ServiceOptions)(nil),
 		ExtensionType: (*ServiceRules)(nil),
 		Field:         50100,
-		Name:          "raveesh_me.http_proto_lint.v1.service",
+		Name:          "dedo.v1.service",
 		Tag:           "bytes,50100,opt,name=service",
-		Filename:      "raveesh_me/http_proto_lint/v1/options.proto",
+		Filename:      "dedo/v1/options.proto",
 	},
 	{
 		ExtendedType:  (*descriptorpb.MethodOptions)(nil),
 		ExtensionType: (*MethodRules)(nil),
 		Field:         50101,
-		Name:          "raveesh_me.http_proto_lint.v1.method",
+		Name:          "dedo.v1.method",
 		Tag:           "bytes,50101,opt,name=method",
-		Filename:      "raveesh_me/http_proto_lint/v1/options.proto",
+		Filename:      "dedo/v1/options.proto",
 	},
 	{
 		ExtendedType:  (*descriptorpb.MessageOptions)(nil),
 		ExtensionType: (*MessageRules)(nil),
 		Field:         50104,
-		Name:          "raveesh_me.http_proto_lint.v1.message",
+		Name:          "dedo.v1.message",
 		Tag:           "bytes,50104,opt,name=message",
-		Filename:      "raveesh_me/http_proto_lint/v1/options.proto",
+		Filename:      "dedo/v1/options.proto",
 	},
 	{
 		ExtendedType:  (*descriptorpb.FieldOptions)(nil),
 		ExtensionType: (*FieldRules)(nil),
 		Field:         50103,
-		Name:          "raveesh_me.http_proto_lint.v1.field",
+		Name:          "dedo.v1.field",
 		Tag:           "bytes,50103,opt,name=field",
-		Filename:      "raveesh_me/http_proto_lint/v1/options.proto",
+		Filename:      "dedo/v1/options.proto",
 	},
 }
 
@@ -739,46 +739,46 @@ var file_raveesh_me_http_proto_lint_v1_options_proto_extTypes = []protoimpl.Exte
 var (
 	// The ownership and audience of the service.
 	//
-	// optional raveesh_me.http_proto_lint.v1.ServiceRules service = 50100;
-	E_Service = &file_raveesh_me_http_proto_lint_v1_options_proto_extTypes[0]
+	// optional dedo.v1.ServiceRules service = 50100;
+	E_Service = &file_dedo_v1_options_proto_extTypes[0]
 )
 
 // Extension fields to descriptorpb.MethodOptions.
 var (
 	// The operational contract of the RPC.
 	//
-	// optional raveesh_me.http_proto_lint.v1.MethodRules method = 50101;
-	E_Method = &file_raveesh_me_http_proto_lint_v1_options_proto_extTypes[1]
+	// optional dedo.v1.MethodRules method = 50101;
+	E_Method = &file_dedo_v1_options_proto_extTypes[1]
 )
 
 // Extension fields to descriptorpb.MessageOptions.
 var (
 	// The consumer-facing documentation of the message.
 	//
-	// optional raveesh_me.http_proto_lint.v1.MessageRules message = 50104;
-	E_Message = &file_raveesh_me_http_proto_lint_v1_options_proto_extTypes[2]
+	// optional dedo.v1.MessageRules message = 50104;
+	E_Message = &file_dedo_v1_options_proto_extTypes[2]
 )
 
 // Extension fields to descriptorpb.FieldOptions.
 var (
 	// The data classification of the field.
 	//
-	// optional raveesh_me.http_proto_lint.v1.FieldRules field = 50103;
-	E_Field = &file_raveesh_me_http_proto_lint_v1_options_proto_extTypes[3]
+	// optional dedo.v1.FieldRules field = 50103;
+	E_Field = &file_dedo_v1_options_proto_extTypes[3]
 )
 
-var File_raveesh_me_http_proto_lint_v1_options_proto protoreflect.FileDescriptor
+var File_dedo_v1_options_proto protoreflect.FileDescriptor
 
-const file_raveesh_me_http_proto_lint_v1_options_proto_rawDesc = "" +
+const file_dedo_v1_options_proto_rawDesc = "" +
 	"\n" +
-	"+raveesh_me/http_proto_lint/v1/options.proto\x12\x1draveesh_me.http_proto_lint.v1\x1a google/protobuf/descriptor.proto\x1a\x1egoogle/protobuf/duration.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x15google/rpc/code.proto\"r\n" +
-	"\fServiceRules\x12C\n" +
-	"\baudience\x18\x01 \x01(\x0e2'.raveesh_me.http_proto_lint.v1.AudienceR\baudience\x12\x1d\n" +
+	"\x15dedo/v1/options.proto\x12\adedo.v1\x1a google/protobuf/descriptor.proto\x1a\x1egoogle/protobuf/duration.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x15google/rpc/code.proto\"\\\n" +
+	"\fServiceRules\x12-\n" +
+	"\baudience\x18\x01 \x01(\x0e2\x11.dedo.v1.AudienceR\baudience\x12\x1d\n" +
 	"\n" +
-	"owner_team\x18\x02 \x01(\tR\townerTeam\"\xf1\x01\n" +
-	"\vCachePolicy\x12U\n" +
+	"owner_team\x18\x02 \x01(\tR\townerTeam\"\xdb\x01\n" +
+	"\vCachePolicy\x12?\n" +
 	"\n" +
-	"visibility\x18\x01 \x01(\x0e25.raveesh_me.http_proto_lint.v1.CachePolicy.VisibilityR\n" +
+	"visibility\x18\x01 \x01(\x0e2\x1f.dedo.v1.CachePolicy.VisibilityR\n" +
 	"visibility\x122\n" +
 	"\amax_age\x18\x02 \x01(\v2\x19.google.protobuf.DurationR\x06maxAge\"W\n" +
 	"\n" +
@@ -793,11 +793,11 @@ const file_raveesh_me_http_proto_lint_v1_options_proto_rawDesc = "" +
 	"\tsuccessor\x18\x03 \x01(\tR\tsuccessor\"K\n" +
 	"\vErrorReason\x12\x16\n" +
 	"\x06reason\x18\x01 \x01(\tR\x06reason\x12$\n" +
-	"\x04code\x18\x02 \x01(\x0e2\x10.google.rpc.CodeR\x04code\"\x90\x01\n" +
+	"\x04code\x18\x02 \x01(\x0e2\x10.google.rpc.CodeR\x04code\"z\n" +
 	"\x04Tool\x12\x14\n" +
 	"\x05title\x18\x01 \x01(\tR\x05title\x12 \n" +
-	"\vdescription\x18\x02 \x01(\tR\vdescription\x12P\n" +
-	"\vannotations\x18\x03 \x01(\v2..raveesh_me.http_proto_lint.v1.ToolAnnotationsR\vannotations\"\x97\x02\n" +
+	"\vdescription\x18\x02 \x01(\tR\vdescription\x12:\n" +
+	"\vannotations\x18\x03 \x01(\v2\x18.dedo.v1.ToolAnnotationsR\vannotations\"\x97\x02\n" +
 	"\x0fToolAnnotations\x12)\n" +
 	"\x0eread_only_hint\x18\x01 \x01(\bH\x00R\freadOnlyHint\x88\x01\x01\x12.\n" +
 	"\x10destructive_hint\x18\x02 \x01(\bH\x01R\x0fdestructiveHint\x88\x01\x01\x12,\n" +
@@ -806,13 +806,13 @@ const file_raveesh_me_http_proto_lint_v1_options_proto_rawDesc = "" +
 	"\x0f_read_only_hintB\x13\n" +
 	"\x11_destructive_hintB\x12\n" +
 	"\x10_idempotent_hintB\x12\n" +
-	"\x10_open_world_hint\"\xb2\x02\n" +
+	"\x10_open_world_hint\"\xda\x01\n" +
 	"\vMethodRules\x12\x16\n" +
-	"\x06scopes\x18\x01 \x03(\tR\x06scopes\x12@\n" +
-	"\x05cache\x18\x02 \x01(\v2*.raveesh_me.http_proto_lint.v1.CachePolicyR\x05cache\x12L\n" +
-	"\vdeprecation\x18\x03 \x01(\v2*.raveesh_me.http_proto_lint.v1.DeprecationR\vdeprecation\x12B\n" +
-	"\x06errors\x18\x04 \x03(\v2*.raveesh_me.http_proto_lint.v1.ErrorReasonR\x06errors\x127\n" +
-	"\x04tool\x18\x05 \x01(\v2#.raveesh_me.http_proto_lint.v1.ToolR\x04tool\"0\n" +
+	"\x06scopes\x18\x01 \x03(\tR\x06scopes\x12*\n" +
+	"\x05cache\x18\x02 \x01(\v2\x14.dedo.v1.CachePolicyR\x05cache\x126\n" +
+	"\vdeprecation\x18\x03 \x01(\v2\x14.dedo.v1.DeprecationR\vdeprecation\x12,\n" +
+	"\x06errors\x18\x04 \x03(\v2\x14.dedo.v1.ErrorReasonR\x06errors\x12!\n" +
+	"\x04tool\x18\x05 \x01(\v2\r.dedo.v1.ToolR\x04tool\"0\n" +
 	"\fMessageRules\x12 \n" +
 	"\vdescription\x18\x01 \x01(\tR\vdescription\"*\n" +
 	"\n" +
@@ -824,39 +824,39 @@ const file_raveesh_me_http_proto_lint_v1_options_proto_rawDesc = "" +
 	"\x1fAUDIENCE_BUSINESS_UNIT_INTERNAL\x10\x02\x12\x1d\n" +
 	"\x19AUDIENCE_COMPANY_INTERNAL\x10\x03\x12\x1d\n" +
 	"\x19AUDIENCE_EXTERNAL_PARTNER\x10\x04\x12\x1c\n" +
-	"\x18AUDIENCE_EXTERNAL_PUBLIC\x10\x05:h\n" +
-	"\aservice\x12\x1f.google.protobuf.ServiceOptions\x18\xb4\x87\x03 \x01(\v2+.raveesh_me.http_proto_lint.v1.ServiceRulesR\aservice:d\n" +
-	"\x06method\x12\x1e.google.protobuf.MethodOptions\x18\xb5\x87\x03 \x01(\v2*.raveesh_me.http_proto_lint.v1.MethodRulesR\x06method:h\n" +
-	"\amessage\x12\x1f.google.protobuf.MessageOptions\x18\xb8\x87\x03 \x01(\v2+.raveesh_me.http_proto_lint.v1.MessageRulesR\amessage:`\n" +
-	"\x05field\x12\x1d.google.protobuf.FieldOptions\x18\xb7\x87\x03 \x01(\v2).raveesh_me.http_proto_lint.v1.FieldRulesR\x05fieldB\x99\x02\n" +
-	"!com.raveesh_me.http_proto_lint.v1B\fOptionsProtoP\x01Z\\github.com/raveesh-me/http-proto-lint/gen/go/raveesh_me/http_proto_lint/v1;http_proto_lintv1\xa2\x02\x03RHX\xaa\x02\x1aRaveeshMe.HttpProtoLint.V1\xca\x02\x1aRaveeshMe\\HttpProtoLint\\V1\xe2\x02&RaveeshMe\\HttpProtoLint\\V1\\GPBMetadata\xea\x02\x1cRaveeshMe::HttpProtoLint::V1b\x06proto3"
+	"\x18AUDIENCE_EXTERNAL_PUBLIC\x10\x05:R\n" +
+	"\aservice\x12\x1f.google.protobuf.ServiceOptions\x18\xb4\x87\x03 \x01(\v2\x15.dedo.v1.ServiceRulesR\aservice:N\n" +
+	"\x06method\x12\x1e.google.protobuf.MethodOptions\x18\xb5\x87\x03 \x01(\v2\x14.dedo.v1.MethodRulesR\x06method:R\n" +
+	"\amessage\x12\x1f.google.protobuf.MessageOptions\x18\xb8\x87\x03 \x01(\v2\x15.dedo.v1.MessageRulesR\amessage:J\n" +
+	"\x05field\x12\x1d.google.protobuf.FieldOptions\x18\xb7\x87\x03 \x01(\v2\x13.dedo.v1.FieldRulesR\x05fieldB\x8a\x01\n" +
+	"\vcom.dedo.v1B\fOptionsProtoP\x01Z0github.com/raveesh-me/dedo/gen/go/dedo/v1;dedov1\xa2\x02\x03DXX\xaa\x02\aDedo.V1\xca\x02\aDedo\\V1\xe2\x02\x13Dedo\\V1\\GPBMetadata\xea\x02\bDedo::V1b\x06proto3"
 
 var (
-	file_raveesh_me_http_proto_lint_v1_options_proto_rawDescOnce sync.Once
-	file_raveesh_me_http_proto_lint_v1_options_proto_rawDescData []byte
+	file_dedo_v1_options_proto_rawDescOnce sync.Once
+	file_dedo_v1_options_proto_rawDescData []byte
 )
 
-func file_raveesh_me_http_proto_lint_v1_options_proto_rawDescGZIP() []byte {
-	file_raveesh_me_http_proto_lint_v1_options_proto_rawDescOnce.Do(func() {
-		file_raveesh_me_http_proto_lint_v1_options_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_raveesh_me_http_proto_lint_v1_options_proto_rawDesc), len(file_raveesh_me_http_proto_lint_v1_options_proto_rawDesc)))
+func file_dedo_v1_options_proto_rawDescGZIP() []byte {
+	file_dedo_v1_options_proto_rawDescOnce.Do(func() {
+		file_dedo_v1_options_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_dedo_v1_options_proto_rawDesc), len(file_dedo_v1_options_proto_rawDesc)))
 	})
-	return file_raveesh_me_http_proto_lint_v1_options_proto_rawDescData
+	return file_dedo_v1_options_proto_rawDescData
 }
 
-var file_raveesh_me_http_proto_lint_v1_options_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_raveesh_me_http_proto_lint_v1_options_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
-var file_raveesh_me_http_proto_lint_v1_options_proto_goTypes = []any{
-	(Audience)(0),                       // 0: raveesh_me.http_proto_lint.v1.Audience
-	(CachePolicy_Visibility)(0),         // 1: raveesh_me.http_proto_lint.v1.CachePolicy.Visibility
-	(*ServiceRules)(nil),                // 2: raveesh_me.http_proto_lint.v1.ServiceRules
-	(*CachePolicy)(nil),                 // 3: raveesh_me.http_proto_lint.v1.CachePolicy
-	(*Deprecation)(nil),                 // 4: raveesh_me.http_proto_lint.v1.Deprecation
-	(*ErrorReason)(nil),                 // 5: raveesh_me.http_proto_lint.v1.ErrorReason
-	(*Tool)(nil),                        // 6: raveesh_me.http_proto_lint.v1.Tool
-	(*ToolAnnotations)(nil),             // 7: raveesh_me.http_proto_lint.v1.ToolAnnotations
-	(*MethodRules)(nil),                 // 8: raveesh_me.http_proto_lint.v1.MethodRules
-	(*MessageRules)(nil),                // 9: raveesh_me.http_proto_lint.v1.MessageRules
-	(*FieldRules)(nil),                  // 10: raveesh_me.http_proto_lint.v1.FieldRules
+var file_dedo_v1_options_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
+var file_dedo_v1_options_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+var file_dedo_v1_options_proto_goTypes = []any{
+	(Audience)(0),                       // 0: dedo.v1.Audience
+	(CachePolicy_Visibility)(0),         // 1: dedo.v1.CachePolicy.Visibility
+	(*ServiceRules)(nil),                // 2: dedo.v1.ServiceRules
+	(*CachePolicy)(nil),                 // 3: dedo.v1.CachePolicy
+	(*Deprecation)(nil),                 // 4: dedo.v1.Deprecation
+	(*ErrorReason)(nil),                 // 5: dedo.v1.ErrorReason
+	(*Tool)(nil),                        // 6: dedo.v1.Tool
+	(*ToolAnnotations)(nil),             // 7: dedo.v1.ToolAnnotations
+	(*MethodRules)(nil),                 // 8: dedo.v1.MethodRules
+	(*MessageRules)(nil),                // 9: dedo.v1.MessageRules
+	(*FieldRules)(nil),                  // 10: dedo.v1.FieldRules
 	(*durationpb.Duration)(nil),         // 11: google.protobuf.Duration
 	(*timestamppb.Timestamp)(nil),       // 12: google.protobuf.Timestamp
 	(code.Code)(0),                      // 13: google.rpc.Code
@@ -865,26 +865,26 @@ var file_raveesh_me_http_proto_lint_v1_options_proto_goTypes = []any{
 	(*descriptorpb.MessageOptions)(nil), // 16: google.protobuf.MessageOptions
 	(*descriptorpb.FieldOptions)(nil),   // 17: google.protobuf.FieldOptions
 }
-var file_raveesh_me_http_proto_lint_v1_options_proto_depIdxs = []int32{
-	0,  // 0: raveesh_me.http_proto_lint.v1.ServiceRules.audience:type_name -> raveesh_me.http_proto_lint.v1.Audience
-	1,  // 1: raveesh_me.http_proto_lint.v1.CachePolicy.visibility:type_name -> raveesh_me.http_proto_lint.v1.CachePolicy.Visibility
-	11, // 2: raveesh_me.http_proto_lint.v1.CachePolicy.max_age:type_name -> google.protobuf.Duration
-	12, // 3: raveesh_me.http_proto_lint.v1.Deprecation.deprecation_time:type_name -> google.protobuf.Timestamp
-	12, // 4: raveesh_me.http_proto_lint.v1.Deprecation.sunset_time:type_name -> google.protobuf.Timestamp
-	13, // 5: raveesh_me.http_proto_lint.v1.ErrorReason.code:type_name -> google.rpc.Code
-	7,  // 6: raveesh_me.http_proto_lint.v1.Tool.annotations:type_name -> raveesh_me.http_proto_lint.v1.ToolAnnotations
-	3,  // 7: raveesh_me.http_proto_lint.v1.MethodRules.cache:type_name -> raveesh_me.http_proto_lint.v1.CachePolicy
-	4,  // 8: raveesh_me.http_proto_lint.v1.MethodRules.deprecation:type_name -> raveesh_me.http_proto_lint.v1.Deprecation
-	5,  // 9: raveesh_me.http_proto_lint.v1.MethodRules.errors:type_name -> raveesh_me.http_proto_lint.v1.ErrorReason
-	6,  // 10: raveesh_me.http_proto_lint.v1.MethodRules.tool:type_name -> raveesh_me.http_proto_lint.v1.Tool
-	14, // 11: raveesh_me.http_proto_lint.v1.service:extendee -> google.protobuf.ServiceOptions
-	15, // 12: raveesh_me.http_proto_lint.v1.method:extendee -> google.protobuf.MethodOptions
-	16, // 13: raveesh_me.http_proto_lint.v1.message:extendee -> google.protobuf.MessageOptions
-	17, // 14: raveesh_me.http_proto_lint.v1.field:extendee -> google.protobuf.FieldOptions
-	2,  // 15: raveesh_me.http_proto_lint.v1.service:type_name -> raveesh_me.http_proto_lint.v1.ServiceRules
-	8,  // 16: raveesh_me.http_proto_lint.v1.method:type_name -> raveesh_me.http_proto_lint.v1.MethodRules
-	9,  // 17: raveesh_me.http_proto_lint.v1.message:type_name -> raveesh_me.http_proto_lint.v1.MessageRules
-	10, // 18: raveesh_me.http_proto_lint.v1.field:type_name -> raveesh_me.http_proto_lint.v1.FieldRules
+var file_dedo_v1_options_proto_depIdxs = []int32{
+	0,  // 0: dedo.v1.ServiceRules.audience:type_name -> dedo.v1.Audience
+	1,  // 1: dedo.v1.CachePolicy.visibility:type_name -> dedo.v1.CachePolicy.Visibility
+	11, // 2: dedo.v1.CachePolicy.max_age:type_name -> google.protobuf.Duration
+	12, // 3: dedo.v1.Deprecation.deprecation_time:type_name -> google.protobuf.Timestamp
+	12, // 4: dedo.v1.Deprecation.sunset_time:type_name -> google.protobuf.Timestamp
+	13, // 5: dedo.v1.ErrorReason.code:type_name -> google.rpc.Code
+	7,  // 6: dedo.v1.Tool.annotations:type_name -> dedo.v1.ToolAnnotations
+	3,  // 7: dedo.v1.MethodRules.cache:type_name -> dedo.v1.CachePolicy
+	4,  // 8: dedo.v1.MethodRules.deprecation:type_name -> dedo.v1.Deprecation
+	5,  // 9: dedo.v1.MethodRules.errors:type_name -> dedo.v1.ErrorReason
+	6,  // 10: dedo.v1.MethodRules.tool:type_name -> dedo.v1.Tool
+	14, // 11: dedo.v1.service:extendee -> google.protobuf.ServiceOptions
+	15, // 12: dedo.v1.method:extendee -> google.protobuf.MethodOptions
+	16, // 13: dedo.v1.message:extendee -> google.protobuf.MessageOptions
+	17, // 14: dedo.v1.field:extendee -> google.protobuf.FieldOptions
+	2,  // 15: dedo.v1.service:type_name -> dedo.v1.ServiceRules
+	8,  // 16: dedo.v1.method:type_name -> dedo.v1.MethodRules
+	9,  // 17: dedo.v1.message:type_name -> dedo.v1.MessageRules
+	10, // 18: dedo.v1.field:type_name -> dedo.v1.FieldRules
 	19, // [19:19] is the sub-list for method output_type
 	19, // [19:19] is the sub-list for method input_type
 	15, // [15:19] is the sub-list for extension type_name
@@ -892,29 +892,29 @@ var file_raveesh_me_http_proto_lint_v1_options_proto_depIdxs = []int32{
 	0,  // [0:11] is the sub-list for field type_name
 }
 
-func init() { file_raveesh_me_http_proto_lint_v1_options_proto_init() }
-func file_raveesh_me_http_proto_lint_v1_options_proto_init() {
-	if File_raveesh_me_http_proto_lint_v1_options_proto != nil {
+func init() { file_dedo_v1_options_proto_init() }
+func file_dedo_v1_options_proto_init() {
+	if File_dedo_v1_options_proto != nil {
 		return
 	}
-	file_raveesh_me_http_proto_lint_v1_options_proto_msgTypes[5].OneofWrappers = []any{}
+	file_dedo_v1_options_proto_msgTypes[5].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_raveesh_me_http_proto_lint_v1_options_proto_rawDesc), len(file_raveesh_me_http_proto_lint_v1_options_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_dedo_v1_options_proto_rawDesc), len(file_dedo_v1_options_proto_rawDesc)),
 			NumEnums:      2,
 			NumMessages:   9,
 			NumExtensions: 4,
 			NumServices:   0,
 		},
-		GoTypes:           file_raveesh_me_http_proto_lint_v1_options_proto_goTypes,
-		DependencyIndexes: file_raveesh_me_http_proto_lint_v1_options_proto_depIdxs,
-		EnumInfos:         file_raveesh_me_http_proto_lint_v1_options_proto_enumTypes,
-		MessageInfos:      file_raveesh_me_http_proto_lint_v1_options_proto_msgTypes,
-		ExtensionInfos:    file_raveesh_me_http_proto_lint_v1_options_proto_extTypes,
+		GoTypes:           file_dedo_v1_options_proto_goTypes,
+		DependencyIndexes: file_dedo_v1_options_proto_depIdxs,
+		EnumInfos:         file_dedo_v1_options_proto_enumTypes,
+		MessageInfos:      file_dedo_v1_options_proto_msgTypes,
+		ExtensionInfos:    file_dedo_v1_options_proto_extTypes,
 	}.Build()
-	File_raveesh_me_http_proto_lint_v1_options_proto = out.File
-	file_raveesh_me_http_proto_lint_v1_options_proto_goTypes = nil
-	file_raveesh_me_http_proto_lint_v1_options_proto_depIdxs = nil
+	File_dedo_v1_options_proto = out.File
+	file_dedo_v1_options_proto_goTypes = nil
+	file_dedo_v1_options_proto_depIdxs = nil
 }

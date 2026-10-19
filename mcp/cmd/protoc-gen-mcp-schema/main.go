@@ -16,7 +16,7 @@ import (
 	"google.golang.org/protobuf/compiler/protogen"
 	"google.golang.org/protobuf/types/pluginpb"
 
-	"github.com/raveesh-me/http-proto-lint/mcp/schema"
+	"github.com/raveesh-me/dedo/mcp/schema"
 )
 
 func main() {

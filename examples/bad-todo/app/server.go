@@ -6,8 +6,8 @@ import (
 
 	"connectrpc.com/connect"
 
-	todov1 "github.com/raveesh-me/http-proto-lint/examples/bad-todo/gen/go/raveesh_me/todo/v1"
-	"github.com/raveesh-me/http-proto-lint/examples/bad-todo/gen/go/raveesh_me/todo/v1/todov1connect"
+	todov1 "github.com/raveesh-me/dedo/examples/bad-todo/gen/go/raveesh_me/todo/v1"
+	"github.com/raveesh-me/dedo/examples/bad-todo/gen/go/raveesh_me/todo/v1/todov1connect"
 )
 
 const maxPageSize = 100

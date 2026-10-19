@@ -3,17 +3,17 @@ syntax = "proto3";
 package raveesh_me.library.v1;
 
 import "google/protobuf/empty.proto";
-import "raveesh_me/http_proto_lint/v1/options.proto";
+import "dedo/v1/options.proto";
 
 service LibraryService {
   rpc GetBook(google.protobuf.Empty) returns (google.protobuf.Empty) {
     option idempotency_level = NO_SIDE_EFFECTS;
-    option (raveesh_me.http_proto_lint.v1.method) = {
+    option (dedo.v1.method) = {
       cache: {visibility: VISIBILITY_PRIVATE, max_age: {seconds: 30}}
     };
   }
   rpc DeleteBook(google.protobuf.Empty) returns (google.protobuf.Empty) {
-    option (raveesh_me.http_proto_lint.v1.method) = {
+    option (dedo.v1.method) = {
       scopes: "library.book.write"
       errors: {reason: "BOOK_NOT_FOUND", code: NOT_FOUND}
     };

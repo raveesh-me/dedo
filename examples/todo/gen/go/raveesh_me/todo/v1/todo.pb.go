@@ -7,7 +7,7 @@
 package todov1
 
 import (
-	_ "github.com/raveesh-me/http-proto-lint/gen/go/raveesh_me/http_proto_lint/v1"
+	_ "github.com/raveesh-me/dedo/gen/go/dedo/v1"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	money "google.golang.org/genproto/googleapis/type/money"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
@@ -842,7 +842,7 @@ var File_raveesh_me_todo_v1_todo_proto protoreflect.FileDescriptor
 
 const file_raveesh_me_todo_v1_todo_proto_rawDesc = "" +
 	"\n" +
-	"\x1draveesh_me/todo/v1/todo.proto\x12\x12raveesh_me.todo.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x17google/api/client.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x19google/api/resource.proto\x1a google/protobuf/field_mask.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x17google/type/money.proto\x1a+raveesh_me/http_proto_lint/v1/options.proto\"\xe2\x02\n" +
+	"\x1draveesh_me/todo/v1/todo.proto\x12\x12raveesh_me.todo.v1\x1a\x15dedo/v1/options.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x17google/api/client.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x19google/api/resource.proto\x1a google/protobuf/field_mask.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x17google/type/money.proto\"\xe2\x02\n" +
 	"\x04Todo\x12\x18\n" +
 	"\x04name\x18\x01 \x01(\tB\x04\xe2A\x01\bR\x04name\x12\x1a\n" +
 	"\x05title\x18\x02 \x01(\tB\x04\xe2A\x01\x02R\x05title\x12\x18\n" +
@@ -944,8 +944,8 @@ const file_raveesh_me_todo_v1_todo_proto_rawDesc = "" +
 	"\x0ftodo.todo.write\x1a;\n" +
 	"\x06\b\x80\xf2\xd6\xca\x06\x12\x06\b\x80\xd9\xdb\xd9\x06\x1a)raveesh_me.todo.v1.TodoService.DeleteTodo\"\x12\n" +
 	"\x0eTODO_NOT_FOUND\x10\x05*^\n" +
-	"\x1bRemove a to-do (deprecated)\x125Deprecated: use DeleteTodo. Removes a to-do for good.\x1a\b\b\x00\x10\x01\x18\x01 \x00\x82\xd3\xe4\x93\x02,:\x01*\"'/commerce/todo/v1/{name=todos/*}:remove\x88\x02\x01\x90\x02\x02\x1a#\xcaA\x0ftodo.raveesh.me\xa2\xbb\x18\r\b\x05\x12\ttodo-teamB\xdf\x01\n" +
-	"\x16com.raveesh_me.todo.v1B\tTodoProtoP\x01ZTgithub.com/raveesh-me/http-proto-lint/examples/todo/gen/go/raveesh_me/todo/v1;todov1\xa2\x02\x03RTX\xaa\x02\x11RaveeshMe.Todo.V1\xca\x02\x11RaveeshMe\\Todo\\V1\xe2\x02\x1dRaveeshMe\\Todo\\V1\\GPBMetadata\xea\x02\x13RaveeshMe::Todo::V1b\x06proto3"
+	"\x1bRemove a to-do (deprecated)\x125Deprecated: use DeleteTodo. Removes a to-do for good.\x1a\b\b\x00\x10\x01\x18\x01 \x00\x82\xd3\xe4\x93\x02,:\x01*\"'/commerce/todo/v1/{name=todos/*}:remove\x88\x02\x01\x90\x02\x02\x1a#\xcaA\x0ftodo.raveesh.me\xa2\xbb\x18\r\b\x05\x12\ttodo-teamB\xd4\x01\n" +
+	"\x16com.raveesh_me.todo.v1B\tTodoProtoP\x01ZIgithub.com/raveesh-me/dedo/examples/todo/gen/go/raveesh_me/todo/v1;todov1\xa2\x02\x03RTX\xaa\x02\x11RaveeshMe.Todo.V1\xca\x02\x11RaveeshMe\\Todo\\V1\xe2\x02\x1dRaveeshMe\\Todo\\V1\\GPBMetadata\xea\x02\x13RaveeshMe::Todo::V1b\x06proto3"
 
 var (
 	file_raveesh_me_todo_v1_todo_proto_rawDescOnce sync.Once

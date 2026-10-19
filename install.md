@@ -12,7 +12,7 @@ Every step below was run as written. Read [guideline.md](guideline.md) for the r
 - A clone of this repository, for the templates:
 
   ```sh
-  git clone https://github.com/raveesh-me/http-proto-lint ~/src/http-proto-lint
+  git clone https://github.com/raveesh-me/dedo ~/src/dedo
   ```
 
 ## 1. Decide the names
@@ -30,12 +30,12 @@ Every step below was run as written. Read [guideline.md](guideline.md) for the r
 ```sh
 mkdir time-counter && cd time-counter && git init
 go mod init github.com/acme/time-counter
-HPL=~/src/http-proto-lint
-cp $HPL/templates/buf.yaml $HPL/templates/buf.gen.yaml $HPL/templates/Makefile.api .
+DEDO=~/src/dedo
+cp $DEDO/templates/buf.yaml $DEDO/templates/buf.gen.yaml $DEDO/templates/Makefile.api .
 mkdir -p .github .vscode docs proto/acme/time_counter/v1
-cp $HPL/templates/CODEOWNERS .github/
-cp $HPL/templates/vscode/*.json .vscode/
-cp $HPL/examples/todo/docs/docs.go $HPL/examples/todo/docs/index.html docs/
+cp $DEDO/templates/CODEOWNERS .github/
+cp $DEDO/templates/vscode/*.json .vscode/
+cp $DEDO/examples/todo/docs/docs.go $DEDO/examples/todo/docs/index.html docs/
 printf 'include Makefile.api\n' > Makefile
 printf '.tools/\n' > .gitignore
 ```
@@ -52,11 +52,11 @@ Pin the code generators, so every machine and CI generate the same code:
 go get -tool google.golang.org/protobuf/cmd/protoc-gen-go
 go get -tool connectrpc.com/connect/cmd/protoc-gen-connect-go
 go get -tool github.com/redpanda-data/protoc-gen-go-mcp/cmd/protoc-gen-go-mcp
-go get -tool github.com/raveesh-me/http-proto-lint/mcp/cmd/protoc-gen-mcp-schema@v0.3.0
-go get -tool github.com/raveesh-me/http-proto-lint/openapi/cmd/protoc-gen-rest-openapi@v0.3.0
+go get -tool github.com/raveesh-me/dedo/mcp/cmd/protoc-gen-mcp-schema@v0.3.0
+go get -tool github.com/raveesh-me/dedo/openapi/cmd/protoc-gen-rest-openapi@v0.3.0
 ```
 
-Give the http-proto-lint modules an explicit version, the latest [release](https://github.com/raveesh-me/http-proto-lint/releases). Right after a release, Go's module proxy can still report an older version as the latest.
+Give the dedo modules an explicit version, the latest [release](https://github.com/raveesh-me/dedo/releases). Right after a release, Go's module proxy can still report an older version as the latest.
 
 Download the lint plugins for your machine into `.tools/`. Do this once per clone; `make api-check` also does it.
 
@@ -78,11 +78,11 @@ import "google/api/field_behavior.proto";
 import "google/api/resource.proto";
 import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";
-import "raveesh_me/http_proto_lint/v1/options.proto";
+import "dedo/v1/options.proto";
 
 // CounterService counts time spent on tasks.
 service CounterService {
-  option (raveesh_me.http_proto_lint.v1.service) = {
+  option (dedo.v1.service) = {
     audience: AUDIENCE_EXTERNAL_PUBLIC
     owner_team: "time-counter-team"
   };
@@ -94,7 +94,7 @@ service CounterService {
       get: "/commerce/timeCounter/v1/{name=counters/*}"
       response_body: "counter"
     };
-    option (raveesh_me.http_proto_lint.v1.method) = {
+    option (dedo.v1.method) = {
       scopes: "time_counter.counter.read"
       errors: {
         reason: "COUNTER_NOT_FOUND"
@@ -118,7 +118,7 @@ service CounterService {
       body: "counter"
       response_body: "counter"
     };
-    option (raveesh_me.http_proto_lint.v1.method) = {
+    option (dedo.v1.method) = {
       scopes: "time_counter.counter.write"
       errors: {
         reason: "DISPLAY_NAME_REQUIRED"
@@ -144,7 +144,7 @@ service CounterService {
       body: "*"
       response_body: "counter"
     };
-    option (raveesh_me.http_proto_lint.v1.method) = {
+    option (dedo.v1.method) = {
       scopes: "time_counter.counter.write"
       errors: {
         reason: "COUNTER_NOT_FOUND"
@@ -172,7 +172,7 @@ message Counter {
     singular: "counter"
     plural: "counters"
   };
-  option (raveesh_me.http_proto_lint.v1.message) = {description: "The time counted for one task."};
+  option (dedo.v1.message) = {description: "The time counted for one task."};
 
   // The resource name, such as counters/1.
   string name = 1 [(google.api.field_behavior) = IDENTIFIER];
@@ -186,7 +186,7 @@ message Counter {
 
 // GetCounterRequest is the request of GetCounter.
 message GetCounterRequest {
-  option (raveesh_me.http_proto_lint.v1.message) = {description: "Which counter to get."};
+  option (dedo.v1.message) = {description: "Which counter to get."};
 
   // The resource name of the counter.
   string name = 1 [
@@ -197,7 +197,7 @@ message GetCounterRequest {
 
 // GetCounterResponse is the response of GetCounter.
 message GetCounterResponse {
-  option (raveesh_me.http_proto_lint.v1.message) = {description: "The requested counter."};
+  option (dedo.v1.message) = {description: "The requested counter."};
 
   // The counter.
   Counter counter = 1;
@@ -205,7 +205,7 @@ message GetCounterResponse {
 
 // CreateCounterRequest is the request of CreateCounter.
 message CreateCounterRequest {
-  option (raveesh_me.http_proto_lint.v1.message) = {description: "The counter to create, and optionally its ID."};
+  option (dedo.v1.message) = {description: "The counter to create, and optionally its ID."};
 
   // The counter to create.
   Counter counter = 1 [(google.api.field_behavior) = REQUIRED];
@@ -215,7 +215,7 @@ message CreateCounterRequest {
 
 // CreateCounterResponse is the response of CreateCounter.
 message CreateCounterResponse {
-  option (raveesh_me.http_proto_lint.v1.message) = {description: "The created counter."};
+  option (dedo.v1.message) = {description: "The created counter."};
 
   // The counter.
   Counter counter = 1;
@@ -223,7 +223,7 @@ message CreateCounterResponse {
 
 // AddTimeRequest is the request of AddTime.
 message AddTimeRequest {
-  option (raveesh_me.http_proto_lint.v1.message) = {description: "Which counter to add time to, and how much."};
+  option (dedo.v1.message) = {description: "Which counter to add time to, and how much."};
 
   // The resource name of the counter.
   string name = 1 [
@@ -236,7 +236,7 @@ message AddTimeRequest {
 
 // AddTimeResponse is the response of AddTime.
 message AddTimeResponse {
-  option (raveesh_me.http_proto_lint.v1.message) = {description: "The counter with its new total."};
+  option (dedo.v1.message) = {description: "The counter with its new total."};
 
   // The counter.
   Counter counter = 1;
@@ -292,7 +292,7 @@ import (
 )
 
 // server holds business logic only. Scopes, headers, flow IDs and error
-// audit come from the http-proto-lint runtime.
+// audit come from the dedo runtime.
 type server struct {
 	mu       sync.Mutex
 	counters map[string]*timecounterv1.Counter
@@ -372,10 +372,10 @@ import (
 	"connectrpc.com/vanguard"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"google.golang.org/protobuf/reflect/protoreflect"
-	"github.com/raveesh-me/http-proto-lint/flowid"
-	"github.com/raveesh-me/http-proto-lint/interceptor"
-	"github.com/raveesh-me/http-proto-lint/mcp/mcpserver"
-	"github.com/raveesh-me/http-proto-lint/policy"
+	"github.com/raveesh-me/dedo/flowid"
+	"github.com/raveesh-me/dedo/interceptor"
+	"github.com/raveesh-me/dedo/mcp/mcpserver"
+	"github.com/raveesh-me/dedo/policy"
 
 	"github.com/acme/time-counter/docs"
 	timecounterv1 "github.com/acme/time-counter/gen/go/acme/time_counter/v1"
@@ -472,7 +472,7 @@ func scopesFromContext(ctx context.Context) []string {
 Add the runtime libraries, and pin Vanguard to `v0.4.0`. Later versions need connect-go v2. Pin it after the code exists, or `go mod tidy` replaces it with the latest.
 
 ```sh
-go get github.com/raveesh-me/http-proto-lint@v0.3.0 github.com/raveesh-me/http-proto-lint/mcp@v0.3.0
+go get github.com/raveesh-me/dedo@v0.3.0 github.com/raveesh-me/dedo/mcp@v0.3.0
 go get connectrpc.com/vanguard@v0.4.0
 go mod tidy
 ```
@@ -482,7 +482,7 @@ Add the policy-table test, so a missing declaration fails before deploy:
 ```sh
 sed -e 's#libraryv1connect "github.com/YOUR_ORG/YOUR_REPO/gen/go/raveesh_me/library/v1/libraryv1connect"#"github.com/acme/time-counter/gen/go/acme/time_counter/v1/time_counterv1connect"#' \
     -e 's#libraryv1connect.LibraryServiceName#time_counterv1connect.CounterServiceName#' \
-    $HPL/templates/policy_table_test.go.tmpl > policy_table_test.go
+    $DEDO/templates/policy_table_test.go.tmpl > policy_table_test.go
 gofmt -w policy_table_test.go
 go test ./...
 ```
@@ -524,7 +524,7 @@ The same RPCs also answer over Connect and gRPC at `/acme.time_counter.v1.Counte
 
 ## Updating later
 
-- **New lint rules:** bump `HTTP_PROTO_LINT_VERSION` in `Makefile.api`, then run `make tools`.
+- **New lint rules:** bump `DEDO_VERSION` in `Makefile.api`, then run `make tools`.
 - **New options module:** run `buf dep update`.
 - **A new RPC:** add it to the `.proto`, then run `buf lint`, `buf generate` and `go mod tidy`, and implement the method in `server.go`. The REST route, the docs and the MCP tool follow from the `.proto`.
 
@@ -538,5 +538,5 @@ The same RPCs also answer over Connect and gRPC at `/acme.time_counter.v1.Counte
 | `go: updates to go.mod needed` while generating | Run `go mod tidy`, then generate again. |
 | `bind: address already in use` | Something else holds port 8080. Run with `ADDR=:9090`. |
 | No findings in the editor | The lint plugins are missing from `.tools/`. Run `make tools`, then reload the editor. |
-| `reading github.com/raveesh-me/http-proto-lint/go.mod at revision v0.0.0: unknown revision` | `go get` picked an old commit instead of a release. Add `@v0.3.0` (or the latest release) to the module path. |
+| `reading github.com/raveesh-me/dedo/go.mod at revision v0.0.0: unknown revision` | `go get` picked an old commit instead of a release. Add `@v0.3.0` (or the latest release) to the module path. |
 | `Module buf.build/bufbuild/protovalidate is declared ... but is unused` | A warning only. Remove the dependency from `buf.yaml` if you don't use protovalidate. |

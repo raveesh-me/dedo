@@ -14,7 +14,7 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/descriptorpb"
 
-	hplv1 "github.com/raveesh-me/http-proto-lint/gen/go/raveesh_me/http_proto_lint/v1"
+	dedov1 "github.com/raveesh-me/dedo/gen/go/dedo/v1"
 )
 
 const (
@@ -68,7 +68,7 @@ func (g *generator) operation(svc *protogen.Service, m *protogen.Method, b bindi
 		return "", nil, fmt.Errorf("%s: %w", m.Desc.FullName(), err)
 	}
 	path, params := tmpl.openAPIPath(func(seg segment) []string { return g.paramNames(m.Input, seg) })
-	rules, _ := proto.GetExtension(m.Desc.Options(), hplv1.E_Method).(*hplv1.MethodRules)
+	rules, _ := proto.GetExtension(m.Desc.Options(), dedov1.E_Method).(*dedov1.MethodRules)
 
 	op := &Operation{
 		OperationID: fmt.Sprintf("%s_%s", svc.Desc.Name(), m.Desc.Name()),
@@ -103,7 +103,7 @@ func (g *generator) operation(svc *protogen.Service, m *protogen.Method, b bindi
 
 // operationDescription prefers the tool description and adds the scopes,
 // which some renderers do not show from the security requirement.
-func operationDescription(m *protogen.Method, rules *hplv1.MethodRules) string {
+func operationDescription(m *protogen.Method, rules *dedov1.MethodRules) string {
 	text := strings.TrimSpace(rules.GetTool().GetDescription())
 	if text == "" {
 		text = cleanComment(m.Comments.Leading)
@@ -221,7 +221,7 @@ func (g *generator) requestBody(m *protogen.Method, params []pathParam, body str
 
 // success documents the 200 response: the response_body field when set, so
 // REST callers see the bare resource, and the headers the runtime adds.
-func (g *generator) success(m *protogen.Method, b binding, rules *hplv1.MethodRules) *Response {
+func (g *generator) success(m *protogen.Method, b binding, rules *dedov1.MethodRules) *Response {
 	var schema *Schema
 	if fd := m.Output.Desc.Fields().ByName(protoreflect.Name(b.rule.GetResponseBody())); fd != nil {
 		schema = g.schemas.field(fd)
@@ -243,7 +243,7 @@ func (g *generator) success(m *protogen.Method, b binding, rules *hplv1.MethodRu
 
 // errorResponses documents each declared error reason under its HTTP status,
 // and the scope check's 403.
-func (g *generator) errorResponses(op *Operation, rules *hplv1.MethodRules) {
+func (g *generator) errorResponses(op *Operation, rules *dedov1.MethodRules) {
 	byStatus := map[int][]string{}
 	for _, e := range rules.GetErrors() {
 		status := httpStatus(e.GetCode())

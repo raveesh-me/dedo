@@ -14,7 +14,7 @@ import (
 	"google.golang.org/protobuf/compiler/protogen"
 	"google.golang.org/protobuf/proto"
 
-	hplv1 "github.com/raveesh-me/http-proto-lint/gen/go/raveesh_me/http_proto_lint/v1"
+	dedov1 "github.com/raveesh-me/dedo/gen/go/dedo/v1"
 )
 
 // Config holds the plugin parameters.
@@ -127,13 +127,13 @@ func (p *PathItem) set(method string, op *Operation) error {
 }
 
 func tag(svc *protogen.Service) Tag {
-	rules, _ := proto.GetExtension(svc.Desc.Options(), hplv1.E_Service).(*hplv1.ServiceRules)
+	rules, _ := proto.GetExtension(svc.Desc.Options(), dedov1.E_Service).(*dedov1.ServiceRules)
 	t := Tag{
 		Name:        string(svc.Desc.Name()),
 		Description: cleanComment(svc.Comments.Leading),
 		OwnerTeam:   rules.GetOwnerTeam(),
 	}
-	if a := rules.GetAudience(); a != hplv1.Audience_AUDIENCE_UNSPECIFIED {
+	if a := rules.GetAudience(); a != dedov1.Audience_AUDIENCE_UNSPECIFIED {
 		t.Audience = a.String()
 	}
 	return t

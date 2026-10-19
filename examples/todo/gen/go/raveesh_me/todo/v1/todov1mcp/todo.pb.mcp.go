@@ -4,7 +4,7 @@
 package todov1mcp
 
 import (
-	v1 "github.com/raveesh-me/http-proto-lint/examples/todo/gen/go/raveesh_me/todo/v1"
+	v1 "github.com/raveesh-me/dedo/examples/todo/gen/go/raveesh_me/todo/v1"
 )
 
 import (

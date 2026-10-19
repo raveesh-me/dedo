@@ -5,7 +5,7 @@ modules:
 deps:
   - buf.build/googleapis/googleapis
   - buf.build/bufbuild/protovalidate
-  - buf.build/cookytech-in/http-proto-lint
+  - buf.build/r-a/dedo
 lint:
   use:
     - STANDARD
@@ -42,8 +42,8 @@ plugins:
   # Native plugin binaries for this machine, fetched by `make tools`. They are
   # referred to by path, so editors started outside a shell find them too.
   # They lint about 17 times faster than the WebAssembly versions on the BSR
-  # (buf.build/cookytech-in/buf-plugin-aip and
-  # buf.build/cookytech-in/http-proto-lint-plugin), which need no download
+  # (buf.build/r-a/buf-plugin-aip and
+  # buf.build/r-a/dedo-lint), which need no download
   # and also work on Windows.
   - plugin: .tools/buf-plugin-aip
-  - plugin: .tools/buf-plugin-raveesh-me-api
+  - plugin: .tools/buf-plugin-dedo

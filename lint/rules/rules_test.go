@@ -11,7 +11,7 @@ import (
 	"buf.build/go/bufplugin/check"
 	"buf.build/go/bufplugin/check/checktest"
 
-	"github.com/raveesh-me/http-proto-lint/lint/rules"
+	"github.com/raveesh-me/dedo/lint/rules"
 )
 
 // wantMarker marks a fixture line where the rule must report an annotation.

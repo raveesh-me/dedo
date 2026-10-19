@@ -9,9 +9,9 @@ import (
 	"connectrpc.com/connect"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"github.com/raveesh-me/http-proto-lint/examples/todo/app"
-	todov1 "github.com/raveesh-me/http-proto-lint/examples/todo/gen/go/raveesh_me/todo/v1"
-	"github.com/raveesh-me/http-proto-lint/examples/todo/gen/go/raveesh_me/todo/v1/todov1connect"
+	"github.com/raveesh-me/dedo/examples/todo/app"
+	todov1 "github.com/raveesh-me/dedo/examples/todo/gen/go/raveesh_me/todo/v1"
+	"github.com/raveesh-me/dedo/examples/todo/gen/go/raveesh_me/todo/v1/todov1connect"
 )
 
 // streamClient sends the token on every request, streams included; the
