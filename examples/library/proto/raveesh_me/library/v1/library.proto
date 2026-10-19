@@ -28,6 +28,10 @@ service LibraryService {
       tool: {
         title: "Get a book"
         description: "Returns one book by its resource name, such as shelves/1/books/2."
+        annotations: {
+          read_only_hint: true
+          open_world_hint: false
+        }
       }
       scopes: "library.book.read"
       cache: {
@@ -45,12 +49,18 @@ service LibraryService {
   //
   // Errors: BOOK_NOT_FOUND.
   rpc DeleteBook(DeleteBookRequest) returns (DeleteBookResponse) {
+    option idempotency_level = IDEMPOTENT;
     option (google.api.http) = {delete: "/v1/{name=shelves/*/books/*}"};
     option (raveesh_me.http_proto_lint.v1.method) = {
       tool: {
         title: "Delete a book"
         description: "Removes a book from its shelf for good."
-        destructive: true
+        annotations: {
+          read_only_hint: false
+          destructive_hint: true
+          idempotent_hint: true
+          open_world_hint: false
+        }
       }
       scopes: "library.book.write"
       errors: {
@@ -66,12 +76,18 @@ service LibraryService {
   //
   // Errors: BOOK_NOT_FOUND.
   rpc RemoveBook(RemoveBookRequest) returns (RemoveBookResponse) {
+    option idempotency_level = IDEMPOTENT;
     option deprecated = true;
     option (raveesh_me.http_proto_lint.v1.method) = {
       tool: {
         title: "Remove a book (deprecated)"
         description: "Deprecated: use DeleteBook. Removes a book from its shelf for good."
-        destructive: true
+        annotations: {
+          read_only_hint: false
+          destructive_hint: true
+          idempotent_hint: true
+          open_world_hint: false
+        }
       }
       scopes: "library.book.write"
       deprecation: {

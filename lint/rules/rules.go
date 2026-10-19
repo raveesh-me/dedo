@@ -21,6 +21,7 @@ var All = []*check.RuleSpec{
 	noJSONName,
 	moneyFieldType,
 	toolRequired,
+	toolAnnotations,
 	messageDescriptionRequired,
 }
 

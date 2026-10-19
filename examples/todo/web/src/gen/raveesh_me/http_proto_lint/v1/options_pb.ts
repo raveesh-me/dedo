@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file raveesh_me/http_proto_lint/v1/options.proto.
  */
 export const file_raveesh_me_http_proto_lint_v1_options: GenFile = /*@__PURE__*/
-  fileDesc("CityYXZlZXNoX21lL2h0dHBfcHJvdG9fbGludC92MS9vcHRpb25zLnByb3RvEh1yYXZlZXNoX21lLmh0dHBfcHJvdG9fbGludC52MSJdCgxTZXJ2aWNlUnVsZXMSOQoIYXVkaWVuY2UYASABKA4yJy5yYXZlZXNoX21lLmh0dHBfcHJvdG9fbGludC52MS5BdWRpZW5jZRISCgpvd25lcl90ZWFtGAIgASgJIt0BCgtDYWNoZVBvbGljeRJJCgp2aXNpYmlsaXR5GAEgASgOMjUucmF2ZWVzaF9tZS5odHRwX3Byb3RvX2xpbnQudjEuQ2FjaGVQb2xpY3kuVmlzaWJpbGl0eRIqCgdtYXhfYWdlGAIgASgLMhkuZ29vZ2xlLnByb3RvYnVmLkR1cmF0aW9uIlcKClZpc2liaWxpdHkSGgoWVklTSUJJTElUWV9VTlNQRUNJRklFRBAAEhYKElZJU0lCSUxJVFlfUFJJVkFURRABEhUKEVZJU0lCSUxJVFlfUFVCTElDEAIihwEKC0RlcHJlY2F0aW9uEjQKEGRlcHJlY2F0aW9uX3RpbWUYASABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi8KC3N1bnNldF90aW1lGAIgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIRCglzdWNjZXNzb3IYAyABKAkiPQoLRXJyb3JSZWFzb24SDgoGcmVhc29uGAEgASgJEh4KBGNvZGUYAiABKA4yEC5nb29nbGUucnBjLkNvZGUiPwoEVG9vbBINCgV0aXRsZRgBIAEoCRITCgtkZXNjcmlwdGlvbhgCIAEoCRITCgtkZXN0cnVjdGl2ZRgDIAEoCCKIAgoLTWV0aG9kUnVsZXMSDgoGc2NvcGVzGAEgAygJEjkKBWNhY2hlGAIgASgLMioucmF2ZWVzaF9tZS5odHRwX3Byb3RvX2xpbnQudjEuQ2FjaGVQb2xpY3kSPwoLZGVwcmVjYXRpb24YAyABKAsyKi5yYXZlZXNoX21lLmh0dHBfcHJvdG9fbGludC52MS5EZXByZWNhdGlvbhI6CgZlcnJvcnMYBCADKAsyKi5yYXZlZXNoX21lLmh0dHBfcHJvdG9fbGludC52MS5FcnJvclJlYXNvbhIxCgR0b29sGAUgASgLMiMucmF2ZWVzaF9tZS5odHRwX3Byb3RvX2xpbnQudjEuVG9vbCIjCgxNZXNzYWdlUnVsZXMSEwoLZGVzY3JpcHRpb24YASABKAkiHwoKRmllbGRSdWxlcxIRCglzZW5zaXRpdmUYASABKAgqxgEKCEF1ZGllbmNlEhgKFEFVRElFTkNFX1VOU1BFQ0lGSUVEEAASHwobQVVESUVOQ0VfQ09NUE9ORU5UX0lOVEVSTkFMEAESIwofQVVESUVOQ0VfQlVTSU5FU1NfVU5JVF9JTlRFUk5BTBACEh0KGUFVRElFTkNFX0NPTVBBTllfSU5URVJOQUwQAxIdChlBVURJRU5DRV9FWFRFUk5BTF9QQVJUTkVSEAQSHAoYQVVESUVOQ0VfRVhURVJOQUxfUFVCTElDEAU6aAoHc2VydmljZRIfLmdvb2dsZS5wcm90b2J1Zi5TZXJ2aWNlT3B0aW9ucxi0hwMgASgLMisucmF2ZWVzaF9tZS5odHRwX3Byb3RvX2xpbnQudjEuU2VydmljZVJ1bGVzUgdzZXJ2aWNlOmQKBm1ldGhvZBIeLmdvb2dsZS5wcm90b2J1Zi5NZXRob2RPcHRpb25zGLWHAyABKAsyKi5yYXZlZXNoX21lLmh0dHBfcHJvdG9fbGludC52MS5NZXRob2RSdWxlc1IGbWV0aG9kOmgKB21lc3NhZ2USHy5nb29nbGUucHJvdG9idWYuTWVzc2FnZU9wdGlvbnMYuIcDIAEoCzIrLnJhdmVlc2hfbWUuaHR0cF9wcm90b19saW50LnYxLk1lc3NhZ2VSdWxlc1IHbWVzc2FnZTpgCgVmaWVsZBIdLmdvb2dsZS5wcm90b2J1Zi5GaWVsZE9wdGlvbnMYt4cDIAEoCzIpLnJhdmVlc2hfbWUuaHR0cF9wcm90b19saW50LnYxLkZpZWxkUnVsZXNSBWZpZWxkYgZwcm90bzM", [file_google_protobuf_descriptor, file_google_protobuf_duration, file_google_protobuf_timestamp, file_google_rpc_code]);
+  fileDesc("CityYXZlZXNoX21lL2h0dHBfcHJvdG9fbGludC92MS9vcHRpb25zLnByb3RvEh1yYXZlZXNoX21lLmh0dHBfcHJvdG9fbGludC52MSJdCgxTZXJ2aWNlUnVsZXMSOQoIYXVkaWVuY2UYASABKA4yJy5yYXZlZXNoX21lLmh0dHBfcHJvdG9fbGludC52MS5BdWRpZW5jZRISCgpvd25lcl90ZWFtGAIgASgJIt0BCgtDYWNoZVBvbGljeRJJCgp2aXNpYmlsaXR5GAEgASgOMjUucmF2ZWVzaF9tZS5odHRwX3Byb3RvX2xpbnQudjEuQ2FjaGVQb2xpY3kuVmlzaWJpbGl0eRIqCgdtYXhfYWdlGAIgASgLMhkuZ29vZ2xlLnByb3RvYnVmLkR1cmF0aW9uIlcKClZpc2liaWxpdHkSGgoWVklTSUJJTElUWV9VTlNQRUNJRklFRBAAEhYKElZJU0lCSUxJVFlfUFJJVkFURRABEhUKEVZJU0lCSUxJVFlfUFVCTElDEAIihwEKC0RlcHJlY2F0aW9uEjQKEGRlcHJlY2F0aW9uX3RpbWUYASABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi8KC3N1bnNldF90aW1lGAIgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIRCglzdWNjZXNzb3IYAyABKAkiPQoLRXJyb3JSZWFzb24SDgoGcmVhc29uGAEgASgJEh4KBGNvZGUYAiABKA4yEC5nb29nbGUucnBjLkNvZGUiiAEKBFRvb2wSDQoFdGl0bGUYASABKAkSEwoLZGVzY3JpcHRpb24YAiABKAkSFwoLZGVzdHJ1Y3RpdmUYAyABKAhCAhgBEkMKC2Fubm90YXRpb25zGAQgASgLMi4ucmF2ZWVzaF9tZS5odHRwX3Byb3RvX2xpbnQudjEuVG9vbEFubm90YXRpb25zItkBCg9Ub29sQW5ub3RhdGlvbnMSGwoOcmVhZF9vbmx5X2hpbnQYASABKAhIAIgBARIdChBkZXN0cnVjdGl2ZV9oaW50GAIgASgISAGIAQESHAoPaWRlbXBvdGVudF9oaW50GAMgASgISAKIAQESHAoPb3Blbl93b3JsZF9oaW50GAQgASgISAOIAQFCEQoPX3JlYWRfb25seV9oaW50QhMKEV9kZXN0cnVjdGl2ZV9oaW50QhIKEF9pZGVtcG90ZW50X2hpbnRCEgoQX29wZW5fd29ybGRfaGludCKIAgoLTWV0aG9kUnVsZXMSDgoGc2NvcGVzGAEgAygJEjkKBWNhY2hlGAIgASgLMioucmF2ZWVzaF9tZS5odHRwX3Byb3RvX2xpbnQudjEuQ2FjaGVQb2xpY3kSPwoLZGVwcmVjYXRpb24YAyABKAsyKi5yYXZlZXNoX21lLmh0dHBfcHJvdG9fbGludC52MS5EZXByZWNhdGlvbhI6CgZlcnJvcnMYBCADKAsyKi5yYXZlZXNoX21lLmh0dHBfcHJvdG9fbGludC52MS5FcnJvclJlYXNvbhIxCgR0b29sGAUgASgLMiMucmF2ZWVzaF9tZS5odHRwX3Byb3RvX2xpbnQudjEuVG9vbCIjCgxNZXNzYWdlUnVsZXMSEwoLZGVzY3JpcHRpb24YASABKAkiHwoKRmllbGRSdWxlcxIRCglzZW5zaXRpdmUYASABKAgqxgEKCEF1ZGllbmNlEhgKFEFVRElFTkNFX1VOU1BFQ0lGSUVEEAASHwobQVVESUVOQ0VfQ09NUE9ORU5UX0lOVEVSTkFMEAESIwofQVVESUVOQ0VfQlVTSU5FU1NfVU5JVF9JTlRFUk5BTBACEh0KGUFVRElFTkNFX0NPTVBBTllfSU5URVJOQUwQAxIdChlBVURJRU5DRV9FWFRFUk5BTF9QQVJUTkVSEAQSHAoYQVVESUVOQ0VfRVhURVJOQUxfUFVCTElDEAU6aAoHc2VydmljZRIfLmdvb2dsZS5wcm90b2J1Zi5TZXJ2aWNlT3B0aW9ucxi0hwMgASgLMisucmF2ZWVzaF9tZS5odHRwX3Byb3RvX2xpbnQudjEuU2VydmljZVJ1bGVzUgdzZXJ2aWNlOmQKBm1ldGhvZBIeLmdvb2dsZS5wcm90b2J1Zi5NZXRob2RPcHRpb25zGLWHAyABKAsyKi5yYXZlZXNoX21lLmh0dHBfcHJvdG9fbGludC52MS5NZXRob2RSdWxlc1IGbWV0aG9kOmgKB21lc3NhZ2USHy5nb29nbGUucHJvdG9idWYuTWVzc2FnZU9wdGlvbnMYuIcDIAEoCzIrLnJhdmVlc2hfbWUuaHR0cF9wcm90b19saW50LnYxLk1lc3NhZ2VSdWxlc1IHbWVzc2FnZTpgCgVmaWVsZBIdLmdvb2dsZS5wcm90b2J1Zi5GaWVsZE9wdGlvbnMYt4cDIAEoCzIpLnJhdmVlc2hfbWUuaHR0cF9wcm90b19saW50LnYxLkZpZWxkUnVsZXNSBWZpZWxkYgZwcm90bzM", [file_google_protobuf_descriptor, file_google_protobuf_duration, file_google_protobuf_timestamp, file_google_rpc_code]);
 
 /**
  * ServiceRules is the ownership and audience of a service.
@@ -170,33 +170,46 @@ export const ErrorReasonSchema: GenMessage<ErrorReason> = /*@__PURE__*/
   messageDesc(file_raveesh_me_http_proto_lint_v1_options, 3);
 
 /**
- * Tool is how an RPC is presented to consumers: as an MCP tool, and as an
- * operation in the REST docs. The text is written for people and models
- * choosing between operations, not for the implementers.
+ * Tool is how an RPC is presented as an MCP tool, and as an operation in
+ * the REST docs. It mirrors the Tool type of the MCP specification
+ * (2026-07-28). The text is written for people and models choosing between
+ * operations, not for the implementers.
  *
  * @generated from message raveesh_me.http_proto_lint.v1.Tool
  */
 export type Tool = Message<"raveesh_me.http_proto_lint.v1.Tool"> & {
   /**
-   * A short human-readable name, such as "Get a to-do".
+   * A short human-readable name, such as "Get a to-do". MCP Tool.title and
+   * ToolAnnotations.title.
    *
    * @generated from field: string title = 1;
    */
   title: string;
 
   /**
-   * What the operation does and when to use it.
+   * What the operation does and when to use it. MCP Tool.description, the
+   * one field every client passes to the model: put anything the model must
+   * know to act safely here, such as "cannot be undone".
    *
    * @generated from field: string description = 2;
    */
   description: string;
 
   /**
-   * The operation may destroy data, so clients should confirm it first.
+   * Deprecated: use annotations.destructive_hint. Its default was the
+   * opposite of the MCP specification's.
    *
-   * @generated from field: bool destructive = 3;
+   * @generated from field: bool destructive = 3 [deprecated = true];
+   * @deprecated
    */
   destructive: boolean;
+
+  /**
+   * Behaviour hints for MCP clients.
+   *
+   * @generated from field: raveesh_me.http_proto_lint.v1.ToolAnnotations annotations = 4;
+   */
+  annotations?: ToolAnnotations;
 };
 
 /**
@@ -205,6 +218,58 @@ export type Tool = Message<"raveesh_me.http_proto_lint.v1.Tool"> & {
  */
 export const ToolSchema: GenMessage<Tool> = /*@__PURE__*/
   messageDesc(file_raveesh_me_http_proto_lint_v1_options, 4);
+
+/**
+ * ToolAnnotations mirrors ToolAnnotations in the MCP specification
+ * (2026-07-28). Every field is a hint for the client, such as whether to ask
+ * the user before a call; clients treat hints from untrusted servers as
+ * untrusted. Leaving a field unset means the specification's default, which
+ * for destructive_hint and open_world_hint is true.
+ *
+ * @generated from message raveesh_me.http_proto_lint.v1.ToolAnnotations
+ */
+export type ToolAnnotations = Message<"raveesh_me.http_proto_lint.v1.ToolAnnotations"> & {
+  /**
+   * If true, the tool does not modify its environment. Spec default: false.
+   *
+   * @generated from field: optional bool read_only_hint = 1;
+   */
+  readOnlyHint?: boolean;
+
+  /**
+   * If true, the tool may perform destructive updates to its environment;
+   * if false, it performs only additive updates. Meaningful only when
+   * read_only_hint is false. Spec default: true.
+   *
+   * @generated from field: optional bool destructive_hint = 2;
+   */
+  destructiveHint?: boolean;
+
+  /**
+   * If true, calling the tool repeatedly with the same arguments has no
+   * additional effect on its environment. Meaningful only when
+   * read_only_hint is false. Spec default: false.
+   *
+   * @generated from field: optional bool idempotent_hint = 3;
+   */
+  idempotentHint?: boolean;
+
+  /**
+   * If true, the tool may interact with an open world of external entities,
+   * such as sending email or calling third parties; if false, its domain of
+   * interaction is closed. Spec default: true.
+   *
+   * @generated from field: optional bool open_world_hint = 4;
+   */
+  openWorldHint?: boolean;
+};
+
+/**
+ * Describes the message raveesh_me.http_proto_lint.v1.ToolAnnotations.
+ * Use `create(ToolAnnotationsSchema)` to create a new message.
+ */
+export const ToolAnnotationsSchema: GenMessage<ToolAnnotations> = /*@__PURE__*/
+  messageDesc(file_raveesh_me_http_proto_lint_v1_options, 5);
 
 /**
  * MethodRules is the operational contract of one RPC.
@@ -253,7 +318,7 @@ export type MethodRules = Message<"raveesh_me.http_proto_lint.v1.MethodRules"> &
  * Use `create(MethodRulesSchema)` to create a new message.
  */
 export const MethodRulesSchema: GenMessage<MethodRules> = /*@__PURE__*/
-  messageDesc(file_raveesh_me_http_proto_lint_v1_options, 5);
+  messageDesc(file_raveesh_me_http_proto_lint_v1_options, 6);
 
 /**
  * MessageRules documents a message for API consumers and models.
@@ -275,7 +340,7 @@ export type MessageRules = Message<"raveesh_me.http_proto_lint.v1.MessageRules">
  * Use `create(MessageRulesSchema)` to create a new message.
  */
 export const MessageRulesSchema: GenMessage<MessageRules> = /*@__PURE__*/
-  messageDesc(file_raveesh_me_http_proto_lint_v1_options, 6);
+  messageDesc(file_raveesh_me_http_proto_lint_v1_options, 7);
 
 /**
  * FieldRules classifies the data in a field.
@@ -296,7 +361,7 @@ export type FieldRules = Message<"raveesh_me.http_proto_lint.v1.FieldRules"> & {
  * Use `create(FieldRulesSchema)` to create a new message.
  */
 export const FieldRulesSchema: GenMessage<FieldRules> = /*@__PURE__*/
-  messageDesc(file_raveesh_me_http_proto_lint_v1_options, 7);
+  messageDesc(file_raveesh_me_http_proto_lint_v1_options, 8);
 
 /**
  * Audience is who may call an API. Mirrors Zalando rule 219.

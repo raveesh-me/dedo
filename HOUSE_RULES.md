@@ -26,6 +26,7 @@ To suppress one finding, put `// buf:lint:ignore <RULE_ID>` above the element, f
 | [`HOUSE_NO_JSON_NAME`](#house_no_json_name) | No custom JSON field names |
 | [`HOUSE_MONEY_FIELD_TYPE`](#house_money_field_type) | Money fields use `google.type.Money` |
 | [`HOUSE_TOOL_REQUIRED`](#house_tool_required) | RPCs declare their MCP tool and REST docs text |
+| [`HOUSE_TOOL_ANNOTATIONS`](#house_tool_annotations) | RPCs declare the MCP ToolAnnotations hints, consistent with the proto |
 | [`HOUSE_MESSAGE_DESCRIPTION_REQUIRED`](#house_message_description_required) | Messages declare a consumer-facing description |
 
 ---
@@ -222,22 +223,67 @@ google.type.Money price = 1;  // Passes.
 
 ## HOUSE_TOOL_REQUIRED
 
-**Checks** that every unary RPC sets `tool` in its method option, with a `title` and a `description` that does more than repeat the title or the RPC name. RPCs named `Delete*` or `Remove*` must set `destructive: true`. Streaming RPCs are exempt, because MCP cannot expose them.
+**Checks** that every unary RPC sets `tool` in its method option, with a `title` and a `description` that does more than repeat the title or the RPC name. Streaming RPCs are exempt, because MCP cannot expose them.
 
-**Why.** Every RPC is published as an MCP tool. The title and description are what an AI agent reads to pick a tool, and they are also the operation's summary and description in the REST docs. `destructive` tells MCP clients to confirm before calling.
+**Why.** Every RPC is published as an MCP tool. These are the MCP specification's `Tool.title` and `Tool.description`. The description is the one field every client passes to the model: hints and the title may never reach it. They are also the operation's summary and description in the REST docs.
 
 ```protobuf
 // Passes.
 option (raveesh_me.http_proto_lint.v1.method) = {
   tool: {
     title: "Delete a product"
-    description: "Removes a product for good. Its variants are removed too."
-    destructive: true
+    description: "Removes a product and its variants for good. It cannot be undone."
   }
 };
 ```
 
-**Fix.** Write the title as a short action ("Get a product"). Write the description for someone choosing between operations: what it does and when to use it.
+**Fix.** Write the title as a short action ("Get a product"). Write the description for someone choosing between operations: what it does, when to use it, and any consequence the caller must know, such as "cannot be undone", "sends an email" or "charges the card".
+
+## HOUSE_TOOL_ANNOTATIONS
+
+**Checks** the MCP `ToolAnnotations` of every unary RPC, against the MCP specification (2026-07-28) and against what the proto already says. Only fields the specification defines are checked:
+
+- `read_only_hint` and `open_world_hint` are always declared.
+- `read_only_hint` is true exactly when `idempotency_level = NO_SIDE_EFFECTS`.
+- `destructive_hint` and `idempotent_hint` are declared exactly when the tool is not read-only. The specification says they mean nothing otherwise.
+- `idempotent_hint` is true exactly when `idempotency_level = IDEMPOTENT`.
+- RPCs named `Delete*` or `Remove*` set `destructive_hint: true`.
+- The deprecated `tool.destructive` is not used.
+
+**Why.** MCP clients use the hints to decide, for example, whether to ask the user before a call. The specification's defaults surprise people: a tool that declares nothing is assumed to be destructive (`destructiveHint` defaults to true) and to reach the outside world (`openWorldHint` defaults to true). So every hint is stated, and the hints that the proto already implies (read-only, idempotent) must agree with it.
+
+Hints are not a safety mechanism. Clients must treat them as untrusted unless the server is trusted, and some hosts don't pass them to the model. A consequence the model must know belongs in the description ([`HOUSE_TOOL_REQUIRED`](#house_tool_required)).
+
+```protobuf
+// A read. Only the two hints that apply.
+rpc GetProduct(GetProductRequest) returns (GetProductResponse) {
+  option idempotency_level = NO_SIDE_EFFECTS;
+  option (raveesh_me.http_proto_lint.v1.method) = {
+    tool: {
+      annotations: {read_only_hint: true, open_world_hint: false}
+    }
+  };
+}
+
+// A delete: destructive, and idempotent because repeating it changes nothing more.
+rpc DeleteProduct(DeleteProductRequest) returns (DeleteProductResponse) {
+  option idempotency_level = IDEMPOTENT;
+  option (raveesh_me.http_proto_lint.v1.method) = {
+    tool: {
+      annotations: {read_only_hint: false, destructive_hint: true, idempotent_hint: true, open_world_hint: false}
+    }
+  };
+}
+```
+
+**Fix.**
+
+| Hint | Set it to |
+| --- | --- |
+| `read_only_hint` | `true` for reads, which also set `idempotency_level = NO_SIDE_EFFECTS`; otherwise `false` |
+| `destructive_hint` | `true` if the tool may overwrite or delete anything; `false` only if it purely adds, as a Create does |
+| `idempotent_hint` | `true` if repeating the call with the same arguments changes nothing more, which also sets `idempotency_level = IDEMPOTENT` (Update and Delete usually are) |
+| `open_world_hint` | `false` if the tool only touches this service's own data; `true` if it reaches outside, such as sending email, charging a card, or calling a third party |
 
 ## HOUSE_MESSAGE_DESCRIPTION_REQUIRED
 

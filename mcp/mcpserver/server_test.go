@@ -50,18 +50,23 @@ func service(t *testing.T) protoreflect.ServiceDescriptor {
 }
 
 func TestAnnotations(t *testing.T) {
-	svc := service(t)
-	get := svc.Methods().ByName("GetThing")
-	getRules, _ := proto.GetExtension(get.Options(), hplv1.E_Method).(*hplv1.MethodRules)
-	a := annotations(get, getRules)
-	if !a.ReadOnlyHint || !a.IdempotentHint || *a.DestructiveHint || *a.OpenWorldHint || a.Title != "Get a thing" {
-		t.Errorf("GetThing annotations = %+v", a)
+	no, yes := false, true
+	a := annotations(&hplv1.Tool{
+		Title: "Delete a thing",
+		Annotations: &hplv1.ToolAnnotations{
+			ReadOnlyHint: &no, DestructiveHint: &yes, IdempotentHint: &yes, OpenWorldHint: &no,
+		},
+	})
+	if a.Title != "Delete a thing" || a.ReadOnlyHint || !a.IdempotentHint || !*a.DestructiveHint || *a.OpenWorldHint {
+		t.Errorf("declared annotations = %+v", a)
 	}
-	del := svc.Methods().ByName("DeleteThing")
-	delRules, _ := proto.GetExtension(del.Options(), hplv1.E_Method).(*hplv1.MethodRules)
-	a = annotations(del, delRules)
-	if a.ReadOnlyHint || !a.IdempotentHint || !*a.DestructiveHint {
-		t.Errorf("DeleteThing annotations = %+v", a)
+	// Undeclared hints are left out, so clients apply the spec defaults.
+	a = annotations(&hplv1.Tool{Title: "Get a thing", Annotations: &hplv1.ToolAnnotations{ReadOnlyHint: &yes}})
+	if !a.ReadOnlyHint || a.DestructiveHint != nil || a.OpenWorldHint != nil {
+		t.Errorf("partial annotations = %+v", a)
+	}
+	if a = annotations(nil); a.ReadOnlyHint || a.DestructiveHint != nil || a.OpenWorldHint != nil {
+		t.Errorf("no tool = %+v", a)
 	}
 }
 

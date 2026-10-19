@@ -29,6 +29,7 @@ const (
 	idNoJSONName                 = "HOUSE_NO_JSON_NAME"
 	idMoneyFieldType             = "HOUSE_MONEY_FIELD_TYPE"
 	idToolRequired               = "HOUSE_TOOL_REQUIRED"
+	idToolAnnotations            = "HOUSE_TOOL_ANNOTATIONS"
 	idMessageDescriptionRequired = "HOUSE_MESSAGE_DESCRIPTION_REQUIRED"
 )
 

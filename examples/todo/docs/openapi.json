@@ -430,6 +430,7 @@
             ]
           }
         ],
+        "x-destructive": true,
         "x-rpc-procedure": "/raveesh_me.todo.v1.TodoService/UpdateTodo",
         "x-error-reasons": [
           "TODO_NOT_FOUND",
