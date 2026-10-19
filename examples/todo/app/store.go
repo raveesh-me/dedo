@@ -95,11 +95,13 @@ func (s *store) update(patch *todov1.Todo, paths []string) (*todov1.Todo, bool) 
 	return clone(next), true
 }
 
-func (s *store) delete(name string) bool {
+// delete removes the to-do and returns its last state.
+func (s *store) delete(name string) (*todov1.Todo, bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if _, ok := s.todos[name]; !ok {
-		return false
+	last, ok := s.todos[name]
+	if !ok {
+		return nil, false
 	}
 	delete(s.todos, name)
 	for i, n := range s.order {
@@ -108,7 +110,7 @@ func (s *store) delete(name string) bool {
 			break
 		}
 	}
-	return true
+	return clone(last), true
 }
 
 func clone(todo *todov1.Todo) *todov1.Todo {

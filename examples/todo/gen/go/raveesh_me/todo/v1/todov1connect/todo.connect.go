@@ -43,6 +43,8 @@ const (
 	TodoServiceUpdateTodoProcedure = "/raveesh_me.todo.v1.TodoService/UpdateTodo"
 	// TodoServiceDeleteTodoProcedure is the fully-qualified name of the TodoService's DeleteTodo RPC.
 	TodoServiceDeleteTodoProcedure = "/raveesh_me.todo.v1.TodoService/DeleteTodo"
+	// TodoServiceWatchTodosProcedure is the fully-qualified name of the TodoService's WatchTodos RPC.
+	TodoServiceWatchTodosProcedure = "/raveesh_me.todo.v1.TodoService/WatchTodos"
 	// TodoServiceRemoveTodoProcedure is the fully-qualified name of the TodoService's RemoveTodo RPC.
 	TodoServiceRemoveTodoProcedure = "/raveesh_me.todo.v1.TodoService/RemoveTodo"
 )
@@ -69,6 +71,17 @@ type TodoServiceClient interface {
 	//
 	// Errors: TODO_NOT_FOUND.
 	DeleteTodo(context.Context, *connect.Request[v1.DeleteTodoRequest]) (*connect.Response[v1.DeleteTodoResponse], error)
+	// WatchTodos streams every change to the to-do list as it happens, so a
+	// UI can show changes made anywhere: in another browser, over REST, or by
+	// an agent through MCP.
+	//
+	// REST has no form for server streaming, so the RPC has no HTTP binding;
+	// Connect and gRPC clients call it.
+	//
+	// Errors: SERVER_SHUTTING_DOWN.
+	//
+	// buf:lint:ignore AIP_0127_HTTP_ANNOTATION Server streaming has no REST form.
+	WatchTodos(context.Context, *connect.Request[v1.WatchTodosRequest]) (*connect.ServerStreamForClient[v1.WatchTodosResponse], error)
 	// Deprecated: Use DeleteTodo.
 	//
 	// RemoveTodo removes a to-do.
@@ -122,6 +135,12 @@ func NewTodoServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(todoServiceMethods.ByName("DeleteTodo")),
 			connect.WithClientOptions(opts...),
 		),
+		watchTodos: connect.NewClient[v1.WatchTodosRequest, v1.WatchTodosResponse](
+			httpClient,
+			baseURL+TodoServiceWatchTodosProcedure,
+			connect.WithSchema(todoServiceMethods.ByName("WatchTodos")),
+			connect.WithClientOptions(opts...),
+		),
 		removeTodo: connect.NewClient[v1.RemoveTodoRequest, v1.RemoveTodoResponse](
 			httpClient,
 			baseURL+TodoServiceRemoveTodoProcedure,
@@ -138,6 +157,7 @@ type todoServiceClient struct {
 	createTodo *connect.Client[v1.CreateTodoRequest, v1.CreateTodoResponse]
 	updateTodo *connect.Client[v1.UpdateTodoRequest, v1.UpdateTodoResponse]
 	deleteTodo *connect.Client[v1.DeleteTodoRequest, v1.DeleteTodoResponse]
+	watchTodos *connect.Client[v1.WatchTodosRequest, v1.WatchTodosResponse]
 	removeTodo *connect.Client[v1.RemoveTodoRequest, v1.RemoveTodoResponse]
 }
 
@@ -164,6 +184,11 @@ func (c *todoServiceClient) UpdateTodo(ctx context.Context, req *connect.Request
 // DeleteTodo calls raveesh_me.todo.v1.TodoService.DeleteTodo.
 func (c *todoServiceClient) DeleteTodo(ctx context.Context, req *connect.Request[v1.DeleteTodoRequest]) (*connect.Response[v1.DeleteTodoResponse], error) {
 	return c.deleteTodo.CallUnary(ctx, req)
+}
+
+// WatchTodos calls raveesh_me.todo.v1.TodoService.WatchTodos.
+func (c *todoServiceClient) WatchTodos(ctx context.Context, req *connect.Request[v1.WatchTodosRequest]) (*connect.ServerStreamForClient[v1.WatchTodosResponse], error) {
+	return c.watchTodos.CallServerStream(ctx, req)
 }
 
 // RemoveTodo calls raveesh_me.todo.v1.TodoService.RemoveTodo.
@@ -195,6 +220,17 @@ type TodoServiceHandler interface {
 	//
 	// Errors: TODO_NOT_FOUND.
 	DeleteTodo(context.Context, *connect.Request[v1.DeleteTodoRequest]) (*connect.Response[v1.DeleteTodoResponse], error)
+	// WatchTodos streams every change to the to-do list as it happens, so a
+	// UI can show changes made anywhere: in another browser, over REST, or by
+	// an agent through MCP.
+	//
+	// REST has no form for server streaming, so the RPC has no HTTP binding;
+	// Connect and gRPC clients call it.
+	//
+	// Errors: SERVER_SHUTTING_DOWN.
+	//
+	// buf:lint:ignore AIP_0127_HTTP_ANNOTATION Server streaming has no REST form.
+	WatchTodos(context.Context, *connect.Request[v1.WatchTodosRequest], *connect.ServerStream[v1.WatchTodosResponse]) error
 	// Deprecated: Use DeleteTodo.
 	//
 	// RemoveTodo removes a to-do.
@@ -244,6 +280,12 @@ func NewTodoServiceHandler(svc TodoServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(todoServiceMethods.ByName("DeleteTodo")),
 		connect.WithHandlerOptions(opts...),
 	)
+	todoServiceWatchTodosHandler := connect.NewServerStreamHandler(
+		TodoServiceWatchTodosProcedure,
+		svc.WatchTodos,
+		connect.WithSchema(todoServiceMethods.ByName("WatchTodos")),
+		connect.WithHandlerOptions(opts...),
+	)
 	todoServiceRemoveTodoHandler := connect.NewUnaryHandler(
 		TodoServiceRemoveTodoProcedure,
 		svc.RemoveTodo,
@@ -262,6 +304,8 @@ func NewTodoServiceHandler(svc TodoServiceHandler, opts ...connect.HandlerOption
 			todoServiceUpdateTodoHandler.ServeHTTP(w, r)
 		case TodoServiceDeleteTodoProcedure:
 			todoServiceDeleteTodoHandler.ServeHTTP(w, r)
+		case TodoServiceWatchTodosProcedure:
+			todoServiceWatchTodosHandler.ServeHTTP(w, r)
 		case TodoServiceRemoveTodoProcedure:
 			todoServiceRemoveTodoHandler.ServeHTTP(w, r)
 		default:
@@ -291,6 +335,10 @@ func (UnimplementedTodoServiceHandler) UpdateTodo(context.Context, *connect.Requ
 
 func (UnimplementedTodoServiceHandler) DeleteTodo(context.Context, *connect.Request[v1.DeleteTodoRequest]) (*connect.Response[v1.DeleteTodoResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("raveesh_me.todo.v1.TodoService.DeleteTodo is not implemented"))
+}
+
+func (UnimplementedTodoServiceHandler) WatchTodos(context.Context, *connect.Request[v1.WatchTodosRequest], *connect.ServerStream[v1.WatchTodosResponse]) error {
+	return connect.NewError(connect.CodeUnimplemented, errors.New("raveesh_me.todo.v1.TodoService.WatchTodos is not implemented"))
 }
 
 func (UnimplementedTodoServiceHandler) RemoveTodo(context.Context, *connect.Request[v1.RemoveTodoRequest]) (*connect.Response[v1.RemoveTodoResponse], error) {

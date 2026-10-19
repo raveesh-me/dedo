@@ -15,13 +15,14 @@ const maxPageSize = 100
 // Server implements the TodoService over an in-memory store. It holds no
 // policy code: scopes, headers and error audit come from the interceptor.
 type Server struct {
-	store *store
+	store   *store
+	changes *changes
 }
 
 var _ todov1connect.TodoServiceHandler = (*Server)(nil)
 
 // NewServer returns a server with an empty list.
-func NewServer() *Server { return &Server{store: newStore()} }
+func NewServer() *Server { return &Server{store: newStore(), changes: newChanges()} }
 
 // GetTodo returns one to-do.
 func (s *Server) GetTodo(_ context.Context, req *connect.Request[todov1.GetTodoRequest]) (*connect.Response[todov1.GetTodoResponse], error) {
@@ -64,6 +65,7 @@ func (s *Server) CreateTodo(_ context.Context, req *connect.Request[todov1.Creat
 	if !ok {
 		return nil, apiError(connect.CodeAlreadyExists, reasonAlreadyExists, "to-do ID is taken")
 	}
+	s.changes.publish(todov1.WatchTodosResponse_CHANGE_CREATED, todo)
 	return connect.NewResponse(&todov1.CreateTodoResponse{Todo: todo}), nil
 }
 
@@ -79,22 +81,27 @@ func (s *Server) UpdateTodo(_ context.Context, req *connect.Request[todov1.Updat
 	if !ok {
 		return nil, notFound(patch.GetName())
 	}
+	s.changes.publish(todov1.WatchTodosResponse_CHANGE_UPDATED, todo)
 	return connect.NewResponse(&todov1.UpdateTodoResponse{Todo: todo}), nil
 }
 
 // DeleteTodo removes a to-do.
 func (s *Server) DeleteTodo(_ context.Context, req *connect.Request[todov1.DeleteTodoRequest]) (*connect.Response[todov1.DeleteTodoResponse], error) {
-	if !s.store.delete(req.Msg.GetName()) {
+	last, ok := s.store.delete(req.Msg.GetName())
+	if !ok {
 		return nil, notFound(req.Msg.GetName())
 	}
+	s.changes.publish(todov1.WatchTodosResponse_CHANGE_DELETED, last)
 	return connect.NewResponse(&todov1.DeleteTodoResponse{}), nil
 }
 
 // RemoveTodo is the deprecated form of DeleteTodo.
 func (s *Server) RemoveTodo(_ context.Context, req *connect.Request[todov1.RemoveTodoRequest]) (*connect.Response[todov1.RemoveTodoResponse], error) {
-	if !s.store.delete(req.Msg.GetName()) {
+	last, ok := s.store.delete(req.Msg.GetName())
+	if !ok {
 		return nil, notFound(req.Msg.GetName())
 	}
+	s.changes.publish(todov1.WatchTodosResponse_CHANGE_DELETED, last)
 	return connect.NewResponse(&todov1.RemoveTodoResponse{}), nil
 }
 

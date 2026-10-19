@@ -1,0 +1,23 @@
+# The UI and the todo service on one origin. The nginx image fills in
+# ${API_UPSTREAM} at startup.
+server {
+  listen 8080;
+  root /usr/share/nginx/html;
+
+  location / {
+    try_files $uri /index.html;
+  }
+
+  # Connect RPCs (including the WatchTodos stream), REST, MCP and the REST
+  # reference go to the service. Buffering off, so streamed changes reach
+  # the browser as they happen.
+  location ~ ^/(raveesh_me\.todo\.v1\.TodoService/|commerce/|mcp$|openapi\.json$|docs$) {
+    proxy_pass ${API_UPSTREAM};
+    proxy_http_version 1.1;
+    proxy_set_header Connection "";
+    proxy_set_header Host $host;
+    proxy_buffering off;
+    proxy_request_buffering off;
+    proxy_read_timeout 1h;
+  }
+}

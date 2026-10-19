@@ -1,0 +1,8 @@
+# Build context for the example images is the repository root.
+.git
+dist
+context
+**/node_modules
+**/test-results
+**/playwright-report
+examples/*/.build

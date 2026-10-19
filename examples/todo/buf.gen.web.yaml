@@ -1,0 +1,11 @@
+# TypeScript for the web UI (web/src/gen), from Buf's hosted protoc-gen-es,
+# so generating it needs no Node. The version matches @bufbuild/protobuf in
+# web/package.json.
+version: v2
+plugins:
+  - remote: buf.build/bufbuild/es:v2.10.1
+    out: web/src/gen
+    include_imports: true
+    opt: target=ts
+inputs:
+  - directory: proto
