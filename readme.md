@@ -14,7 +14,7 @@
 
 New here? [install.md](install.md) builds a new product from scratch, step by step. [guideline.md](guideline.md) explains the reasoning.
 
-**Latest release: [v0.3.0](https://github.com/raveesh-me/dedo/releases/tag/v0.3.0).** The options module is [`buf.build/r-a/dedo`](https://buf.build/r-a/dedo). The lint plugins come as native binaries on the GitHub release (`make tools`) and as Wasm plugins on the BSR. The Go modules are `github.com/raveesh-me/dedo/...@v0.3.0`.
+**Latest release: [v0.4.1](https://github.com/raveesh-me/dedo/releases/tag/v0.4.1).** The options module is [`buf.build/r-a/dedo`](https://buf.build/r-a/dedo). The lint plugins come as native binaries on the GitHub release (`make tools`) and as Wasm plugins on the BSR. The Go modules are `github.com/raveesh-me/dedo/...@v0.4.1`.
 
 Contract rules come from Google's AIPs. Operational rules (audience, ownership, scopes, caching, deprecation, error reasons) come from Zalando's guidelines. Both live in the schema.
 
@@ -181,6 +181,8 @@ Lint rule tests live in `lint/rules/testdata/<rule>/{pass,fail}`. A pass fixture
 ## Releasing
 
 A pull request that breaks the options module fails CI's `buf breaking` check. When the break is deliberate, label the PR `allow-breaking`, re-run the check, and release a new minor version.
+
+Before tagging, set the new version in `templates/Makefile.api` (`DEDO_VERSION`), the `@vX.Y.Z` pins in `install.md` and `guideline.md`, and the readme's "Latest release" line. The release job runs `scripts/check-release-versions.sh` first and stops if any of them names another version.
 
 To release, tag the merge commit on `main` with `lint/vX.Y.Z`, `openapi/vX.Y.Z` and `mcp/vX.Y.Z` (so `go get` works for the nested modules) and push those first. Then push `vX.Y.Z` **on its own**: GitHub starts no workflow when more than three tags arrive in one push.
 
