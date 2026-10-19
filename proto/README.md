@@ -20,3 +20,5 @@ import "dedo/v1/options.proto";
 | `dedo.v1.field` | field | sensitive data |
 
 The house lint rules that enforce these declarations, the Go runtime that applies them, and a step-by-step guide are at [github.com/raveesh-me/dedo](https://github.com/raveesh-me/dedo).
+
+Licensed under the Apache License 2.0.

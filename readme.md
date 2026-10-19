@@ -193,3 +193,7 @@ The `v*` tag runs `.github/workflows/ci.yaml`, which publishes one version every
 The Go module version is the same tag. The job reads a `BUF_KEY` repository secret: a Buf token for the `r-a` organization with module and plugin create and push scopes.
 
 `buf-plugin-aip` is a young third-party project ([hestiatechnology/buf-plugin-aip](https://github.com/hestiatechnology/buf-plugin-aip), Apache-2.0). It is pinned to commit `5158ec0f16f3` and republished from that commit.
+
+## License
+
+[Apache License 2.0](LICENSE).
