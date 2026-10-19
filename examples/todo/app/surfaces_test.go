@@ -116,11 +116,16 @@ func TestMCPToolsUseDeclaredText(t *testing.T) {
 	if get.Title != "Get a to-do" || !strings.HasPrefix(get.Description, "Returns one to-do by its resource name") {
 		t.Errorf("GetTodo tool: title %q, description %q", get.Title, get.Description)
 	}
-	if !get.Annotations.ReadOnlyHint || *get.Annotations.DestructiveHint {
-		t.Errorf("GetTodo hints: %+v", get.Annotations)
+	// Read-only: destructive and idempotent hints do not apply, so they are
+	// left out, as the MCP specification says.
+	if a := get.Annotations; !a.ReadOnlyHint || a.DestructiveHint != nil || a.OpenWorldHint == nil || *a.OpenWorldHint {
+		t.Errorf("GetTodo hints: %+v", a)
 	}
-	if del := tools[deleteTool]; !*del.Annotations.DestructiveHint || del.Annotations.ReadOnlyHint {
-		t.Errorf("DeleteTodo hints: %+v", del.Annotations)
+	if a := tools[deleteTool].Annotations; a.ReadOnlyHint || !*a.DestructiveHint || !a.IdempotentHint || *a.OpenWorldHint {
+		t.Errorf("DeleteTodo hints: %+v", a)
+	}
+	if a := tools[createTool].Annotations; a.ReadOnlyHint || *a.DestructiveHint || a.IdempotentHint {
+		t.Errorf("CreateTodo hints: %+v", a)
 	}
 	var schema map[string]any
 	raw, _ := json.Marshal(get.InputSchema)

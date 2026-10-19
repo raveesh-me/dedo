@@ -13,7 +13,7 @@ import (
 
 var toolRequired = lintRule(
 	idToolRequired,
-	"Checks that every unary RPC declares a tool title and description, and that Delete and Remove RPCs are marked destructive.",
+	"Checks that every unary RPC declares the MCP tool title and description.",
 	checkutil.NewMethodRuleHandler(checkTool, checkutil.WithoutImports()),
 )
 
@@ -44,10 +44,6 @@ func checkTool(_ context.Context, w check.ResponseWriter, _ check.Request, m pro
 	case strings.EqualFold(description, title) || strings.EqualFold(description, string(m.Name())):
 		w.AddAnnotation(check.WithDescriptor(m),
 			messagef(idToolRequired, "RPC %q tool description repeats its name; say what it does and when to use it.", m.Name()))
-	}
-	if hasVerb(m, "Delete", "Remove") && tool != nil && !tool.GetDestructive() {
-		w.AddAnnotation(check.WithDescriptor(m),
-			messagef(idToolRequired, "RPC %q deletes data, so its tool must set destructive: true.", m.Name()))
 	}
 	return nil
 }

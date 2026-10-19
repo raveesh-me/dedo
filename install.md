@@ -102,6 +102,10 @@ service CounterService {
       tool: {
         title: "Get a counter"
         description: "Returns one counter by its resource name, such as counters/1, with the time it has counted."
+        annotations: {
+          read_only_hint: true
+          open_world_hint: false
+        }
       }
     };
   }
@@ -122,6 +126,12 @@ service CounterService {
       tool: {
         title: "Create a counter"
         description: "Starts a new counter at zero for the task named in display_name."
+        annotations: {
+          read_only_hint: false
+          destructive_hint: false
+          idempotent_hint: false
+          open_world_hint: false
+        }
       }
     };
   }
@@ -142,6 +152,12 @@ service CounterService {
       tool: {
         title: "Add time to a counter"
         description: "Adds a duration, such as \"90s\", to a counter and returns its new total."
+        annotations: {
+          read_only_hint: false
+          destructive_hint: false
+          idempotent_hint: false
+          open_world_hint: false
+        }
       }
     };
   }
@@ -225,6 +241,8 @@ message AddTimeResponse {
   Counter counter = 1;
 }
 ```
+
+`tool` is how each RPC appears as an MCP tool. The model always sees `description`; `annotations` are the MCP specification's hints for the client. `AddTime` only adds time, so it is not destructive; a delete would be. [HOUSE_RULES.md](HOUSE_RULES.md#house_tool_annotations) explains how to set each hint.
 
 Then resolve the dependencies and lint:
 

@@ -21,7 +21,7 @@ Contract rules come from Google's AIPs. Operational rules (audience, ownership, 
 | Component | Path | Job |
 | --- | --- | --- |
 | Options module | `proto/raveesh_me/http_proto_lint/v1/options.proto` | Declares audience, owner, scopes, cache policy, deprecation, error reasons and sensitive fields. Published as `buf.build/cookytech-in/http-proto-lint`. |
-| House lint plugin | `lint/` | Thirteen house rules, `HOUSE_*` in the `HOUSE` category. Released as native binaries per platform (fast in editors) and as the Wasm check plugin `buf.build/cookytech-in/http-proto-lint-plugin`. |
+| House lint plugin | `lint/` | Fourteen house rules, `HOUSE_*` in the `HOUSE` category. Released as native binaries per platform (fast in editors) and as the Wasm check plugin `buf.build/cookytech-in/http-proto-lint-plugin`. |
 | Policy table | `policy/` | Reads the options from descriptors at startup. Fails on a missing declaration. |
 | Flow ID | `flowid/` | Reads or creates `X-Flow-ID` and propagates it on outbound calls. |
 | Policy interceptor | `interceptor/` | Checks scopes, sets `Cache-Control`, `Deprecation` and `Sunset`, and logs undeclared error reasons. |
@@ -74,7 +74,8 @@ See `examples/library/proto` for a complete module.
 | `HOUSE_HTTP_PATH_VERSION` | Every HTTP path, additional bindings included, contains the package version, such as `/v1/`, after a root that is the same for the whole service. The root itself, such as `/commerce/pim`, is the owner's choice. |
 | `HOUSE_NO_JSON_NAME` | No field overrides the protojson default name |
 | `HOUSE_MONEY_FIELD_TYPE` | Fields named `price`, `amount`, `*_price` or `*_amount` use `google.type.Money` |
-| `HOUSE_TOOL_REQUIRED` | Every unary RPC declares a tool title and description for MCP and the REST docs. Delete and Remove RPCs are marked destructive. |
+| `HOUSE_TOOL_REQUIRED` | Every unary RPC declares a tool title and description for MCP and the REST docs |
+| `HOUSE_TOOL_ANNOTATIONS` | Every unary RPC declares the MCP `ToolAnnotations` hints (spec 2026-07-28), consistent with its `idempotency_level` |
 | `HOUSE_MESSAGE_DESCRIPTION_REQUIRED` | Every message declares a consumer-facing description |
 
 [HOUSE_RULES.md](HOUSE_RULES.md) explains each rule with examples. Every finding ends with a link to its section, pinned to the plugin's release tag.
@@ -122,7 +123,7 @@ Known v1 gaps: error responses carry no deprecation headers, and streaming calls
 Two Go services, each laid out like a service repository built from `templates/`, with its own `buf.yaml`, `buf.gen.yaml`, `go.mod` and proto files. Both serve the same `TodoService` over Connect, gRPC and REST (through Vanguard), with the same server code and the full runtime: policy table, scope interceptor, flow IDs and error audit.
 
 - `examples/todo` follows the standard. `buf lint` is clean. Its tests check scopes, CRUD, pagination, cache and deprecation headers, REST unwrapping and the error audit end to end. It also serves the REST reference at `/docs` and an MCP server at `/mcp`, and its tests check that MCP tools carry the declared text and enforce the same scopes.
-- `examples/bad-todo` breaks all thirteen house rules, plus one Buf and one AIP rule. Open `proto/raveesh_me/todo/v1/todo.proto` in VS Code to see the findings. `expected-lint.txt` lists them, and `app/app_test.go` shows what each mistake does at runtime: a misnamed scope locks out writers, an unversioned path moves the endpoint, undeclared reasons show up in logs, and a custom `json_name` renames the field for every JSON client.
+- `examples/bad-todo` breaks all fourteen house rules, plus one Buf and one AIP rule. Open `proto/raveesh_me/todo/v1/todo.proto` in VS Code to see the findings. `expected-lint.txt` lists them, and `app/app_test.go` shows what each mistake does at runtime: a misnamed scope locks out writers, an unversioned path moves the endpoint, undeclared reasons show up in logs, and a custom `json_name` renames the field for every JSON client.
 
 `examples/todo` also runs as a deployment, with everything built in containers (podman, kind and kubectl are the only host tools):
 

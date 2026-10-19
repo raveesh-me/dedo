@@ -127,12 +127,14 @@ func NewTodoServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			httpClient,
 			baseURL+TodoServiceUpdateTodoProcedure,
 			connect.WithSchema(todoServiceMethods.ByName("UpdateTodo")),
+			connect.WithIdempotency(connect.IdempotencyIdempotent),
 			connect.WithClientOptions(opts...),
 		),
 		deleteTodo: connect.NewClient[v1.DeleteTodoRequest, v1.DeleteTodoResponse](
 			httpClient,
 			baseURL+TodoServiceDeleteTodoProcedure,
 			connect.WithSchema(todoServiceMethods.ByName("DeleteTodo")),
+			connect.WithIdempotency(connect.IdempotencyIdempotent),
 			connect.WithClientOptions(opts...),
 		),
 		watchTodos: connect.NewClient[v1.WatchTodosRequest, v1.WatchTodosResponse](
@@ -145,6 +147,7 @@ func NewTodoServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			httpClient,
 			baseURL+TodoServiceRemoveTodoProcedure,
 			connect.WithSchema(todoServiceMethods.ByName("RemoveTodo")),
+			connect.WithIdempotency(connect.IdempotencyIdempotent),
 			connect.WithClientOptions(opts...),
 		),
 	}
@@ -272,12 +275,14 @@ func NewTodoServiceHandler(svc TodoServiceHandler, opts ...connect.HandlerOption
 		TodoServiceUpdateTodoProcedure,
 		svc.UpdateTodo,
 		connect.WithSchema(todoServiceMethods.ByName("UpdateTodo")),
+		connect.WithIdempotency(connect.IdempotencyIdempotent),
 		connect.WithHandlerOptions(opts...),
 	)
 	todoServiceDeleteTodoHandler := connect.NewUnaryHandler(
 		TodoServiceDeleteTodoProcedure,
 		svc.DeleteTodo,
 		connect.WithSchema(todoServiceMethods.ByName("DeleteTodo")),
+		connect.WithIdempotency(connect.IdempotencyIdempotent),
 		connect.WithHandlerOptions(opts...),
 	)
 	todoServiceWatchTodosHandler := connect.NewServerStreamHandler(
@@ -290,6 +295,7 @@ func NewTodoServiceHandler(svc TodoServiceHandler, opts ...connect.HandlerOption
 		TodoServiceRemoveTodoProcedure,
 		svc.RemoveTodo,
 		connect.WithSchema(todoServiceMethods.ByName("RemoveTodo")),
+		connect.WithIdempotency(connect.IdempotencyIdempotent),
 		connect.WithHandlerOptions(opts...),
 	)
 	return "/raveesh_me.todo.v1.TodoService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

@@ -372,17 +372,26 @@ func (x *ErrorReason) GetCode() code.Code {
 	return code.Code(0)
 }
 
-// Tool is how an RPC is presented to consumers: as an MCP tool, and as an
-// operation in the REST docs. The text is written for people and models
-// choosing between operations, not for the implementers.
+// Tool is how an RPC is presented as an MCP tool, and as an operation in
+// the REST docs. It mirrors the Tool type of the MCP specification
+// (2026-07-28). The text is written for people and models choosing between
+// operations, not for the implementers.
 type Tool struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// A short human-readable name, such as "Get a to-do".
+	// A short human-readable name, such as "Get a to-do". MCP Tool.title and
+	// ToolAnnotations.title.
 	Title string `protobuf:"bytes,1,opt,name=title,proto3" json:"title,omitempty"`
-	// What the operation does and when to use it.
+	// What the operation does and when to use it. MCP Tool.description, the
+	// one field every client passes to the model: put anything the model must
+	// know to act safely here, such as "cannot be undone".
 	Description string `protobuf:"bytes,2,opt,name=description,proto3" json:"description,omitempty"`
-	// The operation may destroy data, so clients should confirm it first.
-	Destructive   bool `protobuf:"varint,3,opt,name=destructive,proto3" json:"destructive,omitempty"`
+	// Deprecated: use annotations.destructive_hint. Its default was the
+	// opposite of the MCP specification's.
+	//
+	// Deprecated: Marked as deprecated in raveesh_me/http_proto_lint/v1/options.proto.
+	Destructive bool `protobuf:"varint,3,opt,name=destructive,proto3" json:"destructive,omitempty"`
+	// Behaviour hints for MCP clients.
+	Annotations   *ToolAnnotations `protobuf:"bytes,4,opt,name=annotations,proto3" json:"annotations,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -431,9 +440,100 @@ func (x *Tool) GetDescription() string {
 	return ""
 }
 
+// Deprecated: Marked as deprecated in raveesh_me/http_proto_lint/v1/options.proto.
 func (x *Tool) GetDestructive() bool {
 	if x != nil {
 		return x.Destructive
+	}
+	return false
+}
+
+func (x *Tool) GetAnnotations() *ToolAnnotations {
+	if x != nil {
+		return x.Annotations
+	}
+	return nil
+}
+
+// ToolAnnotations mirrors ToolAnnotations in the MCP specification
+// (2026-07-28). Every field is a hint for the client, such as whether to ask
+// the user before a call; clients treat hints from untrusted servers as
+// untrusted. Leaving a field unset means the specification's default, which
+// for destructive_hint and open_world_hint is true.
+type ToolAnnotations struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// If true, the tool does not modify its environment. Spec default: false.
+	ReadOnlyHint *bool `protobuf:"varint,1,opt,name=read_only_hint,json=readOnlyHint,proto3,oneof" json:"read_only_hint,omitempty"`
+	// If true, the tool may perform destructive updates to its environment;
+	// if false, it performs only additive updates. Meaningful only when
+	// read_only_hint is false. Spec default: true.
+	DestructiveHint *bool `protobuf:"varint,2,opt,name=destructive_hint,json=destructiveHint,proto3,oneof" json:"destructive_hint,omitempty"`
+	// If true, calling the tool repeatedly with the same arguments has no
+	// additional effect on its environment. Meaningful only when
+	// read_only_hint is false. Spec default: false.
+	IdempotentHint *bool `protobuf:"varint,3,opt,name=idempotent_hint,json=idempotentHint,proto3,oneof" json:"idempotent_hint,omitempty"`
+	// If true, the tool may interact with an open world of external entities,
+	// such as sending email or calling third parties; if false, its domain of
+	// interaction is closed. Spec default: true.
+	OpenWorldHint *bool `protobuf:"varint,4,opt,name=open_world_hint,json=openWorldHint,proto3,oneof" json:"open_world_hint,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ToolAnnotations) Reset() {
+	*x = ToolAnnotations{}
+	mi := &file_raveesh_me_http_proto_lint_v1_options_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ToolAnnotations) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ToolAnnotations) ProtoMessage() {}
+
+func (x *ToolAnnotations) ProtoReflect() protoreflect.Message {
+	mi := &file_raveesh_me_http_proto_lint_v1_options_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ToolAnnotations.ProtoReflect.Descriptor instead.
+func (*ToolAnnotations) Descriptor() ([]byte, []int) {
+	return file_raveesh_me_http_proto_lint_v1_options_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *ToolAnnotations) GetReadOnlyHint() bool {
+	if x != nil && x.ReadOnlyHint != nil {
+		return *x.ReadOnlyHint
+	}
+	return false
+}
+
+func (x *ToolAnnotations) GetDestructiveHint() bool {
+	if x != nil && x.DestructiveHint != nil {
+		return *x.DestructiveHint
+	}
+	return false
+}
+
+func (x *ToolAnnotations) GetIdempotentHint() bool {
+	if x != nil && x.IdempotentHint != nil {
+		return *x.IdempotentHint
+	}
+	return false
+}
+
+func (x *ToolAnnotations) GetOpenWorldHint() bool {
+	if x != nil && x.OpenWorldHint != nil {
+		return *x.OpenWorldHint
 	}
 	return false
 }
@@ -457,7 +557,7 @@ type MethodRules struct {
 
 func (x *MethodRules) Reset() {
 	*x = MethodRules{}
-	mi := &file_raveesh_me_http_proto_lint_v1_options_proto_msgTypes[5]
+	mi := &file_raveesh_me_http_proto_lint_v1_options_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -469,7 +569,7 @@ func (x *MethodRules) String() string {
 func (*MethodRules) ProtoMessage() {}
 
 func (x *MethodRules) ProtoReflect() protoreflect.Message {
-	mi := &file_raveesh_me_http_proto_lint_v1_options_proto_msgTypes[5]
+	mi := &file_raveesh_me_http_proto_lint_v1_options_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -482,7 +582,7 @@ func (x *MethodRules) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MethodRules.ProtoReflect.Descriptor instead.
 func (*MethodRules) Descriptor() ([]byte, []int) {
-	return file_raveesh_me_http_proto_lint_v1_options_proto_rawDescGZIP(), []int{5}
+	return file_raveesh_me_http_proto_lint_v1_options_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *MethodRules) GetScopes() []string {
@@ -532,7 +632,7 @@ type MessageRules struct {
 
 func (x *MessageRules) Reset() {
 	*x = MessageRules{}
-	mi := &file_raveesh_me_http_proto_lint_v1_options_proto_msgTypes[6]
+	mi := &file_raveesh_me_http_proto_lint_v1_options_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -544,7 +644,7 @@ func (x *MessageRules) String() string {
 func (*MessageRules) ProtoMessage() {}
 
 func (x *MessageRules) ProtoReflect() protoreflect.Message {
-	mi := &file_raveesh_me_http_proto_lint_v1_options_proto_msgTypes[6]
+	mi := &file_raveesh_me_http_proto_lint_v1_options_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -557,7 +657,7 @@ func (x *MessageRules) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MessageRules.ProtoReflect.Descriptor instead.
 func (*MessageRules) Descriptor() ([]byte, []int) {
-	return file_raveesh_me_http_proto_lint_v1_options_proto_rawDescGZIP(), []int{6}
+	return file_raveesh_me_http_proto_lint_v1_options_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *MessageRules) GetDescription() string {
@@ -578,7 +678,7 @@ type FieldRules struct {
 
 func (x *FieldRules) Reset() {
 	*x = FieldRules{}
-	mi := &file_raveesh_me_http_proto_lint_v1_options_proto_msgTypes[7]
+	mi := &file_raveesh_me_http_proto_lint_v1_options_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -590,7 +690,7 @@ func (x *FieldRules) String() string {
 func (*FieldRules) ProtoMessage() {}
 
 func (x *FieldRules) ProtoReflect() protoreflect.Message {
-	mi := &file_raveesh_me_http_proto_lint_v1_options_proto_msgTypes[7]
+	mi := &file_raveesh_me_http_proto_lint_v1_options_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -603,7 +703,7 @@ func (x *FieldRules) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FieldRules.ProtoReflect.Descriptor instead.
 func (*FieldRules) Descriptor() ([]byte, []int) {
-	return file_raveesh_me_http_proto_lint_v1_options_proto_rawDescGZIP(), []int{7}
+	return file_raveesh_me_http_proto_lint_v1_options_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *FieldRules) GetSensitive() bool {
@@ -706,11 +806,21 @@ const file_raveesh_me_http_proto_lint_v1_options_proto_rawDesc = "" +
 	"\tsuccessor\x18\x03 \x01(\tR\tsuccessor\"K\n" +
 	"\vErrorReason\x12\x16\n" +
 	"\x06reason\x18\x01 \x01(\tR\x06reason\x12$\n" +
-	"\x04code\x18\x02 \x01(\x0e2\x10.google.rpc.CodeR\x04code\"`\n" +
+	"\x04code\x18\x02 \x01(\x0e2\x10.google.rpc.CodeR\x04code\"\xb6\x01\n" +
 	"\x04Tool\x12\x14\n" +
 	"\x05title\x18\x01 \x01(\tR\x05title\x12 \n" +
-	"\vdescription\x18\x02 \x01(\tR\vdescription\x12 \n" +
-	"\vdestructive\x18\x03 \x01(\bR\vdestructive\"\xb2\x02\n" +
+	"\vdescription\x18\x02 \x01(\tR\vdescription\x12$\n" +
+	"\vdestructive\x18\x03 \x01(\bB\x02\x18\x01R\vdestructive\x12P\n" +
+	"\vannotations\x18\x04 \x01(\v2..raveesh_me.http_proto_lint.v1.ToolAnnotationsR\vannotations\"\x97\x02\n" +
+	"\x0fToolAnnotations\x12)\n" +
+	"\x0eread_only_hint\x18\x01 \x01(\bH\x00R\freadOnlyHint\x88\x01\x01\x12.\n" +
+	"\x10destructive_hint\x18\x02 \x01(\bH\x01R\x0fdestructiveHint\x88\x01\x01\x12,\n" +
+	"\x0fidempotent_hint\x18\x03 \x01(\bH\x02R\x0eidempotentHint\x88\x01\x01\x12+\n" +
+	"\x0fopen_world_hint\x18\x04 \x01(\bH\x03R\ropenWorldHint\x88\x01\x01B\x11\n" +
+	"\x0f_read_only_hintB\x13\n" +
+	"\x11_destructive_hintB\x12\n" +
+	"\x10_idempotent_hintB\x12\n" +
+	"\x10_open_world_hint\"\xb2\x02\n" +
 	"\vMethodRules\x12\x16\n" +
 	"\x06scopes\x18\x01 \x03(\tR\x06scopes\x12@\n" +
 	"\x05cache\x18\x02 \x01(\v2*.raveesh_me.http_proto_lint.v1.CachePolicyR\x05cache\x12L\n" +
@@ -748,7 +858,7 @@ func file_raveesh_me_http_proto_lint_v1_options_proto_rawDescGZIP() []byte {
 }
 
 var file_raveesh_me_http_proto_lint_v1_options_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_raveesh_me_http_proto_lint_v1_options_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
+var file_raveesh_me_http_proto_lint_v1_options_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_raveesh_me_http_proto_lint_v1_options_proto_goTypes = []any{
 	(Audience)(0),                       // 0: raveesh_me.http_proto_lint.v1.Audience
 	(CachePolicy_Visibility)(0),         // 1: raveesh_me.http_proto_lint.v1.CachePolicy.Visibility
@@ -757,41 +867,43 @@ var file_raveesh_me_http_proto_lint_v1_options_proto_goTypes = []any{
 	(*Deprecation)(nil),                 // 4: raveesh_me.http_proto_lint.v1.Deprecation
 	(*ErrorReason)(nil),                 // 5: raveesh_me.http_proto_lint.v1.ErrorReason
 	(*Tool)(nil),                        // 6: raveesh_me.http_proto_lint.v1.Tool
-	(*MethodRules)(nil),                 // 7: raveesh_me.http_proto_lint.v1.MethodRules
-	(*MessageRules)(nil),                // 8: raveesh_me.http_proto_lint.v1.MessageRules
-	(*FieldRules)(nil),                  // 9: raveesh_me.http_proto_lint.v1.FieldRules
-	(*durationpb.Duration)(nil),         // 10: google.protobuf.Duration
-	(*timestamppb.Timestamp)(nil),       // 11: google.protobuf.Timestamp
-	(code.Code)(0),                      // 12: google.rpc.Code
-	(*descriptorpb.ServiceOptions)(nil), // 13: google.protobuf.ServiceOptions
-	(*descriptorpb.MethodOptions)(nil),  // 14: google.protobuf.MethodOptions
-	(*descriptorpb.MessageOptions)(nil), // 15: google.protobuf.MessageOptions
-	(*descriptorpb.FieldOptions)(nil),   // 16: google.protobuf.FieldOptions
+	(*ToolAnnotations)(nil),             // 7: raveesh_me.http_proto_lint.v1.ToolAnnotations
+	(*MethodRules)(nil),                 // 8: raveesh_me.http_proto_lint.v1.MethodRules
+	(*MessageRules)(nil),                // 9: raveesh_me.http_proto_lint.v1.MessageRules
+	(*FieldRules)(nil),                  // 10: raveesh_me.http_proto_lint.v1.FieldRules
+	(*durationpb.Duration)(nil),         // 11: google.protobuf.Duration
+	(*timestamppb.Timestamp)(nil),       // 12: google.protobuf.Timestamp
+	(code.Code)(0),                      // 13: google.rpc.Code
+	(*descriptorpb.ServiceOptions)(nil), // 14: google.protobuf.ServiceOptions
+	(*descriptorpb.MethodOptions)(nil),  // 15: google.protobuf.MethodOptions
+	(*descriptorpb.MessageOptions)(nil), // 16: google.protobuf.MessageOptions
+	(*descriptorpb.FieldOptions)(nil),   // 17: google.protobuf.FieldOptions
 }
 var file_raveesh_me_http_proto_lint_v1_options_proto_depIdxs = []int32{
 	0,  // 0: raveesh_me.http_proto_lint.v1.ServiceRules.audience:type_name -> raveesh_me.http_proto_lint.v1.Audience
 	1,  // 1: raveesh_me.http_proto_lint.v1.CachePolicy.visibility:type_name -> raveesh_me.http_proto_lint.v1.CachePolicy.Visibility
-	10, // 2: raveesh_me.http_proto_lint.v1.CachePolicy.max_age:type_name -> google.protobuf.Duration
-	11, // 3: raveesh_me.http_proto_lint.v1.Deprecation.deprecation_time:type_name -> google.protobuf.Timestamp
-	11, // 4: raveesh_me.http_proto_lint.v1.Deprecation.sunset_time:type_name -> google.protobuf.Timestamp
-	12, // 5: raveesh_me.http_proto_lint.v1.ErrorReason.code:type_name -> google.rpc.Code
-	3,  // 6: raveesh_me.http_proto_lint.v1.MethodRules.cache:type_name -> raveesh_me.http_proto_lint.v1.CachePolicy
-	4,  // 7: raveesh_me.http_proto_lint.v1.MethodRules.deprecation:type_name -> raveesh_me.http_proto_lint.v1.Deprecation
-	5,  // 8: raveesh_me.http_proto_lint.v1.MethodRules.errors:type_name -> raveesh_me.http_proto_lint.v1.ErrorReason
-	6,  // 9: raveesh_me.http_proto_lint.v1.MethodRules.tool:type_name -> raveesh_me.http_proto_lint.v1.Tool
-	13, // 10: raveesh_me.http_proto_lint.v1.service:extendee -> google.protobuf.ServiceOptions
-	14, // 11: raveesh_me.http_proto_lint.v1.method:extendee -> google.protobuf.MethodOptions
-	15, // 12: raveesh_me.http_proto_lint.v1.message:extendee -> google.protobuf.MessageOptions
-	16, // 13: raveesh_me.http_proto_lint.v1.field:extendee -> google.protobuf.FieldOptions
-	2,  // 14: raveesh_me.http_proto_lint.v1.service:type_name -> raveesh_me.http_proto_lint.v1.ServiceRules
-	7,  // 15: raveesh_me.http_proto_lint.v1.method:type_name -> raveesh_me.http_proto_lint.v1.MethodRules
-	8,  // 16: raveesh_me.http_proto_lint.v1.message:type_name -> raveesh_me.http_proto_lint.v1.MessageRules
-	9,  // 17: raveesh_me.http_proto_lint.v1.field:type_name -> raveesh_me.http_proto_lint.v1.FieldRules
-	18, // [18:18] is the sub-list for method output_type
-	18, // [18:18] is the sub-list for method input_type
-	14, // [14:18] is the sub-list for extension type_name
-	10, // [10:14] is the sub-list for extension extendee
-	0,  // [0:10] is the sub-list for field type_name
+	11, // 2: raveesh_me.http_proto_lint.v1.CachePolicy.max_age:type_name -> google.protobuf.Duration
+	12, // 3: raveesh_me.http_proto_lint.v1.Deprecation.deprecation_time:type_name -> google.protobuf.Timestamp
+	12, // 4: raveesh_me.http_proto_lint.v1.Deprecation.sunset_time:type_name -> google.protobuf.Timestamp
+	13, // 5: raveesh_me.http_proto_lint.v1.ErrorReason.code:type_name -> google.rpc.Code
+	7,  // 6: raveesh_me.http_proto_lint.v1.Tool.annotations:type_name -> raveesh_me.http_proto_lint.v1.ToolAnnotations
+	3,  // 7: raveesh_me.http_proto_lint.v1.MethodRules.cache:type_name -> raveesh_me.http_proto_lint.v1.CachePolicy
+	4,  // 8: raveesh_me.http_proto_lint.v1.MethodRules.deprecation:type_name -> raveesh_me.http_proto_lint.v1.Deprecation
+	5,  // 9: raveesh_me.http_proto_lint.v1.MethodRules.errors:type_name -> raveesh_me.http_proto_lint.v1.ErrorReason
+	6,  // 10: raveesh_me.http_proto_lint.v1.MethodRules.tool:type_name -> raveesh_me.http_proto_lint.v1.Tool
+	14, // 11: raveesh_me.http_proto_lint.v1.service:extendee -> google.protobuf.ServiceOptions
+	15, // 12: raveesh_me.http_proto_lint.v1.method:extendee -> google.protobuf.MethodOptions
+	16, // 13: raveesh_me.http_proto_lint.v1.message:extendee -> google.protobuf.MessageOptions
+	17, // 14: raveesh_me.http_proto_lint.v1.field:extendee -> google.protobuf.FieldOptions
+	2,  // 15: raveesh_me.http_proto_lint.v1.service:type_name -> raveesh_me.http_proto_lint.v1.ServiceRules
+	8,  // 16: raveesh_me.http_proto_lint.v1.method:type_name -> raveesh_me.http_proto_lint.v1.MethodRules
+	9,  // 17: raveesh_me.http_proto_lint.v1.message:type_name -> raveesh_me.http_proto_lint.v1.MessageRules
+	10, // 18: raveesh_me.http_proto_lint.v1.field:type_name -> raveesh_me.http_proto_lint.v1.FieldRules
+	19, // [19:19] is the sub-list for method output_type
+	19, // [19:19] is the sub-list for method input_type
+	15, // [15:19] is the sub-list for extension type_name
+	11, // [11:15] is the sub-list for extension extendee
+	0,  // [0:11] is the sub-list for field type_name
 }
 
 func init() { file_raveesh_me_http_proto_lint_v1_options_proto_init() }
@@ -799,13 +911,14 @@ func file_raveesh_me_http_proto_lint_v1_options_proto_init() {
 	if File_raveesh_me_http_proto_lint_v1_options_proto != nil {
 		return
 	}
+	file_raveesh_me_http_proto_lint_v1_options_proto_msgTypes[5].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_raveesh_me_http_proto_lint_v1_options_proto_rawDesc), len(file_raveesh_me_http_proto_lint_v1_options_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   8,
+			NumMessages:   9,
 			NumExtensions: 4,
 			NumServices:   0,
 		},

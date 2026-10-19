@@ -28,6 +28,10 @@ service TodoService {
       tool: {
         title: "Get a to-do"
         description: "Returns one to-do by its resource name, such as todos/1."
+        annotations: {
+          read_only_hint: true
+          open_world_hint: false
+        }
       }
       scopes: "todo.todo.read"
       cache: {
@@ -68,6 +72,12 @@ service TodoService {
       tool: {
         title: "Create a to-do"
         description: "Adds a to-do with a title, and optionally a budget and an assignee."
+        annotations: {
+          read_only_hint: false
+          destructive_hint: false
+          idempotent_hint: false
+          open_world_hint: false
+        }
       }
       scopes: "todo.write"
       cache: {
@@ -89,6 +99,7 @@ service TodoService {
   //
   // Errors: TODO_NOT_FOUND, TITLE_REQUIRED.
   rpc UpdateTodo(UpdateTodoRequest) returns (UpdateTodoResponse) {
+    option idempotency_level = IDEMPOTENT;
     option (google.api.http) = {
       patch: "/v1/{todo.name=todos/*}"
       body: "todo"
@@ -97,6 +108,12 @@ service TodoService {
       tool: {
         title: "Update a to-do"
         description: "Changes the fields of an existing to-do named in update_mask."
+        annotations: {
+          read_only_hint: false
+          destructive_hint: true
+          idempotent_hint: true
+          open_world_hint: false
+        }
       }
       scopes: "todo.todo.write"
       errors: {
@@ -114,12 +131,19 @@ service TodoService {
   //
   // Errors: TODO_NOT_FOUND.
   rpc DeleteTodo(DeleteTodoRequest) returns (DeleteTodoResponse) {
+    option idempotency_level = IDEMPOTENT;
     option (google.api.http) = {delete: "/v1/{name=todos/*}"};
     option (raveesh_me.http_proto_lint.v1.method) = {
       scopes: "todo.todo.write"
       tool: {
         title: "Delete a to-do"
         description: "Removes a to-do for good."
+        annotations: {
+          read_only_hint: false
+          destructive_hint: false
+          idempotent_hint: true
+          open_world_hint: false
+        }
       }
     };
   }
@@ -130,6 +154,7 @@ service TodoService {
   //
   // Errors: TODO_NOT_FOUND.
   rpc RemoveTodo(RemoveTodoRequest) returns (RemoveTodoResponse) {
+    option idempotency_level = IDEMPOTENT;
     option deprecated = true;
     option (google.api.http) = {
       post: "/v1/{name=todos/*}:remove"
@@ -139,7 +164,12 @@ service TodoService {
       tool: {
         title: "Remove a to-do (deprecated)"
         description: "Deprecated: use DeleteTodo. Removes a to-do for good."
-        destructive: true
+        annotations: {
+          read_only_hint: false
+          destructive_hint: true
+          idempotent_hint: true
+          open_world_hint: false
+        }
       }
       scopes: "todo.todo.write"
       deprecation: {

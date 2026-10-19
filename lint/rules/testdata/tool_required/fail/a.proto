@@ -25,12 +25,4 @@ service LibraryService {
       }
     };
   }
-  rpc DeleteBook(google.protobuf.Empty) returns (google.protobuf.Empty) { // want
-    option (raveesh_me.http_proto_lint.v1.method) = {
-      tool: {
-        title: "Delete a book"
-        description: "Removes a book for good."
-      }
-    };
-  }
 }

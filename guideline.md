@@ -12,7 +12,7 @@ You write one `.proto` file per API. From it you get:
 - **Authorization without code.** Each RPC declares its scopes. The runtime rejects callers without one, on every transport.
 - **REST docs.** `protoc-gen-rest-openapi` writes an OpenAPI 3.1 document of the REST API only. Connect's own routes stay out of it.
 - **MCP tools.** Every unary RPC becomes an MCP tool for AI agents, named after the RPC in snake_case (`GetProduct` becomes `get_product`). Tool calls pass through the same scope checks as REST calls.
-- **A blocking review gate.** `buf lint` runs Buf's rules, Google's AIP rules and 13 house rules (category `HOUSE`), in your editor and in CI.
+- **A blocking review gate.** `buf lint` runs Buf's rules, Google's AIP rules and 14 house rules (category `HOUSE`), in your editor and in CI.
 
 Your handlers contain business logic only. Scope checks, cache and deprecation headers, flow IDs and error auditing come from the runtime.
 
@@ -116,7 +116,8 @@ What each option does:
 | `method.errors` | Runtime, docs | Every error the RPC returns. Undeclared ones are logged. The docs list them per HTTP status. |
 | `method.cache` | Runtime, docs | `Cache-Control` on GET responses of read-only RPCs |
 | `method.deprecation` with `deprecated = true` | Runtime, docs | `Deprecation` and `Sunset` headers, and the successor in the docs |
-| `method.tool` | MCP, docs | The MCP tool's title, description and `destructive` hint. Also the REST operation's summary and description. |
+| `method.tool` | MCP, docs | The MCP tool's `title` and `description`, also the REST operation's summary and description. The description is the one field every client passes to the model. |
+| `method.tool.annotations` | MCP | The MCP specification's `ToolAnnotations` hints (`read_only_hint`, `destructive_hint`, `idempotent_hint`, `open_world_hint`), for clients deciding, for example, whether to ask the user first |
 | `message.description` | MCP, docs | The schema description shown to agents and API readers |
 | `field.sensitive` | Docs | Marks personal or secret data (`x-sensitive`) |
 
@@ -147,7 +148,8 @@ House rules (each finding links to its section in [HOUSE_RULES.md](HOUSE_RULES.m
 | `HOUSE_HTTP_PATH_VERSION` | Put `/v<major>/` in every path, after the same root for the whole service. |
 | `HOUSE_NO_JSON_NAME` | Remove `json_name`. JSON uses the protojson default, lowerCamelCase. |
 | `HOUSE_MONEY_FIELD_TYPE` | Use `google.type.Money` for `price`, `amount`, `*_price` and `*_amount`. |
-| `HOUSE_TOOL_REQUIRED` | Give every unary RPC a tool title and description. Mark Delete and Remove RPCs `destructive: true`. |
+| `HOUSE_TOOL_REQUIRED` | Give every unary RPC a tool title and description. |
+| `HOUSE_TOOL_ANNOTATIONS` | Declare the MCP hints. They must match `idempotency_level`, and Delete and Remove are destructive. |
 | `HOUSE_MESSAGE_DESCRIPTION_REQUIRED` | Give every message a `message.description`. |
 
 `examples/bad-todo` breaks every rule once. Its `expected-lint.txt` lists the findings, and its tests show what each mistake does at runtime.

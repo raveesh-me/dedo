@@ -66,16 +66,45 @@ message ErrorReason {
   google.rpc.Code code = 2;
 }
 
-// Tool is how an RPC is presented to consumers: as an MCP tool, and as an
-// operation in the REST docs. The text is written for people and models
-// choosing between operations, not for the implementers.
+// Tool is how an RPC is presented as an MCP tool, and as an operation in
+// the REST docs. It mirrors the Tool type of the MCP specification
+// (2026-07-28). The text is written for people and models choosing between
+// operations, not for the implementers.
 message Tool {
-  // A short human-readable name, such as "Get a to-do".
+  // A short human-readable name, such as "Get a to-do". MCP Tool.title and
+  // ToolAnnotations.title.
   string title = 1;
-  // What the operation does and when to use it.
+  // What the operation does and when to use it. MCP Tool.description, the
+  // one field every client passes to the model: put anything the model must
+  // know to act safely here, such as "cannot be undone".
   string description = 2;
-  // The operation may destroy data, so clients should confirm it first.
-  bool destructive = 3;
+  // Deprecated: use annotations.destructive_hint. Its default was the
+  // opposite of the MCP specification's.
+  bool destructive = 3 [deprecated = true];
+  // Behaviour hints for MCP clients.
+  ToolAnnotations annotations = 4;
+}
+
+// ToolAnnotations mirrors ToolAnnotations in the MCP specification
+// (2026-07-28). Every field is a hint for the client, such as whether to ask
+// the user before a call; clients treat hints from untrusted servers as
+// untrusted. Leaving a field unset means the specification's default, which
+// for destructive_hint and open_world_hint is true.
+message ToolAnnotations {
+  // If true, the tool does not modify its environment. Spec default: false.
+  optional bool read_only_hint = 1;
+  // If true, the tool may perform destructive updates to its environment;
+  // if false, it performs only additive updates. Meaningful only when
+  // read_only_hint is false. Spec default: true.
+  optional bool destructive_hint = 2;
+  // If true, calling the tool repeatedly with the same arguments has no
+  // additional effect on its environment. Meaningful only when
+  // read_only_hint is false. Spec default: false.
+  optional bool idempotent_hint = 3;
+  // If true, the tool may interact with an open world of external entities,
+  // such as sending email or calling third parties; if false, its domain of
+  // interaction is closed. Spec default: true.
+  optional bool open_world_hint = 4;
 }
 
 // MethodRules is the operational contract of one RPC.
