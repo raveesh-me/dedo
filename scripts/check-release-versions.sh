@@ -24,4 +24,10 @@ check templates/Makefile.api 'DEDO_VERSION \?= v[0-9.]+'
 check install.md 'raveesh-me/dedo[a-z/-]*@v[0-9.]+'
 check guideline.md 'raveesh-me/dedo[a-z/-]*@v[0-9.]+'
 check readme.md 'Latest release: \[v[0-9.]+\]'
+# Inside the repository: the workspace replacements and every module's
+# requirement on the others name the release too.
+check go.work 'dedo[a-z/]* v[0-9.]+ =>'
+for mod in lint/go.mod openapi/go.mod mcp/go.mod examples/todo/go.mod examples/bad-todo/go.mod; do
+  check "$mod" 'github.com/raveesh-me/dedo[a-z/]* v[0-9.]+'
+done
 exit $status

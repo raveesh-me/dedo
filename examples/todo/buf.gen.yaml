@@ -25,11 +25,11 @@ plugins:
     opt: paths=source_relative
   # MCP tool input schemas with field descriptions and field_behavior,
   # passed to mcpserver.New.
-  - local: ["go", "tool", "protoc-gen-mcp-schema"]
+  - local: ["go", "tool", "protoc-gen-dedo-mcp"]
     out: gen/go
     opt: paths=source_relative
   # REST docs: one OpenAPI document for every service, served at /docs.
-  - local: ["go", "tool", "protoc-gen-rest-openapi"]
+  - local: ["go", "tool", "protoc-gen-dedo-openapi"]
     out: docs
     strategy: all
     opt:

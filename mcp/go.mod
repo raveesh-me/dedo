@@ -6,7 +6,7 @@ require (
 	connectrpc.com/connect v1.21.1
 	github.com/bufbuild/protocompile v0.14.1
 	github.com/modelcontextprotocol/go-sdk v1.8.0
-	github.com/raveesh-me/dedo v0.4.0
+	github.com/raveesh-me/dedo v0.5.0
 	github.com/redpanda-data/protoc-gen-go-mcp v0.0.0-20260729122341-6334690a62b6
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.3
 	google.golang.org/genproto/googleapis/api v0.0.0-20260414002931-afd174a4e478
@@ -29,5 +29,3 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20261012220534-4341edf3f941 // indirect
 	google.golang.org/grpc v1.82.1 // indirect
 )
-
-replace github.com/raveesh-me/dedo => ../

@@ -1,0 +1,23 @@
+// Local development: builds every module in this repository against the
+// others' working trees. The modules' go.mod files name released versions,
+// so `go install <module>@<version>` works for consumers.
+go 1.26.1
+
+use (
+	.
+	./examples/bad-todo
+	./examples/todo
+	./lint
+	./mcp
+	./openapi
+)
+
+// The modules require each other at the version being released, which is
+// not tagged yet while it is developed; these replacements point that
+// version at the working tree. They live here, not in go.mod, so they never
+// reach consumers. scripts/check-release-versions.sh checks the version.
+replace (
+	github.com/raveesh-me/dedo v0.5.0 => ./
+	github.com/raveesh-me/dedo/mcp v0.5.0 => ./mcp
+	github.com/raveesh-me/dedo/openapi v0.5.0 => ./openapi
+)

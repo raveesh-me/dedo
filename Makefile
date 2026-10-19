@@ -56,8 +56,9 @@ $(DIST)/buf-plugin-dedo: $(LINT_SRC)
 ## aip-plugin: build buf-plugin-aip at the pinned commit for this machine
 aip-plugin: $(DIST)/buf-plugin-aip
 
+# The AIP source sits inside this repository but outside its Go workspace.
 $(DIST)/buf-plugin-aip: $(AIP_SRC)
-	cd $(DIST)/aip-src && go build -trimpath -o ../buf-plugin-aip .
+	cd $(DIST)/aip-src && GOWORK=off go build -trimpath -o ../buf-plugin-aip .
 
 $(AIP_SRC):
 	rm -rf $(DIST)/aip-src
@@ -73,17 +74,21 @@ wasm-plugins: $(LINT_SRC) $(AIP_SRC)
 	mkdir -p $(DIST)/wasm
 	cd lint && GOOS=wasip1 GOARCH=wasm go build -trimpath -ldflags "$(HOUSE_LDFLAGS)" \
 		-o ../$(DIST)/wasm/buf-plugin-dedo.wasm $(HOUSE_CMD)
-	cd $(DIST)/aip-src && GOOS=wasip1 GOARCH=wasm go build -trimpath -o ../wasm/buf-plugin-aip.wasm .
+	cd $(DIST)/aip-src && GOWORK=off GOOS=wasip1 GOARCH=wasm go build -trimpath -o ../wasm/buf-plugin-aip.wasm .
 
-## release-binaries: both plugins natively for every release platform
+## release-binaries: the lint plugins and the generators natively for every release platform
 release-binaries: $(LINT_SRC) $(AIP_SRC)
 	mkdir -p $(DIST)/release
 	for platform in $(RELEASE_PLATFORMS); do \
 		os=$${platform%/*}; arch=$${platform#*/}; \
 		(cd lint && GOOS=$$os GOARCH=$$arch go build -trimpath -ldflags "$(HOUSE_LDFLAGS)" \
 			-o ../$(DIST)/release/buf-plugin-dedo_$${os}_$${arch} $(HOUSE_CMD)) || exit 1; \
-		(cd $(DIST)/aip-src && GOOS=$$os GOARCH=$$arch go build -trimpath \
+		(cd $(DIST)/aip-src && GOWORK=off GOOS=$$os GOARCH=$$arch go build -trimpath \
 			-o ../release/buf-plugin-aip_$${os}_$${arch} .) || exit 1; \
+		(cd mcp && GOOS=$$os GOARCH=$$arch go build -trimpath \
+			-o ../$(DIST)/release/protoc-gen-dedo-mcp_$${os}_$${arch} ./cmd/protoc-gen-dedo-mcp) || exit 1; \
+		(cd openapi && GOOS=$$os GOARCH=$$arch go build -trimpath \
+			-o ../$(DIST)/release/protoc-gen-dedo-openapi_$${os}_$${arch} ./cmd/protoc-gen-dedo-openapi) || exit 1; \
 	done
 
 ## examples: run both example services as consumer repositories
