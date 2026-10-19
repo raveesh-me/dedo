@@ -48,14 +48,17 @@ Add this to `claude_desktop_config.json` (Settings → Developer → Edit Config
         "run", "-i", "--rm", "docker.io/library/node:24-alpine",
         "npx", "-y", "mcp-remote",
         "http://host.containers.internal:8090/mcp",
-        "--header", "Authorization: Bearer writer"
+        "--header", "Authorization: Bearer writer",
+        "--allow-http"
       ]
     }
   }
 }
 ```
 
-`host.containers.internal` is how a podman container reaches your machine's `localhost`. With Docker, use `docker` and `host.docker.internal` instead.
+`host.containers.internal` is how a podman container reaches your machine's `localhost`. `mcp-remote` accepts plain HTTP only for `localhost`, so `--allow-http` is needed for this name; without it Claude Desktop shows "Server disconnected". With Docker, use `docker` and `host.docker.internal` instead.
+
+If the server shows as failed, Claude Desktop's log for it is `~/Library/Logs/Claude/mcp-server-todo.log`.
 
 ## Without Claude: raw JSON-RPC
 
