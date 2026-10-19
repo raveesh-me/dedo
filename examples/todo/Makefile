@@ -72,9 +72,14 @@ e2e: $(NO_AUTH)
 		-e BASE_URL=http://$(CLUSTER)-control-plane:30080 \
 		$(PLAYWRIGHT_IMAGE) sh -c "npm ci --no-audit --no-fund --loglevel=error && npx playwright test"
 
-## web-gen: regenerate the TypeScript client (Buf's hosted protoc-gen-es)
-web-gen:
+## web-gen: regenerate the TypeScript client with protoc-gen-es in a container
+web-gen: web/node_modules
 	buf generate --template buf.gen.web.yaml
+
+web/node_modules: web/package.json web/package-lock.json $(NO_AUTH)
+	podman run --rm --authfile $(NO_AUTH) -v $(CURDIR)/web:/app -w /app $(NODE_IMAGE) \
+		npm ci --no-audit --no-fund --loglevel=error
+	touch $@
 
 ## web-dev: Vite dev server in a container on :5173, proxying to the cluster
 web-dev: $(NO_AUTH)
