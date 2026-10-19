@@ -1,4 +1,4 @@
-module github.com/raveesh-me/http-proto-lint
+module github.com/raveesh-me/dedo
 
 go 1.26.0
 

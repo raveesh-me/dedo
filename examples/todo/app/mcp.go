@@ -7,11 +7,11 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"google.golang.org/protobuf/reflect/protoreflect"
 
-	todov1 "github.com/raveesh-me/http-proto-lint/examples/todo/gen/go/raveesh_me/todo/v1"
-	"github.com/raveesh-me/http-proto-lint/examples/todo/gen/go/raveesh_me/todo/v1/todov1connect"
-	"github.com/raveesh-me/http-proto-lint/examples/todo/gen/go/raveesh_me/todo/v1/todov1mcp"
-	"github.com/raveesh-me/http-proto-lint/flowid"
-	"github.com/raveesh-me/http-proto-lint/mcp/mcpserver"
+	todov1 "github.com/raveesh-me/dedo/examples/todo/gen/go/raveesh_me/todo/v1"
+	"github.com/raveesh-me/dedo/examples/todo/gen/go/raveesh_me/todo/v1/todov1connect"
+	"github.com/raveesh-me/dedo/examples/todo/gen/go/raveesh_me/todo/v1/todov1mcp"
+	"github.com/raveesh-me/dedo/flowid"
+	"github.com/raveesh-me/dedo/mcp/mcpserver"
 )
 
 // newMCP serves every RPC as an MCP tool named after it, such as get_todo. Tool calls go through api with

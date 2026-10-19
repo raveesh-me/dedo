@@ -3,20 +3,20 @@ syntax = "proto3";
 package raveesh_me.library.v1;
 
 import "google/protobuf/empty.proto";
-import "raveesh_me/http_proto_lint/v1/options.proto";
+import "dedo/v1/options.proto";
 
 service LibraryService {
   rpc SideEffects(google.protobuf.Empty) returns (google.protobuf.Empty) { // want
-    option (raveesh_me.http_proto_lint.v1.method) = {
+    option (dedo.v1.method) = {
       cache: {visibility: VISIBILITY_PRIVATE, max_age: {seconds: 30}}
     };
   }
   rpc NoVisibility(google.protobuf.Empty) returns (google.protobuf.Empty) { // want
     option idempotency_level = NO_SIDE_EFFECTS;
-    option (raveesh_me.http_proto_lint.v1.method) = {cache: {max_age: {seconds: 30}}};
+    option (dedo.v1.method) = {cache: {max_age: {seconds: 30}}};
   }
   rpc NoMaxAge(google.protobuf.Empty) returns (google.protobuf.Empty) { // want
     option idempotency_level = NO_SIDE_EFFECTS;
-    option (raveesh_me.http_proto_lint.v1.method) = {cache: {visibility: VISIBILITY_PUBLIC}};
+    option (dedo.v1.method) = {cache: {visibility: VISIBILITY_PUBLIC}};
   }
 }

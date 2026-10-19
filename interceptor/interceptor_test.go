@@ -14,9 +14,9 @@ import (
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/protobuf/types/known/emptypb"
 
-	"github.com/raveesh-me/http-proto-lint/interceptor"
-	"github.com/raveesh-me/http-proto-lint/internal/testsvc"
-	"github.com/raveesh-me/http-proto-lint/policy"
+	"github.com/raveesh-me/dedo/interceptor"
+	"github.com/raveesh-me/dedo/internal/testsvc"
+	"github.com/raveesh-me/dedo/policy"
 )
 
 type handlerFunc func(context.Context, *connect.Request[emptypb.Empty]) (*connect.Response[emptypb.Empty], error)

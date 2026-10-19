@@ -8,7 +8,7 @@ import (
 	"buf.build/go/bufplugin/check/checkutil"
 	"google.golang.org/protobuf/reflect/protoreflect"
 
-	hplv1 "github.com/raveesh-me/http-proto-lint/gen/go/raveesh_me/http_proto_lint/v1"
+	dedov1 "github.com/raveesh-me/dedo/gen/go/dedo/v1"
 )
 
 var toolRequired = lintRule(
@@ -19,7 +19,7 @@ var toolRequired = lintRule(
 
 var messageDescriptionRequired = lintRule(
 	idMessageDescriptionRequired,
-	"Checks that every message declares raveesh_me.http_proto_lint.v1.message with a description.",
+	"Checks that every message declares dedo.v1.message with a description.",
 	checkutil.NewMessageRuleHandler(checkMessageDescription, checkutil.WithoutImports()),
 )
 
@@ -34,7 +34,7 @@ func checkTool(_ context.Context, w check.ResponseWriter, _ check.Request, m pro
 	switch {
 	case tool == nil:
 		w.AddAnnotation(check.WithDescriptor(m),
-			messagef(idToolRequired, "RPC %q declares no tool; set tool.title and tool.description in raveesh_me.http_proto_lint.v1.method.", m.Name()))
+			messagef(idToolRequired, "RPC %q declares no tool; set tool.title and tool.description in dedo.v1.method.", m.Name()))
 	case title == "":
 		w.AddAnnotation(check.WithDescriptor(m),
 			messagef(idToolRequired, "RPC %q declares no tool title.", m.Name()))
@@ -54,12 +54,12 @@ func checkMessageDescription(_ context.Context, w check.ResponseWriter, _ check.
 	}
 	if strings.TrimSpace(messageRules(msg).GetDescription()) == "" {
 		w.AddAnnotation(check.WithDescriptor(msg),
-			messagef(idMessageDescriptionRequired, "Message %q declares no raveesh_me.http_proto_lint.v1.message description.", msg.Name()))
+			messagef(idMessageDescriptionRequired, "Message %q declares no dedo.v1.message description.", msg.Name()))
 	}
 	return nil
 }
 
-// messageRules reads the raveesh_me.http_proto_lint.v1.message option, or returns nil.
-func messageRules(msg protoreflect.MessageDescriptor) *hplv1.MessageRules {
-	return extension[*hplv1.MessageRules](msg.Options(), hplv1.E_Message)
+// messageRules reads the dedo.v1.message option, or returns nil.
+func messageRules(msg protoreflect.MessageDescriptor) *dedov1.MessageRules {
+	return extension[*dedov1.MessageRules](msg.Options(), dedov1.E_Message)
 }

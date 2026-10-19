@@ -16,9 +16,9 @@ import (
 	"connectrpc.com/connect"
 	"google.golang.org/protobuf/encoding/protojson"
 
-	"github.com/raveesh-me/http-proto-lint/examples/bad-todo/app"
-	todov1 "github.com/raveesh-me/http-proto-lint/examples/bad-todo/gen/go/raveesh_me/todo/v1"
-	"github.com/raveesh-me/http-proto-lint/examples/bad-todo/gen/go/raveesh_me/todo/v1/todov1connect"
+	"github.com/raveesh-me/dedo/examples/bad-todo/app"
+	todov1 "github.com/raveesh-me/dedo/examples/bad-todo/gen/go/raveesh_me/todo/v1"
+	"github.com/raveesh-me/dedo/examples/bad-todo/gen/go/raveesh_me/todo/v1/todov1connect"
 )
 
 type env struct {

@@ -3,19 +3,19 @@ syntax = "proto3";
 package raveesh_me.library.v1;
 
 import "google/protobuf/empty.proto";
-import "raveesh_me/http_proto_lint/v1/options.proto";
+import "dedo/v1/options.proto";
 
 service LibraryService {
   rpc GetBook(google.protobuf.Empty) returns (google.protobuf.Empty) {
     option idempotency_level = NO_SIDE_EFFECTS;
-    option (raveesh_me.http_proto_lint.v1.method) = {
+    option (dedo.v1.method) = {
       tool: {
         annotations: {read_only_hint: true, open_world_hint: false}
       }
     };
   }
   rpc CreateBook(google.protobuf.Empty) returns (google.protobuf.Empty) {
-    option (raveesh_me.http_proto_lint.v1.method) = {
+    option (dedo.v1.method) = {
       tool: {
         annotations: {read_only_hint: false, destructive_hint: false, idempotent_hint: false, open_world_hint: false}
       }
@@ -23,14 +23,14 @@ service LibraryService {
   }
   rpc DeleteBook(google.protobuf.Empty) returns (google.protobuf.Empty) {
     option idempotency_level = IDEMPOTENT;
-    option (raveesh_me.http_proto_lint.v1.method) = {
+    option (dedo.v1.method) = {
       tool: {
         annotations: {read_only_hint: false, destructive_hint: true, idempotent_hint: true, open_world_hint: false}
       }
     };
   }
   rpc SendBook(google.protobuf.Empty) returns (google.protobuf.Empty) {
-    option (raveesh_me.http_proto_lint.v1.method) = {
+    option (dedo.v1.method) = {
       tool: {
         annotations: {read_only_hint: false, destructive_hint: false, idempotent_hint: false, open_world_hint: true}
       }

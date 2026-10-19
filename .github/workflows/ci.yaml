@@ -71,13 +71,13 @@ jobs:
           --create --create-visibility public
       - name: Push the house plugin
         run: >-
-          buf plugin push buf.build/cookytech-in/http-proto-lint-plugin
-          --binary dist/wasm/buf-plugin-raveesh-me-api.wasm
+          buf plugin push buf.build/r-a/dedo-lint
+          --binary dist/wasm/buf-plugin-dedo.wasm
           --label "$GITHUB_REF_NAME" --label main --source-control-url "$SOURCE_URL"
           --create --create-type check --create-visibility public
       - name: Push the pinned AIP plugin
         run: >-
-          buf plugin push buf.build/cookytech-in/buf-plugin-aip
+          buf plugin push buf.build/r-a/buf-plugin-aip
           --binary dist/wasm/buf-plugin-aip.wasm
           --label "$GITHUB_REF_NAME" --label main --source-control-url "$SOURCE_URL"
           --create --create-type check --create-visibility public

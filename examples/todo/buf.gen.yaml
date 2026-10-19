@@ -5,12 +5,12 @@ managed:
   enabled: true
   override:
     - file_option: go_package_prefix
-      value: github.com/raveesh-me/http-proto-lint/examples/todo/gen/go
+      value: github.com/raveesh-me/dedo/examples/todo/gen/go
     # The vendored options module has no BSR name yet, so match it by path.
-    # Its Go code ships in the http-proto-lint Go module.
+    # Its Go code ships in the dedo Go module.
     - file_option: go_package_prefix
-      path: raveesh_me/http_proto_lint
-      value: github.com/raveesh-me/http-proto-lint/gen/go
+      path: dedo
+      value: github.com/raveesh-me/dedo/gen/go
   disable:
     - module: buf.build/googleapis/googleapis
 plugins:

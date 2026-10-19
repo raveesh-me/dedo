@@ -8,7 +8,7 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/descriptorpb"
 
-	hplv1 "github.com/raveesh-me/http-proto-lint/gen/go/raveesh_me/http_proto_lint/v1"
+	dedov1 "github.com/raveesh-me/dedo/gen/go/dedo/v1"
 )
 
 var cacheRequiresNoSideEffects = lintRule(
@@ -26,7 +26,7 @@ func checkCache(_ context.Context, w check.ResponseWriter, _ check.Request, m pr
 		w.AddAnnotation(check.WithDescriptor(m),
 			messagef(idCacheRequiresNoSideEffects, "RPC %q declares a cache policy but is not NO_SIDE_EFFECTS.", m.Name()))
 	}
-	if cache.GetVisibility() == hplv1.CachePolicy_VISIBILITY_UNSPECIFIED {
+	if cache.GetVisibility() == dedov1.CachePolicy_VISIBILITY_UNSPECIFIED {
 		w.AddAnnotation(check.WithDescriptor(m),
 			messagef(idCacheRequiresNoSideEffects, "RPC %q cache policy declares no visibility.", m.Name()))
 	}

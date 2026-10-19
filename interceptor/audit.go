@@ -7,8 +7,8 @@ import (
 	"connectrpc.com/connect"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 
-	"github.com/raveesh-me/http-proto-lint/flowid"
-	"github.com/raveesh-me/http-proto-lint/policy"
+	"github.com/raveesh-me/dedo/flowid"
+	"github.com/raveesh-me/dedo/policy"
 )
 
 // auditError logs errors whose reason the method did not declare. Version 1

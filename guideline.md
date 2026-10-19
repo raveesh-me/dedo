@@ -1,4 +1,4 @@
-# Building an API with http-proto-lint
+# Building an API with dedo
 
 This guide explains how the pieces fit and why. For a copy-paste walkthrough of a new product, follow [install.md](install.md).
 
@@ -54,11 +54,11 @@ my-service/
    go get -tool google.golang.org/protobuf/cmd/protoc-gen-go
    go get -tool connectrpc.com/connect/cmd/protoc-gen-connect-go
    go get -tool github.com/redpanda-data/protoc-gen-go-mcp/cmd/protoc-gen-go-mcp
-   go get -tool github.com/raveesh-me/http-proto-lint/mcp/cmd/protoc-gen-mcp-schema@v0.3.0
-   go get -tool github.com/raveesh-me/http-proto-lint/openapi/cmd/protoc-gen-rest-openapi@v0.3.0
+   go get -tool github.com/raveesh-me/dedo/mcp/cmd/protoc-gen-mcp-schema@v0.3.0
+   go get -tool github.com/raveesh-me/dedo/openapi/cmd/protoc-gen-rest-openapi@v0.3.0
    ```
 
-   Pin the http-proto-lint modules to the latest release explicitly. Go's module proxy can lag behind a new tag.
+   Pin the dedo modules to the latest release explicitly. Go's module proxy can lag behind a new tag.
 
    Then point the `buf.gen.yaml` plugins at them with `local: ["go", "tool", "<generator>"]`, as `examples/todo/buf.gen.yaml` does.
 3. Run `make tools` to download the native lint plugins for your machine into `.tools/`, and add `.tools/` to `.gitignore`. Run `make api-update` (`buf dep update`) and commit `buf.lock`.
@@ -68,12 +68,12 @@ my-service/
 
 Model the API as resources, the way [AIP-121](https://google.aip.dev/121) describes. A resource has a name like `products/{product}`. Methods are the standard ones (`Get`, `List`, `Create`, `Update`, `Delete`) or custom ones bound as `:verb`.
 
-Every service, RPC and message carries options from `raveesh_me.http_proto_lint.v1`. Here is one complete method:
+Every service, RPC and message carries options from `dedo.v1`. Here is one complete method:
 
 ```protobuf
 // ProductService serves the product catalogue.
 service ProductService {
-  option (raveesh_me.http_proto_lint.v1.service) = {
+  option (dedo.v1.service) = {
     audience: AUDIENCE_EXTERNAL_PUBLIC
     owner_team: "pim-team"
   };
@@ -85,7 +85,7 @@ service ProductService {
       get: "/commerce/pim/v1/{name=products/*}"
       response_body: "product"
     };
-    option (raveesh_me.http_proto_lint.v1.method) = {
+    option (dedo.v1.method) = {
       scopes: "pim.product.read"
       cache: {visibility: VISIBILITY_PRIVATE, max_age: {seconds: 30}}
       errors: {reason: "PRODUCT_NOT_FOUND", code: NOT_FOUND}
@@ -103,7 +103,7 @@ service ProductService {
 
 // GetProductRequest is the request of GetProduct.
 message GetProductRequest {
-  option (raveesh_me.http_proto_lint.v1.message) = {description: "Which product to get."};
+  option (dedo.v1.message) = {description: "Which product to get."};
 
   // The resource name of the product.
   string name = 1 [
@@ -268,8 +268,8 @@ Point an MCP client at `http://localhost:8080/mcp`, with the header `Authorizati
 
 **Why both a proto comment and a `tool.description`?** The comment is for people who maintain the API. The description is published to API readers and AI agents, and the lint makes sure it exists.
 
-**Where do the options and plugins come from?** A service depends on `buf.build/cookytech-in/http-proto-lint` in `buf.yaml` and gets the lint plugins with `make tools`. The examples in this repository are the exception: they test the working tree, so they vendor `options.proto` under `third_party/` and load the plugins from `dist/`.
+**Where do the options and plugins come from?** A service depends on `buf.build/r-a/dedo` in `buf.yaml` and gets the lint plugins with `make tools`. The examples in this repository are the exception: they test the working tree, so they vendor `options.proto` under `third_party/` and load the plugins from `dist/`.
 
-**Why native plugin binaries instead of the BSR plugins?** Speed in the editor. One lint takes about 0.3 s with native plugins and about 6 s with the WebAssembly ones, and the editor reruns it as you type. The BSR plugins (`buf.build/cookytech-in/http-proto-lint-plugin` and `buf.build/cookytech-in/buf-plugin-aip`) need no download and work on Windows. Use them there.
+**Why native plugin binaries instead of the BSR plugins?** Speed in the editor. One lint takes about 0.3 s with native plugins and about 6 s with the WebAssembly ones, and the editor reruns it as you type. The BSR plugins (`buf.build/r-a/dedo-lint` and `buf.build/r-a/buf-plugin-aip`) need no download and work on Windows. Use them there.
 
-**How do I update the lint rules?** Bump `HTTP_PROTO_LINT_VERSION` in `Makefile.api` and run `make tools`. CI does the same, so the editor and CI always run the same version.
+**How do I update the lint rules?** Bump `DEDO_VERSION` in `Makefile.api` and run `make tools`. CI does the same, so the editor and CI always run the same version.

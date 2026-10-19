@@ -8,7 +8,7 @@ import (
 	connect "connectrpc.com/connect"
 	context "context"
 	errors "errors"
-	v1 "github.com/raveesh-me/http-proto-lint/examples/bad-todo/gen/go/raveesh_me/todo/v1"
+	v1 "github.com/raveesh-me/dedo/examples/bad-todo/gen/go/raveesh_me/todo/v1"
 	http "net/http"
 	strings "strings"
 )

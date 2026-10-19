@@ -10,7 +10,7 @@ import (
 
 	"connectrpc.com/connect"
 
-	"github.com/raveesh-me/http-proto-lint/policy"
+	"github.com/raveesh-me/dedo/policy"
 )
 
 // Scopes returns the scopes granted to the caller. Auth middleware supplies it.

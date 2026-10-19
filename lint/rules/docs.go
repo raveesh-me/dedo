@@ -9,11 +9,11 @@ import (
 
 // DocsRef is the git ref that rule documentation links point at. Release
 // builds set it to their tag with
-// -ldflags "-X github.com/raveesh-me/http-proto-lint/lint/rules.DocsRef=<tag>",
+// -ldflags "-X github.com/raveesh-me/dedo/lint/rules.DocsRef=<tag>",
 // so each plugin version links to the rules as they were at that version.
 var DocsRef = "main"
 
-const docsBase = "https://github.com/raveesh-me/http-proto-lint/blob/"
+const docsBase = "https://github.com/raveesh-me/dedo/blob/"
 
 // The house rule IDs. Each has a heading of the same name in HOUSE_RULES.md.
 const (

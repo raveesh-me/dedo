@@ -9,14 +9,14 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/reflect/protoregistry"
 
-	hplv1 "github.com/raveesh-me/http-proto-lint/gen/go/raveesh_me/http_proto_lint/v1"
+	dedov1 "github.com/raveesh-me/dedo/gen/go/dedo/v1"
 )
 
 // Method is the operational contract of one RPC.
 type Method struct {
 	Procedure string // "/raveesh_me.library.v1.LibraryService/GetBook"
-	Audience  hplv1.Audience
-	Rules     *hplv1.MethodRules
+	Audience  dedov1.Audience
+	Rules     *dedov1.MethodRules
 }
 
 // Table maps procedure names to their contracts.
@@ -60,14 +60,14 @@ func findService(files *protoregistry.Files, name string) (protoreflect.ServiceD
 }
 
 func addService(table Table, svc protoreflect.ServiceDescriptor) error {
-	svcRules, _ := proto.GetExtension(svc.Options(), hplv1.E_Service).(*hplv1.ServiceRules)
+	svcRules, _ := proto.GetExtension(svc.Options(), dedov1.E_Service).(*dedov1.ServiceRules)
 	if svcRules == nil {
-		return fmt.Errorf("policy: service %s has no raveesh_me.http_proto_lint.v1.service option", svc.FullName())
+		return fmt.Errorf("policy: service %s has no dedo.v1.service option", svc.FullName())
 	}
 	methods := svc.Methods()
 	for i := 0; i < methods.Len(); i++ {
 		m := methods.Get(i)
-		rules, _ := proto.GetExtension(m.Options(), hplv1.E_Method).(*hplv1.MethodRules)
+		rules, _ := proto.GetExtension(m.Options(), dedov1.E_Method).(*dedov1.MethodRules)
 		// A method without scopes would be an open endpoint, so fail closed
 		// even though lint already requires them.
 		if rules == nil || len(rules.GetScopes()) == 0 {

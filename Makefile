@@ -1,4 +1,4 @@
-# Build, test and release http-proto-lint.
+# Build, test and release dedo.
 AIP_PLUGIN_REPO   := https://github.com/hestiatechnology/buf-plugin-aip.git
 AIP_PLUGIN_COMMIT := 5158ec0f16f3
 DIST              := dist
@@ -38,8 +38,8 @@ test:
 # Lint plugins run natively: about 17 times faster per `buf lint` than the
 # same plugins as WebAssembly, which matters in the editor. buf.yaml refers
 # to them by path, so editors started outside a shell still find them.
-HOUSE_CMD     := ./cmd/buf-plugin-raveesh-me-api
-HOUSE_LDFLAGS := -X github.com/raveesh-me/http-proto-lint/lint/rules.DocsRef=$(DOCS_REF)
+HOUSE_CMD     := ./cmd/buf-plugin-dedo
+HOUSE_LDFLAGS := -X github.com/raveesh-me/dedo/lint/rules.DocsRef=$(DOCS_REF)
 LINT_SRC      := $(shell find lint gen -name '*.go') lint/go.mod lint/go.sum
 AIP_SRC       := $(DIST)/aip-src/.pinned-$(AIP_PLUGIN_COMMIT)
 # Platforms the release ships native plugins for. Windows users can use the
@@ -47,9 +47,9 @@ AIP_SRC       := $(DIST)/aip-src/.pinned-$(AIP_PLUGIN_COMMIT)
 RELEASE_PLATFORMS := darwin/arm64 darwin/amd64 linux/arm64 linux/amd64
 
 ## plugin: build the house plugin for this machine
-plugin: $(DIST)/buf-plugin-raveesh-me-api
+plugin: $(DIST)/buf-plugin-dedo
 
-$(DIST)/buf-plugin-raveesh-me-api: $(LINT_SRC)
+$(DIST)/buf-plugin-dedo: $(LINT_SRC)
 	mkdir -p $(DIST)
 	cd lint && go build -trimpath -ldflags "$(HOUSE_LDFLAGS)" -o ../$@ $(HOUSE_CMD)
 
@@ -72,7 +72,7 @@ plugins: plugin aip-plugin
 wasm-plugins: $(LINT_SRC) $(AIP_SRC)
 	mkdir -p $(DIST)/wasm
 	cd lint && GOOS=wasip1 GOARCH=wasm go build -trimpath -ldflags "$(HOUSE_LDFLAGS)" \
-		-o ../$(DIST)/wasm/buf-plugin-raveesh-me-api.wasm $(HOUSE_CMD)
+		-o ../$(DIST)/wasm/buf-plugin-dedo.wasm $(HOUSE_CMD)
 	cd $(DIST)/aip-src && GOOS=wasip1 GOARCH=wasm go build -trimpath -o ../wasm/buf-plugin-aip.wasm .
 
 ## release-binaries: both plugins natively for every release platform
@@ -81,7 +81,7 @@ release-binaries: $(LINT_SRC) $(AIP_SRC)
 	for platform in $(RELEASE_PLATFORMS); do \
 		os=$${platform%/*}; arch=$${platform#*/}; \
 		(cd lint && GOOS=$$os GOARCH=$$arch go build -trimpath -ldflags "$(HOUSE_LDFLAGS)" \
-			-o ../$(DIST)/release/buf-plugin-raveesh-me-api_$${os}_$${arch} $(HOUSE_CMD)) || exit 1; \
+			-o ../$(DIST)/release/buf-plugin-dedo_$${os}_$${arch} $(HOUSE_CMD)) || exit 1; \
 		(cd $(DIST)/aip-src && GOOS=$$os GOARCH=$$arch go build -trimpath \
 			-o ../release/buf-plugin-aip_$${os}_$${arch} .) || exit 1; \
 	done
@@ -91,7 +91,7 @@ examples: vendored-options example-todo example-bad-todo
 
 # Each example owns a copy of the options module until it is on the BSR.
 vendored-options:
-	for ex in todo bad-todo; do diff -r proto/raveesh_me examples/$$ex/third_party/http-proto-lint/raveesh_me || exit 1; done
+	for ex in todo bad-todo; do diff -r proto/dedo examples/$$ex/third_party/dedo/dedo || exit 1; done
 
 ## example-todo: the compliant service lints clean and passes its tests
 example-todo: plugins

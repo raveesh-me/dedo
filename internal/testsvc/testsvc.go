@@ -12,7 +12,7 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	hplv1 "github.com/raveesh-me/http-proto-lint/gen/go/raveesh_me/http_proto_lint/v1"
+	dedov1 "github.com/raveesh-me/dedo/gen/go/dedo/v1"
 )
 
 // Service is the full name of the test service.
@@ -65,7 +65,7 @@ func WithoutServiceRules(f *descriptorpb.FileDescriptorProto) {
 
 // WithoutScopes removes the scopes of DeleteThing.
 func WithoutScopes(f *descriptorpb.FileDescriptorProto) {
-	rules := proto.GetExtension(f.Service[0].Method[1].Options, hplv1.E_Method).(*hplv1.MethodRules)
+	rules := proto.GetExtension(f.Service[0].Method[1].Options, dedov1.E_Method).(*dedov1.MethodRules)
 	rules.Scopes = nil
 }
 
@@ -89,8 +89,8 @@ func file() *descriptorpb.FileDescriptorProto {
 
 func serviceOptions() *descriptorpb.ServiceOptions {
 	opts := &descriptorpb.ServiceOptions{}
-	proto.SetExtension(opts, hplv1.E_Service, &hplv1.ServiceRules{
-		Audience:  hplv1.Audience_AUDIENCE_EXTERNAL_PUBLIC,
+	proto.SetExtension(opts, dedov1.E_Service, &dedov1.ServiceRules{
+		Audience:  dedov1.Audience_AUDIENCE_EXTERNAL_PUBLIC,
 		OwnerTeam: "test-team",
 	})
 	return opts
@@ -100,27 +100,27 @@ func getOptions() *descriptorpb.MethodOptions {
 	opts := &descriptorpb.MethodOptions{
 		IdempotencyLevel: descriptorpb.MethodOptions_NO_SIDE_EFFECTS.Enum(),
 	}
-	proto.SetExtension(opts, hplv1.E_Method, &hplv1.MethodRules{
+	proto.SetExtension(opts, dedov1.E_Method, &dedov1.MethodRules{
 		Scopes: []string{ReadScope},
-		Cache: &hplv1.CachePolicy{
-			Visibility: hplv1.CachePolicy_VISIBILITY_PUBLIC,
+		Cache: &dedov1.CachePolicy{
+			Visibility: dedov1.CachePolicy_VISIBILITY_PUBLIC,
 			MaxAge:     durationpb.New(30_000_000_000),
 		},
-		Errors: []*hplv1.ErrorReason{{Reason: Reason, Code: code.Code_NOT_FOUND}},
+		Errors: []*dedov1.ErrorReason{{Reason: Reason, Code: code.Code_NOT_FOUND}},
 	})
 	return opts
 }
 
 func deleteOptions() *descriptorpb.MethodOptions {
 	opts := &descriptorpb.MethodOptions{Deprecated: proto.Bool(true)}
-	proto.SetExtension(opts, hplv1.E_Method, &hplv1.MethodRules{
+	proto.SetExtension(opts, dedov1.E_Method, &dedov1.MethodRules{
 		Scopes: []string{WriteScope},
-		Deprecation: &hplv1.Deprecation{
+		Deprecation: &dedov1.Deprecation{
 			DeprecationTime: &timestamppb.Timestamp{Seconds: DeprecatedAt},
 			SunsetTime:      &timestamppb.Timestamp{Seconds: SunsetAt},
 			Successor:       "raveesh_me.test.v2.TestService.DeleteThing",
 		},
-		Errors: []*hplv1.ErrorReason{{Reason: Reason, Code: code.Code_NOT_FOUND}},
+		Errors: []*dedov1.ErrorReason{{Reason: Reason, Code: code.Code_NOT_FOUND}},
 	})
 	return opts
 }

@@ -8,7 +8,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/raveesh-me/http-proto-lint/examples/todo/app"
+	"github.com/raveesh-me/dedo/examples/todo/app"
 )
 
 func main() {

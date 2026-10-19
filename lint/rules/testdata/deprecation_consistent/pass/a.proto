@@ -3,12 +3,12 @@ syntax = "proto3";
 package raveesh_me.library.v1;
 
 import "google/protobuf/empty.proto";
-import "raveesh_me/http_proto_lint/v1/options.proto";
+import "dedo/v1/options.proto";
 
 service LibraryService {
   rpc RemoveBook(google.protobuf.Empty) returns (google.protobuf.Empty) {
     option deprecated = true;
-    option (raveesh_me.http_proto_lint.v1.method) = {
+    option (dedo.v1.method) = {
       deprecation: {
         deprecation_time: {seconds: 1767225600}
         sunset_time: {seconds: 1798761600}
@@ -17,7 +17,7 @@ service LibraryService {
     };
   }
   rpc DeleteBook(google.protobuf.Empty) returns (google.protobuf.Empty) {
-    option (raveesh_me.http_proto_lint.v1.method) = {
+    option (dedo.v1.method) = {
       scopes: "library.book.write"
       errors: {reason: "BOOK_NOT_FOUND", code: NOT_FOUND}
     };

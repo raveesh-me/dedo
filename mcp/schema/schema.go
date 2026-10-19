@@ -22,7 +22,7 @@ import (
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 
-	hplv1 "github.com/raveesh-me/http-proto-lint/gen/go/raveesh_me/http_proto_lint/v1"
+	dedov1 "github.com/raveesh-me/dedo/gen/go/dedo/v1"
 )
 
 // maxDepth bounds recursive messages.
@@ -230,7 +230,7 @@ func has(f *protogen.Field, want annotations.FieldBehavior) bool {
 // messageDescription prefers the consumer-facing message option, then the
 // leading comment.
 func messageDescription(msg *protogen.Message) string {
-	rules, _ := proto.GetExtension(msg.Desc.Options(), hplv1.E_Message).(*hplv1.MessageRules)
+	rules, _ := proto.GetExtension(msg.Desc.Options(), dedov1.E_Message).(*dedov1.MessageRules)
 	if d := strings.TrimSpace(rules.GetDescription()); d != "" {
 		return d
 	}

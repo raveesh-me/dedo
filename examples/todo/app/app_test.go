@@ -15,10 +15,10 @@ import (
 	"google.golang.org/genproto/googleapis/type/money"
 	"google.golang.org/protobuf/types/known/fieldmaskpb"
 
-	"github.com/raveesh-me/http-proto-lint/examples/todo/app"
-	todov1 "github.com/raveesh-me/http-proto-lint/examples/todo/gen/go/raveesh_me/todo/v1"
-	"github.com/raveesh-me/http-proto-lint/examples/todo/gen/go/raveesh_me/todo/v1/todov1connect"
-	"github.com/raveesh-me/http-proto-lint/flowid"
+	"github.com/raveesh-me/dedo/examples/todo/app"
+	todov1 "github.com/raveesh-me/dedo/examples/todo/gen/go/raveesh_me/todo/v1"
+	"github.com/raveesh-me/dedo/examples/todo/gen/go/raveesh_me/todo/v1/todov1connect"
+	"github.com/raveesh-me/dedo/flowid"
 )
 
 type env struct {

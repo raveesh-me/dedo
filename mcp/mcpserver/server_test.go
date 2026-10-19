@@ -13,23 +13,23 @@ import (
 	"google.golang.org/protobuf/types/descriptorpb"
 	"google.golang.org/protobuf/types/known/emptypb"
 
-	hplv1 "github.com/raveesh-me/http-proto-lint/gen/go/raveesh_me/http_proto_lint/v1"
+	dedov1 "github.com/raveesh-me/dedo/gen/go/dedo/v1"
 )
 
 // service builds raveesh_me.test.v1.TestService with one read and one
 // destructive method.
 func service(t *testing.T) protoreflect.ServiceDescriptor {
 	t.Helper()
-	method := func(name string, level descriptorpb.MethodOptions_IdempotencyLevel, tool *hplv1.Tool) *descriptorpb.MethodDescriptorProto {
+	method := func(name string, level descriptorpb.MethodOptions_IdempotencyLevel, tool *dedov1.Tool) *descriptorpb.MethodDescriptorProto {
 		opts := &descriptorpb.MethodOptions{IdempotencyLevel: level.Enum()}
-		proto.SetExtension(opts, hplv1.E_Method, &hplv1.MethodRules{Tool: tool})
+		proto.SetExtension(opts, dedov1.E_Method, &dedov1.MethodRules{Tool: tool})
 		return &descriptorpb.MethodDescriptorProto{
 			Name: proto.String(name), InputType: proto.String(".raveesh_me.test.v1.Request"),
 			OutputType: proto.String(".raveesh_me.test.v1.Request"), Options: opts,
 		}
 	}
 	msgOpts := &descriptorpb.MessageOptions{}
-	proto.SetExtension(msgOpts, hplv1.E_Message, &hplv1.MessageRules{Description: "What to act on."})
+	proto.SetExtension(msgOpts, dedov1.E_Message, &dedov1.MessageRules{Description: "What to act on."})
 	fd, err := protodesc.NewFile(&descriptorpb.FileDescriptorProto{
 		Name:        proto.String("raveesh_me/test/v1/test.proto"),
 		Package:     proto.String("raveesh_me.test.v1"),
@@ -38,8 +38,8 @@ func service(t *testing.T) protoreflect.ServiceDescriptor {
 		Service: []*descriptorpb.ServiceDescriptorProto{{
 			Name: proto.String("TestService"),
 			Method: []*descriptorpb.MethodDescriptorProto{
-				method("GetThing", descriptorpb.MethodOptions_NO_SIDE_EFFECTS, &hplv1.Tool{Title: "Get a thing", Description: "Returns a thing."}),
-				method("DeleteThing", descriptorpb.MethodOptions_IDEMPOTENT, &hplv1.Tool{Title: "Delete a thing", Description: "Removes a thing."}),
+				method("GetThing", descriptorpb.MethodOptions_NO_SIDE_EFFECTS, &dedov1.Tool{Title: "Get a thing", Description: "Returns a thing."}),
+				method("DeleteThing", descriptorpb.MethodOptions_IDEMPOTENT, &dedov1.Tool{Title: "Delete a thing", Description: "Removes a thing."}),
 			},
 		}},
 	}, nil)
@@ -51,9 +51,9 @@ func service(t *testing.T) protoreflect.ServiceDescriptor {
 
 func TestAnnotations(t *testing.T) {
 	no, yes := false, true
-	a := annotations(&hplv1.Tool{
+	a := annotations(&dedov1.Tool{
 		Title: "Delete a thing",
-		Annotations: &hplv1.ToolAnnotations{
+		Annotations: &dedov1.ToolAnnotations{
 			ReadOnlyHint: &no, DestructiveHint: &yes, IdempotentHint: &yes, OpenWorldHint: &no,
 		},
 	})
@@ -61,7 +61,7 @@ func TestAnnotations(t *testing.T) {
 		t.Errorf("declared annotations = %+v", a)
 	}
 	// Undeclared hints are left out, so clients apply the spec defaults.
-	a = annotations(&hplv1.Tool{Title: "Get a thing", Annotations: &hplv1.ToolAnnotations{ReadOnlyHint: &yes}})
+	a = annotations(&dedov1.Tool{Title: "Get a thing", Annotations: &dedov1.ToolAnnotations{ReadOnlyHint: &yes}})
 	if !a.ReadOnlyHint || a.DestructiveHint != nil || a.OpenWorldHint != nil {
 		t.Errorf("partial annotations = %+v", a)
 	}

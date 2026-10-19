@@ -5,7 +5,7 @@
 version: v2
 modules:
   - path: proto
-  - path: third_party/http-proto-lint
+  - path: third_party/dedo
 deps:
   - buf.build/googleapis/googleapis
 lint:
@@ -42,4 +42,4 @@ breaking:
   ignore_unstable_packages: true
 plugins:
   - plugin: ../../dist/buf-plugin-aip
-  - plugin: ../../dist/buf-plugin-raveesh-me-api
+  - plugin: ../../dist/buf-plugin-dedo

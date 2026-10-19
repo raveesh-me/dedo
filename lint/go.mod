@@ -1,10 +1,10 @@
-module github.com/raveesh-me/http-proto-lint/lint
+module github.com/raveesh-me/dedo/lint
 
 go 1.26.0
 
 require (
 	buf.build/go/bufplugin v0.11.1
-	github.com/raveesh-me/http-proto-lint v0.3.0
+	github.com/raveesh-me/dedo v0.4.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20261012220534-4341edf3f941
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20261012220534-4341edf3f941
 	google.golang.org/protobuf v1.36.12
@@ -31,4 +31,4 @@ require (
 	pluginrpc.com/pluginrpc v0.5.1-0.20260825152034-473fc805d0d1 // indirect
 )
 
-replace github.com/raveesh-me/http-proto-lint => ../
+replace github.com/raveesh-me/dedo => ../

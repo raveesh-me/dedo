@@ -7,8 +7,8 @@ import (
 
 	"connectrpc.com/connect"
 
-	"github.com/raveesh-me/http-proto-lint/flowid"
-	"github.com/raveesh-me/http-proto-lint/policy"
+	"github.com/raveesh-me/dedo/flowid"
+	"github.com/raveesh-me/dedo/policy"
 )
 
 // authorize runs before validation, so an unauthorised caller learns nothing
