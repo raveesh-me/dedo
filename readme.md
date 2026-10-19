@@ -196,6 +196,14 @@ The Go module version is the same tag. The job reads a `BUF_KEY` repository secr
 
 `buf-plugin-aip` is a young third-party project ([hestiatechnology/buf-plugin-aip](https://github.com/hestiatechnology/buf-plugin-aip), Apache-2.0). It is pinned to commit `5158ec0f16f3` and republished from that commit.
 
+## Why "dedo"?
+
+dedo stands for *define once, deploy everywhere*.
+
+It is also a word heard a lot in the author's home. The author's daughter is one, and whenever she wants something she says "de do", Hindi for "give it to me". She says it so often that the family has started calling her Dedo.
+
+The project works the same way: you hand it one `.proto`, and it gives back RPC, REST, docs and MCP tools.
+
 ## License
 
 [Apache License 2.0](LICENSE).
