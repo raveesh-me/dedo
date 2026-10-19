@@ -29,6 +29,7 @@ plugins:
     strategy: all
     opt:
       - title=Todo API
-      - server=http://localhost:8080
+      # Relative, so the docs console calls whichever origin served the docs.
+      - server=/
 inputs:
   - directory: proto
