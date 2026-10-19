@@ -14,13 +14,15 @@
 
 New here? [install.md](install.md) builds a new product from scratch, step by step. [guideline.md](guideline.md) explains the reasoning.
 
+**Latest release: [v0.2.0](https://github.com/raveesh-me/http-proto-lint/releases/tag/v0.2.0).** The options module is [`buf.build/cookytech-in/http-proto-lint`](https://buf.build/cookytech-in/http-proto-lint). The lint plugins come as native binaries on the GitHub release (`make tools`) and as Wasm plugins on the BSR. The Go modules are `github.com/raveesh-me/http-proto-lint/...@v0.2.0`.
+
 Contract rules come from Google's AIPs. Operational rules (audience, ownership, scopes, caching, deprecation, error reasons) come from Zalando's guidelines. Both live in the schema.
 
 ## What is in this repository
 
 | Component | Path | Job |
 | --- | --- | --- |
-| Options module | `proto/raveesh_me/http_proto_lint/v1/options.proto` | Declares audience, owner, scopes, cache policy, deprecation, error reasons and sensitive fields. Published as `buf.build/cookytech-in/http-proto-lint`. |
+| Options module | `proto/raveesh_me/http_proto_lint/v1/options.proto` | Declares audience, owner, scopes, cache policy, deprecation, error reasons, sensitive fields, message descriptions, and how each RPC appears as an MCP tool (title, description and the MCP specification's `ToolAnnotations`). Published as `buf.build/cookytech-in/http-proto-lint`. |
 | House lint plugin | `lint/` | Fourteen house rules, `HOUSE_*` in the `HOUSE` category. Released as native binaries per platform (fast in editors) and as the Wasm check plugin `buf.build/cookytech-in/http-proto-lint-plugin`. |
 | Policy table | `policy/` | Reads the options from descriptors at startup. Fails on a missing declaration. |
 | Flow ID | `flowid/` | Reads or creates `X-Flow-ID` and propagates it on outbound calls. |
@@ -34,6 +36,8 @@ The root Go module (`github.com/raveesh-me/http-proto-lint`) holds the runtime a
 
 ## Declaring a contract
 
+One RPC with every declaration the standard asks for, from `examples/library` (which CI lints):
+
 ```protobuf
 service LibraryService {
   option (raveesh_me.http_proto_lint.v1.service) = {
@@ -42,6 +46,8 @@ service LibraryService {
   };
 
   // GetBook returns one book.
+  //
+  // Errors: BOOK_NOT_FOUND.
   rpc GetBook(GetBookRequest) returns (GetBookResponse) {
     option idempotency_level = NO_SIDE_EFFECTS;
     option (google.api.http) = {
@@ -49,11 +55,36 @@ service LibraryService {
       response_body: "book"
     };
     option (raveesh_me.http_proto_lint.v1.method) = {
+      tool: {
+        title: "Get a book"
+        description: "Returns one book by its resource name, such as shelves/1/books/2."
+        annotations: {
+          read_only_hint: true
+          open_world_hint: false
+        }
+      }
       scopes: "library.book.read"
-      cache: {visibility: VISIBILITY_PRIVATE, max_age: {seconds: 30}}
-      errors: {reason: "BOOK_NOT_FOUND", code: NOT_FOUND}
+      cache: {
+        visibility: VISIBILITY_PRIVATE
+        max_age: {seconds: 30}
+      }
+      errors: {
+        reason: "BOOK_NOT_FOUND"
+        code: NOT_FOUND
+      }
     };
   }
+}
+
+// GetBookRequest is the request of GetBook.
+message GetBookRequest {
+  option (raveesh_me.http_proto_lint.v1.message) = {description: "Which book to get."};
+
+  // The resource name of the book.
+  string name = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference) = {type: "library.raveesh.me/Book"}
+  ];
 }
 ```
 
@@ -84,45 +115,23 @@ Suppress one finding with `// buf:lint:ignore HOUSE_MONEY_FIELD_TYPE` above the 
 
 ## Using it in a service repository
 
-1. Copy `templates/buf.yaml`, `templates/buf.gen.yaml`, `templates/Makefile.api` and `templates/vscode/*` (into `.vscode/`). Replace `YOUR_ORG/YOUR_REPO`.
-2. Run `make tools` to download the native lint plugins for your machine into `.tools/` (gitignored), and `make api-update` (`buf dep update`). Commit `buf.lock`.
-3. Run `make api-check`. VS Code shows the same findings through the Buf extension (`buf lsp serve`).
-4. Wire the runtime:
+[install.md](install.md) walks through it end to end with a working example. In short:
 
-```go
-table, err := policy.Build(libraryv1connect.LibraryServiceName)
-if err != nil {
-	return err
-}
-guard, err := interceptor.New(interceptor.Config{
-	Table:         table,
-	Scopes:        auth.ScopesFromContext, // your auth middleware
-	EnforceScopes: false,                  // audit first, then enforce
-	Log:           log,
-})
-if err != nil {
-	return err
-}
-path, handler := libraryv1connect.NewLibraryServiceHandler(
-	library.NewServer(),
-	connect.WithInterceptors(guard, validator), // policy before validation
-)
-mux := http.NewServeMux()
-mux.Handle(path, handler)
-return http.ListenAndServe(":8080", flowid.Middleware(auth.Middleware(mux)))
-```
-
+1. Copy the files in `templates/` (`buf.yaml`, `buf.gen.yaml`, `Makefile.api`, `CODEOWNERS`, VS Code settings, the Jenkins stage) and replace the `YOUR_*` placeholders.
+2. Pin the code generators in `go.mod` with `go get -tool`, run `make tools` for the native lint plugins, and run `buf dep update`.
+3. Write the contract, then `make api-check` (lint, format, breaking) and `buf generate` (Go, Connect, MCP tools, REST docs).
+4. Wire the runtime: `policy.Build` for the policy table, `interceptor.New` for scopes and headers, Vanguard for REST, `mcpserver.Wrap` for MCP, and the docs handler. Start with `EnforceScopes: false` (audit mode), then enforce.
 5. Add `templates/policy_table_test.go.tmpl` as a test, so a missing declaration fails before deploy.
 
 `buf.gen.yaml` uses managed mode. A module-scoped `go_package_prefix` override points imports of the options module at this repository's Go module, so generated code links against the runtime's types.
 
-Known v1 gaps: error responses carry no deprecation headers, and streaming calls get the scope check only.
+Known gaps: error responses carry no deprecation headers, and streaming calls get the scope check only, with no error audit.
 
 ## Examples: `todo` and `bad-todo`
 
 Two Go services, each laid out like a service repository built from `templates/`, with its own `buf.yaml`, `buf.gen.yaml`, `go.mod` and proto files. Both serve the same `TodoService` over Connect, gRPC and REST (through Vanguard), with the same server code and the full runtime: policy table, scope interceptor, flow IDs and error audit.
 
-- `examples/todo` follows the standard. `buf lint` is clean. Its tests check scopes, CRUD, pagination, cache and deprecation headers, REST unwrapping and the error audit end to end. It also serves the REST reference at `/docs` and an MCP server at `/mcp`, and its tests check that MCP tools carry the declared text and enforce the same scopes.
+- `examples/todo` follows the standard. `buf lint` is clean. Its tests check scopes, CRUD, pagination, cache and deprecation headers, REST unwrapping and the error audit end to end. It also serves the REST reference at `/docs` and an MCP server at `/mcp`. Its tests check that MCP tools carry the declared text and `ToolAnnotations` and enforce the same scopes, and that a change made through MCP reaches an open `WatchTodos` stream at once.
 - `examples/bad-todo` breaks all fourteen house rules, plus one Buf and one AIP rule. Open `proto/raveesh_me/todo/v1/todo.proto` in VS Code to see the findings. `expected-lint.txt` lists them, and `app/app_test.go` shows what each mistake does at runtime: a misnamed scope locks out writers, an unversioned path moves the endpoint, undeclared reasons show up in logs, and a custom `json_name` renames the field for every JSON client.
 
 `examples/todo` also runs as a deployment, with everything built in containers (podman, kind and kubectl are the only host tools):
@@ -136,7 +145,7 @@ make down
 
 The UI (`web/`) uses TanStack Query through [connect-tan-vue](https://github.com/raveesh-me/connect-tan-vue)'s `createClientWithQuery`, and stays live through the `WatchTodos` server stream. [examples/todo/MCP.md](examples/todo/MCP.md) shows how to connect Claude Code or Claude Desktop to the service's MCP endpoint.
 
-Until the options module and plugins are published, each example vendors `options.proto` under `third_party/` and loads the native plugins from `dist/`. Run `make plugins` once so the editor finds them, then `make examples`. Rerun `make plugins` after changing a rule.
+The examples test this repository's working tree, not a release: each vendors `options.proto` under `third_party/` and loads the lint plugins from `dist/`. Run `make plugins` once so the editor finds them, then `make examples`. Rerun `make plugins` after changing a rule. Service repositories use the published module and plugins instead.
 
 ```sh
 cd examples/todo && go run . &
@@ -162,10 +171,10 @@ The editor reruns the lint as you type, so this is the difference between findin
 make check          # format, generate, Go tests, plugin builds, buf lint, examples
 make plugins        # both lint plugins, natively for this machine, into dist/
 make wasm-plugins   # both lint plugins as WebAssembly, for the BSR
-make breaking     # options module against main
+make breaking       # options module against main
 ```
 
-`make check` needs `buf` and `jq`. Code generators are pinned in each `go.mod` as Go tools and run through `go tool`. The root `buf.yaml` lints the options module and the example with the locally built plugin from `dist/`.
+`make check` needs `buf` and `jq`. Code generators are pinned in each `go.mod` as Go tools and run through `go tool`. The root `buf.yaml` lints the options module (Buf rules only, since it defines the extensions) and `examples/library` (all rules, with the locally built plugin from `dist/`).
 
 Lint rule tests live in `lint/rules/testdata/<rule>/{pass,fail}`. A pass fixture must produce no finding. A fail fixture marks each line that must produce one with `// want`.
 
