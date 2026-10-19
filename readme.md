@@ -14,7 +14,7 @@
 
 New here? [install.md](install.md) builds a new product from scratch, step by step. [guideline.md](guideline.md) explains the reasoning.
 
-**Latest release: [v0.2.0](https://github.com/raveesh-me/http-proto-lint/releases/tag/v0.2.0).** The options module is [`buf.build/cookytech-in/http-proto-lint`](https://buf.build/cookytech-in/http-proto-lint). The lint plugins come as native binaries on the GitHub release (`make tools`) and as Wasm plugins on the BSR. The Go modules are `github.com/raveesh-me/http-proto-lint/...@v0.2.0`.
+**Latest release: [v0.3.0](https://github.com/raveesh-me/http-proto-lint/releases/tag/v0.3.0).** The options module is [`buf.build/cookytech-in/http-proto-lint`](https://buf.build/cookytech-in/http-proto-lint). The lint plugins come as native binaries on the GitHub release (`make tools`) and as Wasm plugins on the BSR. The Go modules are `github.com/raveesh-me/http-proto-lint/...@v0.3.0`.
 
 Contract rules come from Google's AIPs. Operational rules (audience, ownership, scopes, caching, deprecation, error reasons) come from Zalando's guidelines. Both live in the schema.
 
@@ -28,7 +28,7 @@ Contract rules come from Google's AIPs. Operational rules (audience, ownership, 
 | Flow ID | `flowid/` | Reads or creates `X-Flow-ID` and propagates it on outbound calls. |
 | Policy interceptor | `interceptor/` | Checks scopes, sets `Cache-Control`, `Deprecation` and `Sunset`, and logs undeclared error reasons. |
 | REST doc generator | `openapi/` | `protoc-gen-rest-openapi`: an OpenAPI 3.1 document from the `google.api.http` bindings, with scopes, error reasons, deprecation and the declared descriptions. Connect routes are left out. |
-| MCP adapter | `mcp/` | Serves the tools that `protoc-gen-go-mcp` generates under short snake_case names (`get_todo`), with the declared title, description and behaviour hints. Tool calls run through the same auth and policy as REST. |
+| MCP adapter and schemas | `mcp/` | `protoc-gen-mcp-schema` writes each tool's input schema at code-generation time: field descriptions from comments, `OUTPUT_ONLY` fields left out, partial-update and create semantics from AIP. `mcpserver` serves the tools `protoc-gen-go-mcp` generates under short snake_case names (`get_todo`), with those schemas, the declared title, description, `ToolAnnotations` and error reasons, and without deprecated RPCs. Tool calls run through the same auth and policy as REST. |
 | Templates | `templates/` | `buf.yaml`, `buf.gen.yaml`, `Makefile.api`, VS Code settings, a Jenkins stage and a policy-table test for service repositories. |
 | Examples | `examples/` | `library`: a contract-only module. `todo` and `bad-todo`: two runnable services with the same interface, one compliant and one breaking every rule. |
 
@@ -120,7 +120,7 @@ Suppress one finding with `// buf:lint:ignore HOUSE_MONEY_FIELD_TYPE` above the 
 1. Copy the files in `templates/` (`buf.yaml`, `buf.gen.yaml`, `Makefile.api`, `CODEOWNERS`, VS Code settings, the Jenkins stage) and replace the `YOUR_*` placeholders.
 2. Pin the code generators in `go.mod` with `go get -tool`, run `make tools` for the native lint plugins, and run `buf dep update`.
 3. Write the contract, then `make api-check` (lint, format, breaking) and `buf generate` (Go, Connect, MCP tools, REST docs).
-4. Wire the runtime: `policy.Build` for the policy table, `interceptor.New` for scopes and headers, Vanguard for REST, `mcpserver.Wrap` for MCP, and the docs handler. Start with `EnforceScopes: false` (audit mode), then enforce.
+4. Wire the runtime: `policy.Build` for the policy table, `interceptor.New` for scopes and headers, Vanguard for REST, `mcpserver.New` with the generated `MCPInputSchemas` for MCP, and the docs handler. Start with `EnforceScopes: false` (audit mode), then enforce.
 5. Add `templates/policy_table_test.go.tmpl` as a test, so a missing declaration fails before deploy.
 
 `buf.gen.yaml` uses managed mode. A module-scoped `go_package_prefix` override points imports of the options module at this repository's Go module, so generated code links against the runtime's types.

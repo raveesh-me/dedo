@@ -54,7 +54,8 @@ my-service/
    go get -tool google.golang.org/protobuf/cmd/protoc-gen-go
    go get -tool connectrpc.com/connect/cmd/protoc-gen-connect-go
    go get -tool github.com/redpanda-data/protoc-gen-go-mcp/cmd/protoc-gen-go-mcp
-   go get -tool github.com/raveesh-me/http-proto-lint/openapi/cmd/protoc-gen-rest-openapi@v0.2.0
+   go get -tool github.com/raveesh-me/http-proto-lint/mcp/cmd/protoc-gen-mcp-schema@v0.3.0
+   go get -tool github.com/raveesh-me/http-proto-lint/openapi/cmd/protoc-gen-rest-openapi@v0.3.0
    ```
 
    Pin the http-proto-lint modules to the latest release explicitly. Go's module proxy can lag behind a new tag.
@@ -194,7 +195,10 @@ api := flowid.Middleware(auth.Middleware(transcoder))
 mcpServer := mcp.NewServer(&mcp.Implementation{Name: "products", Version: "v1"}, nil)
 client := productsv1connect.NewProductServiceClient(mcpserver.InProcessClient(api), "http://in-process",
 	connect.WithInterceptors(mcpserver.ForwardHeaders(), flowid.ClientInterceptor()))
-tools, err := mcpserver.Wrap(mcpServer, serviceDescriptor) // fails if two RPCs share a tool name
+tools, err := mcpserver.New(mcpServer, mcpserver.Config{
+	Services:     []protoreflect.ServiceDescriptor{serviceDescriptor},
+	InputSchemas: productsv1.MCPInputSchemas, // from protoc-gen-mcp-schema
+}) // fails if two RPCs share a tool name
 productsv1mcp.ForwardToConnectProductServiceClient(tools, client)
 
 mux := http.NewServeMux()

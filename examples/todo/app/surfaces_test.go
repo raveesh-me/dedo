@@ -109,12 +109,25 @@ func TestMCPToolsUseDeclaredText(t *testing.T) {
 	for _, tool := range res.Tools {
 		tools[tool.Name] = tool
 	}
-	if len(tools) != 6 {
-		t.Fatalf("got %d tools, want 6", len(tools))
+	// The deprecated remove_todo is not a tool.
+	if len(tools) != 5 || tools["remove_todo"] != nil {
+		t.Fatalf("got %d tools, want 5 without remove_todo", len(tools))
 	}
 	get := tools[getTool]
 	if get.Title != "Get a to-do" || !strings.HasPrefix(get.Description, "Returns one to-do by its resource name") {
 		t.Errorf("GetTodo tool: title %q, description %q", get.Title, get.Description)
+	}
+	if !strings.Contains(get.Description, "Errors: TODO_NOT_FOUND (NOT_FOUND).") {
+		t.Errorf("GetTodo description lacks its error reasons: %q", get.Description)
+	}
+	update, _ := json.Marshal(tools["update_todo"].InputSchema)
+	for _, want := range []string{`"required":["name"]`, "Valid paths: title, done, budgetAmount, assigneeEmail."} {
+		if !strings.Contains(string(update), want) {
+			t.Errorf("update_todo input schema lacks %s: %s", want, update)
+		}
+	}
+	if strings.Contains(string(update), "create_time") {
+		t.Errorf("update_todo input schema offers the output-only create_time: %s", update)
 	}
 	// Read-only: destructive and idempotent hints do not apply, so they are
 	// left out, as the MCP specification says.
@@ -172,4 +185,38 @@ func text(res *mcp.CallToolResult) string {
 		}
 	}
 	return b.String()
+}
+
+// An agent marks a to-do done with its name alone, and an update without a
+// mask leaves the fields it does not set alone (AIP-134).
+func TestMCPPartialUpdate(t *testing.T) {
+	e := newEnv(t)
+	ctx := context.Background()
+	writer := mcpSession(t, e, app.WriterToken)
+	call := func(name string, args map[string]any) string {
+		t.Helper()
+		res, err := writer.CallTool(ctx, &mcp.CallToolParams{Name: name, Arguments: args})
+		if err != nil || res.IsError {
+			t.Fatalf("%s: %v %s", name, err, text(res))
+		}
+		return text(res)
+	}
+	call(createTool, map[string]any{
+		"todo_id": "p",
+		"todo": map[string]any{
+			"title":          "keep my fields",
+			"assignee_email": "a@example.com",
+			"budget_amount":  map[string]any{"currency_code": "EUR", "units": "5"},
+		},
+	})
+	done := call("update_todo", map[string]any{"todo": map[string]any{"name": "todos/p", "done": true}})
+	for _, want := range []string{`"done":true`, "keep my fields", "a@example.com", `"units":"5"`} {
+		if !strings.Contains(done, want) {
+			t.Errorf("after marking done, the to-do lacks %s: %s", want, done)
+		}
+	}
+	masked := call("update_todo", map[string]any{"todo": map[string]any{"name": "todos/p"}, "update_mask": "assigneeEmail"})
+	if strings.Contains(masked, "a@example.com") || !strings.Contains(masked, "keep my fields") {
+		t.Errorf("a masked update should clear only assigneeEmail: %s", masked)
+	}
 }
