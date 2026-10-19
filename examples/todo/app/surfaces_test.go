@@ -64,7 +64,7 @@ func TestRESTReference(t *testing.T) {
 	if _, ok := item.Get.Responses.Codes.Get("404"); !ok {
 		t.Error("GetTodo documents no 404 for TODO_NOT_FOUND")
 	}
-	if page := get(t, e.url+"/docs"); !strings.Contains(page, `data-url="/openapi.json"`) {
+	if page := get(t, e.url+"/docs"); !strings.Contains(page, `apiDescriptionUrl="/openapi.json"`) {
 		t.Errorf("docs page does not load the spec: %s", page)
 	}
 }
