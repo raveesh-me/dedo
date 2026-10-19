@@ -483,7 +483,8 @@ type UpdateTodoRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// The to-do to update. Its name selects it.
 	Todo *Todo `protobuf:"bytes,1,opt,name=todo,proto3" json:"todo,omitempty"`
-	// The fields to update.
+	// The fields to change. Without it, every field set in todo changes
+	// (AIP-134); name it to clear a field or set done to false.
 	UpdateMask    *fieldmaskpb.FieldMask `protobuf:"bytes,2,opt,name=update_mask,json=updateMask,proto3" json:"update_mask,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -906,7 +907,7 @@ const file_raveesh_me_todo_v1_todo_proto_rawDesc = "" +
 	"\x0eCHANGE_CREATED\x10\x01\x12\x12\n" +
 	"\x0eCHANGE_UPDATED\x10\x02\x12\x12\n" +
 	"\x0eCHANGE_DELETED\x10\x03:=»\x189\n" +
-	"7One change to the to-do list, and the to-do it changed.2\x8f\x11\n" +
+	"7One change to the to-do list, and the to-do it changed.2\xcd\x11\n" +
 	"\vTodoService\x12\xba\x02\n" +
 	"\aGetTodo\x12\".raveesh_me.todo.v1.GetTodoRequest\x1a#.raveesh_me.todo.v1.GetTodoResponse\"\xe5\x01\xaa\xbb\x18\xaf\x01\n" +
 	"\x0etodo.todo.read\x12\x06\b\x01\x12\x02\b\n" +
@@ -922,13 +923,13 @@ const file_raveesh_me_todo_v1_todo_proto_rawDesc = "" +
 	"\x0ftodo.todo.write\"\x12\n" +
 	"\x0eTITLE_REQUIRED\x10\x03\"\x17\n" +
 	"\x13TODO_ALREADY_EXISTS\x10\x06*\x9f\x01\n" +
-	"\x0eCreate a to-do\x12\x82\x01Adds a to-do with a title, and optionally a budget and an assignee. Pass todo_id to choose its ID; otherwise the server picks one.\x1a\b\b\x00\x10\x00\x18\x00 \x00\x82\xd3\xe4\x93\x02%:\x04todob\x04todo\"\x17/commerce/todo/v1/todos\x12\x84\x03\n" +
+	"\x0eCreate a to-do\x12\x82\x01Adds a to-do with a title, and optionally a budget and an assignee. Pass todo_id to choose its ID; otherwise the server picks one.\x1a\b\b\x00\x10\x00\x18\x00 \x00\x82\xd3\xe4\x93\x02%:\x04todob\x04todo\"\x17/commerce/todo/v1/todos\x12\xc2\x03\n" +
 	"\n" +
-	"UpdateTodo\x12%.raveesh_me.todo.v1.UpdateTodoRequest\x1a&.raveesh_me.todo.v1.UpdateTodoResponse\"\xa6\x02\xaa\xbb\x18\xe5\x01\n" +
+	"UpdateTodo\x12%.raveesh_me.todo.v1.UpdateTodoRequest\x1a&.raveesh_me.todo.v1.UpdateTodoResponse\"\xe4\x02\xaa\xbb\x18\xa3\x02\n" +
 	"\x0ftodo.todo.write\"\x12\n" +
 	"\x0eTODO_NOT_FOUND\x10\x05\"\x12\n" +
-	"\x0eTITLE_REQUIRED\x10\x03*\xa9\x01\n" +
-	"\x0eUpdate a to-do\x12\x8c\x01Changes the fields of an existing to-do named in update_mask, such as done or title. Leave update_mask empty to replace every mutable field.\x1a\b\b\x00\x10\x01\x18\x01 \x00\x82\xd3\xe4\x93\x023:\x04todob\x04todo2%/commerce/todo/v1/{todo.name=todos/*}\x90\x02\x02\x12\x81\x02\n" +
+	"\x0eTITLE_REQUIRED\x10\x03*\xe7\x01\n" +
+	"\x0eUpdate a to-do\x12\xca\x01Changes fields of an existing to-do: the ones named in update_mask, or, without update_mask, the ones you set. Fields you leave out keep their values. To mark a to-do done, send its name and done: true.\x1a\b\b\x00\x10\x01\x18\x01 \x00\x82\xd3\xe4\x93\x023:\x04todob\x04todo2%/commerce/todo/v1/{todo.name=todos/*}\x90\x02\x02\x12\x81\x02\n" +
 	"\n" +
 	"DeleteTodo\x12%.raveesh_me.todo.v1.DeleteTodoRequest\x1a&.raveesh_me.todo.v1.DeleteTodoResponse\"\xa3\x01\xaa\xbb\x18t\n" +
 	"\x0ftodo.todo.write\"\x12\n" +

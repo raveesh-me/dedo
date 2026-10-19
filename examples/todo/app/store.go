@@ -76,9 +76,6 @@ func (s *store) update(patch *todov1.Todo, paths []string) (*todov1.Todo, bool) 
 		return nil, false
 	}
 	next := clone(current)
-	if len(paths) == 0 {
-		paths = []string{"title", "done", "budget_amount", "assignee_email"}
-	}
 	for _, path := range paths {
 		switch path {
 		case "title":

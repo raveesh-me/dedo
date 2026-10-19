@@ -5,6 +5,7 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+	"google.golang.org/protobuf/reflect/protoreflect"
 
 	todov1 "github.com/raveesh-me/http-proto-lint/examples/todo/gen/go/raveesh_me/todo/v1"
 	"github.com/raveesh-me/http-proto-lint/examples/todo/gen/go/raveesh_me/todo/v1/todov1connect"
@@ -24,7 +25,10 @@ func newMCP(api http.Handler) (http.Handler, error) {
 		connect.WithInterceptors(mcpserver.ForwardHeaders(), flowid.ClientInterceptor()),
 	)
 	service := todov1.File_raveesh_me_todo_v1_todo_proto.Services().ByName("TodoService")
-	tools, err := mcpserver.Wrap(server, service)
+	tools, err := mcpserver.New(server, mcpserver.Config{
+		Services:     []protoreflect.ServiceDescriptor{service},
+		InputSchemas: todov1.MCPInputSchemas,
+	})
 	if err != nil {
 		return nil, err
 	}

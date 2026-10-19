@@ -117,7 +117,7 @@ service TodoService {
     option (raveesh_me.http_proto_lint.v1.method) = {
       tool: {
         title: "Update a to-do"
-        description: "Changes the fields of an existing to-do named in update_mask, such as done or title. Leave update_mask empty to replace every mutable field."
+        description: "Changes fields of an existing to-do: the ones named in update_mask, or, without update_mask, the ones you set. Fields you leave out keep their values. To mark a to-do done, send its name and done: true."
         annotations: {
           read_only_hint: false
           destructive_hint: true
@@ -311,7 +311,8 @@ message UpdateTodoRequest {
 
   // The to-do to update. Its name selects it.
   Todo todo = 1 [(google.api.field_behavior) = REQUIRED];
-  // The fields to update.
+  // The fields to change. Without it, every field set in todo changes
+  // (AIP-134); name it to clear a field or set done to false.
   google.protobuf.FieldMask update_mask = 2 [(google.api.field_behavior) = OPTIONAL];
 }
 

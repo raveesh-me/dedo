@@ -69,12 +69,16 @@ func (s *Server) CreateTodo(_ context.Context, req *connect.Request[todov1.Creat
 	return connect.NewResponse(&todov1.CreateTodoResponse{Todo: todo}), nil
 }
 
-// UpdateTodo changes the fields named in the update mask, or every mutable
-// field when the mask is empty.
+// UpdateTodo changes the fields named in the update mask. Without a mask it
+// changes the fields that are set, as AIP-134 says, so an omitted field is
+// never wiped.
 func (s *Server) UpdateTodo(_ context.Context, req *connect.Request[todov1.UpdateTodoRequest]) (*connect.Response[todov1.UpdateTodoResponse], error) {
 	patch := req.Msg.GetTodo()
 	paths := req.Msg.GetUpdateMask().GetPaths()
-	if (len(paths) == 0 || contains(paths, "title")) && patch.GetTitle() == "" {
+	if len(paths) == 0 {
+		paths = populated(patch)
+	}
+	if contains(paths, "title") && patch.GetTitle() == "" {
 		return nil, apiError(connect.CodeInvalidArgument, reasonTitleRequired, "title is required")
 	}
 	todo, ok := s.store.update(patch, paths)
@@ -103,6 +107,25 @@ func (s *Server) RemoveTodo(_ context.Context, req *connect.Request[todov1.Remov
 	}
 	s.changes.publish(todov1.WatchTodosResponse_CHANGE_DELETED, last)
 	return connect.NewResponse(&todov1.RemoveTodoResponse{}), nil
+}
+
+// populated returns the mutable fields set in a to-do: the implied update
+// mask of AIP-134.
+func populated(todo *todov1.Todo) []string {
+	var paths []string
+	if todo.GetTitle() != "" {
+		paths = append(paths, "title")
+	}
+	if todo.GetDone() {
+		paths = append(paths, "done")
+	}
+	if todo.GetBudgetAmount() != nil {
+		paths = append(paths, "budget_amount")
+	}
+	if todo.GetAssigneeEmail() != "" {
+		paths = append(paths, "assignee_email")
+	}
+	return paths
 }
 
 func contains(paths []string, path string) bool {

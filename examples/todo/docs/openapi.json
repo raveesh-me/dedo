@@ -339,7 +339,7 @@
       "patch": {
         "operationId": "TodoService_UpdateTodo",
         "summary": "Update a to-do",
-        "description": "Changes the fields of an existing to-do named in update_mask, such as done or title. Leave update_mask empty to replace every mutable field.\n\nRequires one of the token scopes: `todo.todo.write`.",
+        "description": "Changes fields of an existing to-do: the ones named in update_mask, or, without update_mask, the ones you set. Fields you leave out keep their values. To mark a to-do done, send its name and done: true.\n\nRequires one of the token scopes: `todo.todo.write`.",
         "tags": [
           "TodoService"
         ],
@@ -356,7 +356,7 @@
           {
             "name": "updateMask",
             "in": "query",
-            "description": "The fields to update.",
+            "description": "The fields to change. Without it, every field set in todo changes\n(AIP-134); name it to clear a field or set done to false.",
             "schema": {
               "type": "string",
               "description": "Comma-separated lowerCamelCase field paths."
