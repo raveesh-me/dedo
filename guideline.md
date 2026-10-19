@@ -70,6 +70,7 @@ Model the API as resources, the way [AIP-121](https://google.aip.dev/121) descri
 Every service, RPC and message carries options from `raveesh_me.http_proto_lint.v1`. Here is one complete method:
 
 ```protobuf
+// ProductService serves the product catalogue.
 service ProductService {
   option (raveesh_me.http_proto_lint.v1.service) = {
     audience: AUDIENCE_EXTERNAL_PUBLIC
@@ -90,6 +91,10 @@ service ProductService {
       tool: {
         title: "Get a product"
         description: "Returns one product by its resource name, such as products/123."
+        annotations: {
+          read_only_hint: true
+          open_world_hint: false
+        }
       }
     };
   }
@@ -259,7 +264,7 @@ Point an MCP client at `http://localhost:8080/mcp`, with the header `Authorizati
 
 **Why both a proto comment and a `tool.description`?** The comment is for people who maintain the API. The description is published to API readers and AI agents, and the lint makes sure it exists.
 
-**Where do the options and plugins come from until the first release?** The examples vendor `options.proto` under `third_party/` and load the plugins from `dist/`. After the first release, depend on `buf.build/cookytech-in/http-proto-lint` and run `make tools`.
+**Where do the options and plugins come from?** A service depends on `buf.build/cookytech-in/http-proto-lint` in `buf.yaml` and gets the lint plugins with `make tools`. The examples in this repository are the exception: they test the working tree, so they vendor `options.proto` under `third_party/` and load the plugins from `dist/`.
 
 **Why native plugin binaries instead of the BSR plugins?** Speed in the editor. One lint takes about 0.3 s with native plugins and about 6 s with the WebAssembly ones, and the editor reruns it as you type. The BSR plugins (`buf.build/cookytech-in/http-proto-lint-plugin` and `buf.build/cookytech-in/buf-plugin-aip`) need no download and work on Windows. Use them there.
 

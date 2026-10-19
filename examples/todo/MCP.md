@@ -1,6 +1,6 @@
 # Use the todo service from Claude
 
-The todo service is also an MCP server. Every RPC is a tool, named after it (`list_todos`, `create_todo`, `update_todo`, `delete_todo`, and so on), with the title and description declared in the `.proto`. Tool calls go through the same auth and scope checks as REST and RPC calls. A change an agent makes appears live in the web UI.
+The todo service is also an MCP server. Every RPC is a tool, named after it (`list_todos`, `create_todo`, `update_todo`, `delete_todo`, and so on), with the title, description and MCP `ToolAnnotations` hints declared in the `.proto`. The model sees the description; hints such as `destructiveHint` are for the client, which may not pass them on. Tool calls go through the same auth and scope checks as REST and RPC calls. A change an agent makes appears live in the web UI.
 
 Start the service first:
 
