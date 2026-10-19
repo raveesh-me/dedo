@@ -39,7 +39,7 @@ func service(t *testing.T) protoreflect.ServiceDescriptor {
 			Name: proto.String("TestService"),
 			Method: []*descriptorpb.MethodDescriptorProto{
 				method("GetThing", descriptorpb.MethodOptions_NO_SIDE_EFFECTS, &hplv1.Tool{Title: "Get a thing", Description: "Returns a thing."}),
-				method("DeleteThing", descriptorpb.MethodOptions_IDEMPOTENT, &hplv1.Tool{Title: "Delete a thing", Description: "Removes a thing.", Destructive: true}),
+				method("DeleteThing", descriptorpb.MethodOptions_IDEMPOTENT, &hplv1.Tool{Title: "Delete a thing", Description: "Removes a thing."}),
 			},
 		}},
 	}, nil)

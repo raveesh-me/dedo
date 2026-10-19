@@ -1,6 +1,6 @@
 # Include from a service Makefile: `include Makefile.api`.
 # Deps are pinned in buf.lock; commit it. Add .tools/ to .gitignore.
-HTTP_PROTO_LINT_VERSION ?= v0.1.1
+HTTP_PROTO_LINT_VERSION ?= v0.2.0
 HTTP_PROTO_LINT_RELEASE := https://github.com/raveesh-me/http-proto-lint/releases/download/$(HTTP_PROTO_LINT_VERSION)
 TOOLS_PLATFORM          := $(shell go env GOOS)_$(shell go env GOARCH)
 TOOLS_STAMP             := .tools/$(HTTP_PROTO_LINT_VERSION)

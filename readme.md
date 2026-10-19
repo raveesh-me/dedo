@@ -171,6 +171,8 @@ Lint rule tests live in `lint/rules/testdata/<rule>/{pass,fail}`. A pass fixture
 
 ## Releasing
 
+A pull request that breaks the options module fails CI's `buf breaking` check. When the break is deliberate, label the PR `allow-breaking`, re-run the check, and release a new minor version.
+
 To release, tag the merge commit on `main` with `lint/vX.Y.Z`, `openapi/vX.Y.Z` and `mcp/vX.Y.Z` (so `go get` works for the nested modules) and push those first. Then push `vX.Y.Z` **on its own**: GitHub starts no workflow when more than three tags arrive in one push.
 
 The `v*` tag runs `.github/workflows/ci.yaml`, which publishes one version everywhere:

@@ -385,13 +385,8 @@ type Tool struct {
 	// one field every client passes to the model: put anything the model must
 	// know to act safely here, such as "cannot be undone".
 	Description string `protobuf:"bytes,2,opt,name=description,proto3" json:"description,omitempty"`
-	// Deprecated: use annotations.destructive_hint. Its default was the
-	// opposite of the MCP specification's.
-	//
-	// Deprecated: Marked as deprecated in raveesh_me/http_proto_lint/v1/options.proto.
-	Destructive bool `protobuf:"varint,3,opt,name=destructive,proto3" json:"destructive,omitempty"`
 	// Behaviour hints for MCP clients.
-	Annotations   *ToolAnnotations `protobuf:"bytes,4,opt,name=annotations,proto3" json:"annotations,omitempty"`
+	Annotations   *ToolAnnotations `protobuf:"bytes,3,opt,name=annotations,proto3" json:"annotations,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -438,14 +433,6 @@ func (x *Tool) GetDescription() string {
 		return x.Description
 	}
 	return ""
-}
-
-// Deprecated: Marked as deprecated in raveesh_me/http_proto_lint/v1/options.proto.
-func (x *Tool) GetDestructive() bool {
-	if x != nil {
-		return x.Destructive
-	}
-	return false
 }
 
 func (x *Tool) GetAnnotations() *ToolAnnotations {
@@ -806,12 +793,11 @@ const file_raveesh_me_http_proto_lint_v1_options_proto_rawDesc = "" +
 	"\tsuccessor\x18\x03 \x01(\tR\tsuccessor\"K\n" +
 	"\vErrorReason\x12\x16\n" +
 	"\x06reason\x18\x01 \x01(\tR\x06reason\x12$\n" +
-	"\x04code\x18\x02 \x01(\x0e2\x10.google.rpc.CodeR\x04code\"\xb6\x01\n" +
+	"\x04code\x18\x02 \x01(\x0e2\x10.google.rpc.CodeR\x04code\"\x90\x01\n" +
 	"\x04Tool\x12\x14\n" +
 	"\x05title\x18\x01 \x01(\tR\x05title\x12 \n" +
-	"\vdescription\x18\x02 \x01(\tR\vdescription\x12$\n" +
-	"\vdestructive\x18\x03 \x01(\bB\x02\x18\x01R\vdestructive\x12P\n" +
-	"\vannotations\x18\x04 \x01(\v2..raveesh_me.http_proto_lint.v1.ToolAnnotationsR\vannotations\"\x97\x02\n" +
+	"\vdescription\x18\x02 \x01(\tR\vdescription\x12P\n" +
+	"\vannotations\x18\x03 \x01(\v2..raveesh_me.http_proto_lint.v1.ToolAnnotationsR\vannotations\"\x97\x02\n" +
 	"\x0fToolAnnotations\x12)\n" +
 	"\x0eread_only_hint\x18\x01 \x01(\bH\x00R\freadOnlyHint\x88\x01\x01\x12.\n" +
 	"\x10destructive_hint\x18\x02 \x01(\bH\x01R\x0fdestructiveHint\x88\x01\x01\x12,\n" +
