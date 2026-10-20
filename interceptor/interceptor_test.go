@@ -3,14 +3,15 @@ package interceptor_test
 import (
 	"bytes"
 	"context"
-	"errors"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
-	"connectrpc.com/connect"
+	"connectrpc.com/connect/v2"
+	"connectrpc.com/connect/v2/connecthttp"
+	"connectrpc.com/connect/v2/connectproto"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/protobuf/types/known/emptypb"
 
@@ -19,10 +20,27 @@ import (
 	"github.com/raveesh-me/dedo/policy"
 )
 
-type handlerFunc func(context.Context, *connect.Request[emptypb.Empty]) (*connect.Response[emptypb.Empty], error)
+// handlerFunc is a unary handler of the test service, which takes and
+// returns Empty.
+type handlerFunc func(context.Context) error
 
-func ok(context.Context, *connect.Request[emptypb.Empty]) (*connect.Response[emptypb.Empty], error) {
-	return connect.NewResponse(&emptypb.Empty{}), nil
+func ok(context.Context) error { return nil }
+
+// unary adapts a handlerFunc to a server function, as generated code does.
+func unary(h handlerFunc) connect.ServerFunc {
+	return func(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+		if err := stream.Receive(&emptypb.Empty{}); err != nil {
+			return err
+		}
+		if err := h(ctx); err != nil {
+			return err
+		}
+		return stream.Send(&emptypb.Empty{})
+	}
+}
+
+func spec(procedure string) connect.Spec {
+	return connect.Spec{Procedure: procedure, StreamType: connect.StreamTypeUnary, IdempotencyLevel: connect.IdempotencyNoSideEffects}
 }
 
 type fixture struct {
@@ -50,21 +68,24 @@ func newFixture(t *testing.T, enforce bool, scopes []string, handler handlerFunc
 	if err != nil {
 		t.Fatal(err)
 	}
-	mux := http.NewServeMux()
+	server := connect.NewServer(guard)
 	for _, p := range []string{testsvc.GetThing, testsvc.DeleteThing, "/raveesh_me.test.v1.TestService/Unlisted"} {
-		mux.Handle(p, connect.NewUnaryHandler(p, handler,
-			connect.WithInterceptors(guard),
-			connect.WithIdempotency(connect.IdempotencyNoSideEffects)))
+		server.Register(connect.Method{Spec: spec(p), Handler: unary(handler)})
 	}
+	mux := http.NewServeMux()
+	connecthttp.Mount(mux, server)
 	srv := httptest.NewServer(mux)
 	t.Cleanup(srv.Close)
 	return fixture{url: srv.URL, log: &log}
 }
 
-func (f fixture) call(t *testing.T, procedure string, opts ...connect.ClientOption) (*connect.Response[emptypb.Empty], error) {
+// call makes a unary call and returns the response headers.
+func (f fixture) call(t *testing.T, procedure string, opts ...connecthttp.Option) (*connect.Header, error) {
 	t.Helper()
-	client := connect.NewClient[emptypb.Empty, emptypb.Empty](http.DefaultClient, f.url+procedure, opts...)
-	return client.CallUnary(context.Background(), connect.NewRequest(&emptypb.Empty{}))
+	client := connect.NewClient(connecthttp.NewTransport(http.DefaultClient, f.url, opts...))
+	ctx, info := connect.NewClientContext(t.Context())
+	err := client.CallUnary(ctx, spec(procedure), &emptypb.Empty{}, &emptypb.Empty{})
+	return info.ResponseHeader(), err
 }
 
 func TestNewRejectsIncompleteConfig(t *testing.T) {
@@ -105,46 +126,72 @@ func TestUnlistedProcedureUnimplemented(t *testing.T) {
 
 func TestCacheHeaderOnGetOnly(t *testing.T) {
 	f := newFixture(t, true, []string{testsvc.ReadScope}, ok)
-	res, err := f.call(t, testsvc.GetThing, connect.WithHTTPGet(), connect.WithIdempotency(connect.IdempotencyNoSideEffects))
+	h, err := f.call(t, testsvc.GetThing, connecthttp.WithHTTPGet())
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := res.Header().Get("Cache-Control"); got != "public, max-age=30" {
+	if got := h.Get("Cache-Control"); got != "public, max-age=30" {
 		t.Errorf("GET Cache-Control = %q", got)
 	}
-	res, err = f.call(t, testsvc.GetThing)
+	h, err = f.call(t, testsvc.GetThing)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := res.Header().Get("Cache-Control"); got != "" {
+	if got := h.Get("Cache-Control"); got != "" {
 		t.Errorf("POST Cache-Control = %q, want none", got)
+	}
+}
+
+// An error is never cached, even on a GET.
+func TestNoCacheHeaderOnError(t *testing.T) {
+	f := newFixture(t, true, []string{testsvc.ReadScope}, func(context.Context) error {
+		return connect.NewError(connect.CodeNotFound, "failed")
+	})
+	h, err := f.call(t, testsvc.GetThing, connecthttp.WithHTTPGet())
+	if err == nil {
+		t.Fatal("want error")
+	}
+	if got := h.Get("Cache-Control"); got != "" {
+		t.Errorf("error Cache-Control = %q, want none", got)
 	}
 }
 
 func TestDeprecationHeaders(t *testing.T) {
 	f := newFixture(t, true, []string{testsvc.WriteScope}, ok)
-	res, err := f.call(t, testsvc.DeleteThing)
+	h, err := f.call(t, testsvc.DeleteThing)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := res.Header().Get("Deprecation"); got != "@1767225600" {
+	if got := h.Get("Deprecation"); got != "@1767225600" {
 		t.Errorf("Deprecation = %q", got)
 	}
-	if got := res.Header().Get("Sunset"); got != "Fri, 01 Jan 2027 00:00:00 GMT" {
+	if got := h.Get("Sunset"); got != "Fri, 01 Jan 2027 00:00:00 GMT" {
 		t.Errorf("Sunset = %q", got)
+	}
+}
+
+// A caller of a deprecated method learns of it from errors too.
+func TestDeprecationHeadersOnError(t *testing.T) {
+	f := newFixture(t, true, []string{testsvc.WriteScope}, func(context.Context) error {
+		return connect.NewError(connect.CodeInternal, "failed")
+	})
+	h, err := f.call(t, testsvc.DeleteThing)
+	if err == nil {
+		t.Fatal("want error")
+	}
+	if got := h.Get("Deprecation"); got != "@1767225600" {
+		t.Errorf("error Deprecation = %q", got)
 	}
 }
 
 func errWithReason(t *testing.T, code connect.Code, reason string) handlerFunc {
 	t.Helper()
-	return func(context.Context, *connect.Request[emptypb.Empty]) (*connect.Response[emptypb.Empty], error) {
-		cerr := connect.NewError(code, errors.New("failed"))
-		detail, err := connect.NewErrorDetail(&errdetails.ErrorInfo{Reason: reason})
+	return func(context.Context) error {
+		detail, err := connectproto.NewErrorDetail(&errdetails.ErrorInfo{Reason: reason})
 		if err != nil {
 			t.Fatal(err)
 		}
-		cerr.AddDetail(detail)
-		return nil, cerr
+		return connect.NewError(code, "failed").WithDetail(detail)
 	}
 }
 
@@ -157,8 +204,8 @@ func TestErrorAudit(t *testing.T) {
 		{"declared", errWithReason(t, connect.CodeNotFound, testsvc.Reason), ""},
 		{"wrong code", errWithReason(t, connect.CodeInternal, testsvc.Reason), "undeclared error reason"},
 		{"unknown reason", errWithReason(t, connect.CodeNotFound, "OTHER"), "undeclared error reason"},
-		{"no detail", func(context.Context, *connect.Request[emptypb.Empty]) (*connect.Response[emptypb.Empty], error) {
-			return nil, connect.NewError(connect.CodeNotFound, errors.New("failed"))
+		{"no detail", func(context.Context) error {
+			return connect.NewError(connect.CodeNotFound, "failed")
 		}, "error without ErrorInfo"},
 	}
 	for _, tt := range tests {

@@ -30,6 +30,7 @@ const (
 	jsonPkg      = protogen.GoImportPath("encoding/json")
 	mcpPkg       = protogen.GoImportPath("github.com/modelcontextprotocol/go-sdk/mcp")
 	mcpserverPkg = protogen.GoImportPath("github.com/raveesh-me/dedo/mcp/mcpserver")
+	protoPkg     = protogen.GoImportPath("google.golang.org/protobuf/proto")
 )
 
 func main() {
@@ -133,8 +134,13 @@ func writeTools(g *protogen.GeneratedFile, svc *protogen.Service) error {
 		g.P("OutputSchema: ", raw, "(MCPOutputSchemas[", full, "]),")
 		g.P("},")
 		procedure := fmt.Sprintf("/%s/%s", svc.Desc.FullName(), m.Desc.Name())
-		g.P("Call: ", g.QualifiedGoIdent(protogen.GoIdent{GoName: "Unary", GoImportPath: mcpserverPkg}),
-			"[", g.QualifiedGoIdent(m.Input.GoIdent), ", ", g.QualifiedGoIdent(m.Output.GoIdent), "](", strconv.Quote(procedure), "),")
+		// Constructors rather than type parameters: like connect-go v2's own
+		// generated code, a tool adds no per-RPC copy of the forwarding code.
+		message := g.QualifiedGoIdent(protogen.GoIdent{GoName: "Message", GoImportPath: protoPkg})
+		g.P("Call: ", g.QualifiedGoIdent(protogen.GoIdent{GoName: "Unary", GoImportPath: mcpserverPkg}), "(", strconv.Quote(procedure), ",")
+		g.P("func() ", message, " { return new(", g.QualifiedGoIdent(m.Input.GoIdent), ") },")
+		g.P("func() ", message, " { return new(", g.QualifiedGoIdent(m.Output.GoIdent), ") },")
+		g.P("),")
 		g.P("},")
 	}
 	g.P("}")

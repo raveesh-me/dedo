@@ -4,7 +4,8 @@ import (
 	"context"
 	"errors"
 
-	"connectrpc.com/connect"
+	"connectrpc.com/connect/v2"
+	"connectrpc.com/connect/v2/connectproto"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 
 	"github.com/raveesh-me/dedo/flowid"
@@ -13,7 +14,7 @@ import (
 
 // auditError logs errors whose reason the method did not declare. Version 1
 // logs only; version 2 enforces.
-func (i *Interceptor) auditError(ctx context.Context, m policy.Method, err error) {
+func (i *guard) auditError(ctx context.Context, m policy.Method, err error) {
 	var cerr *connect.Error
 	if !errors.As(err, &cerr) {
 		i.cfg.Log.WarnContext(ctx, "error is not a connect error",
@@ -37,7 +38,7 @@ func (i *Interceptor) auditError(ctx context.Context, m policy.Method, err error
 // errorInfo returns the first ErrorInfo detail of the error, or nil.
 func errorInfo(cerr *connect.Error) *errdetails.ErrorInfo {
 	for _, detail := range cerr.Details() {
-		value, err := detail.Value()
+		value, err := connectproto.UnmarshalErrorDetail(detail)
 		if info, ok := value.(*errdetails.ErrorInfo); err == nil && ok {
 			return info
 		}

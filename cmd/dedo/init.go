@@ -353,6 +353,9 @@ func (in *initer) generators() error {
 	var pinned []string
 	for _, gen := range generators {
 		if existing := findItem(plugins, func(n *yaml.Node) bool { return runsGenerator(n, gen) }); existing != nil {
+			if ref := strings.Join(allStrings(pluginRef(existing)), " "); connectV1Remote.MatchString(ref) {
+				in.say("buf.gen.yaml: WARNING %s generates connect-go v1 code; dedo needs v2: use buf.build/connectrpc/go:%s", ref, connectRelease)
+			}
 			if !isGoTool(existing, gen) {
 				in.say("buf.gen.yaml: %s already runs as %s; left as it is", gen, strings.Join(allStrings(pluginRef(existing)), " "))
 			}
@@ -379,7 +382,7 @@ func (in *initer) generators() error {
 func (in *initer) generatorTools() map[string]string {
 	return map[string]string{
 		"protoc-gen-go":           "google.golang.org/protobuf/cmd/protoc-gen-go",
-		"protoc-gen-connect-go":   "connectrpc.com/connect/cmd/protoc-gen-connect-go",
+		"protoc-gen-connect-go":   "connectrpc.com/connect/v2/cmd/protoc-gen-connect-go@" + connectRelease,
 		"protoc-gen-dedo-mcp":     "github.com/raveesh-me/dedo/mcp/cmd/protoc-gen-dedo-mcp@" + in.release,
 		"protoc-gen-dedo-openapi": "github.com/raveesh-me/dedo/openapi/cmd/protoc-gen-dedo-openapi@" + in.release,
 	}
@@ -402,6 +405,17 @@ func (in *initer) pinGenerators(gens []string) {
 	}
 	in.say("go.mod: will pin %s as Go tools", strings.Join(names, ", "))
 }
+
+// The connect-go v2 releases dedo is built and tested with.
+const (
+	connectRelease  = "v2.0.1"
+	vanguardRelease = "v0.5.0"
+	validateRelease = "v0.9.0"
+)
+
+// connectV1Remote matches Buf's remote Connect plugin pinned to a v1 release,
+// which generates code dedo's connect-go v2 runtime cannot serve.
+var connectV1Remote = regexp.MustCompile(`^buf\.build/connectrpc/go(simple)?:v1\.`)
 
 // generatorRefs are the Buf remote plugins that produce what a generator
 // does, so a repository using them gets no second copy of that code.
@@ -538,8 +552,9 @@ func (in *initer) server() error {
 	in.cmds = append(in.cmds, []string{"go", "get",
 		"github.com/raveesh-me/dedo@" + in.release,
 		"github.com/raveesh-me/dedo/mcp@" + in.release,
-		// Later versions need connect-go v2.
-		"connectrpc.com/vanguard@v0.4.0",
+		"connectrpc.com/connect/v2@" + connectRelease,
+		"connectrpc.com/vanguard@" + vanguardRelease,
+		"connectrpc.com/validate@" + validateRelease,
 	})
 	in.say("go.mod: will add github.com/raveesh-me/dedo and its mcp module at %s", in.release)
 	if err := os.MkdirAll(in.path("docs"), 0o755); err != nil {

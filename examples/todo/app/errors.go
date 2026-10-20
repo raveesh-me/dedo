@@ -1,9 +1,8 @@
 package app
 
 import (
-	"errors"
-
-	"connectrpc.com/connect"
+	"connectrpc.com/connect/v2"
+	"connectrpc.com/connect/v2/connectproto"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 )
 
@@ -18,9 +17,9 @@ const (
 
 // apiError returns a Connect error carrying an ErrorInfo with the reason.
 func apiError(code connect.Code, reason, message string) error {
-	err := connect.NewError(code, errors.New(message))
-	if detail, derr := connect.NewErrorDetail(&errdetails.ErrorInfo{Reason: reason, Domain: errorDomain}); derr == nil {
-		err.AddDetail(detail)
+	err := connect.NewError(code, message)
+	if detail, derr := connectproto.NewErrorDetail(&errdetails.ErrorInfo{Reason: reason, Domain: errorDomain}); derr == nil {
+		err = err.WithDetail(detail)
 	}
 	return err
 }

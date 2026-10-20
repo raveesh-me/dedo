@@ -13,7 +13,8 @@ import (
 	"strings"
 	"testing"
 
-	"connectrpc.com/connect"
+	"connectrpc.com/connect/v2"
+	"connectrpc.com/connect/v2/connecthttp"
 	"google.golang.org/protobuf/encoding/protojson"
 
 	"github.com/raveesh-me/dedo/examples/bad-todo/app"
@@ -42,13 +43,17 @@ func newEnv(t *testing.T) env {
 }
 
 func (e env) client(token string) todov1connect.TodoServiceClient {
-	auth := connect.UnaryInterceptorFunc(func(next connect.UnaryFunc) connect.UnaryFunc {
-		return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
-			req.Header().Set("Authorization", "Bearer "+token)
-			return next(ctx, req)
+	auth := func(next connect.ClientFunc) connect.ClientFunc {
+		return func(ctx context.Context, spec connect.Spec) (connect.ClientStream, error) {
+			info, ok := connect.CallInfoForClientContext(ctx)
+			if !ok {
+				ctx, info = connect.NewClientContext(ctx)
+			}
+			info.RequestHeader().Set("Authorization", "Bearer "+token)
+			return next(ctx, spec)
 		}
-	})
-	return todov1connect.NewTodoServiceClient(http.DefaultClient, e.url, connect.WithInterceptors(auth))
+	}
+	return todov1connect.NewTodoServiceClient(connect.NewClient(connecthttp.NewTransport(http.DefaultClient, e.url), auth))
 }
 
 func (e env) rest(t *testing.T, method, path, token, body string) (int, string) {
@@ -78,7 +83,7 @@ func (e env) rest(t *testing.T, method, path, token, body string) (int, string) 
 func TestMisnamedScopeLocksOutWriters(t *testing.T) {
 	e := newEnv(t)
 	_, err := e.client(app.WriterToken).CreateTodo(context.Background(),
-		connect.NewRequest(&todov1.CreateTodoRequest{Todo: &todov1.Todo{Title: "x"}}))
+		&todov1.CreateTodoRequest{Todo: &todov1.Todo{Title: "x"}})
 	if connect.CodeOf(err) != connect.CodePermissionDenied {
 		t.Fatalf("err = %v, want permission_denied", err)
 	}
@@ -103,11 +108,11 @@ func TestUnversionedPath(t *testing.T) {
 func TestUndeclaredReasonsAreLogged(t *testing.T) {
 	e := newEnv(t)
 	ctx := context.Background()
-	_, err := e.client(app.ReaderToken).ListTodos(ctx, connect.NewRequest(&todov1.ListTodosRequest{PageToken: "x"}))
+	_, err := e.client(app.ReaderToken).ListTodos(ctx, &todov1.ListTodosRequest{PageToken: "x"})
 	if connect.CodeOf(err) != connect.CodeInvalidArgument {
 		t.Fatalf("list: %v", err)
 	}
-	_, err = e.client(app.WriterToken).DeleteTodo(ctx, connect.NewRequest(&todov1.DeleteTodoRequest{Name: "todos/x"}))
+	_, err = e.client(app.WriterToken).DeleteTodo(ctx, &todov1.DeleteTodoRequest{Name: "todos/x"})
 	if connect.CodeOf(err) != connect.CodeNotFound {
 		t.Fatalf("delete: %v", err)
 	}

@@ -16,7 +16,7 @@
 
 New here? Everything is in [`guidance/`](guidance): [install.md](guidance/install.md) adds dedo to a Go service, one part at a time or all at once with `dedo init`, [tutorial.md](guidance/tutorial.md) builds a new product from scratch, [guideline.md](guidance/guideline.md) explains the reasoning, [RULES.md](guidance/RULES.md) documents every lint rule, and [claude.md](guidance/claude.md) is guidance for coding agents to append to your `AGENTS.md` or `CLAUDE.md`.
 
-**Latest release: [v0.10.0](https://github.com/raveesh-me/dedo/releases/tag/v0.10.0).** The options module is [`buf.build/r-a/dedo`](https://buf.build/r-a/dedo). The lint plugin comes as native binaries on the GitHub release (`make tools`) and as a Wasm plugin on the BSR. The Go modules are `github.com/raveesh-me/dedo/...@v0.10.0`.
+**Latest release: [v0.11.0](https://github.com/raveesh-me/dedo/releases/tag/v0.11.0).** The options module is [`buf.build/r-a/dedo`](https://buf.build/r-a/dedo). The lint plugin comes as native binaries on the GitHub release (`make tools`) and as a Wasm plugin on the BSR. The Go modules are `github.com/raveesh-me/dedo/...@v0.11.0`.
 
 Contract rules come from Google's AIPs. Operational rules (audience, ownership, scopes, caching, deprecation, error reasons) come from Zalando's guidelines. Both live in the schema.
 
@@ -121,7 +121,7 @@ Suppress one finding with `// buf:lint:ignore ZALANDO_MONEY_FIELD_TYPE` above th
 ## Using it in a service repository
 
 ```sh
-go install github.com/raveesh-me/dedo/cmd/dedo@v0.10.0
+go install github.com/raveesh-me/dedo/cmd/dedo@v0.11.0
 dedo init
 ```
 
@@ -130,7 +130,7 @@ dedo init
 1. `dedo init` (or by hand: copy `buf.yaml`, `buf.gen.yaml`, `Makefile.api` from `templates/`, pin the generators and the lint plugin with `go get -tool`, run `dedo tools` and `buf dep update`).
 2. Fill in `CODEOWNERS` and the VS Code settings from `templates/` if you use them.
 3. Write the contract, then `make api-check` (lint, format, breaking) and `buf generate` (Go, Connect, MCP tools, REST docs).
-4. Wire the runtime: `policy.Build` for the policy table, `interceptor.New` for scopes and headers, Vanguard for REST, `mcpserver.AddTools` with the generated `<Service>MCPTools()` for MCP, and the docs handler. Start with `EnforceScopes: false` (audit mode), then enforce.
+4. Wire the runtime on one connect-go v2 `connect.Server`: `policy.Build` for the policy table, `interceptor.New` for scopes and headers, `connecthttp.Mount` for Connect and gRPC, `vanguard.Mount` for REST, `mcpserver.AddTools` with the generated `<Service>MCPTools()` for MCP, and the docs handler. Start with `EnforceScopes: false` (audit mode), then enforce.
 5. Keep the policy-table test `dedo init` writes, so a missing declaration fails `go test` before deploy.
 
 The options module sets its own `go_package`, so generated code links against the runtime's types with or without Buf's managed mode. With managed mode, `buf.gen.yaml` keeps a module-scoped override for it (`dedo init` adds it).
@@ -139,7 +139,7 @@ Clients need nothing from dedo: a dedo API is a Buf module, so connect-es, conne
 
 Upgrading: `dedo update` installs the latest `dedo`, and `dedo upgrade` moves a repository to it: the options module, the lint plugin, the generators and the runtime as one release, then `buf.lock` and the generated code. In an existing Buf repository, `dedo init` keeps your generators (remote plugins included) and adds only dedo's; a repository of protos without Go gets the options and the BSR lint plugin. [install.md](guidance/install.md#adding-dedo-to-an-existing-buf-repository) has the details.
 
-Known gaps: error responses carry no deprecation headers, and streaming calls get the scope check only, with no error audit.
+Every transport reaches one connect-go v2 `connect.Server`, so its interceptors (flow IDs, auth, dedo's policy, validation) run for Connect, gRPC, REST and MCP alike, streams included, and error responses carry the deprecation headers too. Auth belongs in a server interceptor, not HTTP middleware: MCP calls reach the server in-process.
 
 ## Examples: `todo` and `bad-todo`
 

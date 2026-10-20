@@ -8,7 +8,8 @@ import (
 	"log/slog"
 	"net/http"
 
-	"connectrpc.com/connect"
+	"connectrpc.com/connect/v2"
+	"connectrpc.com/connect/v2/connecthttp"
 	"connectrpc.com/validate"
 	"connectrpc.com/vanguard"
 
@@ -31,31 +32,37 @@ type Config struct {
 // Routes:
 //
 //	/docs, /openapi.json  the REST reference
-//	/mcp                  the MCP server; tool calls run through the API below
-//	everything else       the API over Connect, gRPC and REST
+//	/mcp                  the MCP server; tool calls go to the server below
+//	everything else       the server over Connect, gRPC and REST
 func NewHandler(cfg Config) (http.Handler, error) {
 	if cfg.Log == nil {
 		return nil, errors.New("app: no logger")
 	}
-	api, err := newAPI(cfg)
+	server, err := newServer(cfg)
 	if err != nil {
 		return nil, err
 	}
-	tools, err := newMCP(api)
+	tools, err := newMCP(server)
 	if err != nil {
 		return nil, err
 	}
 	mux := http.NewServeMux()
+	// Connect, gRPC and gRPC-Web, then REST from the google.api.http bindings.
+	connecthttp.Mount(mux, server)
+	if err := vanguard.Mount(mux, server); err != nil {
+		return nil, err
+	}
 	mux.Handle("GET /openapi.json", docs.Spec())
 	mux.Handle("GET /docs", docs.Page())
 	mux.Handle("/mcp", flowid.Middleware(tools))
-	mux.Handle("/", api)
 	return mux, nil
 }
 
-// newAPI returns the service behind its policy: flow IDs, auth, REST
-// transcoding and the policy interceptor.
-func newAPI(cfg Config) (http.Handler, error) {
+// newServer returns the TodoService behind its policy. The interceptors run
+// for every transport, in order: flow IDs, auth, the declared contract
+// (scopes, headers, error audit), then the buf.validate rules, so an
+// unauthorised caller learns nothing from validation errors.
+func newServer(cfg Config) (*connect.Server, error) {
 	table, err := policy.Build(todov1connect.TodoServiceName)
 	if err != nil {
 		return nil, err
@@ -69,15 +76,7 @@ func newAPI(cfg Config) (http.Handler, error) {
 	if err != nil {
 		return nil, err
 	}
-	path, handler := todov1connect.NewTodoServiceHandler(
-		NewServer(),
-		// The guard checks scopes first; then the buf.validate rules in the
-		// proto, which the MCP tool schemas also state, reject bad input.
-		connect.WithInterceptors(guard, validate.NewInterceptor()),
-	)
-	transcoder, err := vanguard.NewTranscoder([]*vanguard.Service{vanguard.NewService(path, handler)})
-	if err != nil {
-		return nil, err
-	}
-	return flowid.Middleware(AuthMiddleware(transcoder)), nil
+	server := connect.NewServer(flowid.Interceptor(), Auth(), guard, validate.NewServerInterceptor())
+	todov1connect.RegisterTodoServiceHandler(server, NewServer())
+	return server, nil
 }

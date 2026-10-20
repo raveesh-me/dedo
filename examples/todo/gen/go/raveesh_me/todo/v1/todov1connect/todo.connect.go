@@ -5,48 +5,96 @@
 package todov1connect
 
 import (
-	connect "connectrpc.com/connect"
+	connect "connectrpc.com/connect/v2"
 	context "context"
-	errors "errors"
 	v1 "github.com/raveesh-me/dedo/examples/todo/gen/go/raveesh_me/todo/v1"
-	http "net/http"
-	strings "strings"
+	sync "sync"
 )
-
-// This is a compile-time assertion to ensure that this generated file and the connect package are
-// compatible. If you get a compiler error that this constant is not defined, this code was
-// generated with a version of connect newer than the one compiled into your binary. You can fix the
-// problem by either regenerating this code with an older version of connect or updating the connect
-// version compiled into your binary.
-const _ = connect.IsAtLeastVersion1_13_0
 
 const (
 	// TodoServiceName is the fully-qualified name of the TodoService service.
 	TodoServiceName = "raveesh_me.todo.v1.TodoService"
 )
 
-// These constants are the fully-qualified names of the RPCs defined in this package. They're
-// exposed at runtime as Spec.Procedure and as the final two segments of the HTTP route.
+// These constants are the procedure names of the RPCs defined in this package. They're exposed at
+// runtime as Spec.Procedure and as the final two segments of the HTTP route.
 //
 // Note that these are different from the fully-qualified method names used by
 // google.golang.org/protobuf/reflect/protoreflect. To convert from these constants to
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
-	// TodoServiceGetTodoProcedure is the fully-qualified name of the TodoService's GetTodo RPC.
+	// TodoServiceGetTodoProcedure is the procedure name of the TodoService's GetTodo RPC.
 	TodoServiceGetTodoProcedure = "/raveesh_me.todo.v1.TodoService/GetTodo"
-	// TodoServiceListTodosProcedure is the fully-qualified name of the TodoService's ListTodos RPC.
+	// TodoServiceListTodosProcedure is the procedure name of the TodoService's ListTodos RPC.
 	TodoServiceListTodosProcedure = "/raveesh_me.todo.v1.TodoService/ListTodos"
-	// TodoServiceCreateTodoProcedure is the fully-qualified name of the TodoService's CreateTodo RPC.
+	// TodoServiceCreateTodoProcedure is the procedure name of the TodoService's CreateTodo RPC.
 	TodoServiceCreateTodoProcedure = "/raveesh_me.todo.v1.TodoService/CreateTodo"
-	// TodoServiceUpdateTodoProcedure is the fully-qualified name of the TodoService's UpdateTodo RPC.
+	// TodoServiceUpdateTodoProcedure is the procedure name of the TodoService's UpdateTodo RPC.
 	TodoServiceUpdateTodoProcedure = "/raveesh_me.todo.v1.TodoService/UpdateTodo"
-	// TodoServiceDeleteTodoProcedure is the fully-qualified name of the TodoService's DeleteTodo RPC.
+	// TodoServiceDeleteTodoProcedure is the procedure name of the TodoService's DeleteTodo RPC.
 	TodoServiceDeleteTodoProcedure = "/raveesh_me.todo.v1.TodoService/DeleteTodo"
-	// TodoServiceWatchTodosProcedure is the fully-qualified name of the TodoService's WatchTodos RPC.
+	// TodoServiceWatchTodosProcedure is the procedure name of the TodoService's WatchTodos RPC.
 	TodoServiceWatchTodosProcedure = "/raveesh_me.todo.v1.TodoService/WatchTodos"
-	// TodoServiceRemoveTodoProcedure is the fully-qualified name of the TodoService's RemoveTodo RPC.
+	// TodoServiceRemoveTodoProcedure is the procedure name of the TodoService's RemoveTodo RPC.
 	TodoServiceRemoveTodoProcedure = "/raveesh_me.todo.v1.TodoService/RemoveTodo"
+)
+
+var (
+	todoServiceGetTodoSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType:       connect.StreamTypeUnary,
+			Schema:           v1.File_raveesh_me_todo_v1_todo_proto.Services().ByName("TodoService").Methods().ByName("GetTodo"),
+			Procedure:        TodoServiceGetTodoProcedure,
+			IdempotencyLevel: connect.IdempotencyNoSideEffects,
+		}
+	})
+	todoServiceListTodosSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType:       connect.StreamTypeUnary,
+			Schema:           v1.File_raveesh_me_todo_v1_todo_proto.Services().ByName("TodoService").Methods().ByName("ListTodos"),
+			Procedure:        TodoServiceListTodosProcedure,
+			IdempotencyLevel: connect.IdempotencyNoSideEffects,
+		}
+	})
+	todoServiceCreateTodoSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_raveesh_me_todo_v1_todo_proto.Services().ByName("TodoService").Methods().ByName("CreateTodo"),
+			Procedure:  TodoServiceCreateTodoProcedure,
+		}
+	})
+	todoServiceUpdateTodoSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType:       connect.StreamTypeUnary,
+			Schema:           v1.File_raveesh_me_todo_v1_todo_proto.Services().ByName("TodoService").Methods().ByName("UpdateTodo"),
+			Procedure:        TodoServiceUpdateTodoProcedure,
+			IdempotencyLevel: connect.IdempotencyIdempotent,
+		}
+	})
+	todoServiceDeleteTodoSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType:       connect.StreamTypeUnary,
+			Schema:           v1.File_raveesh_me_todo_v1_todo_proto.Services().ByName("TodoService").Methods().ByName("DeleteTodo"),
+			Procedure:        TodoServiceDeleteTodoProcedure,
+			IdempotencyLevel: connect.IdempotencyIdempotent,
+		}
+	})
+	todoServiceWatchTodosSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeServer,
+			Schema:     v1.File_raveesh_me_todo_v1_todo_proto.Services().ByName("TodoService").Methods().ByName("WatchTodos"),
+			Procedure:  TodoServiceWatchTodosProcedure,
+		}
+	})
+	todoServiceRemoveTodoSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType:       connect.StreamTypeUnary,
+			Schema:           v1.File_raveesh_me_todo_v1_todo_proto.Services().ByName("TodoService").Methods().ByName("RemoveTodo"),
+			Procedure:        TodoServiceRemoveTodoProcedure,
+			IdempotencyLevel: connect.IdempotencyIdempotent,
+		}
+	})
 )
 
 // TodoServiceClient is a client for the raveesh_me.todo.v1.TodoService service.
@@ -54,23 +102,23 @@ type TodoServiceClient interface {
 	// GetTodo returns one to-do.
 	//
 	// Errors: TODO_NOT_FOUND.
-	GetTodo(context.Context, *connect.Request[v1.GetTodoRequest]) (*connect.Response[v1.GetTodoResponse], error)
+	GetTodo(context.Context, *v1.GetTodoRequest) (*v1.GetTodoResponse, error)
 	// ListTodos returns a page of to-dos, oldest first.
 	//
 	// Errors: INVALID_PAGE_TOKEN.
-	ListTodos(context.Context, *connect.Request[v1.ListTodosRequest]) (*connect.Response[v1.ListTodosResponse], error)
+	ListTodos(context.Context, *v1.ListTodosRequest) (*v1.ListTodosResponse, error)
 	// CreateTodo adds a to-do.
 	//
 	// Errors: TITLE_REQUIRED, TODO_ALREADY_EXISTS.
-	CreateTodo(context.Context, *connect.Request[v1.CreateTodoRequest]) (*connect.Response[v1.CreateTodoResponse], error)
+	CreateTodo(context.Context, *v1.CreateTodoRequest) (*v1.CreateTodoResponse, error)
 	// UpdateTodo changes the fields of a to-do named in the update mask.
 	//
 	// Errors: TODO_NOT_FOUND, TITLE_REQUIRED.
-	UpdateTodo(context.Context, *connect.Request[v1.UpdateTodoRequest]) (*connect.Response[v1.UpdateTodoResponse], error)
+	UpdateTodo(context.Context, *v1.UpdateTodoRequest) (*v1.UpdateTodoResponse, error)
 	// DeleteTodo removes a to-do.
 	//
 	// Errors: TODO_NOT_FOUND.
-	DeleteTodo(context.Context, *connect.Request[v1.DeleteTodoRequest]) (*connect.Response[v1.DeleteTodoResponse], error)
+	DeleteTodo(context.Context, *v1.DeleteTodoRequest) (*v1.DeleteTodoResponse, error)
 	// WatchTodos streams every change to the to-do list as it happens, so a
 	// UI can show changes made anywhere: in another browser, over REST, or by
 	// an agent through MCP.
@@ -81,7 +129,7 @@ type TodoServiceClient interface {
 	// Errors: SERVER_SHUTTING_DOWN.
 	//
 	// buf:lint:ignore AIP_0127_HTTP_ANNOTATION Server streaming has no REST form.
-	WatchTodos(context.Context, *connect.Request[v1.WatchTodosRequest]) (*connect.ServerStreamForClient[v1.WatchTodosResponse], error)
+	WatchTodos(context.Context, *v1.WatchTodosRequest) (TodoServiceWatchTodosClientStream, error)
 	// Deprecated: Use DeleteTodo.
 	//
 	// RemoveTodo removes a to-do.
@@ -89,116 +137,33 @@ type TodoServiceClient interface {
 	// Errors: TODO_NOT_FOUND.
 	//
 	// Deprecated: do not use.
-	RemoveTodo(context.Context, *connect.Request[v1.RemoveTodoRequest]) (*connect.Response[v1.RemoveTodoResponse], error)
+	RemoveTodo(context.Context, *v1.RemoveTodoRequest) (*v1.RemoveTodoResponse, error)
 }
 
-// NewTodoServiceClient constructs a client for the raveesh_me.todo.v1.TodoService service. By
-// default, it uses the Connect protocol with the binary Protobuf Codec, asks for gzipped responses,
-// and sends uncompressed requests. To use the gRPC or gRPC-Web protocols, supply the
-// connect.WithGRPC() or connect.WithGRPCWeb() options.
-//
-// The URL supplied here should be the base URL for the Connect or gRPC server (for example,
-// http://api.acme.com or https://acme.com/grpc).
-func NewTodoServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) TodoServiceClient {
-	baseURL = strings.TrimRight(baseURL, "/")
-	todoServiceMethods := v1.File_raveesh_me_todo_v1_todo_proto.Services().ByName("TodoService").Methods()
-	return &todoServiceClient{
-		getTodo: connect.NewClient[v1.GetTodoRequest, v1.GetTodoResponse](
-			httpClient,
-			baseURL+TodoServiceGetTodoProcedure,
-			connect.WithSchema(todoServiceMethods.ByName("GetTodo")),
-			connect.WithIdempotency(connect.IdempotencyNoSideEffects),
-			connect.WithClientOptions(opts...),
-		),
-		listTodos: connect.NewClient[v1.ListTodosRequest, v1.ListTodosResponse](
-			httpClient,
-			baseURL+TodoServiceListTodosProcedure,
-			connect.WithSchema(todoServiceMethods.ByName("ListTodos")),
-			connect.WithIdempotency(connect.IdempotencyNoSideEffects),
-			connect.WithClientOptions(opts...),
-		),
-		createTodo: connect.NewClient[v1.CreateTodoRequest, v1.CreateTodoResponse](
-			httpClient,
-			baseURL+TodoServiceCreateTodoProcedure,
-			connect.WithSchema(todoServiceMethods.ByName("CreateTodo")),
-			connect.WithClientOptions(opts...),
-		),
-		updateTodo: connect.NewClient[v1.UpdateTodoRequest, v1.UpdateTodoResponse](
-			httpClient,
-			baseURL+TodoServiceUpdateTodoProcedure,
-			connect.WithSchema(todoServiceMethods.ByName("UpdateTodo")),
-			connect.WithIdempotency(connect.IdempotencyIdempotent),
-			connect.WithClientOptions(opts...),
-		),
-		deleteTodo: connect.NewClient[v1.DeleteTodoRequest, v1.DeleteTodoResponse](
-			httpClient,
-			baseURL+TodoServiceDeleteTodoProcedure,
-			connect.WithSchema(todoServiceMethods.ByName("DeleteTodo")),
-			connect.WithIdempotency(connect.IdempotencyIdempotent),
-			connect.WithClientOptions(opts...),
-		),
-		watchTodos: connect.NewClient[v1.WatchTodosRequest, v1.WatchTodosResponse](
-			httpClient,
-			baseURL+TodoServiceWatchTodosProcedure,
-			connect.WithSchema(todoServiceMethods.ByName("WatchTodos")),
-			connect.WithClientOptions(opts...),
-		),
-		removeTodo: connect.NewClient[v1.RemoveTodoRequest, v1.RemoveTodoResponse](
-			httpClient,
-			baseURL+TodoServiceRemoveTodoProcedure,
-			connect.WithSchema(todoServiceMethods.ByName("RemoveTodo")),
-			connect.WithIdempotency(connect.IdempotencyIdempotent),
-			connect.WithClientOptions(opts...),
-		),
+// NewTodoServiceClient constructs a client for the raveesh_me.todo.v1.TodoService service. Multiple
+// service clients may share a single connect.Client.
+func NewTodoServiceClient(client *connect.Client) TodoServiceClient {
+	return &todoServiceClient{client: client}
+}
+
+// TodoServiceWatchTodosClientStream is the client stream for the TodoService's WatchTodos RPC.
+type TodoServiceWatchTodosClientStream struct {
+	stream connect.ClientStream
+}
+
+// Receive returns the next response message from the server.
+func (s TodoServiceWatchTodosClientStream) Receive() (*v1.WatchTodosResponse, error) {
+	var res v1.WatchTodosResponse
+	if err := s.stream.Receive(&res); err != nil {
+		return nil, err
 	}
+	return &res, nil
 }
 
-// todoServiceClient implements TodoServiceClient.
-type todoServiceClient struct {
-	getTodo    *connect.Client[v1.GetTodoRequest, v1.GetTodoResponse]
-	listTodos  *connect.Client[v1.ListTodosRequest, v1.ListTodosResponse]
-	createTodo *connect.Client[v1.CreateTodoRequest, v1.CreateTodoResponse]
-	updateTodo *connect.Client[v1.UpdateTodoRequest, v1.UpdateTodoResponse]
-	deleteTodo *connect.Client[v1.DeleteTodoRequest, v1.DeleteTodoResponse]
-	watchTodos *connect.Client[v1.WatchTodosRequest, v1.WatchTodosResponse]
-	removeTodo *connect.Client[v1.RemoveTodoRequest, v1.RemoveTodoResponse]
-}
-
-// GetTodo calls raveesh_me.todo.v1.TodoService.GetTodo.
-func (c *todoServiceClient) GetTodo(ctx context.Context, req *connect.Request[v1.GetTodoRequest]) (*connect.Response[v1.GetTodoResponse], error) {
-	return c.getTodo.CallUnary(ctx, req)
-}
-
-// ListTodos calls raveesh_me.todo.v1.TodoService.ListTodos.
-func (c *todoServiceClient) ListTodos(ctx context.Context, req *connect.Request[v1.ListTodosRequest]) (*connect.Response[v1.ListTodosResponse], error) {
-	return c.listTodos.CallUnary(ctx, req)
-}
-
-// CreateTodo calls raveesh_me.todo.v1.TodoService.CreateTodo.
-func (c *todoServiceClient) CreateTodo(ctx context.Context, req *connect.Request[v1.CreateTodoRequest]) (*connect.Response[v1.CreateTodoResponse], error) {
-	return c.createTodo.CallUnary(ctx, req)
-}
-
-// UpdateTodo calls raveesh_me.todo.v1.TodoService.UpdateTodo.
-func (c *todoServiceClient) UpdateTodo(ctx context.Context, req *connect.Request[v1.UpdateTodoRequest]) (*connect.Response[v1.UpdateTodoResponse], error) {
-	return c.updateTodo.CallUnary(ctx, req)
-}
-
-// DeleteTodo calls raveesh_me.todo.v1.TodoService.DeleteTodo.
-func (c *todoServiceClient) DeleteTodo(ctx context.Context, req *connect.Request[v1.DeleteTodoRequest]) (*connect.Response[v1.DeleteTodoResponse], error) {
-	return c.deleteTodo.CallUnary(ctx, req)
-}
-
-// WatchTodos calls raveesh_me.todo.v1.TodoService.WatchTodos.
-func (c *todoServiceClient) WatchTodos(ctx context.Context, req *connect.Request[v1.WatchTodosRequest]) (*connect.ServerStreamForClient[v1.WatchTodosResponse], error) {
-	return c.watchTodos.CallServerStream(ctx, req)
-}
-
-// RemoveTodo calls raveesh_me.todo.v1.TodoService.RemoveTodo.
-//
-// Deprecated: do not use.
-func (c *todoServiceClient) RemoveTodo(ctx context.Context, req *connect.Request[v1.RemoveTodoRequest]) (*connect.Response[v1.RemoveTodoResponse], error) {
-	return c.removeTodo.CallUnary(ctx, req)
+// Close releases the stream's resources. It is idempotent and is typically deferred to clean up a
+// stream abandoned before io.EOF.
+func (s TodoServiceWatchTodosClientStream) Close() error {
+	return s.stream.Close()
 }
 
 // TodoServiceHandler is an implementation of the raveesh_me.todo.v1.TodoService service.
@@ -206,23 +171,23 @@ type TodoServiceHandler interface {
 	// GetTodo returns one to-do.
 	//
 	// Errors: TODO_NOT_FOUND.
-	GetTodo(context.Context, *connect.Request[v1.GetTodoRequest]) (*connect.Response[v1.GetTodoResponse], error)
+	GetTodo(context.Context, *v1.GetTodoRequest) (*v1.GetTodoResponse, error)
 	// ListTodos returns a page of to-dos, oldest first.
 	//
 	// Errors: INVALID_PAGE_TOKEN.
-	ListTodos(context.Context, *connect.Request[v1.ListTodosRequest]) (*connect.Response[v1.ListTodosResponse], error)
+	ListTodos(context.Context, *v1.ListTodosRequest) (*v1.ListTodosResponse, error)
 	// CreateTodo adds a to-do.
 	//
 	// Errors: TITLE_REQUIRED, TODO_ALREADY_EXISTS.
-	CreateTodo(context.Context, *connect.Request[v1.CreateTodoRequest]) (*connect.Response[v1.CreateTodoResponse], error)
+	CreateTodo(context.Context, *v1.CreateTodoRequest) (*v1.CreateTodoResponse, error)
 	// UpdateTodo changes the fields of a to-do named in the update mask.
 	//
 	// Errors: TODO_NOT_FOUND, TITLE_REQUIRED.
-	UpdateTodo(context.Context, *connect.Request[v1.UpdateTodoRequest]) (*connect.Response[v1.UpdateTodoResponse], error)
+	UpdateTodo(context.Context, *v1.UpdateTodoRequest) (*v1.UpdateTodoResponse, error)
 	// DeleteTodo removes a to-do.
 	//
 	// Errors: TODO_NOT_FOUND.
-	DeleteTodo(context.Context, *connect.Request[v1.DeleteTodoRequest]) (*connect.Response[v1.DeleteTodoResponse], error)
+	DeleteTodo(context.Context, *v1.DeleteTodoRequest) (*v1.DeleteTodoResponse, error)
 	// WatchTodos streams every change to the to-do list as it happens, so a
 	// UI can show changes made anywhere: in another browser, over REST, or by
 	// an agent through MCP.
@@ -233,7 +198,7 @@ type TodoServiceHandler interface {
 	// Errors: SERVER_SHUTTING_DOWN.
 	//
 	// buf:lint:ignore AIP_0127_HTTP_ANNOTATION Server streaming has no REST form.
-	WatchTodos(context.Context, *connect.Request[v1.WatchTodosRequest], *connect.ServerStream[v1.WatchTodosResponse]) error
+	WatchTodos(context.Context, *v1.WatchTodosRequest, TodoServiceWatchTodosServerStream) error
 	// Deprecated: Use DeleteTodo.
 	//
 	// RemoveTodo removes a to-do.
@@ -241,112 +206,208 @@ type TodoServiceHandler interface {
 	// Errors: TODO_NOT_FOUND.
 	//
 	// Deprecated: do not use.
-	RemoveTodo(context.Context, *connect.Request[v1.RemoveTodoRequest]) (*connect.Response[v1.RemoveTodoResponse], error)
+	RemoveTodo(context.Context, *v1.RemoveTodoRequest) (*v1.RemoveTodoResponse, error)
 }
 
-// NewTodoServiceHandler builds an HTTP handler from the service implementation. It returns the path
-// on which to mount the handler and the handler itself.
-//
-// By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
-// and JSON codecs. They also support gzip compression.
-func NewTodoServiceHandler(svc TodoServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
-	todoServiceMethods := v1.File_raveesh_me_todo_v1_todo_proto.Services().ByName("TodoService").Methods()
-	todoServiceGetTodoHandler := connect.NewUnaryHandler(
-		TodoServiceGetTodoProcedure,
-		svc.GetTodo,
-		connect.WithSchema(todoServiceMethods.ByName("GetTodo")),
-		connect.WithIdempotency(connect.IdempotencyNoSideEffects),
-		connect.WithHandlerOptions(opts...),
+// RegisterTodoServiceHandler registers svc as the raveesh_me.todo.v1.TodoService implementation on
+// server.
+func RegisterTodoServiceHandler(server *connect.Server, svc TodoServiceHandler) {
+	adapter := todoServiceHandler{svc: svc}
+	server.Register(
+		connect.Method{Spec: todoServiceGetTodoSpec(), Handler: adapter.getTodo},
+		connect.Method{Spec: todoServiceListTodosSpec(), Handler: adapter.listTodos},
+		connect.Method{Spec: todoServiceCreateTodoSpec(), Handler: adapter.createTodo},
+		connect.Method{Spec: todoServiceUpdateTodoSpec(), Handler: adapter.updateTodo},
+		connect.Method{Spec: todoServiceDeleteTodoSpec(), Handler: adapter.deleteTodo},
+		connect.Method{Spec: todoServiceWatchTodosSpec(), Handler: adapter.watchTodos},
+		connect.Method{Spec: todoServiceRemoveTodoSpec(), Handler: adapter.removeTodo},
 	)
-	todoServiceListTodosHandler := connect.NewUnaryHandler(
-		TodoServiceListTodosProcedure,
-		svc.ListTodos,
-		connect.WithSchema(todoServiceMethods.ByName("ListTodos")),
-		connect.WithIdempotency(connect.IdempotencyNoSideEffects),
-		connect.WithHandlerOptions(opts...),
-	)
-	todoServiceCreateTodoHandler := connect.NewUnaryHandler(
-		TodoServiceCreateTodoProcedure,
-		svc.CreateTodo,
-		connect.WithSchema(todoServiceMethods.ByName("CreateTodo")),
-		connect.WithHandlerOptions(opts...),
-	)
-	todoServiceUpdateTodoHandler := connect.NewUnaryHandler(
-		TodoServiceUpdateTodoProcedure,
-		svc.UpdateTodo,
-		connect.WithSchema(todoServiceMethods.ByName("UpdateTodo")),
-		connect.WithIdempotency(connect.IdempotencyIdempotent),
-		connect.WithHandlerOptions(opts...),
-	)
-	todoServiceDeleteTodoHandler := connect.NewUnaryHandler(
-		TodoServiceDeleteTodoProcedure,
-		svc.DeleteTodo,
-		connect.WithSchema(todoServiceMethods.ByName("DeleteTodo")),
-		connect.WithIdempotency(connect.IdempotencyIdempotent),
-		connect.WithHandlerOptions(opts...),
-	)
-	todoServiceWatchTodosHandler := connect.NewServerStreamHandler(
-		TodoServiceWatchTodosProcedure,
-		svc.WatchTodos,
-		connect.WithSchema(todoServiceMethods.ByName("WatchTodos")),
-		connect.WithHandlerOptions(opts...),
-	)
-	todoServiceRemoveTodoHandler := connect.NewUnaryHandler(
-		TodoServiceRemoveTodoProcedure,
-		svc.RemoveTodo,
-		connect.WithSchema(todoServiceMethods.ByName("RemoveTodo")),
-		connect.WithIdempotency(connect.IdempotencyIdempotent),
-		connect.WithHandlerOptions(opts...),
-	)
-	return "/raveesh_me.todo.v1.TodoService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
-		case TodoServiceGetTodoProcedure:
-			todoServiceGetTodoHandler.ServeHTTP(w, r)
-		case TodoServiceListTodosProcedure:
-			todoServiceListTodosHandler.ServeHTTP(w, r)
-		case TodoServiceCreateTodoProcedure:
-			todoServiceCreateTodoHandler.ServeHTTP(w, r)
-		case TodoServiceUpdateTodoProcedure:
-			todoServiceUpdateTodoHandler.ServeHTTP(w, r)
-		case TodoServiceDeleteTodoProcedure:
-			todoServiceDeleteTodoHandler.ServeHTTP(w, r)
-		case TodoServiceWatchTodosProcedure:
-			todoServiceWatchTodosHandler.ServeHTTP(w, r)
-		case TodoServiceRemoveTodoProcedure:
-			todoServiceRemoveTodoHandler.ServeHTTP(w, r)
-		default:
-			http.NotFound(w, r)
-		}
-	})
+}
+
+// TodoServiceWatchTodosServerStream is the server stream for the TodoService's WatchTodos RPC.
+type TodoServiceWatchTodosServerStream struct {
+	stream connect.ServerStream
+}
+
+// SendHeaders flushes the response headers without a message. The first Send does this implicitly.
+func (s TodoServiceWatchTodosServerStream) SendHeaders() error {
+	return s.stream.SendHeaders()
+}
+
+// Send sends a response message to the client.
+func (s TodoServiceWatchTodosServerStream) Send(res *v1.WatchTodosResponse) error {
+	return s.stream.Send(res)
 }
 
 // UnimplementedTodoServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedTodoServiceHandler struct{}
 
-func (UnimplementedTodoServiceHandler) GetTodo(context.Context, *connect.Request[v1.GetTodoRequest]) (*connect.Response[v1.GetTodoResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("raveesh_me.todo.v1.TodoService.GetTodo is not implemented"))
+func (UnimplementedTodoServiceHandler) GetTodo(context.Context, *v1.GetTodoRequest) (*v1.GetTodoResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "raveesh_me.todo.v1.TodoService.GetTodo is not implemented")
 }
 
-func (UnimplementedTodoServiceHandler) ListTodos(context.Context, *connect.Request[v1.ListTodosRequest]) (*connect.Response[v1.ListTodosResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("raveesh_me.todo.v1.TodoService.ListTodos is not implemented"))
+func (UnimplementedTodoServiceHandler) ListTodos(context.Context, *v1.ListTodosRequest) (*v1.ListTodosResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "raveesh_me.todo.v1.TodoService.ListTodos is not implemented")
 }
 
-func (UnimplementedTodoServiceHandler) CreateTodo(context.Context, *connect.Request[v1.CreateTodoRequest]) (*connect.Response[v1.CreateTodoResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("raveesh_me.todo.v1.TodoService.CreateTodo is not implemented"))
+func (UnimplementedTodoServiceHandler) CreateTodo(context.Context, *v1.CreateTodoRequest) (*v1.CreateTodoResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "raveesh_me.todo.v1.TodoService.CreateTodo is not implemented")
 }
 
-func (UnimplementedTodoServiceHandler) UpdateTodo(context.Context, *connect.Request[v1.UpdateTodoRequest]) (*connect.Response[v1.UpdateTodoResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("raveesh_me.todo.v1.TodoService.UpdateTodo is not implemented"))
+func (UnimplementedTodoServiceHandler) UpdateTodo(context.Context, *v1.UpdateTodoRequest) (*v1.UpdateTodoResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "raveesh_me.todo.v1.TodoService.UpdateTodo is not implemented")
 }
 
-func (UnimplementedTodoServiceHandler) DeleteTodo(context.Context, *connect.Request[v1.DeleteTodoRequest]) (*connect.Response[v1.DeleteTodoResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("raveesh_me.todo.v1.TodoService.DeleteTodo is not implemented"))
+func (UnimplementedTodoServiceHandler) DeleteTodo(context.Context, *v1.DeleteTodoRequest) (*v1.DeleteTodoResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "raveesh_me.todo.v1.TodoService.DeleteTodo is not implemented")
 }
 
-func (UnimplementedTodoServiceHandler) WatchTodos(context.Context, *connect.Request[v1.WatchTodosRequest], *connect.ServerStream[v1.WatchTodosResponse]) error {
-	return connect.NewError(connect.CodeUnimplemented, errors.New("raveesh_me.todo.v1.TodoService.WatchTodos is not implemented"))
+func (UnimplementedTodoServiceHandler) WatchTodos(context.Context, *v1.WatchTodosRequest, TodoServiceWatchTodosServerStream) error {
+	return connect.NewError(connect.CodeUnimplemented, "raveesh_me.todo.v1.TodoService.WatchTodos is not implemented")
 }
 
-func (UnimplementedTodoServiceHandler) RemoveTodo(context.Context, *connect.Request[v1.RemoveTodoRequest]) (*connect.Response[v1.RemoveTodoResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("raveesh_me.todo.v1.TodoService.RemoveTodo is not implemented"))
+func (UnimplementedTodoServiceHandler) RemoveTodo(context.Context, *v1.RemoveTodoRequest) (*v1.RemoveTodoResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "raveesh_me.todo.v1.TodoService.RemoveTodo is not implemented")
+}
+
+type todoServiceClient struct {
+	client *connect.Client
+}
+
+func (c *todoServiceClient) GetTodo(ctx context.Context, req *v1.GetTodoRequest) (*v1.GetTodoResponse, error) {
+	var res v1.GetTodoResponse
+	if err := c.client.CallUnary(ctx, todoServiceGetTodoSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *todoServiceClient) ListTodos(ctx context.Context, req *v1.ListTodosRequest) (*v1.ListTodosResponse, error) {
+	var res v1.ListTodosResponse
+	if err := c.client.CallUnary(ctx, todoServiceListTodosSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *todoServiceClient) CreateTodo(ctx context.Context, req *v1.CreateTodoRequest) (*v1.CreateTodoResponse, error) {
+	var res v1.CreateTodoResponse
+	if err := c.client.CallUnary(ctx, todoServiceCreateTodoSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *todoServiceClient) UpdateTodo(ctx context.Context, req *v1.UpdateTodoRequest) (*v1.UpdateTodoResponse, error) {
+	var res v1.UpdateTodoResponse
+	if err := c.client.CallUnary(ctx, todoServiceUpdateTodoSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *todoServiceClient) DeleteTodo(ctx context.Context, req *v1.DeleteTodoRequest) (*v1.DeleteTodoResponse, error) {
+	var res v1.DeleteTodoResponse
+	if err := c.client.CallUnary(ctx, todoServiceDeleteTodoSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *todoServiceClient) WatchTodos(ctx context.Context, req *v1.WatchTodosRequest) (TodoServiceWatchTodosClientStream, error) {
+	stream, err := c.client.CallServerStream(ctx, todoServiceWatchTodosSpec(), req)
+	if err != nil {
+		return TodoServiceWatchTodosClientStream{}, err
+	}
+	return TodoServiceWatchTodosClientStream{stream: stream}, nil
+}
+
+func (c *todoServiceClient) RemoveTodo(ctx context.Context, req *v1.RemoveTodoRequest) (*v1.RemoveTodoResponse, error) {
+	var res v1.RemoveTodoResponse
+	if err := c.client.CallUnary(ctx, todoServiceRemoveTodoSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+type todoServiceHandler struct{ svc TodoServiceHandler }
+
+func (h todoServiceHandler) getTodo(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.GetTodoRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.GetTodo(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h todoServiceHandler) listTodos(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.ListTodosRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.ListTodos(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h todoServiceHandler) createTodo(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.CreateTodoRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.CreateTodo(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h todoServiceHandler) updateTodo(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.UpdateTodoRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.UpdateTodo(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h todoServiceHandler) deleteTodo(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.DeleteTodoRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.DeleteTodo(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h todoServiceHandler) watchTodos(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.WatchTodosRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	return h.svc.WatchTodos(ctx, &req, TodoServiceWatchTodosServerStream{stream: stream})
+}
+
+func (h todoServiceHandler) removeTodo(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.RemoveTodoRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.RemoveTodo(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
 }

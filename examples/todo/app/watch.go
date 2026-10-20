@@ -4,9 +4,8 @@ import (
 	"context"
 	"sync"
 
-	"connectrpc.com/connect"
-
 	todov1 "github.com/raveesh-me/dedo/examples/todo/gen/go/raveesh_me/todo/v1"
+	"github.com/raveesh-me/dedo/examples/todo/gen/go/raveesh_me/todo/v1/todov1connect"
 )
 
 // subscriberBuffer is how many changes a slow subscriber may fall behind
@@ -51,12 +50,13 @@ func (c *changes) publish(change todov1.WatchTodosResponse_Change, todo *todov1.
 }
 
 // WatchTodos streams every change until the caller disconnects.
-func (s *Server) WatchTodos(ctx context.Context, _ *connect.Request[todov1.WatchTodosRequest], stream *connect.ServerStream[todov1.WatchTodosResponse]) error {
+func (s *Server) WatchTodos(ctx context.Context, _ *todov1.WatchTodosRequest, stream todov1connect.TodoServiceWatchTodosServerStream) error {
 	events, cancel := s.changes.subscribe()
 	defer cancel()
 	// Send the headers now, so the client knows the watch is open before
-	// the first change.
-	if err := stream.Conn().Send(nil); err != nil {
+	// the first change. (connect-go v2.0.1's HTTP transport does not send
+	// them until the first message yet; this works once it does.)
+	if err := stream.SendHeaders(); err != nil {
 		return err
 	}
 	for {

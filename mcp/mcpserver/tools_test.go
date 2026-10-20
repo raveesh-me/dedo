@@ -3,41 +3,51 @@ package mcpserver
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
-	"connectrpc.com/connect"
+	"connectrpc.com/connect/v2"
+	"connectrpc.com/connect/v2/connectinprocess"
+	"connectrpc.com/connect/v2/connectproto"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
 const echoProcedure = "/dedo.test.v1.EchoService/Echo"
 
 // echoBackend answers with the caller's token and the request value, or
-// fails with a declared reason for "missing".
-func echoBackend() http.Handler {
-	mux := http.NewServeMux()
-	mux.Handle(echoProcedure, connect.NewUnaryHandler(echoProcedure,
-		func(_ context.Context, req *connect.Request[structpb.Struct]) (*connect.Response[structpb.Struct], error) {
-			say := req.Msg.GetFields()["say"].GetStringValue()
+// fails with a declared reason for "missing". It is a connect.Server reached
+// in-process, as a service's MCP tools reach it.
+func echoBackend() *connect.Client {
+	server := connect.NewServer()
+	server.Register(connect.Method{
+		Spec: connect.Spec{Procedure: echoProcedure, StreamType: connect.StreamTypeUnary},
+		Handler: func(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+			var req structpb.Struct
+			if err := stream.Receive(&req); err != nil {
+				return err
+			}
+			say := req.GetFields()["say"].GetStringValue()
 			if say == "missing" {
-				err := connect.NewError(connect.CodeNotFound, errors.New("no such thing"))
-				if d, derr := connect.NewErrorDetail(&errdetails.ErrorInfo{Reason: "THING_NOT_FOUND"}); derr == nil {
-					err.AddDetail(d)
+				err := connect.NewError(connect.CodeNotFound, "no such thing")
+				if d, derr := connectproto.NewErrorDetail(&errdetails.ErrorInfo{Reason: "THING_NOT_FOUND"}); derr == nil {
+					err = err.WithDetail(d)
 				}
-				return nil, err
+				return err
 			}
-			out, err := structpb.NewStruct(map[string]any{"auth": req.Header().Get("Authorization"), "said": say})
+			info, _ := connect.CallInfoForServerContext(ctx)
+			out, err := structpb.NewStruct(map[string]any{"auth": info.RequestHeader().Get("Authorization"), "said": say})
 			if err != nil {
-				return nil, err
+				return err
 			}
-			return connect.NewResponse(out), nil
-		}))
-	return mux
+			return stream.Send(out)
+		},
+	})
+	return connect.NewClient(connectinprocess.New(server))
 }
 
 // echoTool is what protoc-gen-dedo-mcp generates for an Echo RPC.
@@ -51,14 +61,16 @@ func echoTool() Tool {
 			InputSchema:  json.RawMessage(`{"type":"object","properties":{"say":{"type":"string"}}}`),
 			OutputSchema: json.RawMessage(`{"type":"object"}`),
 		},
-		Call: Unary[structpb.Struct, structpb.Struct](echoProcedure),
+		Call: Unary(echoProcedure,
+			func() proto.Message { return new(structpb.Struct) },
+			func() proto.Message { return new(structpb.Struct) }),
 	}
 }
 
 func typedSession(t *testing.T, tools ...Tool) *mcp.ClientSession {
 	t.Helper()
 	server := mcp.NewServer(&mcp.Implementation{Name: "test", Version: "v1"}, nil)
-	if err := AddTools(server, Target{Client: InProcessClient(echoBackend())}, tools...); err != nil {
+	if err := AddTools(server, echoBackend(), tools...); err != nil {
 		t.Fatal(err)
 	}
 	ts := httptest.NewServer(mcp.NewStreamableHTTPHandler(func(*http.Request) *mcp.Server { return server },
@@ -102,20 +114,20 @@ func TestAddToolsForwards(t *testing.T) {
 
 func TestAddToolsRejects(t *testing.T) {
 	server := mcp.NewServer(&mcp.Implementation{Name: "test", Version: "v1"}, nil)
-	client := Target{Client: InProcessClient(echoBackend())}
+	client := echoBackend()
 	bad := echoTool()
 	bad.Tool = &mcp.Tool{Name: "Not Valid", InputSchema: json.RawMessage(`{"type":"object"}`)}
 	for name, tc := range map[string]struct {
-		target Target
+		client *connect.Client
 		tools  []Tool
 		want   string
 	}{
-		"no client":    {Target{}, []Tool{echoTool()}, "Client"},
+		"no client":    {nil, []Tool{echoTool()}, "client"},
 		"no call":      {client, []Tool{{Tool: echoTool().Tool}}, "lacks"},
 		"invalid name": {client, []Tool{bad}, "not a valid"},
 		"duplicate":    {client, []Tool{echoTool(), echoTool()}, "two tools"},
 	} {
-		if err := AddTools(server, tc.target, tc.tools...); err == nil || !strings.Contains(err.Error(), tc.want) {
+		if err := AddTools(server, tc.client, tc.tools...); err == nil || !strings.Contains(err.Error(), tc.want) {
 			t.Errorf("%s: err = %v, want it to mention %q", name, err, tc.want)
 		}
 	}

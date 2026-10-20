@@ -7,6 +7,7 @@ import (
 	json "encoding/json"
 	mcp "github.com/modelcontextprotocol/go-sdk/mcp"
 	mcpserver "github.com/raveesh-me/dedo/mcp/mcpserver"
+	proto "google.golang.org/protobuf/proto"
 )
 
 // MCPInputSchemas maps each unary RPC's full name to the JSON Schema of its
@@ -51,7 +52,10 @@ func TodoServiceMCPTools() []mcpserver.Tool {
 				InputSchema:  json.RawMessage(MCPInputSchemas["raveesh_me.todo.v1.TodoService.GetTodo"]),
 				OutputSchema: json.RawMessage(MCPOutputSchemas["raveesh_me.todo.v1.TodoService.GetTodo"]),
 			},
-			Call: mcpserver.Unary[GetTodoRequest, GetTodoResponse]("/raveesh_me.todo.v1.TodoService/GetTodo"),
+			Call: mcpserver.Unary("/raveesh_me.todo.v1.TodoService/GetTodo",
+				func() proto.Message { return new(GetTodoRequest) },
+				func() proto.Message { return new(GetTodoResponse) },
+			),
 		},
 		{
 			Tool: &mcp.Tool{
@@ -67,7 +71,10 @@ func TodoServiceMCPTools() []mcpserver.Tool {
 				InputSchema:  json.RawMessage(MCPInputSchemas["raveesh_me.todo.v1.TodoService.ListTodos"]),
 				OutputSchema: json.RawMessage(MCPOutputSchemas["raveesh_me.todo.v1.TodoService.ListTodos"]),
 			},
-			Call: mcpserver.Unary[ListTodosRequest, ListTodosResponse]("/raveesh_me.todo.v1.TodoService/ListTodos"),
+			Call: mcpserver.Unary("/raveesh_me.todo.v1.TodoService/ListTodos",
+				func() proto.Message { return new(ListTodosRequest) },
+				func() proto.Message { return new(ListTodosResponse) },
+			),
 		},
 		{
 			Tool: &mcp.Tool{
@@ -84,7 +91,10 @@ func TodoServiceMCPTools() []mcpserver.Tool {
 				InputSchema:  json.RawMessage(MCPInputSchemas["raveesh_me.todo.v1.TodoService.CreateTodo"]),
 				OutputSchema: json.RawMessage(MCPOutputSchemas["raveesh_me.todo.v1.TodoService.CreateTodo"]),
 			},
-			Call: mcpserver.Unary[CreateTodoRequest, CreateTodoResponse]("/raveesh_me.todo.v1.TodoService/CreateTodo"),
+			Call: mcpserver.Unary("/raveesh_me.todo.v1.TodoService/CreateTodo",
+				func() proto.Message { return new(CreateTodoRequest) },
+				func() proto.Message { return new(CreateTodoResponse) },
+			),
 		},
 		{
 			Tool: &mcp.Tool{
@@ -101,7 +111,10 @@ func TodoServiceMCPTools() []mcpserver.Tool {
 				InputSchema:  json.RawMessage(MCPInputSchemas["raveesh_me.todo.v1.TodoService.UpdateTodo"]),
 				OutputSchema: json.RawMessage(MCPOutputSchemas["raveesh_me.todo.v1.TodoService.UpdateTodo"]),
 			},
-			Call: mcpserver.Unary[UpdateTodoRequest, UpdateTodoResponse]("/raveesh_me.todo.v1.TodoService/UpdateTodo"),
+			Call: mcpserver.Unary("/raveesh_me.todo.v1.TodoService/UpdateTodo",
+				func() proto.Message { return new(UpdateTodoRequest) },
+				func() proto.Message { return new(UpdateTodoResponse) },
+			),
 		},
 		{
 			Tool: &mcp.Tool{
@@ -118,7 +131,10 @@ func TodoServiceMCPTools() []mcpserver.Tool {
 				InputSchema:  json.RawMessage(MCPInputSchemas["raveesh_me.todo.v1.TodoService.DeleteTodo"]),
 				OutputSchema: json.RawMessage(MCPOutputSchemas["raveesh_me.todo.v1.TodoService.DeleteTodo"]),
 			},
-			Call: mcpserver.Unary[DeleteTodoRequest, DeleteTodoResponse]("/raveesh_me.todo.v1.TodoService/DeleteTodo"),
+			Call: mcpserver.Unary("/raveesh_me.todo.v1.TodoService/DeleteTodo",
+				func() proto.Message { return new(DeleteTodoRequest) },
+				func() proto.Message { return new(DeleteTodoResponse) },
+			),
 		},
 	}
 }

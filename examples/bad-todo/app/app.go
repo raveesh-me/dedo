@@ -7,7 +7,8 @@ import (
 	"log/slog"
 	"net/http"
 
-	"connectrpc.com/connect"
+	"connectrpc.com/connect/v2"
+	"connectrpc.com/connect/v2/connecthttp"
 	"connectrpc.com/vanguard"
 
 	"github.com/raveesh-me/dedo/examples/bad-todo/gen/go/raveesh_me/todo/v1/todov1connect"
@@ -41,13 +42,12 @@ func NewHandler(cfg Config) (http.Handler, error) {
 	if err != nil {
 		return nil, err
 	}
-	path, handler := todov1connect.NewTodoServiceHandler(
-		NewServer(),
-		connect.WithInterceptors(guard),
-	)
-	transcoder, err := vanguard.NewTranscoder([]*vanguard.Service{vanguard.NewService(path, handler)})
-	if err != nil {
+	server := connect.NewServer(flowid.Interceptor(), Auth(), guard)
+	todov1connect.RegisterTodoServiceHandler(server, NewServer())
+	mux := http.NewServeMux()
+	connecthttp.Mount(mux, server)
+	if err := vanguard.Mount(mux, server); err != nil {
 		return nil, err
 	}
-	return flowid.Middleware(AuthMiddleware(transcoder)), nil
+	return mux, nil
 }
