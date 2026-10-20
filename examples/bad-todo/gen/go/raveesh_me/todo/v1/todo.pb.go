@@ -690,7 +690,7 @@ var File_raveesh_me_todo_v1_todo_proto protoreflect.FileDescriptor
 
 const file_raveesh_me_todo_v1_todo_proto_rawDesc = "" +
 	"\n" +
-	"\x1draveesh_me/todo/v1/todo.proto\x12\x12raveesh_me.todo.v1\x1a\x15dedo/v1/options.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x17google/api/client.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x19google/api/resource.proto\x1a google/protobuf/field_mask.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xb6\x02\n" +
+	"\x1draveesh_me/todo/v1/todo.proto\x12\x12raveesh_me.todo.v1\x1a\x15dedo/v1/options.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x17google/api/client.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x19google/api/resource.proto\x1a google/protobuf/field_mask.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xb7\x02\n" +
 	"\x04Todo\x12\x18\n" +
 	"\x04name\x18\x01 \x01(\tB\x04\xe2A\x01\bR\x04name\x12\x1e\n" +
 	"\x05title\x18\x02 \x01(\tB\x04\xe2A\x01\x02R\ttodoTitle\x12\x18\n" +
@@ -699,11 +699,11 @@ const file_raveesh_me_todo_v1_todo_proto_rawDesc = "" +
 	"\x11assigned_to_email\x18\x05 \x01(\tB\n" +
 	"\xe2A\x01\x01\xba\xbb\x18\x02\b\x01R\x0fassignedToEmail\x12A\n" +
 	"\vcreate_time\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampB\x04\xe2A\x01\x03R\n" +
-	"createTime:4\xeaA1\n" +
-	"\x14todo.raveesh.me/Todo\x12\ftodos/{todo}*\x05todos2\x04todo\"^\n" +
-	"\x0eGetTodoRequest\x121\n" +
-	"\x04name\x18\x01 \x01(\tB\x1d\xe2A\x01\x02\xfaA\x16\n" +
-	"\x14todo.raveesh.me/TodoR\x04name:\x19»\x18\x15\n" +
+	"createTime:5\xeaA2\n" +
+	"\x15todo.example.com/Todo\x12\ftodos/{todo}*\x05todos2\x04todo\"_\n" +
+	"\x0eGetTodoRequest\x122\n" +
+	"\x04name\x18\x01 \x01(\tB\x1e\xe2A\x01\x02\xfaA\x17\n" +
+	"\x15todo.example.com/TodoR\x04name:\x19»\x18\x15\n" +
 	"\x13Which to-do to get.\"[\n" +
 	"\x0fGetTodoResponse\x12,\n" +
 	"\x04todo\x18\x01 \x01(\v2\x18.raveesh_me.todo.v1.TodoR\x04todo:\x1a»\x18\x16\n" +
@@ -731,16 +731,16 @@ const file_raveesh_me_todo_v1_todo_proto_rawDesc = "" +
 	"<The new field values of a to-do, and which fields to change.\"\\\n" +
 	"\x12UpdateTodoResponse\x12,\n" +
 	"\x04todo\x18\x01 \x01(\v2\x18.raveesh_me.todo.v1.TodoR\x04todo:\x18»\x18\x14\n" +
-	"\x12The updated to-do.\"d\n" +
-	"\x11DeleteTodoRequest\x121\n" +
-	"\x04name\x18\x01 \x01(\tB\x1d\xe2A\x01\x02\xfaA\x16\n" +
-	"\x14todo.raveesh.me/TodoR\x04name:\x1c»\x18\x18\n" +
+	"\x12The updated to-do.\"e\n" +
+	"\x11DeleteTodoRequest\x122\n" +
+	"\x04name\x18\x01 \x01(\tB\x1e\xe2A\x01\x02\xfaA\x17\n" +
+	"\x15todo.example.com/TodoR\x04name:\x1c»\x18\x18\n" +
 	"\x16Which to-do to delete.\"-\n" +
 	"\x12DeleteTodoResponse:\x17»\x18\x13\n" +
-	"\x11Empty on success.\"d\n" +
-	"\x11RemoveTodoRequest\x121\n" +
-	"\x04name\x18\x01 \x01(\tB\x1d\xe2A\x01\x02\xfaA\x16\n" +
-	"\x14todo.raveesh.me/TodoR\x04name:\x1c»\x18\x18\n" +
+	"\x11Empty on success.\"e\n" +
+	"\x11RemoveTodoRequest\x122\n" +
+	"\x04name\x18\x01 \x01(\tB\x1e\xe2A\x01\x02\xfaA\x17\n" +
+	"\x15todo.example.com/TodoR\x04name:\x1c»\x18\x18\n" +
 	"\x16Which to-do to remove.\"-\n" +
 	"\x12RemoveTodoResponse:\x17»\x18\x13\n" +
 	"\x11Empty on success.2\x9b\f\n" +

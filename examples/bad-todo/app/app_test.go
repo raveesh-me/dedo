@@ -73,7 +73,7 @@ func (e env) rest(t *testing.T, method, path, token, body string) (int, string) 
 	return res.StatusCode, string(b)
 }
 
-// HOUSE_SCOPE_NAME_FORMAT: CreateTodo declares "todo.write", which no
+// ZALANDO_SCOPE_NAME_FORMAT: CreateTodo declares "todo.write", which no
 // token carries, so even a writer cannot create.
 func TestMisnamedScopeLocksOutWriters(t *testing.T) {
 	e := newEnv(t)
@@ -84,7 +84,7 @@ func TestMisnamedScopeLocksOutWriters(t *testing.T) {
 	}
 }
 
-// HOUSE_HTTP_PATH_VERSION: GetTodo is served outside /v1/.
+// DEDO_HTTP_PATH_VERSION: GetTodo is served outside /v1/.
 func TestUnversionedPath(t *testing.T) {
 	e := newEnv(t)
 	// /v1/todos/{id} exists for PATCH and DELETE only.
@@ -97,7 +97,7 @@ func TestUnversionedPath(t *testing.T) {
 	}
 }
 
-// HOUSE_ERROR_REASON_FORMAT and HOUSE_METHOD_RULES_REQUIRED: the
+// DEDO_ERROR_REASON_FORMAT and DEDO_METHOD_RULES_REQUIRED: the
 // handlers return reasons the contract does not declare, so the runtime
 // logs them.
 func TestUndeclaredReasonsAreLogged(t *testing.T) {
@@ -119,7 +119,7 @@ func TestUndeclaredReasonsAreLogged(t *testing.T) {
 	}
 }
 
-// HOUSE_NO_JSON_NAME: responses name the field "todoTitle" instead of
+// DEDO_NO_JSON_NAME: responses name the field "todoTitle" instead of
 // the protojson default "title". Every JSON client sees a different name
 // from the one in the schema.
 func TestCustomJSONName(t *testing.T) {

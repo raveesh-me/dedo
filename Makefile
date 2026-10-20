@@ -1,12 +1,10 @@
 # Build, test and release dedo.
-AIP_PLUGIN_REPO   := https://github.com/hestiatechnology/buf-plugin-aip.git
-AIP_PLUGIN_COMMIT := 5158ec0f16f3
 DIST              := dist
-# The git ref that lint findings link to in HOUSE_RULES.md. Releases pass
+# The git ref that lint findings link to in RULES.md. Releases pass
 # their tag, so each plugin version links to its own rule docs.
 DOCS_REF          ?= main
 
-.PHONY: all check generate format lint breaking test plugin aip-plugin plugins wasm-plugins release-binaries examples example-todo example-bad-todo vendored-options clean
+.PHONY: all check generate format lint breaking test plugin plugins wasm-plugins release-binaries examples example-todo example-bad-todo vendored-options clean
 
 all: check
 
@@ -21,7 +19,7 @@ generate:
 format:
 	buf format --diff --exit-code
 
-## lint: buf lint the options module and the example with the house plugin
+## lint: buf lint the options module with buf-plugin-dedo
 lint: plugin
 	buf lint
 
@@ -33,58 +31,48 @@ breaking:
 test:
 	go vet ./...
 	go test -race -cover ./...
-	for mod in lint openapi mcp; do (cd $$mod && go vet ./... && go test -race -cover ./...) || exit 1; done
+	for mod in lint openapi mcp examples/house-lint; do (cd $$mod && go vet ./... && go test -race -cover ./...) || exit 1; done
 
 # Lint plugins run natively: about 17 times faster per `buf lint` than the
 # same plugins as WebAssembly, which matters in the editor. buf.yaml refers
 # to them by path, so editors started outside a shell still find them.
-HOUSE_CMD     := ./cmd/buf-plugin-dedo
-HOUSE_LDFLAGS := -X github.com/raveesh-me/dedo/lint/rules.DocsRef=$(DOCS_REF)
+DEDO_CMD     := ./cmd/buf-plugin-dedo
+DEDO_LDFLAGS := -X github.com/raveesh-me/dedo/lint/rules.DocsRef=$(DOCS_REF)
 LINT_SRC      := $(shell find lint gen -name '*.go') lint/go.mod lint/go.sum
-AIP_SRC       := $(DIST)/aip-src/.pinned-$(AIP_PLUGIN_COMMIT)
 # Platforms the release ships native plugins for. Windows users can use the
 # WebAssembly plugins on the BSR.
 RELEASE_PLATFORMS := darwin/arm64 darwin/amd64 linux/arm64 linux/amd64
 
-## plugin: build the house plugin for this machine
+## plugin: build buf-plugin-dedo for this machine
 plugin: $(DIST)/buf-plugin-dedo
 
 $(DIST)/buf-plugin-dedo: $(LINT_SRC)
 	mkdir -p $(DIST)
-	cd lint && go build -trimpath -ldflags "$(HOUSE_LDFLAGS)" -o ../$@ $(HOUSE_CMD)
+	cd lint && go build -trimpath -ldflags "$(DEDO_LDFLAGS)" -o ../$@ $(DEDO_CMD)
 
-## aip-plugin: build buf-plugin-aip at the pinned commit for this machine
-aip-plugin: $(DIST)/buf-plugin-aip
+# An organisation's own HOUSE_* plugin; in this repository, the example one.
+HOUSE_SRC := $(shell find examples/house-lint -name '*.go') examples/house-lint/go.mod examples/house-lint/go.sum
 
-# The AIP source sits inside this repository but outside its Go workspace.
-$(DIST)/buf-plugin-aip: $(AIP_SRC)
-	cd $(DIST)/aip-src && GOWORK=off go build -trimpath -o ../buf-plugin-aip .
+$(DIST)/buf-plugin-house: $(HOUSE_SRC)
+	mkdir -p $(DIST)
+	cd examples/house-lint && go build -trimpath -o ../../$@ ./cmd/buf-plugin-house
 
-$(AIP_SRC):
-	rm -rf $(DIST)/aip-src
-	git clone --quiet $(AIP_PLUGIN_REPO) $(DIST)/aip-src
-	git -C $(DIST)/aip-src checkout --quiet $(AIP_PLUGIN_COMMIT)
-	touch $@
+## plugins: every lint plugin for this machine, as the examples' buf.yaml use them
+plugins: plugin $(DIST)/buf-plugin-house
 
-## plugins: both plugins for this machine, as buf.yaml in this repository uses them
-plugins: plugin aip-plugin
-
-## wasm-plugins: both plugins as WebAssembly, for the BSR
-wasm-plugins: $(LINT_SRC) $(AIP_SRC)
+## wasm-plugins: buf-plugin-dedo as WebAssembly, for the BSR
+wasm-plugins: $(LINT_SRC)
 	mkdir -p $(DIST)/wasm
-	cd lint && GOOS=wasip1 GOARCH=wasm go build -trimpath -ldflags "$(HOUSE_LDFLAGS)" \
-		-o ../$(DIST)/wasm/buf-plugin-dedo.wasm $(HOUSE_CMD)
-	cd $(DIST)/aip-src && GOWORK=off GOOS=wasip1 GOARCH=wasm go build -trimpath -o ../wasm/buf-plugin-aip.wasm .
+	cd lint && GOOS=wasip1 GOARCH=wasm go build -trimpath -ldflags "$(DEDO_LDFLAGS)" \
+		-o ../$(DIST)/wasm/buf-plugin-dedo.wasm $(DEDO_CMD)
 
-## release-binaries: the lint plugins and the generators natively for every release platform
-release-binaries: $(LINT_SRC) $(AIP_SRC)
+## release-binaries: the lint plugin and the generators natively for every release platform
+release-binaries: $(LINT_SRC)
 	mkdir -p $(DIST)/release
 	for platform in $(RELEASE_PLATFORMS); do \
 		os=$${platform%/*}; arch=$${platform#*/}; \
-		(cd lint && GOOS=$$os GOARCH=$$arch go build -trimpath -ldflags "$(HOUSE_LDFLAGS)" \
-			-o ../$(DIST)/release/buf-plugin-dedo_$${os}_$${arch} $(HOUSE_CMD)) || exit 1; \
-		(cd $(DIST)/aip-src && GOWORK=off GOOS=$$os GOARCH=$$arch go build -trimpath \
-			-o ../release/buf-plugin-aip_$${os}_$${arch} .) || exit 1; \
+		(cd lint && GOOS=$$os GOARCH=$$arch go build -trimpath -ldflags "$(DEDO_LDFLAGS)" \
+			-o ../$(DIST)/release/buf-plugin-dedo_$${os}_$${arch} $(DEDO_CMD)) || exit 1; \
 		(cd mcp && GOOS=$$os GOARCH=$$arch go build -trimpath \
 			-o ../$(DIST)/release/protoc-gen-dedo-mcp_$${os}_$${arch} ./cmd/protoc-gen-dedo-mcp) || exit 1; \
 		(cd openapi && GOOS=$$os GOARCH=$$arch go build -trimpath \

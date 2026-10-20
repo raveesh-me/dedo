@@ -10,7 +10,7 @@
 | MCP tools for AI agents | `protoc-gen-dedo-mcp` writes each tool's input and output schema; `mcpserver` registers and serves the tools with the declared text, hints and error reasons |
 | Authorization, cache and deprecation headers, flow IDs, error audit | The policy runtime, read from options in the `.proto` |
 
-**First-class lint guidance.** A Buf check plugin turns the standard into findings in your editor as you type, each linked to an explanation in [HOUSE_RULES.md](HOUSE_RULES.md). The same `buf lint` gates CI. Handlers carry business logic only.
+**First-class lint guidance.** A Buf check plugin turns the standard into findings in your editor as you type, each linked to an explanation in [RULES.md](RULES.md). The same `buf lint` gates CI. Handlers carry business logic only.
 
 New here? [install.md](install.md) builds a new product from scratch, step by step. [guideline.md](guideline.md) explains the reasoning.
 
@@ -23,7 +23,7 @@ Contract rules come from Google's AIPs. Operational rules (audience, ownership, 
 | Component | Path | Job |
 | --- | --- | --- |
 | Options module | `proto/dedo/v1/options.proto` | Declares audience, owner, scopes, cache policy, deprecation, error reasons, sensitive fields, message descriptions, and how each RPC appears as an MCP tool (title, description and the MCP specification's `ToolAnnotations`). Published as `buf.build/r-a/dedo`. |
-| House lint plugin | `lint/` | Fourteen house rules, `HOUSE_*` in the `HOUSE` category. Released as native binaries per platform (fast in editors) and as the Wasm check plugin `buf.build/r-a/dedo-lint`. |
+| Lint plugin | `lint/` | `buf-plugin-dedo`: Google's AIP rules (`AIP_*`, through api-linter), five Zalando rules (`ZALANDO_*`) and nine dedo rules (`DEDO_*`), each in the category of its prefix. [RULES.md](RULES.md) documents every rule, the tiebreakers between sources and what dedo skips. Released as native binaries per platform (fast in editors) and as the Wasm check plugin `buf.build/r-a/dedo-lint`. |
 | Policy table | `policy/` | Reads the options from descriptors at startup. Fails on a missing declaration. |
 | Flow ID | `flowid/` | Reads or creates `X-Flow-ID` and propagates it on outbound calls. |
 | Policy interceptor | `interceptor/` | Checks scopes, sets `Cache-Control`, `Deprecation` and `Sunset`, and logs undeclared error reasons. |
@@ -92,26 +92,28 @@ See `examples/library/proto` for a complete module.
 
 ## Lint rules
 
+`buf-plugin-dedo` runs three classes of rules: `AIP_*` (Google's AIPs, through api-linter), `ZALANDO_*` (the Zalando guidelines dedo adopts) and `DEDO_*` (dedo's own). When they disagree, DEDO wins over AIP, and AIP over ZALANDO. `HOUSE_*` is left for your organisation's own plugin; [`examples/house-lint`](examples/house-lint) shows one. [RULES.md](RULES.md) has the tiebreakers and every rule dedo skips, by source.
+
 | Rule ID | Checks |
 | --- | --- |
-| `HOUSE_SERVICE_RULES_REQUIRED` | Every service declares the service option with an audience and an owner team |
-| `HOUSE_METHOD_RULES_REQUIRED` | Every RPC declares the method option with at least one scope and one error reason |
-| `HOUSE_SCOPE_NAME_FORMAT` | Scopes match `<app>.<resource>.<read\|write>` |
-| `HOUSE_ERROR_REASON_FORMAT` | Reasons are UPPER_SNAKE_CASE. Codes are neither `OK` nor `UNKNOWN`. |
-| `HOUSE_CACHE_REQUIRES_NO_SIDE_EFFECTS` | A cache policy appears only on `NO_SIDE_EFFECTS` methods, with a visibility and a positive max age |
-| `HOUSE_DEPRECATION_CONSISTENT` | `deprecated = true` and a deprecation schedule appear together, sunset follows deprecation, and the successor exists |
-| `HOUSE_READ_METHOD_NO_SIDE_EFFECTS` | Unary `Get*` and `List*` RPCs set `idempotency_level = NO_SIDE_EFFECTS` |
-| `HOUSE_HTTP_RESPONSE_BODY` | HTTP rules of `Get*`, `Create*` and `Update*` RPCs set `response_body` |
-| `HOUSE_HTTP_PATH_VERSION` | Every HTTP path, additional bindings included, contains the package version, such as `/v1/`, after a root that is the same for the whole service. The root itself, such as `/commerce/pim`, is the owner's choice. |
-| `HOUSE_NO_JSON_NAME` | No field overrides the protojson default name |
-| `HOUSE_MONEY_FIELD_TYPE` | Fields named `price`, `amount`, `*_price` or `*_amount` use `google.type.Money` |
-| `HOUSE_TOOL_REQUIRED` | Every unary RPC declares a tool title and description for MCP and the REST docs |
-| `HOUSE_TOOL_ANNOTATIONS` | Every unary RPC declares the MCP `ToolAnnotations` hints (spec 2026-07-28), consistent with its `idempotency_level` |
-| `HOUSE_MESSAGE_DESCRIPTION_REQUIRED` | Every message declares a consumer-facing description |
+| `ZALANDO_SERVICE_RULES_REQUIRED` | Every service declares the service option with an audience and an owner team |
+| `DEDO_METHOD_RULES_REQUIRED` | Every RPC declares the method option with at least one scope and one error reason |
+| `ZALANDO_SCOPE_NAME_FORMAT` | Scopes match `<app>.<resource>.<read\|write>` |
+| `DEDO_ERROR_REASON_FORMAT` | Reasons are UPPER_SNAKE_CASE. Codes are neither `OK` nor `UNKNOWN`. |
+| `ZALANDO_CACHE_REQUIRES_NO_SIDE_EFFECTS` | A cache policy appears only on `NO_SIDE_EFFECTS` methods, with a visibility and a positive max age |
+| `ZALANDO_DEPRECATION_CONSISTENT` | `deprecated = true` and a deprecation schedule appear together, sunset follows deprecation, and the successor exists |
+| `DEDO_READ_METHOD_NO_SIDE_EFFECTS` | Unary `Get*` and `List*` RPCs set `idempotency_level = NO_SIDE_EFFECTS` |
+| `DEDO_HTTP_RESPONSE_BODY` | HTTP rules of `Get*`, `Create*` and `Update*` RPCs set `response_body` |
+| `DEDO_HTTP_PATH_VERSION` | Every HTTP path, additional bindings included, contains the package version, such as `/v1/`, after a root that is the same for the whole service. The root itself, such as `/commerce/pim`, is the owner's choice. |
+| `DEDO_NO_JSON_NAME` | No field overrides the protojson default name |
+| `ZALANDO_MONEY_FIELD_TYPE` | Fields named `price`, `amount`, `*_price` or `*_amount` use `google.type.Money` |
+| `DEDO_TOOL_REQUIRED` | Every unary RPC declares a tool title and description for MCP and the REST docs |
+| `DEDO_TOOL_ANNOTATIONS` | Every unary RPC declares the MCP `ToolAnnotations` hints (spec 2026-07-28), consistent with its `idempotency_level` |
+| `DEDO_MESSAGE_DESCRIPTION_REQUIRED` | Every message declares a consumer-facing description |
 
-[HOUSE_RULES.md](HOUSE_RULES.md) explains each rule with examples. Every finding ends with a link to its section, pinned to the plugin's release tag.
+[RULES.md](RULES.md) explains each rule with examples. Every finding ends with a link to its section, pinned to the plugin's release tag.
 
-Suppress one finding with `// buf:lint:ignore HOUSE_MONEY_FIELD_TYPE` above the element, followed by the reason.
+Suppress one finding with `// buf:lint:ignore ZALANDO_MONEY_FIELD_TYPE` above the element, followed by the reason.
 
 ## Using it in a service repository
 
@@ -132,7 +134,7 @@ Known gaps: error responses carry no deprecation headers, and streaming calls ge
 Two Go services, each laid out like a service repository built from `templates/`, with its own `buf.yaml`, `buf.gen.yaml`, `go.mod` and proto files. Both serve the same `TodoService` over Connect, gRPC and REST (through Vanguard), with the same server code and the full runtime: policy table, scope interceptor, flow IDs and error audit.
 
 - `examples/todo` follows the standard. `buf lint` is clean. Its tests check scopes, CRUD, pagination, cache and deprecation headers, REST unwrapping and the error audit end to end. It also serves the REST reference at `/docs` (Stoplight Elements, rendering the generated `/openapi.json`) and an MCP server at `/mcp`. Its tests check that MCP tools carry the declared text and `ToolAnnotations` and enforce the same scopes, and that a change made through MCP reaches an open `WatchTodos` stream at once.
-- `examples/bad-todo` breaks all fourteen house rules, plus one Buf and one AIP rule. Open `proto/raveesh_me/todo/v1/todo.proto` in VS Code to see the findings. `expected-lint.txt` lists them, and `app/app_test.go` shows what each mistake does at runtime: a misnamed scope locks out writers, an unversioned path moves the endpoint, undeclared reasons show up in logs, and a custom `json_name` renames the field for every JSON client.
+- `examples/bad-todo` breaks all fourteen ZALANDO and DEDO rules, plus one Buf rule, one AIP rule and the example HOUSE rule. Open `proto/raveesh_me/todo/v1/todo.proto` in VS Code to see the findings. `expected-lint.txt` lists them, and `app/app_test.go` shows what each mistake does at runtime: a misnamed scope locks out writers, an unversioned path moves the endpoint, undeclared reasons show up in logs, and a custom `json_name` renames the field for every JSON client.
 
 `examples/todo` also runs as a deployment, with everything built in containers (podman, kind and kubectl are the only host tools):
 
@@ -189,12 +191,12 @@ To release, tag the merge commit on `main` with `lint/vX.Y.Z`, `openapi/vX.Y.Z` 
 The `v*` tag runs `.github/workflows/ci.yaml`, which publishes one version everywhere:
 
 - `buf push` of the options module with the tag and `main` as labels; `main` is the default label that unpinned dependencies resolve to
-- `buf plugin push` of `buf.build/r-a/dedo-lint` and `buf.build/r-a/buf-plugin-aip`
-- a GitHub release carrying both lint plugins and both generators (`protoc-gen-dedo-mcp`, `protoc-gen-dedo-openapi`) as native binaries for macOS and Linux (arm64 and amd64), and the lint plugins as `.wasm` files. `make tools` downloads the lint plugins.
+- `buf plugin push` of `buf.build/r-a/dedo-lint`
+- a GitHub release carrying the lint plugin and both generators (`protoc-gen-dedo-mcp`, `protoc-gen-dedo-openapi`) as native binaries for macOS and Linux (arm64 and amd64), and the lint plugin as a `.wasm` file. `make tools` downloads the lint plugin.
 
 The Go module version is the same tag. The job reads a `BUF_KEY` repository secret: a Buf token for the `r-a` organization with module and plugin create and push scopes.
 
-`buf-plugin-aip` is a young third-party project ([hestiatechnology/buf-plugin-aip](https://github.com/hestiatechnology/buf-plugin-aip), Apache-2.0). It is pinned to commit `5158ec0f16f3` and republished from that commit.
+The `AIP_*` rules run Google's [api-linter](https://github.com/googleapis/api-linter) inside buf-plugin-dedo, an approach adapted from [hestiatechnology/buf-plugin-aip](https://github.com/hestiatechnology/buf-plugin-aip) (both Apache-2.0; see `NOTICE`). Dependabot keeps api-linter current.
 
 ## Why "dedo"?
 

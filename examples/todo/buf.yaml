@@ -13,6 +13,8 @@ lint:
     - STANDARD
     - COMMENTS
     - AIP_NOLANG
+    - DEDO
+    - ZALANDO
     - HOUSE
   except:
     # Every response is a unique <Rpc>Response; REST unwraps it with response_body.
@@ -41,5 +43,8 @@ breaking:
     - FILE
   ignore_unstable_packages: true
 plugins:
-  - plugin: ../../dist/buf-plugin-aip
   - plugin: ../../dist/buf-plugin-dedo
+  # The organisation's own HOUSE_* rules: see examples/house-lint.
+  - plugin: ../../dist/buf-plugin-house
+    options:
+      resource_domain: raveesh.me

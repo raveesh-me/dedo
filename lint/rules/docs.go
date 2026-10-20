@@ -15,27 +15,27 @@ var DocsRef = "main"
 
 const docsBase = "https://github.com/raveesh-me/dedo/blob/"
 
-// The house rule IDs. Each has a heading of the same name in HOUSE_RULES.md.
+// The ZALANDO_* and DEDO_* rule IDs. Each has a heading of the same name in RULES.md.
 const (
-	idServiceRulesRequired       = "HOUSE_SERVICE_RULES_REQUIRED"
-	idMethodRulesRequired        = "HOUSE_METHOD_RULES_REQUIRED"
-	idScopeNameFormat            = "HOUSE_SCOPE_NAME_FORMAT"
-	idErrorReasonFormat          = "HOUSE_ERROR_REASON_FORMAT"
-	idCacheRequiresNoSideEffects = "HOUSE_CACHE_REQUIRES_NO_SIDE_EFFECTS"
-	idDeprecationConsistent      = "HOUSE_DEPRECATION_CONSISTENT"
-	idReadMethodNoSideEffects    = "HOUSE_READ_METHOD_NO_SIDE_EFFECTS"
-	idHTTPResponseBody           = "HOUSE_HTTP_RESPONSE_BODY"
-	idHTTPPathVersion            = "HOUSE_HTTP_PATH_VERSION"
-	idNoJSONName                 = "HOUSE_NO_JSON_NAME"
-	idMoneyFieldType             = "HOUSE_MONEY_FIELD_TYPE"
-	idToolRequired               = "HOUSE_TOOL_REQUIRED"
-	idToolAnnotations            = "HOUSE_TOOL_ANNOTATIONS"
-	idMessageDescriptionRequired = "HOUSE_MESSAGE_DESCRIPTION_REQUIRED"
+	idServiceRulesRequired       = "ZALANDO_SERVICE_RULES_REQUIRED"
+	idMethodRulesRequired        = "DEDO_METHOD_RULES_REQUIRED"
+	idScopeNameFormat            = "ZALANDO_SCOPE_NAME_FORMAT"
+	idErrorReasonFormat          = "DEDO_ERROR_REASON_FORMAT"
+	idCacheRequiresNoSideEffects = "ZALANDO_CACHE_REQUIRES_NO_SIDE_EFFECTS"
+	idDeprecationConsistent      = "ZALANDO_DEPRECATION_CONSISTENT"
+	idReadMethodNoSideEffects    = "DEDO_READ_METHOD_NO_SIDE_EFFECTS"
+	idHTTPResponseBody           = "DEDO_HTTP_RESPONSE_BODY"
+	idHTTPPathVersion            = "DEDO_HTTP_PATH_VERSION"
+	idNoJSONName                 = "DEDO_NO_JSON_NAME"
+	idMoneyFieldType             = "ZALANDO_MONEY_FIELD_TYPE"
+	idToolRequired               = "DEDO_TOOL_REQUIRED"
+	idToolAnnotations            = "DEDO_TOOL_ANNOTATIONS"
+	idMessageDescriptionRequired = "DEDO_MESSAGE_DESCRIPTION_REQUIRED"
 )
 
-// DocsURL returns the link to a rule's section in HOUSE_RULES.md.
+// DocsURL returns the link to a rule's section in RULES.md.
 func DocsURL(ruleID string) string {
-	return docsBase + DocsRef + "/HOUSE_RULES.md#" + strings.ToLower(ruleID)
+	return docsBase + DocsRef + "/RULES.md#" + strings.ToLower(ruleID)
 }
 
 // messagef formats an annotation message and appends the rule's

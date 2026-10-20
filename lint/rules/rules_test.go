@@ -18,7 +18,11 @@ import (
 const wantMarker = "// want"
 
 func TestSpec(t *testing.T) {
-	checktest.SpecTest(t, rules.Spec)
+	spec, err := rules.NewSpec()
+	if err != nil {
+		t.Fatal(err)
+	}
+	checktest.SpecTest(t, spec)
 }
 
 // TestRules runs every rule against testdata/<rule>/pass and
@@ -26,7 +30,8 @@ func TestSpec(t *testing.T) {
 // fixtures must produce one annotation on each line marked "// want".
 func TestRules(t *testing.T) {
 	for _, rule := range rules.All {
-		dir := filepath.Join("testdata", strings.ToLower(strings.TrimPrefix(rule.ID, rules.Category+"_")))
+		_, name, _ := strings.Cut(rule.ID, "_")
+		dir := filepath.Join("testdata", strings.ToLower(name))
 		t.Run(rule.ID, func(t *testing.T) {
 			t.Run("pass", func(t *testing.T) {
 				got := annotationLines(t, rule.ID, filepath.Join(dir, "pass"))
@@ -64,7 +69,11 @@ func annotationLines(t *testing.T, ruleID, dir string) []string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	client, err := check.NewClientForSpec(rules.Spec)
+	spec, err := rules.NewSpec()
+	if err != nil {
+		t.Fatal(err)
+	}
+	client, err := check.NewClientForSpec(spec)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -125,29 +134,29 @@ func location(file string, line int) string {
 	return fmt.Sprintf("%s:%04d", file, line)
 }
 
-// TestRulesDocumented keeps HOUSE_RULES.md in step with the rules: every
+// TestRulesDocumented keeps RULES.md in step with the rules: every
 // rule's docs link must land on a heading, and every heading on a rule.
 func TestRulesDocumented(t *testing.T) {
-	doc, err := os.ReadFile("../../HOUSE_RULES.md")
+	doc, err := os.ReadFile("../../RULES.md")
 	if err != nil {
 		t.Fatal(err)
 	}
 	headings := map[string]bool{}
 	for _, line := range strings.Split(string(doc), "\n") {
-		if id, ok := strings.CutPrefix(line, "## "); ok {
+		if id, ok := strings.CutPrefix(line, "### "); ok {
 			headings[id] = true
 		}
 	}
 	for _, rule := range rules.All {
 		if !headings[rule.ID] {
-			t.Errorf("HOUSE_RULES.md has no \"## %s\" heading", rule.ID)
+			t.Errorf("RULES.md has no \"### %s\" heading", rule.ID)
 		}
-		if want := "/HOUSE_RULES.md#" + strings.ToLower(rule.ID); !strings.HasSuffix(rules.DocsURL(rule.ID), want) {
+		if want := "/RULES.md#" + strings.ToLower(rule.ID); !strings.HasSuffix(rules.DocsURL(rule.ID), want) {
 			t.Errorf("DocsURL(%s) = %s", rule.ID, rules.DocsURL(rule.ID))
 		}
 		delete(headings, rule.ID)
 	}
 	for id := range headings {
-		t.Errorf("HOUSE_RULES.md documents %q, which is not a rule", id)
+		t.Errorf("RULES.md documents %q, which is not a rule", id)
 	}
 }

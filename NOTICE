@@ -1,0 +1,11 @@
+dedo
+Copyright 2026 Raveesh Agarwal
+
+This product includes software developed at:
+
+- hestiatechnology/buf-plugin-aip (https://github.com/hestiatechnology/buf-plugin-aip),
+  licensed under the Apache License 2.0. lint/aip follows its approach to
+  running Google's API linter as Buf lint rules, and keeps its rule IDs and
+  categories.
+- googleapis/api-linter (https://github.com/googleapis/api-linter), licensed
+  under the Apache License 2.0, used as a library for the AIP rules.
