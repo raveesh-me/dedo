@@ -1,20 +1,19 @@
 # Include from a service Makefile: `include Makefile.api`.
 # Deps are pinned in buf.lock; commit it. Add .tools/ to .gitignore.
-DEDO_VERSION ?= v0.10.0
-DEDO_RELEASE := https://github.com/raveesh-me/dedo/releases/download/$(DEDO_VERSION)
-TOOLS_PLATFORM          := $(shell go env GOOS)_$(shell go env GOARCH)
-TOOLS_STAMP             := .tools/$(DEDO_VERSION)
+#
+# The lint plugin is pinned in go.mod as a Go tool, like the generators
+# (go get -tool github.com/raveesh-me/dedo/lint/cmd/buf-plugin-dedo-lint@vX.Y.Z),
+# and built into .tools/, where buf.yaml finds it. `dedo tools` does the same
+# without make.
+LINT_PLUGIN := github.com/raveesh-me/dedo/lint/cmd/buf-plugin-dedo-lint
 
 .PHONY: tools api-update api-check api-generate
 
-## tools: download the native lint plugin for this machine, once per version
-tools: $(TOOLS_STAMP)
+## tools: build the lint plugin pinned in go.mod into .tools/, again whenever go.mod changes
+tools: .tools/buf-plugin-dedo-lint
 
-$(TOOLS_STAMP):
-	rm -rf .tools && mkdir -p .tools
-	curl -fsSL -o .tools/buf-plugin-dedo-lint $(DEDO_RELEASE)/buf-plugin-dedo-lint_$(TOOLS_PLATFORM)
-	chmod +x .tools/buf-plugin-dedo-lint
-	touch $@
+.tools/buf-plugin-dedo-lint: go.mod go.sum
+	go build -o $@ $(LINT_PLUGIN)
 
 ## api-update: move deps to their latest versions
 api-update:

@@ -39,14 +39,15 @@ import "dedo/v1/options.proto";
 
 ## 2. Linting: buf-plugin-dedo-lint
 
-Download the plugin for your machine with the targets in `Makefile.api`:
+Pin the plugin in `go.mod` like the generators, and build it into `.tools/`:
 
 ```sh
-dedo templates Makefile.api > Makefile.api
-printf 'include Makefile.api\n' >> Makefile
+go get -tool github.com/raveesh-me/dedo/lint/cmd/buf-plugin-dedo-lint@v0.10.0
+dedo tools          # builds .tools/buf-plugin-dedo-lint from the pin
 printf '.tools/\n' >> .gitignore
-make tools          # downloads .tools/buf-plugin-dedo-lint for DEDO_VERSION
 ```
+
+Without the `dedo` command, `go build -o .tools/buf-plugin-dedo-lint github.com/raveesh-me/dedo/lint/cmd/buf-plugin-dedo-lint` does the same. It runs natively because Buf starts the plugin about a dozen times per lint; through `go tool` each lint would take 2 s instead of 0.3 s. Run `dedo tools` again after a fresh clone or a version change.
 
 List the plugin and its categories in `buf.yaml`, with the AIP rules dedo skips on purpose (the full list is in [templates/buf.yaml](../templates/buf.yaml); [RULES.md](RULES.md#skipped-rules) says why):
 
@@ -66,12 +67,13 @@ plugins:
 ```
 
 ```sh
+dedo templates Makefile.api > Makefile.api && printf 'include Makefile.api\n' >> Makefile
 make api-check      # buf format, buf lint, buf breaking against main
 ```
 
 The breaking check compares with the `main` branch, and is skipped while `main` has no `.proto` files. Compare with another branch with `make api-check API_BASE=develop`.
 
-On Windows, use the Wasm plugin from the BSR instead: `- plugin: buf.build/r-a/dedo-lint`.
+Without Go on a machine, list the Wasm plugin from the BSR instead: `- plugin: buf.build/r-a/dedo-lint` (about 5 s per lint).
 
 ## 3. Code generators
 
@@ -203,5 +205,5 @@ Append [claude.md](claude.md) to your `AGENTS.md` or `CLAUDE.md` (`dedo template
 
 ## Updating
 
-- **dedo itself:** `go install github.com/raveesh-me/dedo/cmd/dedo@<new version>`, then `dedo init` again. It moves `DEDO_VERSION`, re-pins the generators and runtime, replaces plugin entries earlier releases used, and deletes `*.mcp_schema.pb.go` files from before v0.9.0 (`buf generate` now writes `*.mcp.pb.go`). Then run `make api-generate`.
+- **dedo itself:** `go install github.com/raveesh-me/dedo/cmd/dedo@<new version>`, then `dedo init` again. It re-pins the lint plugin, the generators and the runtime, rebuilds the plugin, replaces plugin entries earlier releases used, and deletes `*.mcp_schema.pb.go` files from before v0.9.0 (`buf generate` now writes `*.mcp.pb.go`). Then run `make api-generate`.
 - **The options module:** `buf dep update`.

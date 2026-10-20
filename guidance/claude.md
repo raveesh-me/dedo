@@ -6,7 +6,7 @@ Append this file to your repository's `AGENTS.md` or `CLAUDE.md`; `dedo init` do
 
 - One `.proto` defines the API. dedo serves it as Connect/gRPC, REST (`google.api.http`, through Vanguard), an OpenAPI 3.1 reference and MCP tools. Change the proto, never the generated output.
 - Never edit anything under `gen/` or `docs/openapi.json`. Run `make api-generate` and commit the result; CI fails on stale output.
-- Set up and upgrade dedo with `dedo init` (after `go install github.com/raveesh-me/dedo/cmd/dedo@<version>`), not by hand-editing pins: it moves `DEDO_VERSION`, the generators and the runtime together.
+- Set up and upgrade dedo with `dedo init` (after `go install github.com/raveesh-me/dedo/cmd/dedo@<version>`), not by hand-editing pins: it moves the lint plugin, the generators and the runtime together in `go.mod`. After a fresh clone, run `dedo tools` to build the lint plugin into `.tools/`.
 - Before you finish a change to `proto/`, run `make api-check` (format, lint, breaking). Fix findings in the proto. Suppress one only with `// buf:lint:ignore <RULE_ID>` and a written reason.
 - Scopes, cache policy, deprecation and error reasons are declared in the proto (`dedo.v1` options) and enforced by the runtime. Do not write scope checks, cache headers or deprecation headers in handlers.
 - Return errors with a declared reason in a `google.rpc.ErrorInfo` detail. Undeclared reasons are logged as audit findings.

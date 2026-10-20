@@ -20,7 +20,6 @@ check() {
     status=1
   fi
 }
-check templates/Makefile.api 'DEDO_VERSION \?= v[0-9.]+'
 check guidance/install.md 'raveesh-me/dedo[a-z/-]*@v[0-9.]+'
 check guidance/tutorial.md 'raveesh-me/dedo[a-z/-]*@v[0-9.]+'
 check cmd/dedo/main.go 'const version = "v[0-9.]+"'

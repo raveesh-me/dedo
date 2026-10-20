@@ -40,11 +40,11 @@ breaking:
     - FILE
   ignore_unstable_packages: true
 plugins:
-  # The native plugin binary for this machine, fetched by `make tools`. It is
-  # referred to by path, so editors started outside a shell find it too. It
-  # lints about 17 times faster than the WebAssembly version on the BSR
-  # (buf.build/r-a/dedo-lint), which needs no download and also works on
-  # Windows.
+  # Pinned in go.mod and built into .tools/ by `dedo tools` (or make tools).
+  # It is referred to by path, so editors started outside a shell find it
+  # too, and runs natively: buf starts it about a dozen times per lint. A
+  # machine without Go can list the BSR plugin instead
+  # (buf.build/r-a/dedo-lint), at about 5 s per lint.
   - plugin: .tools/buf-plugin-dedo-lint
   # Your organisation's own HOUSE_* rules, if it has any (add HOUSE to
   # lint.use too). See guidance/RULES.md#house-rules in the dedo repository.

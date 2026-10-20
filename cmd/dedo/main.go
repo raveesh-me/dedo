@@ -30,6 +30,7 @@ func main() {
 
 const usage = `usage:
   dedo init [-dir DIR] [-offline]   set up the repository in DIR (default .)
+  dedo tools [-dir DIR]             build the lint plugin pinned in go.mod into .tools/
   dedo templates [NAME]             list the bundled templates, or print one
   dedo version                      print the dedo release this command installs
 `
@@ -49,6 +50,14 @@ func run(args []string, out io.Writer) error {
 			return err
 		}
 		return initRepo(*dir, *release, *offline, out)
+	case "tools":
+		flags := flag.NewFlagSet("tools", flag.ContinueOnError)
+		flags.SetOutput(out)
+		dir := flags.String("dir", ".", "the repository")
+		if err := flags.Parse(args[1:]); err != nil {
+			return err
+		}
+		return tools(*dir, out)
 	case "templates":
 		return templates(args[1:], out)
 	case "version":

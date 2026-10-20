@@ -95,7 +95,7 @@ lint:
     - HOUSE
 ```
 
-To share the rules across repositories, keep the plugin in one repository of its own, released the way dedo is: native binaries on a GitHub release, and a Wasm check plugin on the BSR for Windows. Each service pins its version, the same way it pins `DEDO_VERSION`. [`examples/house-lint`](../examples/house-lint) is a working starting point with one rule; `examples/todo` follows it and `examples/bad-todo` breaks it.
+To share the rules across repositories, keep the plugin in one repository of its own, as a Go module: each service pins it in `go.mod` with `go get -tool` and builds it into `.tools/`, the way it does dedo's plugin. [`examples/house-lint`](../examples/house-lint) is a working starting point with one rule; `examples/todo` follows it and `examples/bad-todo` breaks it.
 
 House rules rank below everything above: they may add constraints, but not contradict a DEDO, AIP or ZALANDO rule.
 
