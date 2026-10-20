@@ -10,9 +10,9 @@
 | MCP tools for AI agents | `protoc-gen-dedo-mcp` writes each tool's input and output schema; `mcpserver` registers and serves the tools with the declared text, hints and error reasons |
 | Authorization, cache and deprecation headers, flow IDs, error audit | The policy runtime, read from options in the `.proto` |
 
-**First-class lint guidance.** A Buf check plugin turns the standard into findings in your editor as you type, each linked to an explanation in [RULES.md](RULES.md). The same `buf lint` gates CI. Handlers carry business logic only.
+**First-class lint guidance.** A Buf check plugin turns the standard into findings in your editor as you type, each linked to an explanation in [RULES.md](guidance/RULES.md). The same `buf lint` gates CI. Handlers carry business logic only.
 
-New here? [install.md](install.md) builds a new product from scratch, step by step. [guideline.md](guideline.md) explains the reasoning.
+New here? Everything is in [`guidance/`](guidance): [install.md](guidance/install.md) builds a new product from scratch, step by step, [guideline.md](guidance/guideline.md) explains the reasoning, [RULES.md](guidance/RULES.md) documents every lint rule, and [claude.md](guidance/claude.md) is guidance for coding agents to append to your `AGENTS.md` or `CLAUDE.md`.
 
 **Latest release: [v0.6.0](https://github.com/raveesh-me/dedo/releases/tag/v0.6.0).** The options module is [`buf.build/r-a/dedo`](https://buf.build/r-a/dedo). The lint plugin comes as native binaries on the GitHub release (`make tools`) and as a Wasm plugin on the BSR. The Go modules are `github.com/raveesh-me/dedo/...@v0.6.0`.
 
@@ -23,7 +23,7 @@ Contract rules come from Google's AIPs. Operational rules (audience, ownership, 
 | Component | Path | Job |
 | --- | --- | --- |
 | Options module | `proto/dedo/v1/options.proto` | Declares audience, owner, scopes, cache policy, deprecation, error reasons, sensitive fields, message descriptions, and how each RPC appears as an MCP tool (title, description and the MCP specification's `ToolAnnotations`). Published as `buf.build/r-a/dedo`. |
-| Lint plugin | `lint/` | `buf-plugin-dedo`: Google's AIP rules (`AIP_*`, through api-linter), five Zalando rules (`ZALANDO_*`) and nine dedo rules (`DEDO_*`), each in the category of its prefix. [RULES.md](RULES.md) documents every rule, the tiebreakers between sources and what dedo skips. Released as native binaries per platform (fast in editors) and as the Wasm check plugin `buf.build/r-a/dedo-lint`. |
+| Lint plugin | `lint/` | `buf-plugin-dedo`: Google's AIP rules (`AIP_*`, through api-linter), five Zalando rules (`ZALANDO_*`) and nine dedo rules (`DEDO_*`), each in the category of its prefix. [RULES.md](guidance/RULES.md) documents every rule, the tiebreakers between sources and what dedo skips. Released as native binaries per platform (fast in editors) and as the Wasm check plugin `buf.build/r-a/dedo-lint`. |
 | Policy table | `policy/` | Reads the options from descriptors at startup. Fails on a missing declaration. |
 | Flow ID | `flowid/` | Reads or creates `X-Flow-ID` and propagates it on outbound calls. |
 | Policy interceptor | `interceptor/` | Checks scopes, sets `Cache-Control`, `Deprecation` and `Sunset`, and logs undeclared error reasons. |
@@ -92,7 +92,7 @@ See `examples/library/proto` for a complete module.
 
 ## Lint rules
 
-`buf-plugin-dedo` runs three classes of rules: `AIP_*` (Google's AIPs, through api-linter), `ZALANDO_*` (the Zalando guidelines dedo adopts) and `DEDO_*` (dedo's own). When they disagree, DEDO wins over AIP, and AIP over ZALANDO. `HOUSE_*` is left for your organisation's own plugin; [`examples/house-lint`](examples/house-lint) shows one. [RULES.md](RULES.md) has the tiebreakers and every rule dedo skips, by source.
+`buf-plugin-dedo` runs three classes of rules: `AIP_*` (Google's AIPs, through api-linter), `ZALANDO_*` (the Zalando guidelines dedo adopts) and `DEDO_*` (dedo's own). When they disagree, DEDO wins over AIP, and AIP over ZALANDO. `HOUSE_*` is left for your organisation's own plugin; [`examples/house-lint`](examples/house-lint) shows one. [RULES.md](guidance/RULES.md) has the tiebreakers and every rule dedo skips, by source.
 
 | Rule ID | Checks |
 | --- | --- |
@@ -111,13 +111,13 @@ See `examples/library/proto` for a complete module.
 | `DEDO_TOOL_ANNOTATIONS` | Every unary RPC declares the MCP `ToolAnnotations` hints (spec 2026-07-28), consistent with its `idempotency_level` |
 | `DEDO_MESSAGE_DESCRIPTION_REQUIRED` | Every message declares a consumer-facing description |
 
-[RULES.md](RULES.md) explains each rule with examples. Every finding ends with a link to its section, pinned to the plugin's release tag.
+[RULES.md](guidance/RULES.md) explains each rule with examples. Every finding ends with a link to its section, pinned to the plugin's release tag.
 
 Suppress one finding with `// buf:lint:ignore ZALANDO_MONEY_FIELD_TYPE` above the element, followed by the reason.
 
 ## Using it in a service repository
 
-[install.md](install.md) walks through it end to end with a working example. In short:
+[install.md](guidance/install.md) walks through it end to end with a working example. In short:
 
 1. Copy the files in `templates/` (`buf.yaml`, `buf.gen.yaml`, `Makefile.api`, `CODEOWNERS`, VS Code settings, the Jenkins stage) and replace the `YOUR_*` placeholders.
 2. Pin the code generators in `go.mod` with `go get -tool`, run `make tools` for the native lint plugins, and run `buf dep update`.
@@ -184,7 +184,7 @@ Lint rule tests live in `lint/rules/testdata/<rule>/{pass,fail}`. A pass fixture
 
 A pull request that breaks the options module fails CI's `buf breaking` check. When the break is deliberate, label the PR `allow-breaking`, re-run the check, and release a new minor version.
 
-Before tagging, set the new version in `templates/Makefile.api` (`DEDO_VERSION`), the `@vX.Y.Z` pins in `install.md` and `guideline.md`, and the readme's "Latest release" line. The release job runs `scripts/check-release-versions.sh` first and stops if any of them names another version.
+Before tagging, set the new version in `templates/Makefile.api` (`DEDO_VERSION`), the `@vX.Y.Z` pins in `guidance/install.md` and `guidance/guideline.md`, and the readme's "Latest release" line. The release job runs `scripts/check-release-versions.sh` first and stops if any of them names another version.
 
 To release, tag the merge commit on `main` with `lint/vX.Y.Z`, `openapi/vX.Y.Z` and `mcp/vX.Y.Z` (so `go get` works for the nested modules) and push those first. Then push `vX.Y.Z` **on its own**: GitHub starts no workflow when more than three tags arrive in one push.
 
@@ -202,7 +202,7 @@ The `AIP_*` rules run Google's [api-linter](https://github.com/googleapis/api-li
 
 Two weekly jobs keep dedo current with the sources it follows:
 
-- **AIPs.** Dependabot (`.github/dependabot.yml`) opens a pull request for each new release of api-linter, which carries the `AIP_*` rules. If a new or changed rule fires on `examples/bad-todo`, CI fails on `expected-lint.txt`; decide whether to follow the rule or skip it, and record the decision in [RULES.md](RULES.md#skipped-rules). The MCP go-sdk gets its own pull request the same way.
+- **AIPs.** Dependabot (`.github/dependabot.yml`) opens a pull request for each new release of api-linter, which carries the `AIP_*` rules. If a new or changed rule fires on `examples/bad-todo`, CI fails on `expected-lint.txt`; decide whether to follow the rule or skip it, and record the decision in [RULES.md](guidance/RULES.md#skipped-rules). The MCP go-sdk gets its own pull request the same way.
 - **MCP specification.** `.github/workflows/mcp-spec.yaml` runs `scripts/check-mcp-spec.sh` every Monday. It compares the newest dated specification and the draft with the `Tool` definition vendored in `mcp/mcpserver/testdata`, and checks the tools `mcpserver` serves against each. When a newer version is out, the definition changed, or the tools no longer match, it opens (or updates) one issue labelled `mcp-spec` with the report. Run it locally with `scripts/check-mcp-spec.sh report.md`.
 
 ## Why "dedo"?

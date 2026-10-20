@@ -1,5 +1,5 @@
 # Copy into a service repository. Replace the YOUR_* placeholders.
-# Pin the generators in go.mod (see install.md):
+# Pin the generators in go.mod (see guidance/install.md in the dedo repository):
 #   go get -tool google.golang.org/protobuf/cmd/protoc-gen-go
 #   go get -tool connectrpc.com/connect/cmd/protoc-gen-connect-go
 #   go get -tool github.com/raveesh-me/dedo/mcp/cmd/protoc-gen-dedo-mcp

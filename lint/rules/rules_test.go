@@ -137,7 +137,7 @@ func location(file string, line int) string {
 // TestRulesDocumented keeps RULES.md in step with the rules: every
 // rule's docs link must land on a heading, and every heading on a rule.
 func TestRulesDocumented(t *testing.T) {
-	doc, err := os.ReadFile("../../RULES.md")
+	doc, err := os.ReadFile("../../guidance/RULES.md")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -151,7 +151,7 @@ func TestRulesDocumented(t *testing.T) {
 		if !headings[rule.ID] {
 			t.Errorf("RULES.md has no \"### %s\" heading", rule.ID)
 		}
-		if want := "/RULES.md#" + strings.ToLower(rule.ID); !strings.HasSuffix(rules.DocsURL(rule.ID), want) {
+		if want := "/guidance/RULES.md#" + strings.ToLower(rule.ID); !strings.HasSuffix(rules.DocsURL(rule.ID), want) {
 			t.Errorf("DocsURL(%s) = %s", rule.ID, rules.DocsURL(rule.ID))
 		}
 		delete(headings, rule.ID)

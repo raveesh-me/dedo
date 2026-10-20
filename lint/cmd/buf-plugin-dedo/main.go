@@ -1,6 +1,6 @@
 // Command buf-plugin-dedo is dedo's Buf check plugin. It runs Google's AIP
 // linter (AIP_*), the Zalando guidelines dedo adopts (ZALANDO_*) and dedo's
-// own rules (DEDO_*) in one pass. See RULES.md.
+// own rules (DEDO_*) in one pass. See guidance/RULES.md.
 package main
 
 import (
