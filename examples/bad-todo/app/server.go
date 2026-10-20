@@ -4,7 +4,7 @@ import (
 	"context"
 	"strconv"
 
-	"connectrpc.com/connect"
+	"connectrpc.com/connect/v2"
 
 	todov1 "github.com/raveesh-me/dedo/examples/bad-todo/gen/go/raveesh_me/todo/v1"
 	"github.com/raveesh-me/dedo/examples/bad-todo/gen/go/raveesh_me/todo/v1/todov1connect"
@@ -24,26 +24,26 @@ var _ todov1connect.TodoServiceHandler = (*Server)(nil)
 func NewServer() *Server { return &Server{store: newStore()} }
 
 // GetTodo returns one to-do.
-func (s *Server) GetTodo(_ context.Context, req *connect.Request[todov1.GetTodoRequest]) (*connect.Response[todov1.GetTodoResponse], error) {
-	todo, ok := s.store.get(req.Msg.GetName())
+func (s *Server) GetTodo(_ context.Context, req *todov1.GetTodoRequest) (*todov1.GetTodoResponse, error) {
+	todo, ok := s.store.get(req.GetName())
 	if !ok {
-		return nil, notFound(req.Msg.GetName())
+		return nil, notFound(req.GetName())
 	}
-	return connect.NewResponse(&todov1.GetTodoResponse{Todo: todo}), nil
+	return &todov1.GetTodoResponse{Todo: todo}, nil
 }
 
 // ListTodos returns a page of to-dos. The page token is the offset of the
 // next to-do.
-func (s *Server) ListTodos(_ context.Context, req *connect.Request[todov1.ListTodosRequest]) (*connect.Response[todov1.ListTodosResponse], error) {
+func (s *Server) ListTodos(_ context.Context, req *todov1.ListTodosRequest) (*todov1.ListTodosResponse, error) {
 	offset := 0
-	if token := req.Msg.GetPageToken(); token != "" {
+	if token := req.GetPageToken(); token != "" {
 		n, err := strconv.Atoi(token)
 		if err != nil || n < 0 {
 			return nil, apiError(connect.CodeInvalidArgument, reasonInvalidPageToken, "malformed page token")
 		}
 		offset = n
 	}
-	size := int(req.Msg.GetPageSize())
+	size := int(req.GetPageSize())
 	if size <= 0 || size > maxPageSize {
 		size = maxPageSize
 	}
@@ -52,26 +52,26 @@ func (s *Server) ListTodos(_ context.Context, req *connect.Request[todov1.ListTo
 	if more {
 		res.NextPageToken = strconv.Itoa(offset + len(todos))
 	}
-	return connect.NewResponse(res), nil
+	return res, nil
 }
 
 // CreateTodo adds a to-do.
-func (s *Server) CreateTodo(_ context.Context, req *connect.Request[todov1.CreateTodoRequest]) (*connect.Response[todov1.CreateTodoResponse], error) {
-	if req.Msg.GetTodo().GetTitle() == "" {
+func (s *Server) CreateTodo(_ context.Context, req *todov1.CreateTodoRequest) (*todov1.CreateTodoResponse, error) {
+	if req.GetTodo().GetTitle() == "" {
 		return nil, apiError(connect.CodeInvalidArgument, reasonTitleRequired, "title is required")
 	}
-	todo, ok := s.store.create(req.Msg.GetTodoId(), req.Msg.GetTodo())
+	todo, ok := s.store.create(req.GetTodoId(), req.GetTodo())
 	if !ok {
 		return nil, apiError(connect.CodeAlreadyExists, reasonAlreadyExists, "to-do ID is taken")
 	}
-	return connect.NewResponse(&todov1.CreateTodoResponse{Todo: todo}), nil
+	return &todov1.CreateTodoResponse{Todo: todo}, nil
 }
 
 // UpdateTodo changes the fields named in the update mask, or every mutable
 // field when the mask is empty.
-func (s *Server) UpdateTodo(_ context.Context, req *connect.Request[todov1.UpdateTodoRequest]) (*connect.Response[todov1.UpdateTodoResponse], error) {
-	patch := req.Msg.GetTodo()
-	paths := req.Msg.GetUpdateMask().GetPaths()
+func (s *Server) UpdateTodo(_ context.Context, req *todov1.UpdateTodoRequest) (*todov1.UpdateTodoResponse, error) {
+	patch := req.GetTodo()
+	paths := req.GetUpdateMask().GetPaths()
 	if (len(paths) == 0 || contains(paths, "title")) && patch.GetTitle() == "" {
 		return nil, apiError(connect.CodeInvalidArgument, reasonTitleRequired, "title is required")
 	}
@@ -79,23 +79,23 @@ func (s *Server) UpdateTodo(_ context.Context, req *connect.Request[todov1.Updat
 	if !ok {
 		return nil, notFound(patch.GetName())
 	}
-	return connect.NewResponse(&todov1.UpdateTodoResponse{Todo: todo}), nil
+	return &todov1.UpdateTodoResponse{Todo: todo}, nil
 }
 
 // DeleteTodo removes a to-do.
-func (s *Server) DeleteTodo(_ context.Context, req *connect.Request[todov1.DeleteTodoRequest]) (*connect.Response[todov1.DeleteTodoResponse], error) {
-	if !s.store.delete(req.Msg.GetName()) {
-		return nil, notFound(req.Msg.GetName())
+func (s *Server) DeleteTodo(_ context.Context, req *todov1.DeleteTodoRequest) (*todov1.DeleteTodoResponse, error) {
+	if !s.store.delete(req.GetName()) {
+		return nil, notFound(req.GetName())
 	}
-	return connect.NewResponse(&todov1.DeleteTodoResponse{}), nil
+	return &todov1.DeleteTodoResponse{}, nil
 }
 
 // RemoveTodo is the deprecated form of DeleteTodo.
-func (s *Server) RemoveTodo(_ context.Context, req *connect.Request[todov1.RemoveTodoRequest]) (*connect.Response[todov1.RemoveTodoResponse], error) {
-	if !s.store.delete(req.Msg.GetName()) {
-		return nil, notFound(req.Msg.GetName())
+func (s *Server) RemoveTodo(_ context.Context, req *todov1.RemoveTodoRequest) (*todov1.RemoveTodoResponse, error) {
+	if !s.store.delete(req.GetName()) {
+		return nil, notFound(req.GetName())
 	}
-	return connect.NewResponse(&todov1.RemoveTodoResponse{}), nil
+	return &todov1.RemoveTodoResponse{}, nil
 }
 
 func contains(paths []string, path string) bool {

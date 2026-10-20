@@ -3,7 +3,7 @@
 Each numbered section below adds one part of dedo to a repository. `dedo init` does all of them, editing what is already there:
 
 ```sh
-go install github.com/raveesh-me/dedo/cmd/dedo@v0.10.0
+go install github.com/raveesh-me/dedo/cmd/dedo@v0.11.0
 dedo init
 ```
 
@@ -22,7 +22,7 @@ version: v2
 deps:
   - buf.build/googleapis/googleapis
   - buf.build/bufbuild/protovalidate
-  - buf.build/r-a/dedo:v0.10.0   # the same release as the lint plugin and runtime
+  - buf.build/r-a/dedo:v0.11.0   # the same release as the lint plugin and runtime
 ```
 
 ```sh
@@ -44,7 +44,7 @@ import "dedo/v1/options.proto";
 Pin the plugin in `go.mod` like the generators, and build it into `.tools/`:
 
 ```sh
-go get -tool github.com/raveesh-me/dedo/lint/cmd/buf-plugin-dedo-lint@v0.10.0
+go get -tool github.com/raveesh-me/dedo/lint/cmd/buf-plugin-dedo-lint@v0.11.0
 dedo tools          # builds .tools/buf-plugin-dedo-lint from the pin
 printf '.tools/\n' >> .gitignore
 ```
@@ -83,9 +83,9 @@ Pin the generators as Go tools:
 
 ```sh
 go get -tool google.golang.org/protobuf/cmd/protoc-gen-go
-go get -tool connectrpc.com/connect/cmd/protoc-gen-connect-go
-go get -tool github.com/raveesh-me/dedo/mcp/cmd/protoc-gen-dedo-mcp@v0.10.0
-go get -tool github.com/raveesh-me/dedo/openapi/cmd/protoc-gen-dedo-openapi@v0.10.0
+go get -tool connectrpc.com/connect/v2/cmd/protoc-gen-connect-go@v2.0.1
+go get -tool github.com/raveesh-me/dedo/mcp/cmd/protoc-gen-dedo-mcp@v0.11.0
+go get -tool github.com/raveesh-me/dedo/openapi/cmd/protoc-gen-dedo-openapi@v0.11.0
 ```
 
 Add them to `buf.gen.yaml` ([templates/buf.gen.yaml](../templates/buf.gen.yaml) is a complete one):
@@ -134,11 +134,11 @@ make api-generate   # buf generate
 
 ## 4. The server
 
-Add the runtime libraries. Pin Vanguard to `v0.4.0`: later versions need connect-go v2.
+Add the runtime libraries. dedo is built on connect-go v2, where one `connect.Server` holds the interceptors and every transport mounts on it:
 
 ```sh
-go get github.com/raveesh-me/dedo@v0.10.0 github.com/raveesh-me/dedo/mcp@v0.10.0
-go get connectrpc.com/vanguard@v0.4.0
+go get github.com/raveesh-me/dedo@v0.11.0 github.com/raveesh-me/dedo/mcp@v0.11.0
+go get connectrpc.com/connect/v2@v2.0.1 connectrpc.com/vanguard@v0.5.0 connectrpc.com/validate@v0.9.0
 ```
 
 Add the REST reference page; it serves the generated `openapi.json` at `/openapi.json` and a reference page at `/docs`:
@@ -160,41 +160,42 @@ func newHandler(log *slog.Logger) (http.Handler, error) {
 	}
 	guard, err := interceptor.New(interceptor.Config{
 		Table:         table,
-		Scopes:        scopesFromContext, // your auth middleware puts the caller's scopes in the context
+		Scopes:        scopesFromContext, // your auth interceptor puts the caller's scopes in the context
 		EnforceScopes: true,
 		Log:           log,
 	})
 	if err != nil {
 		return nil, err
 	}
-	path, rpc := time_counterv1connect.NewCounterServiceHandler(newServer(), connect.WithInterceptors(guard))
-	rest, err := vanguard.NewTranscoder([]*vanguard.Service{vanguard.NewService(path, rpc)})
-	if err != nil {
-		return nil, err
-	}
-	api := flowid.Middleware(authMiddleware(rest))
-
-	// MCP: every RPC is a tool, as protoc-gen-dedo-mcp generated it, called
-	// through the same API with the caller's token.
-	mcpServer := mcp.NewServer(&mcp.Implementation{Name: "time-counter", Version: "v1"}, nil)
-	target := mcpserver.Target{Client: mcpserver.InProcessClient(api)}
-	if err := mcpserver.AddTools(mcpServer, target, time_counterv1.CounterServiceMCPTools()...); err != nil {
-		return nil, err
-	}
+	// One server, one interceptor chain, for every transport below.
+	server := connect.NewServer(flowid.Interceptor(), auth, guard, validate.NewServerInterceptor())
+	time_counterv1connect.RegisterCounterServiceHandler(server, newServer())
 
 	mux := http.NewServeMux()
+	// Connect, gRPC and gRPC-Web, then REST from the google.api.http bindings.
+	connecthttp.Mount(mux, server)
+	if err := vanguard.Mount(mux, server); err != nil {
+		return nil, err
+	}
+
+	// MCP: every RPC is a tool, as protoc-gen-dedo-mcp generated it, called
+	// in-process on the same server with the caller's token.
+	tools := mcp.NewServer(&mcp.Implementation{Name: "time-counter", Version: "v1"}, nil)
+	if err := mcpserver.AddTools(tools, connect.NewClient(connectinprocess.New(server)), time_counterv1.CounterServiceMCPTools()...); err != nil {
+		return nil, err
+	}
+
 	mux.Handle("GET /openapi.json", docs.Spec())
 	mux.Handle("GET /docs", docs.Page())
 	// The MCP transport requires an Origin check.
 	mux.Handle("/mcp", flowid.Middleware(http.NewCrossOriginProtection().Handler(mcp.NewStreamableHTTPHandler(
-		func(*http.Request) *mcp.Server { return mcpServer },
+		func(*http.Request) *mcp.Server { return tools },
 		&mcp.StreamableHTTPOptions{Stateless: true, JSONResponse: true}))))
-	mux.Handle("/", api)
 	return mux, nil
 }
 ```
 
-The complete file, with `main`, imports and a development `authMiddleware`, is [templates/main.go.tmpl](../templates/main.go.tmpl) (`dedo init` fills it in). Add a policy-table test ([templates/policy_table_test.go.tmpl](../templates/policy_table_test.go.tmpl)) so a missing declaration fails `go test` before deploy.
+Auth is a server interceptor (`auth` in the template), not HTTP middleware, so it covers MCP calls, which reach the server in-process, as well as Connect, gRPC and REST. The complete file, with `main`, imports and a development `auth`, is [templates/main.go.tmpl](../templates/main.go.tmpl) (`dedo init` fills it in). Add a policy-table test ([templates/policy_table_test.go.tmpl](../templates/policy_table_test.go.tmpl)) so a missing declaration fails `go test` before deploy.
 
 ```sh
 go mod tidy
@@ -234,6 +235,7 @@ dedo upgrade    # moves this repository to it
 - the lint plugin, the generators and the runtime in `go.mod`, and the plugin rebuilt into `.tools/`;
 - the options module's label in `buf.yaml`, then `buf.lock` (`buf dep update`); in a schema repository, the BSR lint plugin's label too (`buf plugin update`);
 - `Makefile.api`, and plugin entries and generated files that earlier releases named differently;
-- the generated code (`buf generate`) and `go.mod` (`go mod tidy`).
+- the generated code (`buf generate`) and `go.mod` (`go mod tidy`);
+- from connect-go v1 (dedo before v0.11.0): connect-go's own `connect-go-v2-migrate`, before and after regenerating, rewrites handlers and clients. It lists what it cannot rewrite; the wiring in `main.go` (one `connect.Server`, `connecthttp.Mount`, `vanguard.Mount`, auth as an interceptor) is printed beside yours to copy.
 
 It keeps your `main.go` and `server.go`, and prints dedo's current `main.go` beside yours to compare. `dedo update -version vX.Y.Z` installs a given release instead of the latest.

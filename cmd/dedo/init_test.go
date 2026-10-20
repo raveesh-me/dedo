@@ -163,7 +163,7 @@ func TestInitFreshRepository(t *testing.T) {
 	}
 	for _, want := range []string{
 		`time_counterv1 "github.com/acme/time-counter/gen/go/acme/time_counter/v1"`,
-		`mcpserver.AddTools(mcpServer, target, time_counterv1.CounterServiceMCPTools()...)`,
+		`mcpserver.AddTools(tools, connect.NewClient(connectinprocess.New(server)), time_counterv1.CounterServiceMCPTools()...)`,
 		`"reader": {"time_counter.counter.read"}`,
 		`"writer": {"time_counter.counter.read", "time_counter.counter.write"}`,
 	} {
@@ -649,5 +649,16 @@ func TestInitNamesUndeclaredServices(t *testing.T) {
 	})
 	if out := initOffline(t, dir); !strings.Contains(out, "CartService declare nothing for dedo yet") {
 		t.Errorf("no hint about CartService:\n%s", out)
+	}
+}
+
+// A remote Connect plugin pinned to v1 is flagged: dedo needs v2 code.
+func TestInitWarnsOnConnectV1Remote(t *testing.T) {
+	dir := repo(t, map[string]string{
+		"go.mod":       "module example.com/shop\n",
+		"buf.gen.yaml": "version: v2\nplugins:\n  - remote: buf.build/connectrpc/go:v1.19.1\n    out: gen\n",
+	})
+	if out := initOffline(t, dir); !strings.Contains(out, "generates connect-go v1 code") {
+		t.Errorf("no warning:\n%s", out)
 	}
 }

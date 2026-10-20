@@ -5,10 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/http"
-	"strings"
 
-	"connectrpc.com/connect"
+	"connectrpc.com/connect/v2"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
@@ -24,28 +22,18 @@ type Tool struct {
 }
 
 // Call binds a tool to the client that forwards its calls.
-type Call func(target Target) mcp.ToolHandlerFor[json.RawMessage, json.RawMessage]
+type Call func(client *connect.Client) mcp.ToolHandlerFor[json.RawMessage, json.RawMessage]
 
-// Target is where tool calls are forwarded, as Connect calls.
-type Target struct {
-	// Client sends them, usually InProcessClient(api): the service's whole
-	// HTTP stack, so MCP calls get the same auth, scope checks, flow IDs and
-	// error audit as REST and RPC calls.
-	Client *http.Client
-	// BaseURL defaults to "http://in-process".
-	BaseURL string
-}
-
-// AddTools registers generated tools on s. It fails when the client is
-// missing or two tools share a name, which happens only when services
-// sharing a server have RPCs of the same name.
-func AddTools(s *mcp.Server, target Target, tools ...Tool) error {
-	if target.Client == nil {
-		return errors.New("mcpserver: Target.Client is required")
-	}
-	target.BaseURL = strings.TrimSuffix(target.BaseURL, "/")
-	if target.BaseURL == "" {
-		target.BaseURL = "http://in-process"
+// AddTools registers generated tools on s, each forwarding its calls through
+// client, usually connect.NewClient(connectinprocess.New(server)): straight
+// to the service's connect.Server, so MCP calls get the same auth, scope
+// checks, validation, flow IDs and error audit as Connect, gRPC and REST
+// calls. It fails when the client is missing or two tools share a name,
+// which happens only when services sharing a server have RPCs of the same
+// name.
+func AddTools(s *mcp.Server, client *connect.Client, tools ...Tool) error {
+	if client == nil {
+		return errors.New("mcpserver: a client is required")
 	}
 	seen := map[string]bool{}
 	for _, t := range tools {
@@ -59,28 +47,23 @@ func AddTools(s *mcp.Server, target Target, tools ...Tool) error {
 			return fmt.Errorf("mcpserver: two tools are named %q; serve their services from separate MCP servers", t.Tool.Name)
 		}
 		seen[t.Tool.Name] = true
-		mcp.AddTool(s, t.Tool, t.Call(target))
+		mcp.AddTool(s, t.Tool, t.Call(client))
 	}
 	return nil
 }
 
-// Unary returns the forwarder of a unary RPC with request type Req and
-// response type Res, at its Connect procedure path, such as
-// "/acme.time_counter.v1.CounterService/AddTime". Generated code calls it;
-// the messages are the generated types, so nothing is resolved at run time.
-func Unary[Req, Res any, PReq interface {
-	*Req
-	proto.Message
-}, PRes interface {
-	*Res
-	proto.Message
-}](procedure string) Call {
-	return func(target Target) mcp.ToolHandlerFor[json.RawMessage, json.RawMessage] {
-		client := connect.NewClient[Req, Res](target.Client, target.BaseURL+procedure)
-		desc := PReq(new(Req)).ProtoReflect().Descriptor()
+// Unary returns the forwarder of a unary RPC at its procedure, such as
+// "/acme.time_counter.v1.CounterService/AddTime". newRequest and newResponse
+// return empty generated messages, so nothing is resolved at run time.
+// Generated code calls it once per RPC; it is not generic, so tools add no
+// per-RPC copy of this code to a binary.
+func Unary(procedure string, newRequest, newResponse func() proto.Message) Call {
+	spec := connect.Spec{Procedure: procedure, StreamType: connect.StreamTypeUnary}
+	return func(client *connect.Client) mcp.ToolHandlerFor[json.RawMessage, json.RawMessage] {
+		desc := newRequest().ProtoReflect().Descriptor()
 		hasMask := hasFieldMask(desc, map[protoreflect.FullName]bool{})
 		return func(ctx context.Context, req *mcp.CallToolRequest, args json.RawMessage) (*mcp.CallToolResult, json.RawMessage, error) {
-			in := PReq(new(Req))
+			in := newRequest()
 			if len(args) > 0 {
 				if hasMask {
 					var err error
@@ -92,28 +75,29 @@ func Unary[Req, Res any, PReq interface {
 					return nil, nil, &ToolError{Code: "INVALID_ARGUMENT", Message: "the arguments do not match the input schema: " + err.Error()}
 				}
 			}
-			call := connect.NewRequest((*Req)(in))
-			copyHeaders(req, call.Header())
-			res, err := client.CallUnary(ctx, call)
-			if err != nil {
+			out := newResponse()
+			if err := client.CallUnary(forwardHeaders(ctx, req), spec, in, out); err != nil {
 				return nil, nil, toolError(err)
 			}
-			out, err := marshalResult(PRes(res.Msg))
-			return nil, out, err
+			res, err := marshalResult(out)
+			return nil, res, err
 		}
 	}
 }
 
-// copyHeaders forwards the caller's token and flow ID.
-func copyHeaders(req *mcp.CallToolRequest, h http.Header) {
-	if req.Extra == nil {
-		return
+// forwardHeaders puts the MCP caller's token and flow ID on the forwarded
+// call, where the server's interceptors read them.
+func forwardHeaders(ctx context.Context, req *mcp.CallToolRequest) context.Context {
+	if req == nil || req.Extra == nil {
+		return ctx
 	}
+	ctx, info := connect.NewClientContext(ctx)
 	for _, name := range forwardedHeaders {
 		if v := req.Extra.Header.Get(name); v != "" {
-			h.Set(name, v)
+			info.RequestHeader().Set(name, v)
 		}
 	}
+	return ctx
 }
 
 // marshalResult writes a response as structuredContent: proto field names,

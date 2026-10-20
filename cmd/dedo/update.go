@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
@@ -79,6 +80,15 @@ func upgrade(dir string, offline bool, out io.Writer) error {
 	if !offline {
 		newerHint(out)
 	}
+	// A repository on connect-go v1 moves to v2 with connect-go's own
+	// migration tool: one pass before regenerating, one after, as its guide
+	// prescribes. What it cannot rewrite, it lists for a person to do.
+	v1 := goErr == nil && usesConnectV1(dir)
+	if v1 {
+		fmt.Fprintln(out, "\nmigrating handlers and clients from connect-go v1 to v2 (connect-go-v2-migrate, pass 1)...")
+		pre := &initer{p: &project{dir: dir}, out: out, cmds: [][]string{migrateCmd}}
+		pre.runCommands(offline)
+	}
 	if err := initRepo(dir, version, offline, out); err != nil {
 		return err
 	}
@@ -86,6 +96,9 @@ func upgrade(dir string, offline bool, out io.Writer) error {
 	in.cmds = append(in.cmds, []string{"buf", "dep", "update"})
 	if _, err := os.Stat(filepath.Join(dir, "buf.gen.yaml")); err == nil {
 		in.cmds = append(in.cmds, []string{"buf", "generate"})
+	}
+	if v1 {
+		in.cmds = append(in.cmds, migrateCmd)
 	}
 	if goErr == nil {
 		in.cmds = append(in.cmds, []string{"go", "mod", "tidy"})
@@ -95,6 +108,15 @@ func upgrade(dir string, offline bool, out io.Writer) error {
 	}
 	fmt.Fprintf(out, "\nupgraded to dedo %s\n", version)
 	return nil
+}
+
+// migrateCmd runs connect-go's v1-to-v2 migration tool, writing its changes.
+var migrateCmd = []string{"go", "run", "connectrpc.com/connect/v2/cmd/connect-go-v2-migrate@v1.0.0", "-w"}
+
+// usesConnectV1 reports whether go.mod requires connect-go v1.
+func usesConnectV1(dir string) bool {
+	b, err := os.ReadFile(filepath.Join(dir, "go.mod"))
+	return err == nil && regexp.MustCompile(`(?m)^\s*(require\s+)?connectrpc\.com/connect v1\.`).Match(b)
 }
 
 // newerHint says when a later dedo is out, since upgrade moves a

@@ -11,7 +11,8 @@ import (
 	"strings"
 	"testing"
 
-	"connectrpc.com/connect"
+	"connectrpc.com/connect/v2"
+	"connectrpc.com/connect/v2/connecthttp"
 	"google.golang.org/genproto/googleapis/type/money"
 	"google.golang.org/protobuf/types/known/fieldmaskpb"
 
@@ -42,15 +43,22 @@ func newEnv(t *testing.T) env {
 }
 
 // client returns a Connect client that sends the token on every call.
-func (e env) client(token string, opts ...connect.ClientOption) todov1connect.TodoServiceClient {
-	auth := connect.UnaryInterceptorFunc(func(next connect.UnaryFunc) connect.UnaryFunc {
-		return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
-			req.Header().Set("Authorization", "Bearer "+token)
-			return next(ctx, req)
+func (e env) client(token string, opts ...connecthttp.Option) todov1connect.TodoServiceClient {
+	return todov1connect.NewTodoServiceClient(connect.NewClient(connecthttp.NewTransport(http.DefaultClient, e.url, opts...), bearerAuth(token)))
+}
+
+// bearerAuth sends the token on every call.
+func bearerAuth(token string) connect.ClientInterceptor {
+	return func(next connect.ClientFunc) connect.ClientFunc {
+		return func(ctx context.Context, spec connect.Spec) (connect.ClientStream, error) {
+			info, ok := connect.CallInfoForClientContext(ctx)
+			if !ok {
+				ctx, info = connect.NewClientContext(ctx)
+			}
+			info.RequestHeader().Set("Authorization", "Bearer "+token)
+			return next(ctx, spec)
 		}
-	})
-	opts = append(opts, connect.WithInterceptors(auth))
-	return todov1connect.NewTodoServiceClient(http.DefaultClient, e.url, opts...)
+	}
 }
 
 // rest sends a REST request and returns the response and its body.
@@ -78,14 +86,14 @@ func (e env) rest(t *testing.T, method, path, token, body string) (*http.Respons
 
 func create(t *testing.T, e env, id, title string) *todov1.Todo {
 	t.Helper()
-	res, err := e.client(app.WriterToken).CreateTodo(context.Background(), connect.NewRequest(&todov1.CreateTodoRequest{
+	res, err := e.client(app.WriterToken).CreateTodo(context.Background(), &todov1.CreateTodoRequest{
 		TodoId: id,
 		Todo:   &todov1.Todo{Title: title, BudgetAmount: &money.Money{CurrencyCode: "EUR", Units: 5}},
-	}))
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	return res.Msg.GetTodo()
+	return res.GetTodo()
 }
 
 func TestScopes(t *testing.T) {
@@ -93,15 +101,15 @@ func TestScopes(t *testing.T) {
 	create(t, e, "a", "write it")
 	ctx := context.Background()
 
-	_, err := e.client(app.ReaderToken).CreateTodo(ctx, connect.NewRequest(&todov1.CreateTodoRequest{Todo: &todov1.Todo{Title: "x"}}))
+	_, err := e.client(app.ReaderToken).CreateTodo(ctx, &todov1.CreateTodoRequest{Todo: &todov1.Todo{Title: "x"}})
 	if connect.CodeOf(err) != connect.CodePermissionDenied {
 		t.Errorf("reader create: %v, want permission_denied", err)
 	}
-	_, err = e.client("nobody").GetTodo(ctx, connect.NewRequest(&todov1.GetTodoRequest{Name: "todos/a"}))
+	_, err = e.client("nobody").GetTodo(ctx, &todov1.GetTodoRequest{Name: "todos/a"})
 	if connect.CodeOf(err) != connect.CodePermissionDenied {
 		t.Errorf("anonymous get: %v, want permission_denied", err)
 	}
-	if _, err := e.client(app.ReaderToken).GetTodo(ctx, connect.NewRequest(&todov1.GetTodoRequest{Name: "todos/a"})); err != nil {
+	if _, err := e.client(app.ReaderToken).GetTodo(ctx, &todov1.GetTodoRequest{Name: "todos/a"}); err != nil {
 		t.Errorf("reader get: %v", err)
 	}
 }
@@ -114,26 +122,26 @@ func TestCRUD(t *testing.T) {
 	if created.GetName() != "todos/1" || created.GetCreateTime() == nil {
 		t.Fatalf("created = %v", created)
 	}
-	if _, err := w.CreateTodo(ctx, connect.NewRequest(&todov1.CreateTodoRequest{TodoId: "1", Todo: &todov1.Todo{Title: "dup"}})); connect.CodeOf(err) != connect.CodeAlreadyExists {
+	if _, err := w.CreateTodo(ctx, &todov1.CreateTodoRequest{TodoId: "1", Todo: &todov1.Todo{Title: "dup"}}); connect.CodeOf(err) != connect.CodeAlreadyExists {
 		t.Errorf("duplicate create: %v", err)
 	}
-	if _, err := w.CreateTodo(ctx, connect.NewRequest(&todov1.CreateTodoRequest{Todo: &todov1.Todo{}})); connect.CodeOf(err) != connect.CodeInvalidArgument {
+	if _, err := w.CreateTodo(ctx, &todov1.CreateTodoRequest{Todo: &todov1.Todo{}}); connect.CodeOf(err) != connect.CodeInvalidArgument {
 		t.Errorf("untitled create: %v", err)
 	}
-	updated, err := w.UpdateTodo(ctx, connect.NewRequest(&todov1.UpdateTodoRequest{
+	updated, err := w.UpdateTodo(ctx, &todov1.UpdateTodoRequest{
 		Todo:       &todov1.Todo{Name: "todos/1", Done: true, Title: "ignored"},
 		UpdateMask: &fieldmaskpb.FieldMask{Paths: []string{"done"}},
-	}))
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !updated.Msg.GetTodo().GetDone() || updated.Msg.GetTodo().GetTitle() != "first" {
-		t.Errorf("updated = %v", updated.Msg.GetTodo())
+	if !updated.GetTodo().GetDone() || updated.GetTodo().GetTitle() != "first" {
+		t.Errorf("updated = %v", updated.GetTodo())
 	}
-	if _, err := w.DeleteTodo(ctx, connect.NewRequest(&todov1.DeleteTodoRequest{Name: "todos/1"})); err != nil {
+	if _, err := w.DeleteTodo(ctx, &todov1.DeleteTodoRequest{Name: "todos/1"}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := w.GetTodo(ctx, connect.NewRequest(&todov1.GetTodoRequest{Name: "todos/1"})); connect.CodeOf(err) != connect.CodeNotFound {
+	if _, err := w.GetTodo(ctx, &todov1.GetTodoRequest{Name: "todos/1"}); connect.CodeOf(err) != connect.CodeNotFound {
 		t.Errorf("get after delete: %v", err)
 	}
 }
@@ -148,21 +156,21 @@ func TestListPagination(t *testing.T) {
 	var titles []string
 	token := ""
 	for {
-		res, err := r.ListTodos(ctx, connect.NewRequest(&todov1.ListTodosRequest{PageSize: 2, PageToken: token}))
+		res, err := r.ListTodos(ctx, &todov1.ListTodosRequest{PageSize: 2, PageToken: token})
 		if err != nil {
 			t.Fatal(err)
 		}
-		for _, todo := range res.Msg.GetTodos() {
+		for _, todo := range res.GetTodos() {
 			titles = append(titles, todo.GetTitle())
 		}
-		if token = res.Msg.GetNextPageToken(); token == "" {
+		if token = res.GetNextPageToken(); token == "" {
 			break
 		}
 	}
 	if strings.Join(titles, ",") != "a,b,c" {
 		t.Errorf("titles = %v", titles)
 	}
-	_, err := r.ListTodos(ctx, connect.NewRequest(&todov1.ListTodosRequest{PageToken: "x"}))
+	_, err := r.ListTodos(ctx, &todov1.ListTodosRequest{PageToken: "x"})
 	if connect.CodeOf(err) != connect.CodeInvalidArgument {
 		t.Errorf("bad token: %v", err)
 	}
@@ -171,12 +179,12 @@ func TestListPagination(t *testing.T) {
 func TestCacheHeaderOnConnectGet(t *testing.T) {
 	e := newEnv(t)
 	create(t, e, "a", "cache me")
-	res, err := e.client(app.ReaderToken, connect.WithHTTPGet()).GetTodo(context.Background(),
-		connect.NewRequest(&todov1.GetTodoRequest{Name: "todos/a"}))
-	if err != nil {
+	ctx, info := connect.NewClientContext(context.Background())
+	if _, err := e.client(app.ReaderToken, connecthttp.WithHTTPGet()).GetTodo(ctx,
+		&todov1.GetTodoRequest{Name: "todos/a"}); err != nil {
 		t.Fatal(err)
 	}
-	if got := res.Header().Get("Cache-Control"); got != "private, max-age=10" {
+	if got := info.ResponseHeader().Get("Cache-Control"); got != "private, max-age=10" {
 		t.Errorf("Cache-Control = %q", got)
 	}
 }
@@ -184,14 +192,14 @@ func TestCacheHeaderOnConnectGet(t *testing.T) {
 func TestDeprecationHeaders(t *testing.T) {
 	e := newEnv(t)
 	create(t, e, "a", "old")
-	res, err := e.client(app.WriterToken).RemoveTodo(context.Background(), connect.NewRequest(&todov1.RemoveTodoRequest{Name: "todos/a"}))
-	if err != nil {
+	ctx, info := connect.NewClientContext(context.Background())
+	if _, err := e.client(app.WriterToken).RemoveTodo(ctx, &todov1.RemoveTodoRequest{Name: "todos/a"}); err != nil {
 		t.Fatal(err)
 	}
-	if got := res.Header().Get("Deprecation"); got != "@1767225600" {
+	if got := info.ResponseHeader().Get("Deprecation"); got != "@1767225600" {
 		t.Errorf("Deprecation = %q", got)
 	}
-	if got := res.Header().Get("Sunset"); got != "Fri, 01 Jan 2027 00:00:00 GMT" {
+	if got := info.ResponseHeader().Get("Sunset"); got != "Fri, 01 Jan 2027 00:00:00 GMT" {
 		t.Errorf("Sunset = %q", got)
 	}
 }

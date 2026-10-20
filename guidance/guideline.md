@@ -21,7 +21,7 @@ Install:
 - Go 1.25 or later
 - The [Buf CLI](https://buf.build/docs/installation)
 - VS Code with the Buf extension (`bufbuild.vscode-buf`), or Zed. Remove other Protobuf extensions.
-- The `dedo` command: `go install github.com/raveesh-me/dedo/cmd/dedo@v0.10.0`
+- The `dedo` command: `go install github.com/raveesh-me/dedo/cmd/dedo@v0.11.0`
 
 Decide two names with your team:
 
@@ -56,7 +56,7 @@ Why it is set up this way:
 
 - **The generators are Go tools** pinned in `go.mod`, so every machine and CI generate the same code without Buf's remote plugins.
 - **The lint plugin is pinned in `go.mod` too**, and built into `.tools/` (ignored by git) by `dedo tools`, so the editor and CI run the same version. It runs as a native binary because Buf starts it about a dozen times per lint. Commit `buf.lock`.
-- **Vanguard stays at `v0.4.0`**: later versions need connect-go v2.
+- **connect-go v2:** one `connect.Server` holds the interceptors (flow IDs, auth, dedo's policy, validation); Connect and gRPC (`connecthttp.Mount`), REST (`vanguard.Mount`) and MCP (`connectinprocess`) all reach it, so every transport gets the same checks.
 
 [install.md](install.md) shows each part by hand, for repositories that prefer not to run `dedo init`. Add `.github/CODEOWNERS` yourself (`dedo templates CODEOWNERS`) so every change under `proto/` needs an API review.
 
@@ -187,32 +187,33 @@ Commit all of it. CI fails when the committed output is stale.
 `examples/todo/app/app.go` and `app/mcp.go` show the whole setup. In short:
 
 ```go
-// The API: policy table, policy interceptor, REST transcoding, auth, flow IDs.
+// One connect.Server, with the interceptors every transport runs: flow IDs,
+// auth, the declared contract, then the buf.validate rules.
 table, err := policy.Build(productsv1connect.ProductServiceName) // fails on a missing declaration
 guard, err := interceptor.New(interceptor.Config{
 	Table:         table,
-	Scopes:        auth.ScopesFromContext, // your token middleware
+	Scopes:        auth.ScopesFromContext, // your token interceptor
 	EnforceScopes: false,                  // start in audit mode, then enforce
 	Log:           log,
 })
-path, handler := productsv1connect.NewProductServiceHandler(server, connect.WithInterceptors(guard))
-transcoder, err := vanguard.NewTranscoder([]*vanguard.Service{vanguard.NewService(path, handler)})
-api := flowid.Middleware(auth.Middleware(transcoder))
-
-// MCP: every RPC is a tool, as protoc-gen-dedo-mcp generated it, forwarded
-// to the API in-process with the caller's token.
-mcpServer := mcp.NewServer(&mcp.Implementation{Name: "products", Version: "v1"}, nil)
-err = mcpserver.AddTools(mcpServer, mcpserver.Target{Client: mcpserver.InProcessClient(api)},
-	productsv1.ProductServiceMCPTools()...) // fails if two RPCs share a tool name
+server := connect.NewServer(flowid.Interceptor(), auth.Interceptor(), guard, validate.NewServerInterceptor())
+productsv1connect.RegisterProductServiceHandler(server, newServer())
 
 mux := http.NewServeMux()
+connecthttp.Mount(mux, server)                       // Connect, gRPC, gRPC-Web
+err = vanguard.Mount(mux, server)                    // REST, from google.api.http
+client := connect.NewClient(connectinprocess.New(server)) // MCP calls, in-process
+
+// MCP: every RPC is a tool, as protoc-gen-dedo-mcp generated it.
+tools := mcp.NewServer(&mcp.Implementation{Name: "products", Version: "v1"}, nil)
+err = mcpserver.AddTools(tools, client, productsv1.ProductServiceMCPTools()...) // fails if two RPCs share a tool name
+
 mux.Handle("GET /openapi.json", docs.Spec()) // embeds docs/openapi.json
 mux.Handle("GET /docs", docs.Page())
 // Cross-origin protection: the MCP transport requires an Origin check.
 mux.Handle("/mcp", flowid.Middleware(http.NewCrossOriginProtection().Handler(mcp.NewStreamableHTTPHandler(
-	func(*http.Request) *mcp.Server { return mcpServer },
+	func(*http.Request) *mcp.Server { return tools },
 	&mcp.StreamableHTTPOptions{Stateless: true, JSONResponse: true}))))
-mux.Handle("/", api)
 ```
 
 Return errors with a declared reason in a `google.rpc.ErrorInfo` detail. `examples/todo/app/errors.go` has a helper.
@@ -268,6 +269,8 @@ Point an MCP client at `http://localhost:8080/mcp`, with the header `Authorizati
 ## Questions
 
 **Why is the version in the path, when Zalando advises against URL versioning?** The contract follows the AIPs, and the proto package already carries the major version. A breaking change becomes a new package and a new path, with no media-type negotiation.
+
+**How does a client know a server stream is open?** Send a first message that says so: the todo example's `WatchTodos` starts with `CHANGE_WATCHING`. Headers alone are not enough: buffering proxies hold them back, and connect-go v2.0.1's HTTP transport sends none until the first message.
 
 **Can a service skip REST for an RPC?** No. AIP-127 requires an HTTP binding on every RPC, so every RPC is reachable over every transport.
 

@@ -96,3 +96,35 @@ func TestNewer(t *testing.T) {
 		}
 	}
 }
+
+// A repository on connect-go v1 is migrated by connect-go's own tool, once
+// before regenerating and once after.
+func TestUpgradeMigratesConnectV1(t *testing.T) {
+	dir := repo(t, map[string]string{
+		"go.mod":       "module example.com/notes\n\nrequire connectrpc.com/connect v1.19.1\n",
+		"buf.lock":     "version: v2\n",
+		"buf.gen.yaml": "version: v2\nplugins: []\n",
+	})
+	var out bytes.Buffer
+	if err := run([]string{"upgrade", "-offline", "-dir", dir}, &out); err != nil {
+		t.Fatal(err)
+	}
+	migrate := strings.Join(migrateCmd, " ")
+	if strings.Count(out.String(), migrate) != 2 {
+		t.Errorf("want the migration tool twice:\n%s", out.String())
+	}
+	if i, j := strings.LastIndex(out.String(), "buf generate"), strings.LastIndex(out.String(), migrate); i < 0 || j < i {
+		t.Errorf("the second pass must follow buf generate:\n%s", out.String())
+	}
+}
+
+func TestUpgradeLeavesConnectV2Alone(t *testing.T) {
+	dir := repo(t, map[string]string{"go.mod": "module example.com/notes\n\nrequire connectrpc.com/connect/v2 v2.0.1\n", "buf.lock": "version: v2\n"})
+	var out bytes.Buffer
+	if err := run([]string{"upgrade", "-offline", "-dir", dir}, &out); err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(out.String(), "connect-go-v2-migrate") {
+		t.Error("migration tool run on a v2 repository")
+	}
+}

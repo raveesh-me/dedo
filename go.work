@@ -19,7 +19,7 @@ use (
 // version at the working tree. They live here, not in go.mod, so they never
 // reach consumers. scripts/check-release-versions.sh checks the version.
 replace (
-	github.com/raveesh-me/dedo v0.10.0 => ./
-	github.com/raveesh-me/dedo/mcp v0.10.0 => ./mcp
-	github.com/raveesh-me/dedo/openapi v0.10.0 => ./openapi
+	github.com/raveesh-me/dedo v0.11.0 => ./
+	github.com/raveesh-me/dedo/mcp v0.11.0 => ./mcp
+	github.com/raveesh-me/dedo/openapi v0.11.0 => ./openapi
 )

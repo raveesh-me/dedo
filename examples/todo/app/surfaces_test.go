@@ -8,13 +8,15 @@ import (
 	"strings"
 	"testing"
 
-	"connectrpc.com/connect"
+	"connectrpc.com/connect/v2"
+	"connectrpc.com/connect/v2/connecthttp"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/pb33f/libopenapi"
 	"google.golang.org/genproto/googleapis/type/money"
 
 	"github.com/raveesh-me/dedo/examples/todo/app"
 	todov1 "github.com/raveesh-me/dedo/examples/todo/gen/go/raveesh_me/todo/v1"
+	"github.com/raveesh-me/dedo/flowid"
 )
 
 func get(t *testing.T, url string) string {
@@ -256,19 +258,19 @@ func TestValidationRules(t *testing.T) {
 	if err == nil && !res.IsError {
 		t.Errorf("MCP accepted an invalid email: %s", text(res))
 	}
-	_, err = e.client(app.WriterToken).CreateTodo(context.Background(), connect.NewRequest(&todov1.CreateTodoRequest{
+	_, err = e.client(app.WriterToken).CreateTodo(context.Background(), &todov1.CreateTodoRequest{
 		Todo: &todov1.Todo{Title: "x", AssigneeEmail: "not-an-email"},
-	}))
+	})
 	if connect.CodeOf(err) != connect.CodeInvalidArgument {
 		t.Errorf("Connect CreateTodo with an invalid email: %v, want InvalidArgument", err)
 	}
-	_, err = e.client(app.WriterToken).CreateTodo(context.Background(), connect.NewRequest(&todov1.CreateTodoRequest{
+	_, err = e.client(app.WriterToken).CreateTodo(context.Background(), &todov1.CreateTodoRequest{
 		Todo: &todov1.Todo{Title: "x", BudgetAmount: &money.Money{CurrencyCode: "EUR", Units: 1, Nanos: -500000000}},
-	}))
+	})
 	if connect.CodeOf(err) != connect.CodeInvalidArgument {
 		t.Errorf("CreateTodo with units and nanos of opposite signs: %v, want InvalidArgument", err)
 	}
-	_, err = e.client(app.ReaderToken).ListTodos(context.Background(), connect.NewRequest(&todov1.ListTodosRequest{PageSize: -1}))
+	_, err = e.client(app.ReaderToken).ListTodos(context.Background(), &todov1.ListTodosRequest{PageSize: -1})
 	if connect.CodeOf(err) != connect.CodeInvalidArgument {
 		t.Errorf("ListTodos with page_size -1: %v, want InvalidArgument", err)
 	}
@@ -307,5 +309,40 @@ func TestMCPRejectsCrossOrigin(t *testing.T) {
 		if res.StatusCode != tt.want {
 			t.Errorf("Origin %q: status %d, want %d", tt.origin, res.StatusCode, tt.want)
 		}
+	}
+}
+
+// Every surface reaches the same connect.Server, so the same interceptors
+// run on each: a reader cannot create a to-do, and every response carries a
+// flow ID.
+func TestEverySurfaceRunsTheInterceptors(t *testing.T) {
+	e := newEnv(t)
+	denied := func(surface string, err error) {
+		t.Helper()
+		if connect.CodeOf(err) != connect.CodePermissionDenied {
+			t.Errorf("%s: err = %v, want permission_denied", surface, err)
+		}
+	}
+	req := &todov1.CreateTodoRequest{TodoId: "x", Todo: &todov1.Todo{Title: "x"}}
+	for name, opts := range map[string][]connecthttp.Option{
+		"connect":  nil,
+		"grpc-web": {connecthttp.WithGRPCWeb()},
+	} {
+		ctx, info := connect.NewClientContext(context.Background())
+		_, err := e.client(app.ReaderToken, opts...).CreateTodo(ctx, req)
+		denied(name, err)
+		if info.ResponseHeader().Get(flowid.Header) == "" {
+			t.Errorf("%s: no flow ID", name)
+		}
+	}
+	res, body := e.rest(t, http.MethodPost, "/commerce/todo/v1/todos?todoId=x", app.ReaderToken, `{"title":"x"}`)
+	if res.StatusCode != http.StatusForbidden || res.Header.Get(flowid.Header) == "" {
+		t.Errorf("rest: %d %s, flow ID %q", res.StatusCode, body, res.Header.Get(flowid.Header))
+	}
+	tool, err := mcpSession(t, e, app.ReaderToken).CallTool(context.Background(), &mcp.CallToolParams{
+		Name: createTool, Arguments: map[string]any{"todo_id": "x", "todo": map[string]any{"title": "x"}},
+	})
+	if err != nil || !tool.IsError || !strings.Contains(text(tool), "PERMISSION_DENIED") {
+		t.Errorf("mcp: %v %s", err, text(tool))
 	}
 }

@@ -2,10 +2,9 @@ package interceptor
 
 import (
 	"context"
-	"errors"
 	"slices"
 
-	"connectrpc.com/connect"
+	"connectrpc.com/connect/v2"
 
 	"github.com/raveesh-me/dedo/flowid"
 	"github.com/raveesh-me/dedo/policy"
@@ -13,10 +12,10 @@ import (
 
 // authorize runs before validation, so an unauthorised caller learns nothing
 // from validation errors.
-func (i *Interceptor) authorize(ctx context.Context, procedure string) (policy.Method, error) {
+func (i *guard) authorize(ctx context.Context, procedure string) (policy.Method, error) {
 	m, ok := i.cfg.Table[procedure]
 	if !ok {
-		return m, connect.NewError(connect.CodeUnimplemented, errors.New("procedure has no policy"))
+		return m, connect.NewError(connect.CodeUnimplemented, "procedure has no policy")
 	}
 	if granted(i.cfg.Scopes(ctx), m.Rules.GetScopes()) {
 		return m, nil
@@ -26,7 +25,7 @@ func (i *Interceptor) authorize(ctx context.Context, procedure string) (policy.M
 			"procedure", procedure, "flow_id", flowid.From(ctx))
 		return m, nil
 	}
-	return m, connect.NewError(connect.CodePermissionDenied, errors.New("missing required scope"))
+	return m, connect.NewError(connect.CodePermissionDenied, "missing required scope")
 }
 
 // granted reports whether the caller holds at least one declared scope.

@@ -2,11 +2,14 @@ package app_test
 
 import (
 	"context"
+	"errors"
+	"io"
 	"net/http"
 	"testing"
 	"time"
 
-	"connectrpc.com/connect"
+	"connectrpc.com/connect/v2"
+	"connectrpc.com/connect/v2/connecthttp"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/raveesh-me/dedo/examples/todo/app"
@@ -14,34 +17,36 @@ import (
 	"github.com/raveesh-me/dedo/examples/todo/gen/go/raveesh_me/todo/v1/todov1connect"
 )
 
-// streamClient sends the token on every request, streams included; the
-// interceptor in env.client covers unary calls only.
+// streamClient sends the token on every request, streams included.
 func streamClient(e env, token string) todov1connect.TodoServiceClient {
-	return todov1connect.NewTodoServiceClient(&http.Client{Transport: bearer{token: token}}, e.url)
+	return todov1connect.NewTodoServiceClient(connect.NewClient(connecthttp.NewTransport(http.DefaultClient, e.url), bearerAuth(token)))
 }
 
-// watch opens WatchTodos and returns its events on a channel.
+// watch opens WatchTodos, waits until the server says the watch is open, and
+// returns the changes after that on a channel.
 func watch(t *testing.T, e env, token string) <-chan *todov1.WatchTodosResponse {
 	t.Helper()
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
-	stream, err := streamClient(e, token).WatchTodos(ctx, connect.NewRequest(&todov1.WatchTodosRequest{}))
+	stream, err := streamClient(e, token).WatchTodos(ctx, &todov1.WatchTodosRequest{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	// The server sends headers when the watch is open, so changes made
-	// after this point are not missed.
-	if _, err := stream.ResponseHeader(), stream.Err(); err != nil {
-		t.Fatal(err)
+	if first, err := stream.Receive(); err != nil || first.GetChange() != todov1.WatchTodosResponse_CHANGE_WATCHING {
+		t.Fatalf("first message = %v, %v; want CHANGE_WATCHING", first, err)
 	}
 	events := make(chan *todov1.WatchTodosResponse, 16)
 	go func() {
 		defer close(events)
-		for stream.Receive() {
-			events <- stream.Msg()
-		}
-		if err := stream.Err(); err != nil {
-			t.Logf("watch ended: %v", err)
+		for {
+			msg, err := stream.Receive()
+			if err != nil {
+				if !errors.Is(err, io.EOF) && ctx.Err() == nil {
+					t.Logf("watch ended: %v", err)
+				}
+				return
+			}
+			events <- msg
 		}
 	}()
 	return events
@@ -67,9 +72,10 @@ func TestWatchSeesChangesMadeThroughMCP(t *testing.T) {
 	events := watch(t, e, app.ReaderToken)
 
 	ctx := context.Background()
+	const id = "agent"
 	res, err := mcpSession(t, e, app.WriterToken).CallTool(ctx, &mcp.CallToolParams{
 		Name:      createTool,
-		Arguments: map[string]any{"todo": map[string]any{"title": "added by an agent"}, "todo_id": "agent"},
+		Arguments: map[string]any{"todo": map[string]any{"title": "added by an agent"}, "todo_id": id},
 	})
 	if err != nil || res.IsError {
 		t.Fatalf("create via MCP: %v %s", err, text(res))
@@ -79,11 +85,11 @@ func TestWatchSeesChangesMadeThroughMCP(t *testing.T) {
 		t.Fatalf("event = %v", created)
 	}
 
-	if _, err := e.client(app.WriterToken).DeleteTodo(ctx, connect.NewRequest(&todov1.DeleteTodoRequest{Name: "todos/agent"})); err != nil {
+	if _, err := e.client(app.WriterToken).DeleteTodo(ctx, &todov1.DeleteTodoRequest{Name: "todos/" + id}); err != nil {
 		t.Fatal(err)
 	}
 	deleted := next(t, events)
-	if deleted.GetChange() != todov1.WatchTodosResponse_CHANGE_DELETED || deleted.GetTodo().GetName() != "todos/agent" {
+	if deleted.GetChange() != todov1.WatchTodosResponse_CHANGE_DELETED || deleted.GetTodo().GetName() != "todos/"+id {
 		t.Fatalf("event = %v", deleted)
 	}
 }
@@ -91,11 +97,11 @@ func TestWatchSeesChangesMadeThroughMCP(t *testing.T) {
 // The stream needs the read scope like any other read.
 func TestWatchRequiresReadScope(t *testing.T) {
 	e := newEnv(t)
-	stream, err := streamClient(e, "nobody").WatchTodos(context.Background(), connect.NewRequest(&todov1.WatchTodosRequest{}))
+	stream, err := streamClient(e, "nobody").WatchTodos(context.Background(), &todov1.WatchTodosRequest{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if stream.Receive() || connect.CodeOf(stream.Err()) != connect.CodePermissionDenied {
-		t.Fatalf("err = %v, want permission_denied", stream.Err())
+	if _, err := stream.Receive(); connect.CodeOf(err) != connect.CodePermissionDenied {
+		t.Fatalf("err = %v, want permission_denied", err)
 	}
 }

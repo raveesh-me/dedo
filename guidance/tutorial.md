@@ -12,7 +12,7 @@ Every step below was run as written. [install.md](install.md) lists the same set
 - The `dedo` command:
 
   ```sh
-  go install github.com/raveesh-me/dedo/cmd/dedo@v0.10.0
+  go install github.com/raveesh-me/dedo/cmd/dedo@v0.11.0
   ```
 
 ## 1. Decide the names
@@ -264,11 +264,11 @@ package main
 
 import (
 	"context"
-	"errors"
 	"strconv"
 	"sync"
 
-	"connectrpc.com/connect"
+	"connectrpc.com/connect/v2"
+	"connectrpc.com/connect/v2/connectproto"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/durationpb"
@@ -287,55 +287,55 @@ type server struct {
 
 func newServer() *server { return &server{counters: map[string]*timecounterv1.Counter{}} }
 
-func (s *server) GetCounter(_ context.Context, req *connect.Request[timecounterv1.GetCounterRequest]) (*connect.Response[timecounterv1.GetCounterResponse], error) {
+func (s *server) GetCounter(_ context.Context, req *timecounterv1.GetCounterRequest) (*timecounterv1.GetCounterResponse, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	c, ok := s.counters[req.Msg.GetName()]
+	c, ok := s.counters[req.GetName()]
 	if !ok {
-		return nil, apiError(connect.CodeNotFound, "COUNTER_NOT_FOUND", "no counter named "+req.Msg.GetName())
+		return nil, apiError(connect.CodeNotFound, "COUNTER_NOT_FOUND", "no counter named "+req.GetName())
 	}
-	return connect.NewResponse(&timecounterv1.GetCounterResponse{Counter: proto.CloneOf(c)}), nil
+	return &timecounterv1.GetCounterResponse{Counter: proto.CloneOf(c)}, nil
 }
 
-func (s *server) CreateCounter(_ context.Context, req *connect.Request[timecounterv1.CreateCounterRequest]) (*connect.Response[timecounterv1.CreateCounterResponse], error) {
-	if req.Msg.GetCounter().GetDisplayName() == "" {
+func (s *server) CreateCounter(_ context.Context, req *timecounterv1.CreateCounterRequest) (*timecounterv1.CreateCounterResponse, error) {
+	if req.GetCounter().GetDisplayName() == "" {
 		return nil, apiError(connect.CodeInvalidArgument, "DISPLAY_NAME_REQUIRED", "display_name is required")
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	id := req.Msg.GetCounterId()
+	id := req.GetCounterId()
 	if id == "" {
 		s.next++
 		id = strconv.Itoa(s.next)
 	}
 	c := &timecounterv1.Counter{
 		Name:        "counters/" + id,
-		DisplayName: req.Msg.GetCounter().GetDisplayName(),
+		DisplayName: req.GetCounter().GetDisplayName(),
 		Elapsed:     durationpb.New(0),
 		CreateTime:  timestamppb.Now(),
 	}
 	s.counters[c.GetName()] = c
-	return connect.NewResponse(&timecounterv1.CreateCounterResponse{Counter: proto.CloneOf(c)}), nil
+	return &timecounterv1.CreateCounterResponse{Counter: proto.CloneOf(c)}, nil
 }
 
-func (s *server) AddTime(_ context.Context, req *connect.Request[timecounterv1.AddTimeRequest]) (*connect.Response[timecounterv1.AddTimeResponse], error) {
+func (s *server) AddTime(_ context.Context, req *timecounterv1.AddTimeRequest) (*timecounterv1.AddTimeResponse, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	c, ok := s.counters[req.Msg.GetName()]
+	c, ok := s.counters[req.GetName()]
 	if !ok {
-		return nil, apiError(connect.CodeNotFound, "COUNTER_NOT_FOUND", "no counter named "+req.Msg.GetName())
+		return nil, apiError(connect.CodeNotFound, "COUNTER_NOT_FOUND", "no counter named "+req.GetName())
 	}
 	next := proto.CloneOf(c)
-	next.Elapsed = durationpb.New(c.GetElapsed().AsDuration() + req.Msg.GetDuration().AsDuration())
+	next.Elapsed = durationpb.New(c.GetElapsed().AsDuration() + req.GetDuration().AsDuration())
 	s.counters[next.GetName()] = next
-	return connect.NewResponse(&timecounterv1.AddTimeResponse{Counter: proto.CloneOf(next)}), nil
+	return &timecounterv1.AddTimeResponse{Counter: proto.CloneOf(next)}, nil
 }
 
 // apiError returns an error carrying one of the RPC's declared reasons.
 func apiError(code connect.Code, reason, message string) error {
-	err := connect.NewError(code, errors.New(message))
-	if detail, derr := connect.NewErrorDetail(&errdetails.ErrorInfo{Reason: reason, Domain: "time-counter.acme.com"}); derr == nil {
-		err.AddDetail(detail)
+	err := connect.NewError(code, message)
+	if detail, derr := connectproto.NewErrorDetail(&errdetails.ErrorInfo{Reason: reason, Domain: "time-counter.acme.com"}); derr == nil {
+		err = err.WithDetail(detail)
 	}
 	return err
 }
@@ -357,7 +357,10 @@ import (
 	"os"
 	"strings"
 
-	"connectrpc.com/connect"
+	"connectrpc.com/connect/v2"
+	"connectrpc.com/connect/v2/connecthttp"
+	"connectrpc.com/connect/v2/connectinprocess"
+	"connectrpc.com/validate"
 	"connectrpc.com/vanguard"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/raveesh-me/dedo/flowid"
@@ -381,8 +384,12 @@ func main() {
 	if addr == "" {
 		addr = ":8080"
 	}
+	protocols := new(http.Protocols)
+	protocols.SetHTTP1(true)
+	protocols.SetUnencryptedHTTP2(true) // gRPC clients without TLS
 	log.Info("listening", "addr", addr)
-	if err := http.ListenAndServe(addr, handler); err != nil {
+	server := &http.Server{Addr: addr, Handler: handler, Protocols: protocols}
+	if err := server.ListenAndServe(); err != nil {
 		log.Error("server stopped", "error", err)
 		os.Exit(1)
 	}
@@ -403,35 +410,38 @@ func newHandler(log *slog.Logger) (http.Handler, error) {
 	if err != nil {
 		return nil, err
 	}
+	// The interceptors run for every transport below, in order: flow IDs,
+	// auth, the declared contract (scopes, headers, error audit), then the
+	// buf.validate rules.
+	server := connect.NewServer(flowid.Interceptor(), auth, guard, validate.NewServerInterceptor())
 	// newServer returns your implementation of time_counterv1connect.CounterServiceHandler.
-	path, rpc := time_counterv1connect.NewCounterServiceHandler(newServer(), connect.WithInterceptors(guard))
-	rest, err := vanguard.NewTranscoder([]*vanguard.Service{vanguard.NewService(path, rpc)})
-	if err != nil {
-		return nil, err
-	}
-	api := flowid.Middleware(authMiddleware(rest))
-
-	// MCP: every RPC is a tool, as protoc-gen-dedo-mcp generated it, called
-	// through the same API with the caller's token.
-	mcpServer := mcp.NewServer(&mcp.Implementation{Name: "time-counter", Version: "v1"}, nil)
-	target := mcpserver.Target{Client: mcpserver.InProcessClient(api)}
-	if err := mcpserver.AddTools(mcpServer, target, time_counterv1.CounterServiceMCPTools()...); err != nil {
-		return nil, err
-	}
+	time_counterv1connect.RegisterCounterServiceHandler(server, newServer())
 
 	mux := http.NewServeMux()
+	// Connect, gRPC and gRPC-Web, then REST from the google.api.http bindings.
+	connecthttp.Mount(mux, server)
+	if err := vanguard.Mount(mux, server); err != nil {
+		return nil, err
+	}
+
+	// MCP: every RPC is a tool, as protoc-gen-dedo-mcp generated it, called
+	// in-process on the same server with the caller's token.
+	tools := mcp.NewServer(&mcp.Implementation{Name: "time-counter", Version: "v1"}, nil)
+	if err := mcpserver.AddTools(tools, connect.NewClient(connectinprocess.New(server)), time_counterv1.CounterServiceMCPTools()...); err != nil {
+		return nil, err
+	}
+
 	mux.Handle("GET /openapi.json", docs.Spec())
 	mux.Handle("GET /docs", docs.Page())
 	// Cross-origin protection: the MCP transport requires an Origin check.
 	mux.Handle("/mcp", flowid.Middleware(http.NewCrossOriginProtection().Handler(mcp.NewStreamableHTTPHandler(
-		func(*http.Request) *mcp.Server { return mcpServer },
+		func(*http.Request) *mcp.Server { return tools },
 		&mcp.StreamableHTTPOptions{Stateless: true, JSONResponse: true}))))
-	mux.Handle("/", api)
 	return mux, nil
 }
 
-// devTokens stands in for real token verification. Replace authMiddleware
-// with your identity platform's middleware before shipping.
+// devTokens stands in for real token verification. Replace auth with your
+// identity platform's token check before shipping.
 var devTokens = map[string][]string{
 	"reader": {"time_counter.counter.read"},
 	"writer": {"time_counter.counter.read", "time_counter.counter.write"},
@@ -439,11 +449,16 @@ var devTokens = map[string][]string{
 
 type scopesKey struct{}
 
-func authMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		token, _ := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
-		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), scopesKey{}, devTokens[token])))
-	})
+// auth puts the scopes of the caller's bearer token in the call's context.
+// As a server interceptor it covers Connect, gRPC, REST and MCP alike.
+func auth(next connect.ServerFunc) connect.ServerFunc {
+	return func(ctx context.Context, spec connect.Spec, stream connect.ServerStream) error {
+		var token string
+		if info, ok := connect.CallInfoForServerContext(ctx); ok {
+			token, _ = strings.CutPrefix(info.RequestHeader().Get("Authorization"), "Bearer ")
+		}
+		return next(context.WithValue(ctx, scopesKey{}, devTokens[token]), spec, stream)
+	}
 }
 
 func scopesFromContext(ctx context.Context) []string {
@@ -489,7 +504,7 @@ The same RPCs also answer over Connect and gRPC at `/acme.time_counter.v1.Counte
 
 ## 7. Before you ship
 
-- Replace `authMiddleware` and `devTokens` in `main.go` with your identity platform's token verification. It must put the caller's scopes in the request context.
+- Replace `auth` and `devTokens` in `main.go` with your identity platform's token verification, as a server interceptor. It must put the caller's scopes in the call's context.
 - Commit to `main`, then run `make api-check`. It also runs `buf breaking` against `main`.
 - Add the CI stage from [templates/Jenkinsfile.api-stage](../templates/Jenkinsfile.api-stage), or the same commands in your CI.
 - Check that the teams in `.github/CODEOWNERS` exist. Every change under `proto/` then needs an API review.
@@ -505,10 +520,10 @@ The same RPCs also answer over Connect and gRPC at `/acme.time_counter.v1.Counte
 | --- | --- |
 | `does not follow proper HTTP path template syntax` | A hyphen in the REST root, such as `/commerce/time-counter`. Use `/commerce/timeCounter`. |
 | `Fields representing timestamps should use google.protobuf.Timestamp` on a field like `seconds` | AIP reads `seconds` as time. Use `google.protobuf.Duration` for spans of time and `Timestamp` for points in time. |
-| `undefined: vanguard.NewTranscoder` | Vanguard was upgraded to a version for connect-go v2. Run `go get connectrpc.com/vanguard@v0.4.0`. |
+| `undefined: ...connect.New...ServiceHandler`, or `connect.Request` in errors | Code written for connect-go v1. `dedo upgrade` runs connect-go's migration tool; then wire `main.go` as dedo's template does. |
 | `go: updates to go.mod needed` while generating | Run `go mod tidy`, then generate again. |
 | `buf breaking: skipped; branch main has no .proto files yet` | Nothing to compare with yet: commit the contract to `main`. If your default branch has another name, run `make api-check API_BASE=<branch>`. |
 | `bind: address already in use` | Something else holds port 8080. Run with `ADDR=:9090`. |
 | No findings in the editor | The lint plugin is missing from `.tools/`, as after a fresh clone. Run `dedo tools` (or `make tools`), then reload the editor. |
-| `reading github.com/raveesh-me/dedo/go.mod at revision v0.0.0: unknown revision` | `go get` picked an old commit instead of a release. Add `@v0.10.0` (or the latest release) to the module path. |
+| `reading github.com/raveesh-me/dedo/go.mod at revision v0.0.0: unknown revision` | `go get` picked an old commit instead of a release. Add `@v0.11.0` (or the latest release) to the module path. |
 | `Module buf.build/bufbuild/protovalidate is declared ... but is unused` | A warning only. Remove the dependency from `buf.yaml` if you don't use protovalidate. |

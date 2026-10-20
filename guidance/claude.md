@@ -9,7 +9,9 @@ Append this file to your repository's `AGENTS.md` or `CLAUDE.md`; `dedo init` do
 - Set dedo up with `dedo init` and upgrade it with `dedo update && dedo upgrade`, never by hand-editing pins: the options module's label in `buf.yaml` and the lint plugin, generators and runtime in `go.mod` are one release and move together. After a fresh clone, run `dedo tools` to build the lint plugin into `.tools/`.
 - Before you finish a change to `proto/`, run `make api-check` (format, lint, breaking). Fix findings in the proto. Suppress one only with `// buf:lint:ignore <RULE_ID>` and a written reason.
 - Scopes, cache policy, deprecation and error reasons are declared in the proto (`dedo.v1` options) and enforced by the runtime. Do not write scope checks, cache headers or deprecation headers in handlers.
-- Return errors with a declared reason in a `google.rpc.ErrorInfo` detail. Undeclared reasons are logged as audit findings.
+- Return errors with a declared reason in a `google.rpc.ErrorInfo` detail. Undeclared reasons are logged as audit findings. The service uses connect-go v2: handlers take and return plain messages, errors are `connect.NewError(code, message)`, and any other error reaches callers as `UNKNOWN` with no message.
+- A server stream that clients wait on (a watch, a feed) sends a first message saying it is open, such as a `CHANGE_WATCHING` value, rather than relying on headers: buffering proxies hold headers back, and connect-go v2.0.1's HTTP transport sends none until the first message.
+- Put cross-cutting checks (auth, tenancy, logging) in `connect.ServerInterceptor`s on the one `connect.Server`, not in HTTP middleware: MCP tool calls reach the server in-process and skip HTTP middleware.
 
 ## Lint classes and precedence
 
@@ -33,7 +35,7 @@ When sources disagree, **DEDO > AIP > ZALANDO**, and HOUSE rules may add constra
 
 ## MCP tools
 
-Every unary, non-deprecated RPC becomes an MCP tool named after it in snake_case (`GetTodo` becomes `get_todo`). `protoc-gen-dedo-mcp` generates them as `<Service>MCPTools()`, and `main.go` serves them with `mcpserver.AddTools(server, mcpserver.Target{Client: mcpserver.InProcessClient(api)}, <pkg>.<Service>MCPTools()...)`. Never write tool definitions by hand: change the proto and regenerate. Calls go through the same auth, scopes and validation as REST and Connect.
+Every unary, non-deprecated RPC becomes an MCP tool named after it in snake_case (`GetTodo` becomes `get_todo`). `protoc-gen-dedo-mcp` generates them as `<Service>MCPTools()`, and `main.go` serves them with `mcpserver.AddTools(tools, connect.NewClient(connectinprocess.New(server)), <pkg>.<Service>MCPTools()...)`: calls go in-process to the service's `connect.Server`. Never write tool definitions by hand: change the proto and regenerate. Calls go through the same auth, scopes and validation as REST and Connect.
 
 ### What the model sees
 

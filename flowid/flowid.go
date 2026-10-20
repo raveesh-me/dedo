@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"regexp"
 
-	"connectrpc.com/connect"
+	"connectrpc.com/connect/v2"
 )
 
 // Header is the HTTP header that carries the flow ID.
@@ -19,8 +19,31 @@ var valid = regexp.MustCompile(`^[A-Za-z0-9_\-+/=]{1,128}$`)
 
 type key struct{}
 
-// Middleware ensures every inbound request carries a flow ID. A malformed
-// inbound ID is replaced, so callers cannot inject text into logs.
+// Interceptor ensures every RPC carries a flow ID, on every transport that
+// reaches the server, and returns it in the response headers. A malformed
+// inbound ID is replaced, so callers cannot inject text into logs. An ID
+// that Middleware already set is kept.
+func Interceptor() connect.ServerInterceptor {
+	return func(next connect.ServerFunc) connect.ServerFunc {
+		return func(ctx context.Context, spec connect.Spec, stream connect.ServerStream) error {
+			info, ok := connect.CallInfoForServerContext(ctx)
+			id := From(ctx)
+			if id == "" && ok {
+				id = info.RequestHeader().Get(Header)
+			}
+			if !valid.MatchString(id) {
+				id = generate()
+			}
+			if ok {
+				info.ResponseHeader().Set(Header, id)
+			}
+			return next(WithID(ctx, id), spec, stream)
+		}
+	}
+}
+
+// Middleware gives plain HTTP routes a flow ID, such as an MCP endpoint whose
+// tool calls forward it to the server.
 func Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		id := r.Header.Get(Header)
@@ -39,20 +62,24 @@ func WithID(ctx context.Context, id string) context.Context {
 	return context.WithValue(ctx, key{}, id)
 }
 
-// From returns the flow ID stored by Middleware, or "".
+// From returns the flow ID stored by Interceptor or Middleware, or "".
 func From(ctx context.Context) string {
 	id, _ := ctx.Value(key{}).(string)
 	return id
 }
 
-// ClientInterceptor copies the flow ID onto outbound unary calls.
-func ClientInterceptor() connect.UnaryInterceptorFunc {
-	return func(next connect.UnaryFunc) connect.UnaryFunc {
-		return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
-			if id := From(ctx); req.Spec().IsClient && id != "" {
-				req.Header().Set(Header, id)
+// ClientInterceptor copies the flow ID onto outbound calls.
+func ClientInterceptor() connect.ClientInterceptor {
+	return func(next connect.ClientFunc) connect.ClientFunc {
+		return func(ctx context.Context, spec connect.Spec) (connect.ClientStream, error) {
+			if id := From(ctx); id != "" {
+				info, ok := connect.CallInfoForClientContext(ctx)
+				if !ok {
+					ctx, info = connect.NewClientContext(ctx)
+				}
+				info.RequestHeader().Set(Header, id)
 			}
-			return next(ctx, req)
+			return next(ctx, spec)
 		}
 	}
 }

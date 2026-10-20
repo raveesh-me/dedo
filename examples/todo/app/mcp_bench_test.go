@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 
+	"connectrpc.com/connect/v2"
+	"connectrpc.com/connect/v2/connectinprocess"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"google.golang.org/protobuf/reflect/protoreflect"
 
@@ -18,21 +20,21 @@ import (
 // tools (mcpserver.AddTools) and through the reflective path (mcpserver.New),
 // end to end over an in-memory MCP session.
 func BenchmarkMCPCall(b *testing.B) {
-	api, err := newAPI(Config{Log: slog.New(slog.NewTextHandler(io.Discard, nil))})
+	api, err := newServer(Config{Log: slog.New(slog.NewTextHandler(io.Discard, nil))})
 	if err != nil {
 		b.Fatal(err)
 	}
-	target := mcpserver.Target{Client: mcpserver.InProcessClient(api)}
+	client := connect.NewClient(connectinprocess.New(api))
 	paths := map[string]func(*mcp.Server) error{
 		"generated": func(s *mcp.Server) error {
-			return mcpserver.AddTools(s, target, todov1.TodoServiceMCPTools()...)
+			return mcpserver.AddTools(s, client, todov1.TodoServiceMCPTools()...)
 		},
 		"reflective": func(s *mcp.Server) error {
 			return mcpserver.New(s, mcpserver.Config{
 				Services:      []protoreflect.ServiceDescriptor{todov1.File_raveesh_me_todo_v1_todo_proto.Services().ByName("TodoService")},
 				InputSchemas:  todov1.MCPInputSchemas,
 				OutputSchemas: todov1.MCPOutputSchemas,
-				Client:        target.Client,
+				Client:        client,
 			})
 		},
 	}

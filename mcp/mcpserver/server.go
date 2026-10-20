@@ -23,12 +23,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/http"
 	"regexp"
 	"strings"
 	"unicode"
 
-	"connectrpc.com/connect"
+	"connectrpc.com/connect/v2"
+	"connectrpc.com/connect/v2/connectproto"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -55,10 +55,10 @@ type Config struct {
 	// merged. Every tool needs an input schema; an output schema is optional.
 	InputSchemas  map[string]string
 	OutputSchemas map[string]string
-	// Client sends the forwarded Connect calls, usually InProcessClient(api).
-	Client *http.Client
-	// BaseURL is where Client sends them. It defaults to "http://in-process".
-	BaseURL string
+	// Client sends the forwarded calls, usually
+	// connect.NewClient(connectinprocess.New(server)): straight to the
+	// service's connect.Server, through its interceptors.
+	Client *connect.Client
 }
 
 // New registers the tools of the services on s. It fails when an RPC has no
@@ -68,10 +68,6 @@ type Config struct {
 func New(s *mcp.Server, cfg Config) error {
 	if cfg.Client == nil {
 		return errors.New("mcpserver: Config.Client is required")
-	}
-	baseURL := strings.TrimSuffix(cfg.BaseURL, "/")
-	if baseURL == "" {
-		baseURL = "http://in-process"
 	}
 	owner := map[string]protoreflect.FullName{}
 	for _, svc := range cfg.Services {
@@ -91,7 +87,7 @@ func New(s *mcp.Server, cfg Config) error {
 			// The SDK's typed AddTool validates the arguments against the input
 			// schema and the result against the output schema, fills
 			// structuredContent, and turns a returned error into a tool error.
-			mcp.AddTool(s, tool, forward(m, cfg.Client, baseURL))
+			mcp.AddTool(s, tool, forward(m, cfg.Client))
 		}
 	}
 	return nil
@@ -136,20 +132,14 @@ func Describe(m protoreflect.MethodDescriptor) (*mcp.Tool, error) {
 	}, nil
 }
 
-// forward returns the tool handler that calls the RPC over Connect with
-// dynamic messages, so no per-service code is needed.
-func forward(m protoreflect.MethodDescriptor, httpClient *http.Client, baseURL string) mcp.ToolHandlerFor[json.RawMessage, json.RawMessage] {
-	opts := []connect.ClientOption{
-		connect.WithSchema(m),
-		connect.WithResponseInitializer(func(_ connect.Spec, msg any) error {
-			if dynamic, ok := msg.(*dynamicpb.Message); ok {
-				*dynamic = *dynamicpb.NewMessage(m.Output())
-			}
-			return nil
-		}),
+// forward returns the tool handler that calls the RPC with dynamic
+// messages, so no per-service code is needed.
+func forward(m protoreflect.MethodDescriptor, client *connect.Client) mcp.ToolHandlerFor[json.RawMessage, json.RawMessage] {
+	spec := connect.Spec{
+		Procedure:  fmt.Sprintf("/%s/%s", m.Parent().FullName(), m.Name()),
+		StreamType: connect.StreamTypeUnary,
+		Schema:     m,
 	}
-	procedure := fmt.Sprintf("/%s/%s", m.Parent().FullName(), m.Name())
-	client := connect.NewClient[dynamicpb.Message, dynamicpb.Message](httpClient, baseURL+procedure, opts...)
 	return func(ctx context.Context, req *mcp.CallToolRequest, args json.RawMessage) (*mcp.CallToolResult, json.RawMessage, error) {
 		in := dynamicpb.NewMessage(m.Input())
 		if len(args) > 0 {
@@ -161,14 +151,12 @@ func forward(m protoreflect.MethodDescriptor, httpClient *http.Client, baseURL s
 				return nil, nil, &ToolError{Code: "INVALID_ARGUMENT", Message: "the arguments do not match the input schema: " + err.Error()}
 			}
 		}
-		call := connect.NewRequest(in)
-		copyHeaders(req, call.Header())
-		res, err := client.CallUnary(ctx, call)
-		if err != nil {
+		out := dynamicpb.NewMessage(m.Output())
+		if err := client.CallUnary(forwardHeaders(ctx, req), spec, in, out); err != nil {
 			return nil, nil, toolError(err)
 		}
-		out, err := marshalResult(res.Msg)
-		return nil, out, err
+		res, err := marshalResult(out)
+		return nil, res, err
 	}
 }
 
@@ -193,7 +181,7 @@ func toolError(err error) *ToolError {
 	}
 	out := &ToolError{Code: strings.ToUpper(cerr.Code().String()), Message: cerr.Message()}
 	for _, d := range cerr.Details() {
-		if v, derr := d.Value(); derr == nil {
+		if v, derr := connectproto.UnmarshalErrorDetail(d); derr == nil {
 			if info, ok := v.(*errdetails.ErrorInfo); ok {
 				out.Reason = info.GetReason()
 				break

@@ -3,13 +3,14 @@ package mcpserver
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
-	"connectrpc.com/connect"
+	"connectrpc.com/connect/v2"
+	"connectrpc.com/connect/v2/connectinprocess"
+	"connectrpc.com/connect/v2/connectproto"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"google.golang.org/genproto/googleapis/rpc/code"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
@@ -82,36 +83,34 @@ var (
 	}
 )
 
-// backend serves GetThing and DeleteThing over Connect with dynamic
-// messages. GetThing echoes the name and the Authorization header it got,
-// and fails with THING_NOT_FOUND for the name "missing".
-func backend(svc protoreflect.ServiceDescriptor) http.Handler {
-	mux := http.NewServeMux()
+// backend serves GetThing and DeleteThing with dynamic messages, in-process.
+// GetThing echoes the name and the Authorization header it got, and fails
+// with THING_NOT_FOUND for the name "missing".
+func backend(svc protoreflect.ServiceDescriptor) *connect.Client {
+	server := connect.NewServer()
 	for _, name := range []protoreflect.Name{"GetThing", "DeleteThing"} {
 		m := svc.Methods().ByName(name)
-		procedure := "/dedo.test.v1.TestService/" + string(name)
-		mux.Handle(procedure, connect.NewUnaryHandler(procedure,
-			func(_ context.Context, req *connect.Request[dynamicpb.Message]) (*connect.Response[dynamicpb.Message], error) {
-				thing := req.Msg.Get(m.Input().Fields().ByName("name")).String()
-				if thing == "missing" {
-					cerr := connect.NewError(connect.CodeNotFound, errors.New("no such thing"))
-					detail, _ := connect.NewErrorDetail(&errdetails.ErrorInfo{Reason: "THING_NOT_FOUND"})
-					cerr.AddDetail(detail)
-					return nil, cerr
+		server.Register(connect.Method{
+			Spec: connect.Spec{Procedure: "/dedo.test.v1.TestService/" + string(name), StreamType: connect.StreamTypeUnary, Schema: m},
+			Handler: func(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+				req := dynamicpb.NewMessage(m.Input())
+				if err := stream.Receive(req); err != nil {
+					return err
 				}
+				thing := req.Get(m.Input().Fields().ByName("name")).String()
+				if thing == "missing" {
+					detail, _ := connectproto.NewErrorDetail(&errdetails.ErrorInfo{Reason: "THING_NOT_FOUND"})
+					return connect.NewError(connect.CodeNotFound, "no such thing").WithDetail(detail)
+				}
+				info, _ := connect.CallInfoForServerContext(ctx)
 				out := dynamicpb.NewMessage(m.Output())
 				out.Set(m.Output().Fields().ByName("name"), protoreflect.ValueOfString(thing))
-				out.Set(m.Output().Fields().ByName("note"), protoreflect.ValueOfString(req.Header().Get("Authorization")))
-				return connect.NewResponse(out), nil
+				out.Set(m.Output().Fields().ByName("note"), protoreflect.ValueOfString(info.RequestHeader().Get("Authorization")))
+				return stream.Send(out)
 			},
-			connect.WithSchema(m),
-			connect.WithRequestInitializer(func(_ connect.Spec, msg any) error {
-				*msg.(*dynamicpb.Message) = *dynamicpb.NewMessage(m.Input())
-				return nil
-			}),
-		))
+		})
 	}
-	return mux
+	return connect.NewClient(connectinprocess.New(server))
 }
 
 // bearer adds a token to every request of the MCP client.
@@ -129,7 +128,7 @@ func session(t *testing.T) *mcp.ClientSession {
 	server := mcp.NewServer(&mcp.Implementation{Name: "test", Version: "v1"}, nil)
 	if err := New(server, Config{
 		Services: []protoreflect.ServiceDescriptor{svc}, InputSchemas: inputSchemas, OutputSchemas: outputSchemas,
-		Client: InProcessClient(backend(svc)),
+		Client: backend(svc),
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -221,7 +220,7 @@ func TestNewRejectsIncompleteConfig(t *testing.T) {
 	svc := service(t)
 	server := mcp.NewServer(&mcp.Implementation{Name: "test", Version: "v1"}, nil)
 	services := []protoreflect.ServiceDescriptor{svc}
-	client := InProcessClient(backend(svc))
+	client := backend(svc)
 	if err := New(server, Config{Services: services, InputSchemas: inputSchemas}); err == nil {
 		t.Error("want an error without a client")
 	}

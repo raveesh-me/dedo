@@ -39,6 +39,9 @@ const (
 	WatchTodosResponse_CHANGE_UPDATED WatchTodosResponse_Change = 2
 	// The to-do was deleted.
 	WatchTodosResponse_CHANGE_DELETED WatchTodosResponse_Change = 3
+	// The watch is open. Sent once, first, without a to-do: no change made
+	// after it is missed.
+	WatchTodosResponse_CHANGE_WATCHING WatchTodosResponse_Change = 4
 )
 
 // Enum value maps for WatchTodosResponse_Change.
@@ -48,12 +51,14 @@ var (
 		1: "CHANGE_CREATED",
 		2: "CHANGE_UPDATED",
 		3: "CHANGE_DELETED",
+		4: "CHANGE_WATCHING",
 	}
 	WatchTodosResponse_Change_value = map[string]int32{
 		"CHANGE_UNSPECIFIED": 0,
 		"CHANGE_CREATED":     1,
 		"CHANGE_UPDATED":     2,
 		"CHANGE_DELETED":     3,
+		"CHANGE_WATCHING":    4,
 	}
 )
 
@@ -901,15 +906,16 @@ const file_raveesh_me_todo_v1_todo_proto_rawDesc = "" +
 	"\x12RemoveTodoResponse:\x17»\x18\x13\n" +
 	"\x11Empty on success.\"H\n" +
 	"\x11WatchTodosRequest:3»\x18/\n" +
-	"-Starts a stream of changes to the to-do list.\"\xa6\x02\n" +
+	"-Starts a stream of changes to the to-do list.\"\xbb\x02\n" +
 	"\x12WatchTodosResponse\x12E\n" +
 	"\x06change\x18\x01 \x01(\x0e2-.raveesh_me.todo.v1.WatchTodosResponse.ChangeR\x06change\x12,\n" +
-	"\x04todo\x18\x02 \x01(\v2\x18.raveesh_me.todo.v1.TodoR\x04todo\"\\\n" +
+	"\x04todo\x18\x02 \x01(\v2\x18.raveesh_me.todo.v1.TodoR\x04todo\"q\n" +
 	"\x06Change\x12\x16\n" +
 	"\x12CHANGE_UNSPECIFIED\x10\x00\x12\x12\n" +
 	"\x0eCHANGE_CREATED\x10\x01\x12\x12\n" +
 	"\x0eCHANGE_UPDATED\x10\x02\x12\x12\n" +
-	"\x0eCHANGE_DELETED\x10\x03:=»\x189\n" +
+	"\x0eCHANGE_DELETED\x10\x03\x12\x13\n" +
+	"\x0fCHANGE_WATCHING\x10\x04:=»\x189\n" +
 	"7One change to the to-do list, and the to-do it changed.2\xcd\x11\n" +
 	"\vTodoService\x12\xba\x02\n" +
 	"\aGetTodo\x12\".raveesh_me.todo.v1.GetTodoRequest\x1a#.raveesh_me.todo.v1.GetTodoResponse\"\xe5\x01\xaa\xbb\x18\xaf\x01\n" +
