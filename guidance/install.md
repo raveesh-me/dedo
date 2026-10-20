@@ -3,7 +3,7 @@
 Each section adds one part of dedo to an existing Go module. `dedo init` does all of them, editing what is already there:
 
 ```sh
-go install github.com/raveesh-me/dedo/cmd/dedo@v0.9.0
+go install github.com/raveesh-me/dedo/cmd/dedo@v0.10.0
 dedo init
 ```
 
@@ -78,8 +78,8 @@ Pin the generators as Go tools:
 ```sh
 go get -tool google.golang.org/protobuf/cmd/protoc-gen-go
 go get -tool connectrpc.com/connect/cmd/protoc-gen-connect-go
-go get -tool github.com/raveesh-me/dedo/mcp/cmd/protoc-gen-dedo-mcp@v0.9.0
-go get -tool github.com/raveesh-me/dedo/openapi/cmd/protoc-gen-dedo-openapi@v0.9.0
+go get -tool github.com/raveesh-me/dedo/mcp/cmd/protoc-gen-dedo-mcp@v0.10.0
+go get -tool github.com/raveesh-me/dedo/openapi/cmd/protoc-gen-dedo-openapi@v0.10.0
 ```
 
 Add them to `buf.gen.yaml` ([templates/buf.gen.yaml](../templates/buf.gen.yaml) is a complete one):
@@ -131,7 +131,7 @@ make api-generate   # buf generate
 Add the runtime libraries. Pin Vanguard to `v0.4.0`: later versions need connect-go v2.
 
 ```sh
-go get github.com/raveesh-me/dedo@v0.9.0 github.com/raveesh-me/dedo/mcp@v0.9.0
+go get github.com/raveesh-me/dedo@v0.10.0 github.com/raveesh-me/dedo/mcp@v0.10.0
 go get connectrpc.com/vanguard@v0.4.0
 ```
 
