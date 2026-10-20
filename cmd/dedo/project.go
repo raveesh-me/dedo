@@ -27,7 +27,6 @@ type service struct {
 	Name     string // CounterService
 	GoPkg    string // time_counterv1
 	GoImport string // github.com/acme/time-counter/gen/go/acme/time_counter/v1
-	FileVar  string // File_acme_time_counter_v1_time_counter_proto
 }
 
 var (
@@ -35,7 +34,6 @@ var (
 	protoPkg   = regexp.MustCompile(`(?m)^\s*package\s+([\w.]+)\s*;`)
 	protoSvc   = regexp.MustCompile(`(?m)^\s*service\s+(\w+)\s*\{`)
 	scopeLit   = regexp.MustCompile(`"([a-z][a-z0-9_]*\.[a-z][a-z0-9_]*\.(?:read|write))"`)
-	nonIdent   = regexp.MustCompile(`[^a-zA-Z0-9]`)
 )
 
 // skipDirs are never searched for proto sources.
@@ -100,7 +98,6 @@ func (p *project) read(rel string) error {
 		Name:     string(svcs[0][1]),
 		GoPkg:    goPackageName(string(pkg[1])),
 		GoImport: p.module + "/gen/go/" + filepath.ToSlash(filepath.Dir(inRoot)),
-		FileVar:  "File_" + nonIdent.ReplaceAllString(inRoot, "_"),
 	}
 	return nil
 }

@@ -15,7 +15,6 @@ import (
 	"github.com/raveesh-me/dedo/interceptor"
 	"github.com/raveesh-me/dedo/mcp/mcpserver"
 	"github.com/raveesh-me/dedo/policy"
-	"google.golang.org/protobuf/reflect/protoreflect"
 
 	"{{.Module}}/docs"
 	{{.GoPkg}} "{{.GoImport}}"
@@ -63,15 +62,11 @@ func newHandler(log *slog.Logger) (http.Handler, error) {
 	}
 	api := flowid.Middleware(authMiddleware(rest))
 
-	// MCP: every RPC is a tool, called through the same API with the caller's
-	// token, using the schemas protoc-gen-dedo-mcp generated.
+	// MCP: every RPC is a tool, as protoc-gen-dedo-mcp generated it, called
+	// through the same API with the caller's token.
 	mcpServer := mcp.NewServer(&mcp.Implementation{Name: "{{.Name}}", Version: "v1"}, nil)
-	if err := mcpserver.New(mcpServer, mcpserver.Config{
-		Services:      []protoreflect.ServiceDescriptor{ {{- .GoPkg}}.{{.FileVar}}.Services().ByName("{{.Service}}")},
-		InputSchemas:  {{.GoPkg}}.MCPInputSchemas,
-		OutputSchemas: {{.GoPkg}}.MCPOutputSchemas,
-		Client:        mcpserver.InProcessClient(api),
-	}); err != nil {
+	target := mcpserver.Target{Client: mcpserver.InProcessClient(api)}
+	if err := mcpserver.AddTools(mcpServer, target, {{.GoPkg}}.{{.Service}}MCPTools()...); err != nil {
 		return nil, err
 	}
 

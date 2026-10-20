@@ -412,7 +412,7 @@ func (in *initer) printMain() error {
 // render fills a Go template with this repository's names, or with
 // placeholders when it has no service yet.
 func (in *initer) render(name string) ([]byte, error) {
-	svc := service{Name: "YourService", GoPkg: "yourv1", GoImport: in.p.module + "/gen/go/your/package/v1", FileVar: "File_your_package_v1_your_proto"}
+	svc := service{Name: "YourService", GoPkg: "yourv1", GoImport: in.p.module + "/gen/go/your/package/v1"}
 	if in.p.service != nil {
 		svc = *in.p.service
 	}

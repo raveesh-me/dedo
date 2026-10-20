@@ -127,7 +127,7 @@ dedo init
 1. `dedo init` (or by hand: copy `buf.yaml`, `buf.gen.yaml`, `Makefile.api` from `templates/`, pin the generators with `go get -tool`, run `make tools` and `buf dep update`).
 2. Fill in `CODEOWNERS` and the VS Code settings from `templates/` if you use them.
 3. Write the contract, then `make api-check` (lint, format, breaking) and `buf generate` (Go, Connect, MCP tools, REST docs).
-4. Wire the runtime: `policy.Build` for the policy table, `interceptor.New` for scopes and headers, Vanguard for REST, `mcpserver.New` with the generated `MCPInputSchemas` for MCP, and the docs handler. Start with `EnforceScopes: false` (audit mode), then enforce.
+4. Wire the runtime: `policy.Build` for the policy table, `interceptor.New` for scopes and headers, Vanguard for REST, `mcpserver.AddTools` with the generated `<Service>MCPTools()` for MCP, and the docs handler. Start with `EnforceScopes: false` (audit mode), then enforce.
 5. Add `templates/policy_table_test.go.tmpl` as a test, so a missing declaration fails before deploy.
 
 `buf.gen.yaml` uses managed mode. A module-scoped `go_package_prefix` override points imports of the options module at this repository's Go module, so generated code links against the runtime's types.

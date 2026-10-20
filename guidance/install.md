@@ -168,14 +168,11 @@ func newHandler(log *slog.Logger) (http.Handler, error) {
 	}
 	api := flowid.Middleware(authMiddleware(rest))
 
-	// MCP: every RPC is a tool, called through the same API with the caller's token.
+	// MCP: every RPC is a tool, as protoc-gen-dedo-mcp generated it, called
+	// through the same API with the caller's token.
 	mcpServer := mcp.NewServer(&mcp.Implementation{Name: "time-counter", Version: "v1"}, nil)
-	if err := mcpserver.New(mcpServer, mcpserver.Config{
-		Services:      []protoreflect.ServiceDescriptor{time_counterv1.File_acme_time_counter_v1_time_counter_proto.Services().ByName("CounterService")},
-		InputSchemas:  time_counterv1.MCPInputSchemas,
-		OutputSchemas: time_counterv1.MCPOutputSchemas,
-		Client:        mcpserver.InProcessClient(api),
-	}); err != nil {
+	target := mcpserver.Target{Client: mcpserver.InProcessClient(api)}
+	if err := mcpserver.AddTools(mcpServer, target, time_counterv1.CounterServiceMCPTools()...); err != nil {
 		return nil, err
 	}
 

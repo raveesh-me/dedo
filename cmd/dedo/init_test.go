@@ -153,7 +153,7 @@ func TestInitFreshRepository(t *testing.T) {
 	}
 	for _, want := range []string{
 		`time_counterv1 "github.com/acme/time-counter/gen/go/acme/time_counter/v1"`,
-		`time_counterv1.File_acme_time_counter_v1_time_counter_proto.Services().ByName("CounterService")`,
+		`mcpserver.AddTools(mcpServer, target, time_counterv1.CounterServiceMCPTools()...)`,
 		`"reader": {"time_counter.counter.read"}`,
 		`"writer": {"time_counter.counter.read", "time_counter.counter.write"}`,
 	} {

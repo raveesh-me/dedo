@@ -1,7 +1,13 @@
 // Package mcpserver serves protobuf services as MCP tools, with the text,
 // schemas and behaviour declared in their dedo.v1 options.
 //
-// New registers every unary, non-deprecated RPC as a tool on an MCP Go SDK
+// AddTools registers the tools protoc-gen-dedo-mcp generates
+// (<Service>MCPTools): their definitions are written out at generation time
+// and their calls use the generated message types, so nothing is resolved by
+// reflection while serving. New does the same from service descriptors at
+// run time, with dynamic messages, for services without generated tools.
+//
+// Both register every unary, non-deprecated RPC as a tool on an MCP Go SDK
 // server. A tool's name is the RPC's in snake_case (GetTodo becomes
 // get_todo); its title, description, ToolAnnotations and error reasons come
 // from the proto options; its input and output schemas are the ones
@@ -71,7 +77,7 @@ func New(s *mcp.Server, cfg Config) error {
 	for _, svc := range cfg.Services {
 		for i := 0; i < svc.Methods().Len(); i++ {
 			m := svc.Methods().Get(i)
-			if m.IsStreamingClient() || m.IsStreamingServer() || isDeprecated(m) {
+			if !Serves(m) {
 				continue
 			}
 			tool, err := describe(m, cfg)
@@ -93,31 +99,46 @@ func New(s *mcp.Server, cfg Config) error {
 
 // describe builds the tool of an RPC from its options and generated schemas.
 func describe(m protoreflect.MethodDescriptor, cfg Config) (*mcp.Tool, error) {
-	name := ToolName(m)
-	if !validName.MatchString(name) {
-		return nil, fmt.Errorf("mcpserver: %s: tool name %q is not a valid MCP tool name", m.FullName(), name)
+	tool, err := Describe(m)
+	if err != nil {
+		return nil, err
 	}
 	input, ok := cfg.InputSchemas[string(m.FullName())]
 	if !ok {
 		return nil, fmt.Errorf("mcpserver: %s has no input schema; generate it with protoc-gen-dedo-mcp", m.FullName())
 	}
-	rules, _ := proto.GetExtension(m.Options(), dedov1.E_Method).(*dedov1.MethodRules)
-	tool := &mcp.Tool{
-		Name:        name,
-		Title:       rules.GetTool().GetTitle(),
-		Description: withErrors(rules.GetTool().GetDescription(), rules.GetErrors()),
-		InputSchema: json.RawMessage(input),
-		Annotations: annotations(rules.GetTool()),
-	}
+	tool.InputSchema = json.RawMessage(input)
 	if output, ok := cfg.OutputSchemas[string(m.FullName())]; ok {
 		tool.OutputSchema = json.RawMessage(output)
 	}
 	return tool, nil
 }
 
+// Serves reports whether an RPC becomes a tool: unary and not deprecated.
+func Serves(m protoreflect.MethodDescriptor) bool {
+	return !m.IsStreamingClient() && !m.IsStreamingServer() && !isDeprecated(m)
+}
+
+// Describe returns the tool of an RPC without its schemas: the name, and
+// the title, description, error reasons and ToolAnnotations from its
+// options. protoc-gen-dedo-mcp writes the result out as Go code.
+func Describe(m protoreflect.MethodDescriptor) (*mcp.Tool, error) {
+	name := ToolName(m)
+	if !validName.MatchString(name) {
+		return nil, fmt.Errorf("mcpserver: %s: tool name %q is not a valid MCP tool name", m.FullName(), name)
+	}
+	rules, _ := proto.GetExtension(m.Options(), dedov1.E_Method).(*dedov1.MethodRules)
+	return &mcp.Tool{
+		Name:        name,
+		Title:       rules.GetTool().GetTitle(),
+		Description: withErrors(rules.GetTool().GetDescription(), rules.GetErrors()),
+		Annotations: annotations(rules.GetTool()),
+	}, nil
+}
+
 // forward returns the tool handler that calls the RPC over Connect with
 // dynamic messages, so no per-service code is needed.
-func forward(m protoreflect.MethodDescriptor, httpClient *http.Client, baseURL string) mcp.ToolHandlerFor[json.RawMessage, map[string]any] {
+func forward(m protoreflect.MethodDescriptor, httpClient *http.Client, baseURL string) mcp.ToolHandlerFor[json.RawMessage, json.RawMessage] {
 	opts := []connect.ClientOption{
 		connect.WithSchema(m),
 		connect.WithResponseInitializer(func(_ connect.Spec, msg any) error {
@@ -129,7 +150,7 @@ func forward(m protoreflect.MethodDescriptor, httpClient *http.Client, baseURL s
 	}
 	procedure := fmt.Sprintf("/%s/%s", m.Parent().FullName(), m.Name())
 	client := connect.NewClient[dynamicpb.Message, dynamicpb.Message](httpClient, baseURL+procedure, opts...)
-	return func(ctx context.Context, req *mcp.CallToolRequest, args json.RawMessage) (*mcp.CallToolResult, map[string]any, error) {
+	return func(ctx context.Context, req *mcp.CallToolRequest, args json.RawMessage) (*mcp.CallToolResult, json.RawMessage, error) {
 		in := dynamicpb.NewMessage(m.Input())
 		if len(args) > 0 {
 			args, err := normalizeMasks(m.Input(), args)
@@ -141,29 +162,13 @@ func forward(m protoreflect.MethodDescriptor, httpClient *http.Client, baseURL s
 			}
 		}
 		call := connect.NewRequest(in)
-		if req.Extra != nil {
-			for _, h := range forwardedHeaders {
-				if v := req.Extra.Header.Get(h); v != "" {
-					call.Header().Set(h, v)
-				}
-			}
-		}
+		copyHeaders(req, call.Header())
 		res, err := client.CallUnary(ctx, call)
 		if err != nil {
 			return nil, nil, toolError(err)
 		}
-		// Default values are written out, so an empty list is
-		// {"todos":[],"next_page_token":""} rather than {}, which a model
-		// cannot tell from a broken reply.
-		out, err := protojson.MarshalOptions{UseProtoNames: true, EmitDefaultValues: true}.Marshal(res.Msg)
-		if err != nil {
-			return nil, nil, err
-		}
-		var structured map[string]any
-		if err := json.Unmarshal(out, &structured); err != nil {
-			return nil, nil, err
-		}
-		return nil, structured, nil
+		out, err := marshalResult(res.Msg)
+		return nil, out, err
 	}
 }
 
