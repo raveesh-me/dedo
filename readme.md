@@ -7,7 +7,7 @@
 | RPC over Connect and gRPC | connect-go |
 | REST, with resource-style URLs | `google.api.http` annotations, served by Vanguard |
 | REST reference docs (OpenAPI 3.1) | `protoc-gen-dedo-openapi` |
-| MCP tools for AI agents | `protoc-gen-go-mcp` (Redpanda) generates the tool registration; `protoc-gen-dedo-mcp` writes each tool's input schema; `mcpserver` serves them with the declared text, hints and error reasons |
+| MCP tools for AI agents | `protoc-gen-dedo-mcp` writes each tool's input and output schema; `mcpserver` registers and serves the tools with the declared text, hints and error reasons |
 | Authorization, cache and deprecation headers, flow IDs, error audit | The policy runtime, read from options in the `.proto` |
 
 **First-class lint guidance.** A Buf check plugin turns the standard into findings in your editor as you type, each linked to an explanation in [HOUSE_RULES.md](HOUSE_RULES.md). The same `buf lint` gates CI. Handlers carry business logic only.
@@ -28,7 +28,7 @@ Contract rules come from Google's AIPs. Operational rules (audience, ownership, 
 | Flow ID | `flowid/` | Reads or creates `X-Flow-ID` and propagates it on outbound calls. |
 | Policy interceptor | `interceptor/` | Checks scopes, sets `Cache-Control`, `Deprecation` and `Sunset`, and logs undeclared error reasons. |
 | REST doc generator | `openapi/` | `protoc-gen-dedo-openapi`: an OpenAPI 3.1 document from the `google.api.http` bindings, with scopes, error reasons, deprecation and the declared descriptions. Connect routes are left out. |
-| MCP adapter and schemas | `mcp/` | `protoc-gen-dedo-mcp` writes each tool's input schema at code-generation time: field descriptions from comments, `OUTPUT_ONLY` fields left out, partial-update and create semantics from AIP. `mcpserver` serves the tools `protoc-gen-go-mcp` generates under short snake_case names (`get_todo`), with those schemas, the declared title, description, `ToolAnnotations` and error reasons, and without deprecated RPCs. Tool calls run through the same auth and policy as REST. |
+| MCP adapter and schemas | `mcp/` | `protoc-gen-dedo-mcp` writes each tool's input schema at code-generation time: field descriptions from comments, `OUTPUT_ONLY` fields left out, partial-update and create semantics from AIP. `mcpserver` registers every unary RPC as a tool under a short snake_case name (`get_todo`), with those schemas, the declared title, description, `ToolAnnotations` and error reasons, and without deprecated RPCs. It forwards each call over Connect through the service's own HTTP stack, so tool calls run through the same auth and policy as REST. |
 | Templates | `templates/` | `buf.yaml`, `buf.gen.yaml`, `Makefile.api`, VS Code settings, a Jenkins stage and a policy-table test for service repositories. |
 | Examples | `examples/` | `library`: a contract-only module. `todo` and `bad-todo`: two runnable services with the same interface, one compliant and one breaking every rule. |
 

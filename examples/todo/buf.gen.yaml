@@ -20,11 +20,8 @@ plugins:
   - local: ["go", "tool", "protoc-gen-connect-go"]
     out: gen/go
     opt: paths=source_relative
-  - local: ["go", "tool", "protoc-gen-go-mcp"]
-    out: gen/go
-    opt: paths=source_relative
-  # MCP tool input schemas with field descriptions and field_behavior,
-  # passed to mcpserver.New.
+  # MCP tool input and output schemas, with field descriptions and
+  # field_behavior; mcpserver.New serves the tools from them.
   - local: ["go", "tool", "protoc-gen-dedo-mcp"]
     out: gen/go
     opt: paths=source_relative

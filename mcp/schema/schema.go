@@ -38,7 +38,15 @@ const (
 	modePlain  mode = iota // REQUIRED fields are required
 	modeCreate             // the resource of a create: no IDENTIFIER
 	modePatch              // the resource of a partial update: only IDENTIFIER is required
+	modeOutput             // a response: every field, none required
 )
+
+// Output returns the output schema of a unary RPC's MCP tool: the response
+// message as the tool's structuredContent carries it (proto field names,
+// output-only fields included, nothing required).
+func Output(m *protogen.Method) Object {
+	return message(m.Output, modeOutput, 0)
+}
 
 // Input returns the input schema of a unary RPC's MCP tool.
 func Input(m *protogen.Method) Object {
@@ -81,7 +89,7 @@ func message(msg *protogen.Message, mode mode, depth int) Object {
 	}
 	var required []string
 	for _, f := range msg.Fields {
-		if has(f, annotations.FieldBehavior_OUTPUT_ONLY) {
+		if mode != modeOutput && has(f, annotations.FieldBehavior_OUTPUT_ONLY) {
 			continue
 		}
 		identifier := has(f, annotations.FieldBehavior_IDENTIFIER)
@@ -89,8 +97,9 @@ func message(msg *protogen.Message, mode mode, depth int) Object {
 			continue
 		}
 		name := string(f.Desc.Name())
-		out["properties"].(Object)[name] = withDescription(field(f, depth), comment(f))
+		out["properties"].(Object)[name] = withDescription(field(f, depth, mode), comment(f))
 		switch {
+		case mode == modeOutput:
 		case mode == modePatch && identifier:
 			required = append(required, name)
 		case mode != modePatch && has(f, annotations.FieldBehavior_REQUIRED):
@@ -103,20 +112,26 @@ func message(msg *protogen.Message, mode mode, depth int) Object {
 	return out
 }
 
-func field(f *protogen.Field, depth int) Object {
+func field(f *protogen.Field, depth int, mode mode) Object {
 	switch {
 	case f.Desc.IsMap():
-		return Object{"type": "object", "additionalProperties": single(f.Message.Fields[1], depth)}
+		return Object{"type": "object", "additionalProperties": single(f.Message.Fields[1], depth, mode)}
 	case f.Desc.IsList():
-		return Object{"type": "array", "items": single(f, depth)}
+		return Object{"type": "array", "items": single(f, depth, mode)}
 	}
-	return single(f, depth)
+	return single(f, depth, mode)
 }
 
-func single(f *protogen.Field, depth int) Object {
+// single builds a field's schema. Nested messages of an output stay output;
+// any other nested message is plain.
+func single(f *protogen.Field, depth int, mode mode) Object {
 	switch f.Desc.Kind() {
 	case protoreflect.MessageKind, protoreflect.GroupKind:
-		return message(f.Message, modePlain, depth+1)
+		nested := modePlain
+		if mode == modeOutput {
+			nested = modeOutput
+		}
+		return message(f.Message, nested, depth+1)
 	case protoreflect.EnumKind:
 		var names []string
 		for _, v := range f.Enum.Values {

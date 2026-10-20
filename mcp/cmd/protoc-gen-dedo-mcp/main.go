@@ -34,20 +34,25 @@ func main() {
 }
 
 func generate(plugin *protogen.Plugin, f *protogen.File) error {
-	schemas := map[string]string{}
+	inputs, outputs := map[string]string{}, map[string]string{}
 	for _, svc := range f.Services {
 		for _, m := range svc.Methods {
 			if m.Desc.IsStreamingClient() || m.Desc.IsStreamingServer() {
 				continue
 			}
-			b, err := json.Marshal(schema.Input(m))
+			in, err := json.Marshal(schema.Input(m))
 			if err != nil {
 				return err
 			}
-			schemas[string(m.Desc.FullName())] = string(b)
+			out, err := json.Marshal(schema.Output(m))
+			if err != nil {
+				return err
+			}
+			inputs[string(m.Desc.FullName())] = string(in)
+			outputs[string(m.Desc.FullName())] = string(out)
 		}
 	}
-	if len(schemas) == 0 {
+	if len(inputs) == 0 {
 		return nil
 	}
 	g := plugin.NewGeneratedFile(f.GeneratedFilenamePrefix+".mcp_schema.pb.go", f.GoImportPath)
@@ -56,18 +61,23 @@ func generate(plugin *protogen.Plugin, f *protogen.File) error {
 	g.P()
 	g.P("package ", f.GoPackageName)
 	g.P()
-	g.P("// MCPInputSchemas maps each unary RPC's full name to the JSON Schema of its")
-	g.P("// MCP tool input, built from the request message, its field comments and")
-	g.P("// google.api.field_behavior. Pass it to mcpserver.New.")
-	g.P("var MCPInputSchemas = map[string]string{")
+	writeMap(g, "MCPInputSchemas", "MCP tool input, built from the request message, its field comments and\n// google.api.field_behavior.", inputs)
+	g.P()
+	writeMap(g, "MCPOutputSchemas", "MCP tool output: the response message as mcpserver encodes it in\n// structuredContent.", outputs)
+	return nil
+}
+
+func writeMap(g *protogen.GeneratedFile, name, doc string, schemas map[string]string) {
+	g.P("// ", name, " maps each unary RPC's full name to the JSON Schema of its")
+	g.P("// ", doc, " Pass it to mcpserver.New.")
+	g.P("var ", name, " = map[string]string{")
 	names := make([]string, 0, len(schemas))
-	for name := range schemas {
-		names = append(names, name)
+	for n := range schemas {
+		names = append(names, n)
 	}
 	sort.Strings(names)
-	for _, name := range names {
-		g.P(strconv.Quote(name), ": ", strconv.Quote(schemas[name]), ",")
+	for _, n := range names {
+		g.P(strconv.Quote(n), ": ", strconv.Quote(schemas[n]), ",")
 	}
 	g.P("}")
-	return nil
 }

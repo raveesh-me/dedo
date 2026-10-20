@@ -3,43 +3,66 @@ package mcpserver
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"connectrpc.com/connect"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
+	"google.golang.org/genproto/googleapis/rpc/code"
+	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protodesc"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/descriptorpb"
-	"google.golang.org/protobuf/types/known/emptypb"
+	"google.golang.org/protobuf/types/dynamicpb"
 
 	dedov1 "github.com/raveesh-me/dedo/gen/go/dedo/v1"
 )
 
-// service builds raveesh_me.test.v1.TestService with one read and one
-// destructive method.
+// service builds dedo.test.v1.TestService: a read, a destructive write, a
+// deprecated RPC and a stream.
 func service(t *testing.T) protoreflect.ServiceDescriptor {
 	t.Helper()
-	method := func(name string, level descriptorpb.MethodOptions_IdempotencyLevel, tool *dedov1.Tool) *descriptorpb.MethodDescriptorProto {
-		opts := &descriptorpb.MethodOptions{IdempotencyLevel: level.Enum()}
-		proto.SetExtension(opts, dedov1.E_Method, &dedov1.MethodRules{Tool: tool})
+	no, yes := false, true
+	method := func(name string, level descriptorpb.MethodOptions_IdempotencyLevel, tool *dedov1.Tool, deprecated, stream bool) *descriptorpb.MethodDescriptorProto {
+		opts := &descriptorpb.MethodOptions{IdempotencyLevel: level.Enum(), Deprecated: proto.Bool(deprecated)}
+		proto.SetExtension(opts, dedov1.E_Method, &dedov1.MethodRules{
+			Tool:   tool,
+			Errors: []*dedov1.ErrorReason{{Reason: "THING_NOT_FOUND", Code: code.Code_NOT_FOUND}},
+		})
 		return &descriptorpb.MethodDescriptorProto{
-			Name: proto.String(name), InputType: proto.String(".raveesh_me.test.v1.Request"),
-			OutputType: proto.String(".raveesh_me.test.v1.Request"), Options: opts,
+			Name: proto.String(name), InputType: proto.String(".dedo.test.v1.Request"),
+			OutputType: proto.String(".dedo.test.v1.Response"), Options: opts, ServerStreaming: proto.Bool(stream),
 		}
 	}
-	msgOpts := &descriptorpb.MessageOptions{}
-	proto.SetExtension(msgOpts, dedov1.E_Message, &dedov1.MessageRules{Description: "What to act on."})
+	str := descriptorpb.FieldDescriptorProto_TYPE_STRING.Enum()
+	field := func(name string, n int32) *descriptorpb.FieldDescriptorProto {
+		return &descriptorpb.FieldDescriptorProto{Name: proto.String(name), Number: proto.Int32(n), Type: str, JsonName: proto.String(name)}
+	}
 	fd, err := protodesc.NewFile(&descriptorpb.FileDescriptorProto{
-		Name:        proto.String("raveesh_me/test/v1/test.proto"),
-		Package:     proto.String("raveesh_me.test.v1"),
-		Syntax:      proto.String("proto3"),
-		MessageType: []*descriptorpb.DescriptorProto{{Name: proto.String("Request"), Options: msgOpts}},
+		Name:    proto.String("dedo/test/v1/test.proto"),
+		Package: proto.String("dedo.test.v1"),
+		Syntax:  proto.String("proto3"),
+		MessageType: []*descriptorpb.DescriptorProto{
+			{Name: proto.String("Request"), Field: []*descriptorpb.FieldDescriptorProto{field("name", 1)}},
+			{Name: proto.String("Response"), Field: []*descriptorpb.FieldDescriptorProto{field("name", 1), field("note", 2)}},
+		},
 		Service: []*descriptorpb.ServiceDescriptorProto{{
 			Name: proto.String("TestService"),
 			Method: []*descriptorpb.MethodDescriptorProto{
-				method("GetThing", descriptorpb.MethodOptions_NO_SIDE_EFFECTS, &dedov1.Tool{Title: "Get a thing", Description: "Returns a thing."}),
-				method("DeleteThing", descriptorpb.MethodOptions_IDEMPOTENT, &dedov1.Tool{Title: "Delete a thing", Description: "Removes a thing."}),
+				method("GetThing", descriptorpb.MethodOptions_NO_SIDE_EFFECTS, &dedov1.Tool{
+					Title: "Get a thing", Description: "Returns a thing.",
+					Annotations: &dedov1.ToolAnnotations{ReadOnlyHint: &yes, OpenWorldHint: &no},
+				}, false, false),
+				method("DeleteThing", descriptorpb.MethodOptions_IDEMPOTENT, &dedov1.Tool{
+					Title: "Delete a thing", Description: "Removes a thing.",
+					Annotations: &dedov1.ToolAnnotations{ReadOnlyHint: &no, DestructiveHint: &yes, IdempotentHint: &yes, OpenWorldHint: &no},
+				}, false, false),
+				method("OldThing", descriptorpb.MethodOptions_IDEMPOTENCY_UNKNOWN, &dedov1.Tool{Title: "Old", Description: "Old."}, true, false),
+				method("WatchThings", descriptorpb.MethodOptions_IDEMPOTENCY_UNKNOWN, nil, false, true),
 			},
 		}},
 	}, nil)
@@ -49,6 +72,166 @@ func service(t *testing.T) protoreflect.ServiceDescriptor {
 	return fd.Services().Get(0)
 }
 
+var (
+	inputSchemas = map[string]string{
+		"dedo.test.v1.TestService.GetThing":    `{"type":"object","properties":{"name":{"type":"string","description":"Which thing."}}}`,
+		"dedo.test.v1.TestService.DeleteThing": `{"type":"object","properties":{"name":{"type":"string"}}}`,
+	}
+	outputSchemas = map[string]string{
+		"dedo.test.v1.TestService.GetThing": `{"type":"object","properties":{"name":{"type":"string"},"note":{"type":"string"}}}`,
+	}
+)
+
+// backend serves GetThing and DeleteThing over Connect with dynamic
+// messages. GetThing echoes the name and the Authorization header it got,
+// and fails with THING_NOT_FOUND for the name "missing".
+func backend(svc protoreflect.ServiceDescriptor) http.Handler {
+	mux := http.NewServeMux()
+	for _, name := range []protoreflect.Name{"GetThing", "DeleteThing"} {
+		m := svc.Methods().ByName(name)
+		procedure := "/dedo.test.v1.TestService/" + string(name)
+		mux.Handle(procedure, connect.NewUnaryHandler(procedure,
+			func(_ context.Context, req *connect.Request[dynamicpb.Message]) (*connect.Response[dynamicpb.Message], error) {
+				thing := req.Msg.Get(m.Input().Fields().ByName("name")).String()
+				if thing == "missing" {
+					cerr := connect.NewError(connect.CodeNotFound, errors.New("no such thing"))
+					detail, _ := connect.NewErrorDetail(&errdetails.ErrorInfo{Reason: "THING_NOT_FOUND"})
+					cerr.AddDetail(detail)
+					return nil, cerr
+				}
+				out := dynamicpb.NewMessage(m.Output())
+				out.Set(m.Output().Fields().ByName("name"), protoreflect.ValueOfString(thing))
+				out.Set(m.Output().Fields().ByName("note"), protoreflect.ValueOfString(req.Header().Get("Authorization")))
+				return connect.NewResponse(out), nil
+			},
+			connect.WithSchema(m),
+			connect.WithRequestInitializer(func(_ connect.Spec, msg any) error {
+				*msg.(*dynamicpb.Message) = *dynamicpb.NewMessage(m.Input())
+				return nil
+			}),
+		))
+	}
+	return mux
+}
+
+// bearer adds a token to every request of the MCP client.
+type bearer struct{ token string }
+
+func (b bearer) RoundTrip(req *http.Request) (*http.Response, error) {
+	req = req.Clone(req.Context())
+	req.Header.Set("Authorization", "Bearer "+b.token)
+	return http.DefaultTransport.RoundTrip(req)
+}
+
+func session(t *testing.T) *mcp.ClientSession {
+	t.Helper()
+	svc := service(t)
+	server := mcp.NewServer(&mcp.Implementation{Name: "test", Version: "v1"}, nil)
+	if err := New(server, Config{
+		Services: []protoreflect.ServiceDescriptor{svc}, InputSchemas: inputSchemas, OutputSchemas: outputSchemas,
+		Client: InProcessClient(backend(svc)),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	ts := httptest.NewServer(mcp.NewStreamableHTTPHandler(func(*http.Request) *mcp.Server { return server },
+		&mcp.StreamableHTTPOptions{Stateless: true, JSONResponse: true}))
+	t.Cleanup(ts.Close)
+	client := mcp.NewClient(&mcp.Implementation{Name: "client", Version: "v1"}, nil)
+	cs, err := client.Connect(context.Background(), &mcp.StreamableClientTransport{
+		Endpoint: ts.URL, HTTPClient: &http.Client{Transport: bearer{token: "t"}},
+	}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = cs.Close() })
+	return cs
+}
+
+func text(res *mcp.CallToolResult) string {
+	var b strings.Builder
+	for _, c := range res.Content {
+		if tc, ok := c.(*mcp.TextContent); ok {
+			b.WriteString(tc.Text)
+		}
+	}
+	return b.String()
+}
+
+// Unary, non-deprecated RPCs become tools with the declared text and schemas.
+func TestTools(t *testing.T) {
+	res, err := session(t).ListTools(context.Background(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tools := map[string]*mcp.Tool{}
+	for _, tool := range res.Tools {
+		tools[tool.Name] = tool
+	}
+	if len(tools) != 2 || tools["get_thing"] == nil || tools["delete_thing"] == nil {
+		t.Fatalf("tools = %v, want get_thing and delete_thing only", res.Tools)
+	}
+	get := tools["get_thing"]
+	if get.Title != "Get a thing" || get.Description != "Returns a thing.\n\nErrors: THING_NOT_FOUND (NOT_FOUND)." {
+		t.Errorf("get_thing: title %q, description %q", get.Title, get.Description)
+	}
+	in, _ := json.Marshal(get.InputSchema)
+	out, _ := json.Marshal(get.OutputSchema)
+	if !strings.Contains(string(in), "Which thing.") || !strings.Contains(string(out), "note") {
+		t.Errorf("get_thing schemas: in %s, out %s", in, out)
+	}
+	if a := tools["delete_thing"].Annotations; a.ReadOnlyHint || !*a.DestructiveHint || !a.IdempotentHint {
+		t.Errorf("delete_thing annotations = %+v", a)
+	}
+}
+
+// A call is forwarded over Connect with the caller's token, and the
+// response comes back as structured content.
+func TestForwardsCalls(t *testing.T) {
+	res, err := session(t).CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "get_thing", Arguments: map[string]any{"name": "a"},
+	})
+	if err != nil || res.IsError {
+		t.Fatalf("call: %v %s", err, text(res))
+	}
+	got, _ := json.Marshal(res.StructuredContent)
+	if string(got) != `{"name":"a","note":"Bearer t"}` {
+		t.Errorf("structured content = %s", got)
+	}
+}
+
+// A failed call is a tool error with the code and the declared reason.
+func TestForwardsErrors(t *testing.T) {
+	cs := session(t)
+	res, err := cs.CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "get_thing", Arguments: map[string]any{"name": "missing"},
+	})
+	if err != nil || !res.IsError || text(res) != `{"code":"NOT_FOUND","message":"no such thing","reason":"THING_NOT_FOUND"}` {
+		t.Errorf("missing thing: %v isError=%v %s", err, res.IsError, text(res))
+	}
+	// The SDK validates arguments against the input schema before the call.
+	res, err = cs.CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "get_thing", Arguments: map[string]any{"name": 7},
+	})
+	if err != nil || !res.IsError || !strings.Contains(text(res), "validating") {
+		t.Errorf("bad arguments: %v %s", err, text(res))
+	}
+}
+
+func TestNewRejectsIncompleteConfig(t *testing.T) {
+	svc := service(t)
+	server := mcp.NewServer(&mcp.Implementation{Name: "test", Version: "v1"}, nil)
+	services := []protoreflect.ServiceDescriptor{svc}
+	client := InProcessClient(backend(svc))
+	if err := New(server, Config{Services: services, InputSchemas: inputSchemas}); err == nil {
+		t.Error("want an error without a client")
+	}
+	if err := New(server, Config{Services: services, Client: client}); err == nil || !strings.Contains(err.Error(), "protoc-gen-dedo-mcp") {
+		t.Errorf("missing schema: %v", err)
+	}
+	if err := New(server, Config{Services: []protoreflect.ServiceDescriptor{svc, svc}, InputSchemas: inputSchemas, Client: client}); err == nil {
+		t.Error("want an error for duplicate tool names")
+	}
+}
 func TestAnnotations(t *testing.T) {
 	no, yes := false, true
 	a := annotations(&dedov1.Tool{
@@ -69,47 +252,6 @@ func TestAnnotations(t *testing.T) {
 		t.Errorf("no tool = %+v", a)
 	}
 }
-
-func TestDescribeSchema(t *testing.T) {
-	input := service(t).Methods().Get(0).Input()
-	out := describeSchema(json.RawMessage(`{"type":"object"}`), input)
-	var schema map[string]any
-	if err := json.Unmarshal(out, &schema); err != nil {
-		t.Fatal(err)
-	}
-	if schema["description"] != "What to act on." || schema["type"] != "object" {
-		t.Errorf("schema = %v", schema)
-	}
-	if got := describeSchema(json.RawMessage(`not json`), input); string(got) != "not json" {
-		t.Errorf("malformed schema changed: %s", got)
-	}
-}
-
-// ForwardHeaders and InProcessClient carry the MCP caller's headers into
-// the in-process call.
-func TestForwardHeadersInProcess(t *testing.T) {
-	var seen http.Header
-	mux := http.NewServeMux()
-	mux.Handle("/test.v1.S/M", connect.NewUnaryHandler("/test.v1.S/M",
-		func(_ context.Context, req *connect.Request[emptypb.Empty]) (*connect.Response[emptypb.Empty], error) {
-			seen = req.Header()
-			return connect.NewResponse(&emptypb.Empty{}), nil
-		}))
-	client := connect.NewClient[emptypb.Empty, emptypb.Empty](InProcessClient(mux), "http://in-process/test.v1.S/M",
-		connect.WithInterceptors(ForwardHeaders()))
-
-	inbound := http.Header{}
-	inbound.Set("Authorization", "Bearer t")
-	inbound.Set("X-Flow-ID", "flow-1")
-	inbound.Set("Cookie", "not forwarded")
-	if _, err := client.CallUnary(withHeaders(context.Background(), inbound), connect.NewRequest(&emptypb.Empty{})); err != nil {
-		t.Fatal(err)
-	}
-	if seen.Get("Authorization") != "Bearer t" || seen.Get("X-Flow-ID") != "flow-1" || seen.Get("Cookie") != "" {
-		t.Errorf("forwarded headers = %v", seen)
-	}
-}
-
 func TestToolName(t *testing.T) {
 	svc := service(t)
 	if got := ToolName(svc.Methods().ByName("GetThing")); got != "get_thing" {
@@ -124,18 +266,6 @@ func TestToolName(t *testing.T) {
 		}
 	}
 }
-
-func TestWrapRejectsDuplicateToolNames(t *testing.T) {
-	svc := service(t)
-	if _, err := Wrap(nil, svc); err != nil {
-		t.Fatalf("one service: %v", err)
-	}
-	if _, err := Wrap(nil, svc, svc); err == nil {
-		t.Fatal("want an error when two RPCs map to the same tool name")
-	}
-}
-
-// methodNamed returns a method descriptor with the given name.
 func methodNamed(t *testing.T, name string) protoreflect.MethodDescriptor {
 	t.Helper()
 	fd, err := protodesc.NewFile(&descriptorpb.FileDescriptorProto{
