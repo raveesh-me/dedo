@@ -288,7 +288,7 @@ delete: "/commerce/products/v1/{name=products/*}"  // Fails in the same service:
 
 **Checks** that no field changes its JSON name with `json_name`.
 
-**Why.** JSON uses the protojson default, lowerCamelCase of the field name. A custom name renames the field for every JSON client, in REST, Connect JSON and MCP, away from the name in the schema. Every server and client would then need a codec option.
+**Why.** JSON uses the protojson default, lowerCamelCase of the field name. A custom name renames the field for every JSON client of REST and Connect, away from the name in the schema. Every server and client would then need a codec option.
 
 ```protobuf
 string title = 1 [json_name = "todoTitle"];  // Fails.

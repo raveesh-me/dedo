@@ -132,6 +132,10 @@ func forward(m protoreflect.MethodDescriptor, httpClient *http.Client, baseURL s
 	return func(ctx context.Context, req *mcp.CallToolRequest, args json.RawMessage) (*mcp.CallToolResult, map[string]any, error) {
 		in := dynamicpb.NewMessage(m.Input())
 		if len(args) > 0 {
+			args, err := normalizeMasks(m.Input(), args)
+			if err != nil {
+				return nil, nil, &ToolError{Code: "INVALID_ARGUMENT", Message: "the arguments are not a JSON object: " + err.Error()}
+			}
 			if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(args, in); err != nil {
 				return nil, nil, &ToolError{Code: "INVALID_ARGUMENT", Message: "the arguments do not match the input schema: " + err.Error()}
 			}
@@ -148,7 +152,10 @@ func forward(m protoreflect.MethodDescriptor, httpClient *http.Client, baseURL s
 		if err != nil {
 			return nil, nil, toolError(err)
 		}
-		out, err := protojson.MarshalOptions{UseProtoNames: true}.Marshal(res.Msg)
+		// Default values are written out, so an empty list is
+		// {"todos":[],"next_page_token":""} rather than {}, which a model
+		// cannot tell from a broken reply.
+		out, err := protojson.MarshalOptions{UseProtoNames: true, EmitDefaultValues: true}.Marshal(res.Msg)
 		if err != nil {
 			return nil, nil, err
 		}

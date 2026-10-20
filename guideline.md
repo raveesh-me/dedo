@@ -126,6 +126,18 @@ What each option does:
 | `message.description` | MCP, docs | The schema description shown to agents and API readers |
 | `field.sensitive` | Docs | Marks personal or secret data (`x-sensitive`) |
 
+The MCP tool schemas also read the standard annotations, so a model can get a call right the first time:
+
+| Declaration | In the tool's input schema |
+| --- | --- |
+| Field comments | Each field's `description` |
+| `google.api.field_behavior` | `REQUIRED` fields are required; `OUTPUT_ONLY` fields are left out. A create leaves out the resource's name; an update with a `FieldMask` requires only the name and lists the field names the mask accepts. |
+| `google.api.resource` and `resource_reference` | A `pattern` for resource names, such as `^todos/[^/]+$` |
+| `buf.validate` rules | `minimum`, `maximum`, `minLength`, `maxLength`, `pattern`, `enum`, `minItems`, `maxItems`, and `format` for `email`, `uri` and `uuid`. Add `connectrpc.com/validate`'s interceptor so the server enforces the same rules on every transport (see `examples/todo/app/app.go`). |
+| `google.type.Money` | The currency code pattern and the `nanos` range its comments document |
+
+Tool calls name fields as the proto does (`budget_amount`), field masks included; `mcpserver` converts mask paths to the JSON mapping. Responses carry every field, defaults included, so an empty list reads `{"todos": [], "next_page_token": ""}`.
+
 Write `tool.description` and `message.description` for the person or model choosing between operations: what it does and when to use it. Proto comments stay the place for notes to implementers.
 
 Every RPC returns a unique `<Rpc>Response` message. Set `response_body` on Get, Create and Update, so REST callers receive the bare resource.
@@ -168,7 +180,7 @@ make api-generate
 This writes, for each service:
 
 - `gen/go/.../<pkg>.pb.go` and `<pkg>connect/` for the API
-- `gen/go/.../<pkg>mcp/` for the MCP tools
+- `gen/go/.../<pkg>.mcp_schema.pb.go` with the MCP tools' input and output schemas
 - `docs/openapi.json` for the REST reference
 
 Commit all of it. CI fails when the committed output is stale.

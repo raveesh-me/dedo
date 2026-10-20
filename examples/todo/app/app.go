@@ -9,6 +9,7 @@ import (
 	"net/http"
 
 	"connectrpc.com/connect"
+	"connectrpc.com/validate"
 	"connectrpc.com/vanguard"
 
 	"github.com/raveesh-me/dedo/examples/todo/docs"
@@ -70,7 +71,9 @@ func newAPI(cfg Config) (http.Handler, error) {
 	}
 	path, handler := todov1connect.NewTodoServiceHandler(
 		NewServer(),
-		connect.WithInterceptors(guard),
+		// The guard checks scopes first; then the buf.validate rules in the
+		// proto, which the MCP tool schemas also state, reject bad input.
+		connect.WithInterceptors(guard, validate.NewInterceptor()),
 	)
 	transcoder, err := vanguard.NewTranscoder([]*vanguard.Service{vanguard.NewService(path, handler)})
 	if err != nil {

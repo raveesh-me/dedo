@@ -11,7 +11,8 @@
 //   - REQUIRED fields are required everywhere else.
 //
 // Every field carries its leading comment as its description, and a field
-// mask lists the paths it accepts.
+// mask lists the paths it accepts. Input values also carry the constraints
+// their declarations imply (see constraints).
 package schema
 
 import (
@@ -27,6 +28,13 @@ import (
 
 // maxDepth bounds recursive messages.
 const maxDepth = 4
+
+// The descriptions of 64-bit integers, which proto3 JSON writes as strings
+// so JavaScript clients keep every digit.
+const (
+	int64Input  = "A 64-bit integer: a JSON number, or a decimal string for values beyond 2^53."
+	int64Output = "A 64-bit integer, as a decimal string."
+)
 
 // Object is a JSON Schema object. encoding/json writes its keys sorted, so
 // the output is deterministic.
@@ -67,7 +75,7 @@ func Input(m *protogen.Method) Object {
 		if isFieldMask(f) && maskPaths != nil {
 			props[string(f.Desc.Name())] = Object{
 				"type": "string",
-				"description": join(comment(f), "Comma-separated paths of the fields to change, in lowerCamelCase. Valid paths: "+
+				"description": join(comment(f), "Comma-separated names of the fields to change. Valid names: "+
 					strings.Join(maskPaths, ", ")+"."),
 			}
 		}
@@ -117,7 +125,11 @@ func field(f *protogen.Field, depth int, mode mode) Object {
 	case f.Desc.IsMap():
 		return Object{"type": "object", "additionalProperties": single(f.Message.Fields[1], depth, mode)}
 	case f.Desc.IsList():
-		return Object{"type": "array", "items": single(f, depth, mode)}
+		out := Object{"type": "array", "items": single(f, depth, mode)}
+		if mode != modeOutput {
+			out = merge(out, listConstraints(f))
+		}
+		return out
 	}
 	return single(f, depth, mode)
 }
@@ -139,10 +151,25 @@ func single(f *protogen.Field, depth int, mode mode) Object {
 		}
 		return Object{"type": "string", "enum": names}
 	}
-	return scalar(f.Desc.Kind())
+	if mode == modeOutput {
+		return scalar(f.Desc.Kind(), mode)
+	}
+	return merge(scalar(f.Desc.Kind(), mode), constraints(f))
 }
 
-func scalar(kind protoreflect.Kind) Object {
+// merge returns a copy of s with the keywords of extra added.
+func merge(s, extra Object) Object {
+	out := Object{}
+	for k, v := range s {
+		out[k] = v
+	}
+	for k, v := range extra {
+		out[k] = v
+	}
+	return out
+}
+
+func scalar(kind protoreflect.Kind, mode mode) Object {
 	switch kind {
 	case protoreflect.BoolKind:
 		return Object{"type": "boolean"}
@@ -152,7 +179,10 @@ func scalar(kind protoreflect.Kind) Object {
 	case protoreflect.Int64Kind, protoreflect.Sint64Kind, protoreflect.Sfixed64Kind,
 		protoreflect.Uint64Kind, protoreflect.Fixed64Kind:
 		// The JSON mapping writes 64-bit integers as strings and reads both.
-		return Object{"type": []string{"string", "integer"}}
+		if mode == modeOutput {
+			return Object{"type": "string", "description": int64Output}
+		}
+		return Object{"type": []string{"string", "integer"}, "description": int64Input}
 	case protoreflect.FloatKind, protoreflect.DoubleKind:
 		return Object{"type": "number"}
 	case protoreflect.BytesKind:
@@ -169,7 +199,7 @@ func wellKnown(md protoreflect.MessageDescriptor) Object {
 	case "google.protobuf.Duration":
 		return Object{"type": "string", "description": `A duration in seconds with an "s" suffix, such as "90s".`}
 	case "google.protobuf.FieldMask":
-		return Object{"type": "string", "description": "Comma-separated field paths in lowerCamelCase."}
+		return Object{"type": "string", "description": "Comma-separated field paths, such as \"title,budget_amount\"."}
 	case "google.protobuf.Empty":
 		return Object{"type": "object"}
 	case "google.protobuf.Struct":
@@ -187,7 +217,7 @@ func wellKnown(md protoreflect.MessageDescriptor) Object {
 	case "google.protobuf.Int32Value", "google.protobuf.UInt32Value":
 		return Object{"type": "integer"}
 	case "google.protobuf.Int64Value", "google.protobuf.UInt64Value":
-		return Object{"type": []string{"string", "integer"}}
+		return Object{"type": []string{"string", "integer"}, "description": int64Input}
 	case "google.protobuf.FloatValue", "google.protobuf.DoubleValue":
 		return Object{"type": "number"}
 	}
@@ -195,7 +225,7 @@ func wellKnown(md protoreflect.MessageDescriptor) Object {
 }
 
 // patchPaths returns the field mask paths a partial-update request accepts:
-// the mutable fields of its resource, in lowerCamelCase. It returns nil for
+// the mutable fields of its resource, by field name. It returns nil for
 // a request without a field mask or a resource.
 func patchPaths(req *protogen.Message) []string {
 	var hasMask bool
@@ -215,7 +245,7 @@ func patchPaths(req *protogen.Message) []string {
 			has(f, annotations.FieldBehavior_IMMUTABLE) {
 			continue
 		}
-		paths = append(paths, f.Desc.JSONName())
+		paths = append(paths, string(f.Desc.Name()))
 	}
 	return paths
 }

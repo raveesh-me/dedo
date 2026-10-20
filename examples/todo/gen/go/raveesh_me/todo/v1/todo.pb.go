@@ -7,6 +7,7 @@
 package todov1
 
 import (
+	_ "buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
 	_ "github.com/raveesh-me/dedo/gen/go/dedo/v1"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	money "google.golang.org/genproto/googleapis/type/money"
@@ -269,7 +270,8 @@ func (x *GetTodoResponse) GetTodo() *Todo {
 // ListTodosRequest is the request of ListTodos.
 type ListTodosRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// The maximum number of to-dos to return. The server caps it at 100.
+	// The maximum number of to-dos to return. Zero means the default, and the
+	// server caps it at 100.
 	PageSize int32 `protobuf:"varint,1,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
 	// The next_page_token of a previous call.
 	PageToken     string `protobuf:"bytes,2,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
@@ -483,8 +485,8 @@ type UpdateTodoRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// The to-do to update. Its name selects it.
 	Todo *Todo `protobuf:"bytes,1,opt,name=todo,proto3" json:"todo,omitempty"`
-	// The fields to change. Without it, every field set in todo changes
-	// (AIP-134); name it to clear a field or set done to false.
+	// The fields to change. Without it, every field set in todo changes;
+	// name a field here to clear it or to set done to false.
 	UpdateMask    *fieldmaskpb.FieldMask `protobuf:"bytes,2,opt,name=update_mask,json=updateMask,proto3" json:"update_mask,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -842,14 +844,13 @@ var File_raveesh_me_todo_v1_todo_proto protoreflect.FileDescriptor
 
 const file_raveesh_me_todo_v1_todo_proto_rawDesc = "" +
 	"\n" +
-	"\x1draveesh_me/todo/v1/todo.proto\x12\x12raveesh_me.todo.v1\x1a\x15dedo/v1/options.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x17google/api/client.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x19google/api/resource.proto\x1a google/protobuf/field_mask.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x17google/type/money.proto\"\xe2\x02\n" +
+	"\x1draveesh_me/todo/v1/todo.proto\x12\x12raveesh_me.todo.v1\x1a\x1bbuf/validate/validate.proto\x1a\x15dedo/v1/options.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x17google/api/client.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x19google/api/resource.proto\x1a google/protobuf/field_mask.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x17google/type/money.proto\"\xec\x02\n" +
 	"\x04Todo\x12\x18\n" +
 	"\x04name\x18\x01 \x01(\tB\x04\xe2A\x01\bR\x04name\x12\x1a\n" +
 	"\x05title\x18\x02 \x01(\tB\x04\xe2A\x01\x02R\x05title\x12\x18\n" +
 	"\x04done\x18\x03 \x01(\bB\x04\xe2A\x01\x01R\x04done\x12=\n" +
-	"\rbudget_amount\x18\x04 \x01(\v2\x12.google.type.MoneyB\x04\xe2A\x01\x01R\fbudgetAmount\x121\n" +
-	"\x0eassignee_email\x18\x05 \x01(\tB\n" +
-	"\xe2A\x01\x01\xba\xbb\x18\x02\b\x01R\rassigneeEmail\x12A\n" +
+	"\rbudget_amount\x18\x04 \x01(\v2\x12.google.type.MoneyB\x04\xe2A\x01\x01R\fbudgetAmount\x12;\n" +
+	"\x0eassignee_email\x18\x05 \x01(\tB\x14\xe2A\x01\x01\xbaH\a\xd8\x01\x01r\x02`\x01\xba\xbb\x18\x02\b\x01R\rassigneeEmail\x12A\n" +
 	"\vcreate_time\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampB\x04\xe2A\x01\x03R\n" +
 	"createTime:U\xeaA1\n" +
 	"\x14todo.raveesh.me/Todo\x12\ftodos/{todo}*\x05todos2\x04todo»\x18\x1d\n" +
@@ -860,9 +861,9 @@ const file_raveesh_me_todo_v1_todo_proto_rawDesc = "" +
 	"\x13Which to-do to get.\"[\n" +
 	"\x0fGetTodoResponse\x12,\n" +
 	"\x04todo\x18\x01 \x01(\v2\x18.raveesh_me.todo.v1.TodoR\x04todo:\x1a»\x18\x16\n" +
-	"\x14The requested to-do.\"\x7f\n" +
-	"\x10ListTodosRequest\x12!\n" +
-	"\tpage_size\x18\x01 \x01(\x05B\x04\xe2A\x01\x01R\bpageSize\x12#\n" +
+	"\x14The requested to-do.\"\x86\x01\n" +
+	"\x10ListTodosRequest\x12(\n" +
+	"\tpage_size\x18\x01 \x01(\x05B\v\xe2A\x01\x01\xbaH\x04\x1a\x02(\x00R\bpageSize\x12#\n" +
 	"\n" +
 	"page_token\x18\x02 \x01(\tB\x04\xe2A\x01\x01R\tpageToken:#»\x18\x1f\n" +
 	"\x1dWhich page of to-dos to list.\"\x86\x01\n" +
