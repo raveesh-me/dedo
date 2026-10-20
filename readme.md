@@ -127,7 +127,7 @@ dedo init
 
 `dedo init` adds the options module, the lint plugin, the code generators, the server libraries and the agent guidance where they are missing, then writes a `main.go` for your service (or, when you have one, prints dedo's to compare). In an empty module it writes a starter service that passes lint, so `make api-generate` and `go run .` work straight away. The templates are bundled into the binary (`dedo templates` lists them), so nothing is cloned. [install.md](guidance/install.md) shows each step by hand, and [tutorial.md](guidance/tutorial.md) builds a service from scratch. In short:
 
-1. `dedo init` (or by hand: copy `buf.yaml`, `buf.gen.yaml`, `Makefile.api` from `templates/`, pin the generators with `go get -tool`, run `make tools` and `buf dep update`).
+1. `dedo init` (or by hand: copy `buf.yaml`, `buf.gen.yaml`, `Makefile.api` from `templates/`, pin the generators and the lint plugin with `go get -tool`, run `dedo tools` and `buf dep update`).
 2. Fill in `CODEOWNERS` and the VS Code settings from `templates/` if you use them.
 3. Write the contract, then `make api-check` (lint, format, breaking) and `buf generate` (Go, Connect, MCP tools, REST docs).
 4. Wire the runtime: `policy.Build` for the policy table, `interceptor.New` for scopes and headers, Vanguard for REST, `mcpserver.AddTools` with the generated `<Service>MCPTools()` for MCP, and the docs handler. Start with `EnforceScopes: false` (audit mode), then enforce.
@@ -196,7 +196,7 @@ Lint rule tests live in `lint/rules/testdata/<rule>/{pass,fail}`. A pass fixture
 
 A pull request that breaks the options module fails CI's `buf breaking` check. When the break is deliberate, label the PR `allow-breaking`, re-run the check, and release a new minor version.
 
-Before tagging, set the new version in `templates/Makefile.api` (`DEDO_VERSION`), the `@vX.Y.Z` pins in `guidance/install.md`, `guidance/tutorial.md` and `guidance/guideline.md`, the `version` constant in `cmd/dedo/main.go`, and the readme's "Latest release" line. The release job runs `scripts/check-release-versions.sh` first and stops if any of them names another version.
+Before tagging, set the new version in the `@vX.Y.Z` pins in `guidance/install.md`, `guidance/tutorial.md` and `guidance/guideline.md`, the `version` constant in `cmd/dedo/main.go`, and the readme's "Latest release" line. The release job runs `scripts/check-release-versions.sh` first and stops if any of them names another version.
 
 To release, tag the merge commit on `main` with `lint/vX.Y.Z`, `openapi/vX.Y.Z`, `mcp/vX.Y.Z` and `cmd/dedo/vX.Y.Z` (so `go get` and `go install` work for the nested modules) and push those first, at most three per push. Then push `vX.Y.Z` **on its own**: GitHub starts no workflow when more than three tags arrive in one push.
 
@@ -204,7 +204,7 @@ The `v*` tag runs `.github/workflows/ci.yaml`, which publishes one version every
 
 - `buf push` of the options module with the tag and `main` as labels; `main` is the default label that unpinned dependencies resolve to
 - `buf plugin push` of `buf.build/r-a/dedo-lint`
-- a GitHub release carrying the `dedo` command, the lint plugin and both generators (`protoc-gen-dedo-mcp`, `protoc-gen-dedo-openapi`) as native binaries for macOS and Linux (arm64 and amd64), and the lint plugin as a `.wasm` file. `make tools` downloads the lint plugin.
+- a GitHub release carrying the `dedo` command, the lint plugin and both generators (`protoc-gen-dedo-mcp`, `protoc-gen-dedo-openapi`) as native binaries for macOS and Linux (arm64 and amd64), and the lint plugin as a `.wasm` file.
 
 The Go module version is the same tag. The job reads a `BUF_KEY` repository secret: a Buf token for the `r-a` organization with module and plugin create and push scopes.
 

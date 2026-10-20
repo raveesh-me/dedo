@@ -126,8 +126,8 @@ func TestInitFreshRepository(t *testing.T) {
 	if got := read(t, dir, "Makefile"); got != "include Makefile.api\n" {
 		t.Errorf("Makefile = %q", got)
 	}
-	if !strings.Contains(read(t, dir, "Makefile.api"), "DEDO_VERSION ?= "+version) {
-		t.Error("Makefile.api does not pin this release")
+	if !strings.Contains(read(t, dir, "Makefile.api"), "go build -o $@ $(LINT_PLUGIN)") {
+		t.Error("Makefile.api does not build the pinned plugin")
 	}
 	if !strings.Contains(read(t, dir, ".gitignore"), ".tools/") {
 		t.Error(".gitignore lacks .tools/")
@@ -146,7 +146,8 @@ func TestInitFreshRepository(t *testing.T) {
 	for _, want := range []string{
 		"go get -tool github.com/raveesh-me/dedo/mcp/cmd/protoc-gen-dedo-mcp@" + version,
 		"buf dep update",
-		"make tools",
+		"go get -tool " + lintPluginPkg + "@" + version,
+		"go build -o " + pluginPath() + " " + lintPluginPkg,
 	} {
 		if !strings.Contains(out, want) {
 			t.Errorf("output lacks %q", want)
@@ -517,5 +518,16 @@ func TestInitWritesMainOnce(t *testing.T) {
 	}
 	if !strings.Contains(out, "dedo's template, to compare with yours") {
 		t.Errorf("template not printed for comparison:\n%s", out)
+	}
+}
+
+func TestToolsNeedsThePin(t *testing.T) {
+	var out bytes.Buffer
+	if err := run([]string{"tools", "-dir", t.TempDir()}, &out); err == nil || !strings.Contains(err.Error(), "dedo init") {
+		t.Errorf("without go.mod: %v", err)
+	}
+	dir := repo(t, map[string]string{"go.mod": "module example.com/notes\n"})
+	if err := run([]string{"tools", "-dir", dir}, &out); err == nil || !strings.Contains(err.Error(), "go get -tool "+lintPluginPkg+"@"+version) {
+		t.Errorf("without the pin: %v", err)
 	}
 }

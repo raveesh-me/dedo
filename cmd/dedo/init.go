@@ -10,7 +10,6 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"text/template"
 
@@ -196,9 +195,7 @@ func (in *initer) linter() error {
 	} else {
 		in.say("buf.yaml: lint plugin and categories already in place")
 	}
-	makefileAPI := regexp.MustCompile(`(?m)^DEDO_VERSION \?= \S+`).
-		ReplaceAll(asset("templates/Makefile.api"), []byte("DEDO_VERSION ?= "+in.release))
-	if err := in.writeFile("Makefile.api", makefileAPI, true); err != nil {
+	if err := in.writeFile("Makefile.api", asset("templates/Makefile.api"), true); err != nil {
 		return err
 	}
 	if err := in.ensureLine("Makefile", "include Makefile.api"); err != nil {
@@ -207,7 +204,14 @@ func (in *initer) linter() error {
 	if err := in.ensureLine(".gitignore", ".tools/"); err != nil {
 		return err
 	}
-	in.cmds = append(in.cmds, []string{"make", "tools"})
+	// The plugin is pinned in go.mod like the generators, then built into
+	// .tools/: buf starts it a dozen times per lint, so it runs natively
+	// rather than through go tool.
+	in.cmds = append(in.cmds,
+		[]string{"go", "get", "-tool", lintPluginPkg + "@" + in.release},
+		buildPluginCmd(),
+	)
+	in.say("go.mod: will pin buf-plugin-dedo-lint as a Go tool and build it into %s", pluginPath())
 	return nil
 }
 

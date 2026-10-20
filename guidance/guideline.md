@@ -42,7 +42,7 @@ my-service/
   buf.yaml               # deps, lint categories and the lint plugin
   buf.gen.yaml           # the four generators, run through go tool
   Makefile               # include Makefile.api
-  Makefile.api           # make tools, api-check, api-generate
+  Makefile.api           # api-check, api-generate
   docs/                  # serves the REST reference
   server.go              # your handlers (dedo init writes a stub)
   policy_table_test.go   # fails on a missing declaration
@@ -55,7 +55,7 @@ my-service/
 Why it is set up this way:
 
 - **The generators are Go tools** pinned in `go.mod`, so every machine and CI generate the same code without Buf's remote plugins.
-- **The lint plugin is a native binary** in `.tools/` (`make tools`, ignored by git), pinned by `DEDO_VERSION` in `Makefile.api`, so the editor and CI run the same version. Commit `buf.lock`.
+- **The lint plugin is pinned in `go.mod` too**, and built into `.tools/` (ignored by git) by `dedo tools`, so the editor and CI run the same version. It runs as a native binary because Buf starts it about a dozen times per lint. Commit `buf.lock`.
 - **Vanguard stays at `v0.4.0`**: later versions need connect-go v2.
 
 [install.md](install.md) shows each part by hand, for repositories that prefer not to run `dedo init`. Add `.github/CODEOWNERS` yourself (`dedo templates CODEOWNERS`) so every change under `proto/` needs an API review.
@@ -273,7 +273,7 @@ Point an MCP client at `http://localhost:8080/mcp`, with the header `Authorizati
 
 **Why both a proto comment and a `tool.description`?** The comment is for people who maintain the API. The description is published to API readers and AI agents, and the lint makes sure it exists.
 
-**Where do the options and the lint plugin come from?** A service depends on `buf.build/r-a/dedo` in `buf.yaml` and gets the lint plugin with `make tools`. The examples in this repository are the exception: they test the working tree, so they vendor `options.proto` under `third_party/` and load the plugins from `dist/`.
+**Where do the options and the lint plugin come from?** A service depends on `buf.build/r-a/dedo` in `buf.yaml` and pins the lint plugin in `go.mod`; `dedo tools` builds it. The examples in this repository are the exception: they test the working tree, so they vendor `options.proto` under `third_party/` and load the plugins from `dist/`.
 
 **Why a native plugin binary instead of the BSR plugin?** Speed in the editor. One lint takes about 0.3 s with the native binary and about 5 s with the WebAssembly one, and the editor reruns it as you type. The BSR plugin (`buf.build/r-a/dedo-lint`) needs no download and works on Windows. Use it there.
 
@@ -285,4 +285,4 @@ Point an MCP client at `http://localhost:8080/mcp`, with the header `Authorizati
 
 If they join Buf's plugin catalog, `remote: buf.build/community/...` becomes a fourth option that needs no install.
 
-**How do I update dedo?** Install the new `dedo` and run `dedo init` again: it moves `DEDO_VERSION` (the lint plugin), the generators and the runtime to the new release, and removes generated files that changed name. Then run `make tools` and `make api-generate`. CI reads the same `DEDO_VERSION`, so the editor and CI always run the same rules.
+**How do I update dedo?** Install the new `dedo` and run `dedo init` again: it moves the lint plugin, the generators and the runtime to the new release in `go.mod`, rebuilds the plugin, and removes generated files that changed name. Then run `make api-generate`. CI builds the plugin from the same `go.mod`, so the editor and CI always run the same rules.
