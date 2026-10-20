@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package raveesh_me.library.v1;
+
+import "google/api/resource.proto";
+
+// No service of this package declares tenancy, so any pattern goes.
+message Book {
+  option (google.api.resource) = {
+    type: "library.raveesh.me/Book"
+    pattern: "shelves/{shelf}/books/{book}"
+  };
+  string name = 1;
+}

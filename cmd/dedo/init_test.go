@@ -684,6 +684,69 @@ func TestInitHouseCategory(t *testing.T) {
 	}
 }
 
+// A service that declares tenancy gets the DEDO_MULTI_TENANT rules and a
+// main.go that checks tenants; any other keeps both as they were.
+func TestInitMultiTenant(t *testing.T) {
+	const tenantProto = `syntax = "proto3";
+
+package acme.contacts.v1;
+
+import "dedo/v1/options.proto";
+
+service ContactService {
+  option (dedo.v1.service) = {
+    audience: AUDIENCE_EXTERNAL_PUBLIC
+    owner_team: "contacts-team"
+    tenancy: {collection: "locations"}
+  };
+}
+`
+	for _, tt := range []struct {
+		name    string
+		bufYAML string // "" when dedo init writes buf.yaml
+	}{
+		{"new buf.yaml", ""},
+		{"existing lint section", "version: v2\nmodules:\n  - path: proto\nlint:\n  use: [STANDARD]\n"},
+		{"buf.yaml without lint", "version: v2\nmodules:\n  - path: proto\n"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			files := map[string]string{
+				"go.mod":                                "module example.com/contacts\n",
+				"proto/acme/contacts/v1/contacts.proto": tenantProto,
+			}
+			if tt.bufYAML != "" {
+				files["buf.yaml"] = tt.bufYAML
+			}
+			dir := repo(t, files)
+			out := initOffline(t, dir)
+			if !slices.Contains(scalars(lookup(lookup(yamlAt(t, dir, "buf.yaml"), "lint"), "use")), "DEDO_MULTI_TENANT") {
+				t.Errorf("DEDO_MULTI_TENANT missing from lint.use:\n%s", read(t, dir, "buf.yaml"))
+			}
+			main := mainGo(t, dir, out)
+			if formatted, err := format.Source([]byte(main)); err != nil || string(formatted) != main {
+				t.Fatalf("main.go is not gofmt-formatted (%v):\n%s", err, main)
+			}
+			for _, want := range []string{"Tenants:       tenantAllowed,", `"slices"`, "func tenantAllowed(", "devTenants[token]"} {
+				if !strings.Contains(main, want) {
+					t.Errorf("main.go lacks %s", want)
+				}
+			}
+		})
+	}
+
+	dir := repo(t, map[string]string{
+		"go.mod":                                "module example.com/contacts\n",
+		"proto/acme/contacts/v1/contacts.proto": strings.Replace(tenantProto, `    tenancy: {collection: "locations"}`+"\n", "", 1),
+	})
+	out := initOffline(t, dir)
+	if slices.Contains(scalars(lookup(lookup(yamlAt(t, dir, "buf.yaml"), "lint"), "use")), "DEDO_MULTI_TENANT") {
+		t.Error("DEDO_MULTI_TENANT added without tenancy")
+	}
+	if main := mainGo(t, dir, out); strings.Contains(main, "tenant") || strings.Contains(main, `"slices"`) {
+		t.Errorf("main.go of a single-tenant service mentions tenants:\n%s", main)
+	}
+}
+
 func TestInitWarnsSchemaRepoHouseRules(t *testing.T) {
 	dir := repo(t, map[string]string{
 		"buf.yaml":                      "version: v2\nmodules:\n  - path: proto\n",

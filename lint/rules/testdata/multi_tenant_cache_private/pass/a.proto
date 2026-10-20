@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+package raveesh_me.todo.v1;
+
+import "dedo/v1/options.proto";
+import "google/protobuf/empty.proto";
+
+service TodoService {
+  option (dedo.v1.service) = {
+    audience: AUDIENCE_EXTERNAL_PUBLIC
+    owner_team: "todo-team"
+    tenancy: {collection: "locations"}
+  };
+  rpc GetTodo(google.protobuf.Empty) returns (google.protobuf.Empty) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+    option (dedo.v1.method) = {
+      cache: {
+        visibility: VISIBILITY_PRIVATE
+        max_age: {seconds: 30}
+      }
+    };
+  }
+}
+
+// Shared caches may keep responses that belong to no tenant.
+service CatalogService {
+  rpc GetCatalog(google.protobuf.Empty) returns (google.protobuf.Empty) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+    option (dedo.v1.method) = {
+      cache: {
+        visibility: VISIBILITY_PUBLIC
+        max_age: {seconds: 30}
+      }
+    };
+  }
+}

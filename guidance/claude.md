@@ -11,11 +11,12 @@ Append this file to your repository's `AGENTS.md` or `CLAUDE.md`; `dedo init` do
 - Scopes, cache policy, deprecation and error reasons are declared in the proto (`dedo.v1` options) and enforced by the runtime. Do not write scope checks, cache headers or deprecation headers in handlers.
 - Return errors with a declared reason in a `google.rpc.ErrorInfo` detail. Undeclared reasons are logged as audit findings. The service uses connect-go v2: handlers take and return plain messages, errors are `connect.NewError(code, message)`, and any other error reaches callers as `UNKNOWN` with no message.
 - A server stream that clients wait on (a watch, a feed) sends a first message saying it is open, such as a `CHANGE_WATCHING` value, rather than relying on headers: buffering proxies hold headers back, and connect-go v2.0.1's HTTP transport sends none until the first message.
-- Put cross-cutting checks (auth, tenancy, logging) in `connect.ServerInterceptor`s on the one `connect.Server`, not in HTTP middleware: MCP tool calls reach the server in-process and skip HTTP middleware.
+- In a multi-tenant service (`tenancy` in `dedo.v1.service`), every resource name starts with the tenant (`locations/1/contacts/2`) and every request names it in the field its HTTP path binds. The runtime rejects requests in another tenant before the handler runs, so handlers never check the tenant of the request themselves; they still scope their storage queries to it. Never mark an RPC `cross_tenant` to get past the check: that is only for RPCs that genuinely span tenants, such as listing the caller's own.
+- Put cross-cutting checks (auth, logging) in `connect.ServerInterceptor`s on the one `connect.Server`, not in HTTP middleware: MCP tool calls reach the server in-process and skip HTTP middleware.
 
 ## Lint classes and precedence
 
-`buf-plugin-dedo-lint` reports four classes of rules:
+`buf-plugin-dedo-lint` reports these classes of rules:
 
 | Prefix | Source |
 | --- | --- |
@@ -23,6 +24,7 @@ Append this file to your repository's `AGENTS.md` or `CLAUDE.md`; `dedo init` do
 | `ZALANDO_*` | The Zalando RESTful API guidelines dedo adopts |
 | `DEDO_*` | dedo's own conventions |
 | `HOUSE_*` | Your organisation's own rules, as CEL checks in `rules.yml` (and the shared files it imports) |
+| `DEDO_MULTI_TENANT_*` | dedo's opt-in rules for multi-tenant services, in the `DEDO_MULTI_TENANT` category |
 
 When sources disagree, **DEDO > AIP > ZALANDO**, and HOUSE rules may add constraints but never contradict the others. So:
 

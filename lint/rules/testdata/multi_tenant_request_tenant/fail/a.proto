@@ -1,0 +1,60 @@
+syntax = "proto3";
+
+package raveesh_me.todo.v1;
+
+import "dedo/v1/options.proto";
+import "google/api/annotations.proto";
+import "google/protobuf/empty.proto";
+
+service TodoService {
+  option (dedo.v1.service) = {
+    audience: AUDIENCE_EXTERNAL_PUBLIC
+    owner_team: "todo-team"
+    tenancy: {collection: "locations"}
+  };
+  rpc GetTodo(GetTodoRequest) returns (Todo) { // want
+    option (google.api.http) = {get: "/commerce/todo/v1/{name=todos/*}"};
+  }
+  rpc ListTodos(ListTodosRequest) returns (google.protobuf.Empty); // want
+  rpc MoveTodo(MoveTodoRequest) returns (Todo) { // want
+    option (google.api.http) = {
+      post: "/commerce/todo/v1/{name=locations/*/todos/*}:move"
+      body: "*"
+      additional_bindings: {
+        post: "/commerce/todo/v1/{destination=locations/*}:moveTodo"
+        body: "*"
+      }
+    };
+  }
+  rpc CountTodos(CountTodosRequest) returns (google.protobuf.Empty) { // want
+    option (google.api.http) = {get: "/commerce/todo/v1/{location=locations/*}/todoCount"};
+  }
+}
+
+service StatusService {
+  rpc GetStatus(google.protobuf.Empty) returns (google.protobuf.Empty) { // want
+    option (google.api.http) = {get: "/commerce/todo/v1/status"};
+    option (dedo.v1.method) = {cross_tenant: true};
+  }
+}
+
+message Todo {
+  string name = 1;
+}
+
+message GetTodoRequest {
+  string name = 1;
+}
+
+message ListTodosRequest {
+  string parent = 1;
+}
+
+message MoveTodoRequest {
+  string name = 1;
+  string destination = 2;
+}
+
+message CountTodosRequest {
+  repeated string location = 1;
+}

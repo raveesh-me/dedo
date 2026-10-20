@@ -1,0 +1,352 @@
+syntax = "proto3";
+
+package raveesh_me.contacts.v1;
+
+import "dedo/v1/options.proto";
+import "google/api/annotations.proto";
+import "google/api/field_behavior.proto";
+import "google/api/resource.proto";
+import "google/protobuf/field_mask.proto";
+
+// ContactService keeps each location's contacts. Every location is a tenant:
+// a caller reaches only the locations it belongs to.
+service ContactService {
+  option (dedo.v1.service) = {
+    audience: AUDIENCE_EXTERNAL_PUBLIC
+    owner_team: "contacts-team"
+    tenancy: {collection: "locations"}
+  };
+
+  // GetContact returns one contact.
+  //
+  // Errors: CONTACT_NOT_FOUND.
+  rpc GetContact(GetContactRequest) returns (GetContactResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+    option (google.api.http) = {
+      get: "/commerce/contacts/v1/{name=locations/*/contacts/*}"
+      response_body: "contact"
+    };
+    option (dedo.v1.method) = {
+      tool: {
+        title: "Get a contact"
+        description: "Returns one contact by its resource name, such as locations/1/contacts/2."
+        annotations: {
+          read_only_hint: true
+          open_world_hint: false
+        }
+      }
+      scopes: "contacts.contact.read"
+      cache: {
+        visibility: VISIBILITY_PRIVATE
+        max_age: {seconds: 30}
+      }
+      errors: {
+        reason: "CONTACT_NOT_FOUND"
+        code: NOT_FOUND
+      }
+    };
+  }
+
+  // ListContacts returns a location's contacts, a page at a time.
+  //
+  // Errors: INVALID_PAGE_TOKEN.
+  rpc ListContacts(ListContactsRequest) returns (ListContactsResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+    option (google.api.http) = {get: "/commerce/contacts/v1/{parent=locations/*}/contacts"};
+    option (dedo.v1.method) = {
+      tool: {
+        title: "List contacts"
+        description: "Lists the contacts of one location, such as locations/1, a page at a time. Use locations/- to list across every location the caller may see."
+        annotations: {
+          read_only_hint: true
+          open_world_hint: false
+        }
+      }
+      scopes: "contacts.contact.read"
+      errors: {
+        reason: "INVALID_PAGE_TOKEN"
+        code: INVALID_ARGUMENT
+      }
+    };
+  }
+
+  // CreateContact adds a contact to a location.
+  //
+  // Errors: EMAIL_TAKEN.
+  rpc CreateContact(CreateContactRequest) returns (CreateContactResponse) {
+    option (google.api.http) = {
+      post: "/commerce/contacts/v1/{parent=locations/*}/contacts"
+      body: "contact"
+      response_body: "contact"
+    };
+    option (dedo.v1.method) = {
+      tool: {
+        title: "Create a contact"
+        description: "Adds a contact to one location, such as locations/1."
+        annotations: {
+          read_only_hint: false
+          destructive_hint: false
+          idempotent_hint: false
+          open_world_hint: false
+        }
+      }
+      scopes: "contacts.contact.write"
+      errors: {
+        reason: "EMAIL_TAKEN"
+        code: ALREADY_EXISTS
+      }
+    };
+  }
+
+  // UpdateContact changes the fields of a contact named in update_mask.
+  //
+  // Errors: CONTACT_NOT_FOUND.
+  rpc UpdateContact(UpdateContactRequest) returns (UpdateContactResponse) {
+    option (google.api.http) = {
+      patch: "/commerce/contacts/v1/{contact.name=locations/*/contacts/*}"
+      body: "contact"
+      response_body: "contact"
+    };
+    option (dedo.v1.method) = {
+      tool: {
+        title: "Update a contact"
+        description: "Changes the fields of a contact named in update_mask, and leaves the others as they are."
+        annotations: {
+          read_only_hint: false
+          destructive_hint: true
+          idempotent_hint: false
+          open_world_hint: false
+        }
+      }
+      scopes: "contacts.contact.write"
+      errors: {
+        reason: "CONTACT_NOT_FOUND"
+        code: NOT_FOUND
+      }
+    };
+  }
+}
+
+// LocationService describes the locations, the tenants of ContactService.
+service LocationService {
+  option (dedo.v1.service) = {
+    audience: AUDIENCE_EXTERNAL_PUBLIC
+    owner_team: "contacts-team"
+    tenancy: {collection: "locations"}
+  };
+
+  // GetLocation returns one location. The location is its own tenant.
+  //
+  // Errors: LOCATION_NOT_FOUND.
+  rpc GetLocation(GetLocationRequest) returns (GetLocationResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+    option (google.api.http) = {
+      get: "/commerce/contacts/v1/{name=locations/*}"
+      response_body: "location"
+    };
+    option (dedo.v1.method) = {
+      tool: {
+        title: "Get a location"
+        description: "Returns one location by its resource name, such as locations/1."
+        annotations: {
+          read_only_hint: true
+          open_world_hint: false
+        }
+      }
+      scopes: "contacts.location.read"
+      errors: {
+        reason: "LOCATION_NOT_FOUND"
+        code: NOT_FOUND
+      }
+    };
+  }
+
+  // ListLocations returns the locations the caller belongs to. It spans
+  // tenants, so it is cross_tenant: the scope guards it, and the server
+  // lists only the caller's own locations.
+  //
+  // Errors: INVALID_PAGE_TOKEN.
+  rpc ListLocations(ListLocationsRequest) returns (ListLocationsResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+    option (google.api.http) = {get: "/commerce/contacts/v1/locations"};
+    option (dedo.v1.method) = {
+      tool: {
+        title: "List my locations"
+        description: "Lists the locations the caller belongs to, a page at a time."
+        annotations: {
+          read_only_hint: true
+          open_world_hint: false
+        }
+      }
+      scopes: "contacts.location.read"
+      cross_tenant: true
+      errors: {
+        reason: "INVALID_PAGE_TOKEN"
+        code: INVALID_ARGUMENT
+      }
+    };
+  }
+}
+
+// Location is one business location, the tenant of every contact under it.
+message Location {
+  option (dedo.v1.message) = {description: "A business location. Contacts belong to one location."};
+
+  option (google.api.resource) = {
+    type: "contacts.raveesh.me/Location"
+    pattern: "locations/{location}"
+    singular: "location"
+    plural: "locations"
+  };
+
+  // The resource name, such as locations/1.
+  string name = 1 [(google.api.field_behavior) = IDENTIFIER];
+  // The name shown to people.
+  string display_name = 2;
+}
+
+// Contact is one person a location keeps in touch with.
+message Contact {
+  option (dedo.v1.message) = {description: "A person a location keeps in touch with."};
+
+  option (google.api.resource) = {
+    type: "contacts.raveesh.me/Contact"
+    pattern: "locations/{location}/contacts/{contact}"
+    singular: "contact"
+    plural: "contacts"
+  };
+
+  // The resource name, such as locations/1/contacts/2.
+  string name = 1 [(google.api.field_behavior) = IDENTIFIER];
+  // The name shown to people.
+  string display_name = 2 [(google.api.field_behavior) = REQUIRED];
+  // The contact's email address.
+  string email = 3 [
+    (google.api.field_behavior) = OPTIONAL,
+    (dedo.v1.field) = {sensitive: true}
+  ];
+}
+
+// GetContactRequest is the request of GetContact.
+message GetContactRequest {
+  option (dedo.v1.message) = {description: "Which contact to get."};
+
+  // The resource name of the contact.
+  string name = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference) = {type: "contacts.raveesh.me/Contact"}
+  ];
+}
+
+// GetContactResponse is the response of GetContact.
+message GetContactResponse {
+  option (dedo.v1.message) = {description: "The requested contact."};
+
+  // The contact.
+  Contact contact = 1;
+}
+
+// ListContactsRequest is the request of ListContacts.
+message ListContactsRequest {
+  option (dedo.v1.message) = {description: "Whose contacts to list, and which page."};
+
+  // The location whose contacts to list, such as locations/1.
+  string parent = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference) = {child_type: "contacts.raveesh.me/Contact"}
+  ];
+  // The most contacts to return. The server picks a size when it is 0.
+  int32 page_size = 2 [(google.api.field_behavior) = OPTIONAL];
+  // The next_page_token of the previous page, empty for the first.
+  string page_token = 3 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// ListContactsResponse is the response of ListContacts.
+message ListContactsResponse {
+  option (dedo.v1.message) = {description: "One page of contacts."};
+
+  // The contacts on this page.
+  repeated Contact contacts = 1;
+  // The token of the next page, empty on the last.
+  string next_page_token = 2;
+}
+
+// CreateContactRequest is the request of CreateContact.
+message CreateContactRequest {
+  option (dedo.v1.message) = {description: "The contact to add, and the location to add it to."};
+
+  // The location to add the contact to, such as locations/1.
+  string parent = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference) = {child_type: "contacts.raveesh.me/Contact"}
+  ];
+  // The contact to add.
+  Contact contact = 2 [(google.api.field_behavior) = REQUIRED];
+  // The ID to give the contact. The server picks one when it is empty.
+  string contact_id = 3 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// CreateContactResponse is the response of CreateContact.
+message CreateContactResponse {
+  option (dedo.v1.message) = {description: "The added contact."};
+
+  // The contact.
+  Contact contact = 1;
+}
+
+// UpdateContactRequest is the request of UpdateContact.
+message UpdateContactRequest {
+  option (dedo.v1.message) = {description: "The contact's new fields, and which of them to change."};
+
+  // The contact, with its name and the fields to change.
+  Contact contact = 1 [(google.api.field_behavior) = REQUIRED];
+  // The fields to change, such as display_name.
+  google.protobuf.FieldMask update_mask = 2 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// UpdateContactResponse is the response of UpdateContact.
+message UpdateContactResponse {
+  option (dedo.v1.message) = {description: "The updated contact."};
+
+  // The contact.
+  Contact contact = 1;
+}
+
+// GetLocationRequest is the request of GetLocation.
+message GetLocationRequest {
+  option (dedo.v1.message) = {description: "Which location to get."};
+
+  // The resource name of the location.
+  string name = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference) = {type: "contacts.raveesh.me/Location"}
+  ];
+}
+
+// GetLocationResponse is the response of GetLocation.
+message GetLocationResponse {
+  option (dedo.v1.message) = {description: "The requested location."};
+
+  // The location.
+  Location location = 1;
+}
+
+// ListLocationsRequest is the request of ListLocations.
+message ListLocationsRequest {
+  option (dedo.v1.message) = {description: "Which page of locations to list."};
+
+  // The most locations to return. The server picks a size when it is 0.
+  int32 page_size = 1 [(google.api.field_behavior) = OPTIONAL];
+  // The next_page_token of the previous page, empty for the first.
+  string page_token = 2 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// ListLocationsResponse is the response of ListLocations.
+message ListLocationsResponse {
+  option (dedo.v1.message) = {description: "One page of the caller's locations."};
+
+  // The locations on this page.
+  repeated Location locations = 1;
+  // The token of the next page, empty on the last.
+  string next_page_token = 2;
+}

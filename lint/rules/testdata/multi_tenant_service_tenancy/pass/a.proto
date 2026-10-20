@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package raveesh_me.todo.v1;
+
+import "dedo/v1/options.proto";
+import "google/protobuf/empty.proto";
+
+service TodoService {
+  option (dedo.v1.service) = {
+    audience: AUDIENCE_EXTERNAL_PUBLIC
+    owner_team: "todo-team"
+    tenancy: {collection: "locations"}
+  };
+  rpc Ping(google.protobuf.Empty) returns (google.protobuf.Empty);
+}
+
+service SubAccountService {
+  option (dedo.v1.service) = {
+    audience: AUDIENCE_EXTERNAL_PUBLIC
+    owner_team: "todo-team"
+    tenancy: {collection: "subAccounts"}
+  };
+  rpc Ping(google.protobuf.Empty) returns (google.protobuf.Empty);
+}

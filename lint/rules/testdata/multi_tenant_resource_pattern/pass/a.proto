@@ -1,0 +1,46 @@
+syntax = "proto3";
+
+package raveesh_me.todo.v1;
+
+import "dedo/v1/options.proto";
+import "google/api/resource.proto";
+import "google/protobuf/empty.proto";
+
+option (google.api.resource_definition) = {
+  type: "todo.raveesh.me/Note"
+  pattern: "locations/{location}/notes/{note}"
+};
+
+service TodoService {
+  option (dedo.v1.service) = {
+    audience: AUDIENCE_EXTERNAL_PUBLIC
+    owner_team: "todo-team"
+    tenancy: {collection: "locations"}
+  };
+  rpc Ping(google.protobuf.Empty) returns (google.protobuf.Empty);
+}
+
+// The tenant itself.
+message Location {
+  option (google.api.resource) = {
+    type: "todo.raveesh.me/Location"
+    pattern: "locations/{location}"
+  };
+  string name = 1;
+}
+
+message Todo {
+  option (google.api.resource) = {
+    type: "todo.raveesh.me/Todo"
+    pattern: "locations/{location}/todos/{todo}"
+  };
+  string name = 1;
+
+  message Item {
+    option (google.api.resource) = {
+      type: "todo.raveesh.me/Item"
+      pattern: "locations/{location}/todos/{todo}/items/{item}"
+    };
+    string name = 1;
+  }
+}

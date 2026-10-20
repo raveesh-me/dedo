@@ -28,6 +28,9 @@ type project struct {
 	schemaOnly bool
 	// undeclared lists services whose files do not import dedo's options.
 	undeclared []string
+	// tenancy is the tenant collection a service declares, such as
+	// "locations", when the repository has a multi-tenant service.
+	tenancy string
 }
 
 // service is the first service found, with the Go names that buf generate
@@ -45,6 +48,7 @@ var (
 	nonIdent   = regexp.MustCompile(`[^a-zA-Z0-9_]`)
 	goPackage  = regexp.MustCompile(`(?m)^\s*option\s+go_package\s*=\s*"([^"]+)"\s*;`)
 	scopeLit   = regexp.MustCompile(`"([a-z][a-z0-9_]*\.[a-z][a-z0-9_]*\.(?:read|write))"`)
+	tenancyLit = regexp.MustCompile(`tenancy\s*:\s*\{\s*collection\s*:\s*"([A-Za-z0-9]+)"`)
 )
 
 // skipDirs are never searched for proto sources.
@@ -97,6 +101,9 @@ func (p *project) read(rel string) error {
 	}
 	for _, s := range scopeLit.FindAllSubmatch(src, -1) {
 		p.scopes = append(p.scopes, string(s[1]))
+	}
+	if t := tenancyLit.FindSubmatch(src); t != nil && p.tenancy == "" {
+		p.tenancy = string(t[1])
 	}
 	svcs := protoSvc.FindAllSubmatch(src, -1)
 	pkg := protoPkg.FindSubmatch(src)

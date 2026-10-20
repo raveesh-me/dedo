@@ -179,10 +179,10 @@ func message(r config.Rule) string {
 
 func base(d protoreflect.Descriptor) map[string]any {
 	return map[string]any{
-		"name":      string(d.Name()),
-		"full_name": string(d.FullName()),
-		"file":      d.ParentFile().Path(),
-		"proto_package":   string(d.ParentFile().Package()),
+		"name":          string(d.Name()),
+		"full_name":     string(d.FullName()),
+		"file":          d.ParentFile().Path(),
+		"proto_package": string(d.ParentFile().Package()),
 	}
 }
 

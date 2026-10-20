@@ -6,6 +6,9 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+{{- if .Tenancy}}
+	"slices"
+{{- end}}
 	"strings"
 
 	"connectrpc.com/connect/v2"
@@ -56,6 +59,9 @@ func newHandler(log *slog.Logger) (http.Handler, error) {
 		Table:         table,
 		Scopes:        scopesFromContext,
 		EnforceScopes: true,
+{{- if .Tenancy}}
+		Tenants:       tenantAllowed,
+{{- end}}
 		Log:           log,
 	})
 	if err != nil {
@@ -102,7 +108,21 @@ var devTokens = map[string][]string{
 	"writer": { {{- range $i, $s := .AllScopes}}{{if $i}}, {{end}}"{{$s}}"{{end -}} },
 }
 
+{{- if .Tenancy}}
+
+// devTenants stands in for your identity platform too: the {{.Tenancy}} each
+// development token may act in, by ID.
+var devTenants = map[string][]string{
+	"reader": {"1"},
+	"writer": {"1"},
+}
+{{- end}}
+
 type scopesKey struct{}
+{{- if .Tenancy}}
+
+type tenantsKey struct{}
+{{- end}}
 
 // auth puts the scopes of the caller's bearer token in the call's context.
 // As a server interceptor it covers Connect, gRPC, REST and MCP alike.
@@ -112,6 +132,9 @@ func auth(next connect.ServerFunc) connect.ServerFunc {
 		if info, ok := connect.CallInfoForServerContext(ctx); ok {
 			token, _ = strings.CutPrefix(info.RequestHeader().Get("Authorization"), "Bearer ")
 		}
+{{- if .Tenancy}}
+		ctx = context.WithValue(ctx, tenantsKey{}, devTenants[token])
+{{- end}}
 		return next(context.WithValue(ctx, scopesKey{}, devTokens[token]), spec, stream)
 	}
 }
@@ -120,3 +143,14 @@ func scopesFromContext(ctx context.Context) []string {
 	scopes, _ := ctx.Value(scopesKey{}).([]string)
 	return scopes
 }
+{{- if .Tenancy}}
+
+// tenantAllowed reports whether the caller may act in a tenant, by the ID in
+// the request's resource name: "1" for {{.Tenancy}}/1/... The ID is "-" for
+// a read across {{.Tenancy}} (AIP-159): grant it only to a caller who may
+// see every one.
+func tenantAllowed(ctx context.Context, tenant string) bool {
+	tenants, _ := ctx.Value(tenantsKey{}).([]string)
+	return slices.Contains(tenants, tenant)
+}
+{{- end}}

@@ -31,6 +31,11 @@ const (
 	idToolRequired               = "DEDO_TOOL_REQUIRED"
 	idToolAnnotations            = "DEDO_TOOL_ANNOTATIONS"
 	idMessageDescriptionRequired = "DEDO_MESSAGE_DESCRIPTION_REQUIRED"
+
+	idMultiTenantServiceTenancy  = "DEDO_MULTI_TENANT_SERVICE_TENANCY"
+	idMultiTenantResourcePattern = "DEDO_MULTI_TENANT_RESOURCE_PATTERN"
+	idMultiTenantRequestTenant   = "DEDO_MULTI_TENANT_REQUEST_TENANT"
+	idMultiTenantCachePrivate    = "DEDO_MULTI_TENANT_CACHE_PRIVATE"
 )
 
 // DocsURL returns the link to a rule's section in guidance/RULES.md.

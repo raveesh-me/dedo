@@ -95,6 +95,10 @@ func initRepo(dir, release string, offline bool, out io.Writer) error {
 // house is the lint category of a repository's own rules.
 const house = "HOUSE"
 
+// multiTenant is the opt-in category of the DEDO_MULTI_TENANT_* rules, which
+// joins lint.use when a service declares dedo.v1.service.tenancy.
+const multiTenant = "DEDO_MULTI_TENANT"
+
 // hasHouseRules reports whether the repository has a rules.yml.
 func (in *initer) hasHouseRules() bool {
 	return config.Find(in.p.dir) != ""
@@ -250,16 +254,23 @@ func (in *initer) linter() error {
 		return err
 	}
 	changed := false
+	// The categories that only some repositories have rules for.
+	var optional []string
+	if in.hasHouseRules() {
+		optional = append(optional, house)
+	}
+	if in.p.tenancy != "" {
+		optional = append(optional, multiTenant)
+	}
 	lint := lookup(root(doc), "lint")
 	if lint == nil {
-		set(root(doc), "lint", lookup(root(tmpl), "lint"))
+		lint = lookup(root(tmpl), "lint")
+		addScalars(child(lint, "use", yaml.SequenceNode), optional...)
+		set(root(doc), "lint", lint)
 		in.say("buf.yaml: added the lint section")
 		changed = true
 	} else {
-		use := []string{"AIP_NOLANG", "DEDO", "ZALANDO"}
-		if in.hasHouseRules() {
-			use = append(use, house)
-		}
+		use := append([]string{"AIP_NOLANG", "DEDO", "ZALANDO"}, optional...)
 		if added := addScalars(child(lint, "use", yaml.SequenceNode), use...); len(added) > 0 {
 			in.say("buf.yaml: lint.use gained %s", strings.Join(added, ", "))
 			changed = true
@@ -796,7 +807,8 @@ func (in *initer) render(name string) ([]byte, error) {
 		service
 		Module, Service, Name string
 		ReadScopes, AllScopes []string
-	}{svc, in.p.module, svc.Name, path.Base(in.p.module), read, in.p.scopes}
+		Tenancy               string
+	}{svc, in.p.module, svc.Name, path.Base(in.p.module), read, in.p.scopes, in.p.tenancy}
 	t, err := template.New(name).Parse(string(asset(name)))
 	if err != nil {
 		return nil, err
