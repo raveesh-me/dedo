@@ -355,3 +355,23 @@ func TestTemplatesCommand(t *testing.T) {
 		t.Error("an unknown template printed")
 	}
 }
+
+// Upgrading from a release before v0.9.0 removes the old generated schema
+// files, which would otherwise duplicate the new ones' declarations.
+func TestInitRemovesStaleSchemaFiles(t *testing.T) {
+	dir := repo(t, map[string]string{
+		"go.mod":                               "module example.com/shop\n",
+		"gen/go/shop/v1/shop.mcp_schema.pb.go": "package shopv1\n",
+		"gen/go/shop/v1/shop.pb.go":            "package shopv1\n",
+	})
+	out := initOffline(t, dir)
+	if _, err := os.Stat(filepath.Join(dir, "gen/go/shop/v1/shop.mcp_schema.pb.go")); !os.IsNotExist(err) {
+		t.Errorf("stale schema file kept: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "gen/go/shop/v1/shop.pb.go")); err != nil {
+		t.Errorf("other generated code removed: %v", err)
+	}
+	if !strings.Contains(out, "shop.mcp.pb.go") {
+		t.Errorf("output does not explain the removal:\n%s", out)
+	}
+}
