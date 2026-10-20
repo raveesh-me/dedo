@@ -1,0 +1,8 @@
+# House rules: the organisation's shared ones, and this service's own.
+imports:
+  - path: ../house-rules
+rules:
+  - id: HOUSE_REST_ROOT
+    on: method
+    check: http_path == '' || http_path.startsWith('/commerce/')
+    message: REST paths start with /commerce/, the commerce platform's root.

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"go/format"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -126,8 +127,8 @@ func TestInitFreshRepository(t *testing.T) {
 	if got := read(t, dir, "Makefile"); got != "include Makefile.api\n" {
 		t.Errorf("Makefile = %q", got)
 	}
-	if !strings.Contains(read(t, dir, "Makefile.api"), "go build -o $@ $(LINT_PLUGIN)") {
-		t.Error("Makefile.api does not build the pinned plugin")
+	if !strings.Contains(read(t, dir, "Makefile.api"), "go tool dedo tools") {
+		t.Error("Makefile.api does not run dedo tools")
 	}
 	if !strings.Contains(read(t, dir, ".gitignore"), ".tools/") {
 		t.Error(".gitignore lacks .tools/")
@@ -660,5 +661,67 @@ func TestInitWarnsOnConnectV1Remote(t *testing.T) {
 	})
 	if out := initOffline(t, dir); !strings.Contains(out, "generates connect-go v1 code") {
 		t.Errorf("no warning:\n%s", out)
+	}
+}
+
+// HOUSE joins lint.use only when the repository has house rules; Buf
+// rejects a category without rules.
+func TestInitHouseCategory(t *testing.T) {
+	base := map[string]string{
+		"go.mod":   "module example.com/shop\n",
+		"buf.yaml": "version: v2\nlint:\n  use: [STANDARD]\n",
+	}
+	dir := repo(t, base)
+	initOffline(t, dir)
+	if slices.Contains(scalars(lookup(lookup(yamlAt(t, dir, "buf.yaml"), "lint"), "use")), "HOUSE") {
+		t.Error("HOUSE added without rules.yml")
+	}
+	base["rules.yml"] = "rules:\n  - {id: HOUSE_X, on: field, check: \"true\", message: X.}\n"
+	dir = repo(t, base)
+	initOffline(t, dir)
+	if !slices.Contains(scalars(lookup(lookup(yamlAt(t, dir, "buf.yaml"), "lint"), "use")), "HOUSE") {
+		t.Error("HOUSE missing with rules.yml")
+	}
+}
+
+func TestInitWarnsSchemaRepoHouseRules(t *testing.T) {
+	dir := repo(t, map[string]string{
+		"buf.yaml":                      "version: v2\nmodules:\n  - path: proto\n",
+		"rules.yml":                     "rules: []\n",
+		"proto/shop/cart/v1/cart.proto": "syntax = \"proto3\";\npackage shop.cart.v1;\n",
+	})
+	if out := initOffline(t, dir); !strings.Contains(out, "house rules do not run without Go") {
+		t.Errorf("no warning:\n%s", out)
+	}
+}
+
+// dedo tools fetches the git imports of rules.yml, so the plugin, which
+// never touches the network, can read them.
+func TestFetchRules(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git is not installed")
+	}
+	remote := t.TempDir()
+	for _, args := range [][]string{{"init", "--quiet"}, {"add", "."}, {"commit", "--quiet", "-m", "v1"}, {"tag", "v1"}} {
+		if args[0] == "add" {
+			if err := os.WriteFile(filepath.Join(remote, "rules.yml"), []byte("rules:\n  - {id: HOUSE_SHARED, on: field, check: \"true\", message: Shared.}\n"), 0o644); err != nil {
+				t.Fatal(err)
+			}
+		}
+		cmd := exec.Command("git", append([]string{"-C", remote, "-c", "user.email=t@example.com", "-c", "user.name=t"}, args...)...)
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v\n%s", args, err, out)
+		}
+	}
+	dir := repo(t, map[string]string{
+		"buf.yaml":  "version: v2\n",
+		"rules.yml": "imports:\n  - git: " + remote + "\n    ref: v1\n",
+	})
+	var out bytes.Buffer
+	if err := fetchRules(dir, &out); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out.String(), "fetched house rules "+remote+"@v1") {
+		t.Errorf("output: %s", out.String())
 	}
 }

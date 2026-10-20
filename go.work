@@ -7,7 +7,6 @@ use (
 	.
 	./cmd/dedo
 	./examples/bad-todo
-	./examples/house-lint
 	./examples/todo
 	./lint
 	./mcp
@@ -19,7 +18,8 @@ use (
 // version at the working tree. They live here, not in go.mod, so they never
 // reach consumers. scripts/check-release-versions.sh checks the version.
 replace (
-	github.com/raveesh-me/dedo v0.11.0 => ./
-	github.com/raveesh-me/dedo/mcp v0.11.0 => ./mcp
-	github.com/raveesh-me/dedo/openapi v0.11.0 => ./openapi
+	github.com/raveesh-me/dedo v0.11.1 => ./
+	github.com/raveesh-me/dedo/lint v0.11.1 => ./lint
+	github.com/raveesh-me/dedo/mcp v0.11.1 => ./mcp
+	github.com/raveesh-me/dedo/openapi v0.11.1 => ./openapi
 )

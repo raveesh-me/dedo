@@ -17,6 +17,8 @@ import (
 
 	"gopkg.in/yaml.v3"
 
+	"github.com/raveesh-me/dedo/lint/house/config"
+
 	"github.com/raveesh-me/dedo"
 )
 
@@ -76,6 +78,11 @@ func initRepo(dir, release string, offline bool, out io.Writer) error {
 		}
 	}
 	failed := in.runCommands(offline)
+	if !offline && in.hasHouseRules() {
+		if err := fetchRules(in.p.dir, in.out); err != nil {
+			failed = append(failed, "dedo tools (house rules): "+err.Error())
+		}
+	}
 	if err := in.printMain(); err != nil {
 		return err
 	}
@@ -83,6 +90,14 @@ func initRepo(dir, release string, offline bool, out io.Writer) error {
 		return fmt.Errorf("%d commands failed: %s; fix the cause and run dedo init again", len(failed), strings.Join(failed, "; "))
 	}
 	return nil
+}
+
+// house is the lint category of a repository's own rules.
+const house = "HOUSE"
+
+// hasHouseRules reports whether the repository has a rules.yml.
+func (in *initer) hasHouseRules() bool {
+	return config.Find(in.p.dir) != ""
 }
 
 // remotePlugin is the lint plugin on the BSR, for repositories without Go.
@@ -241,7 +256,11 @@ func (in *initer) linter() error {
 		in.say("buf.yaml: added the lint section")
 		changed = true
 	} else {
-		if added := addScalars(child(lint, "use", yaml.SequenceNode), "AIP_NOLANG", "DEDO", "ZALANDO"); len(added) > 0 {
+		use := []string{"AIP_NOLANG", "DEDO", "ZALANDO"}
+		if in.hasHouseRules() {
+			use = append(use, house)
+		}
+		if added := addScalars(child(lint, "use", yaml.SequenceNode), use...); len(added) > 0 {
 			in.say("buf.yaml: lint.use gained %s", strings.Join(added, ", "))
 			changed = true
 		}
@@ -281,6 +300,9 @@ func (in *initer) linter() error {
 		in.say("buf.yaml: lint plugin and categories already in place")
 	}
 	if in.p.schemaOnly {
+		if in.hasHouseRules() {
+			in.say("rules.yml: WARNING the BSR plugin cannot read files, so house rules do not run without Go; add a go.mod and run dedo init again to use the native plugin")
+		}
 		// No Go: the plugin is the BSR's, which buf.lock pins.
 		in.cmds = append(in.cmds, []string{"buf", "plugin", "update"})
 		return nil
@@ -307,6 +329,8 @@ func (in *initer) linter() error {
 	// rather than through go tool.
 	in.cmds = append(in.cmds,
 		[]string{"go", "get", "-tool", lintPluginPkg + "@" + in.release},
+		// dedo itself, so make tools (go tool dedo tools) needs only Go.
+		[]string{"go", "get", "-tool", cliPkg + "@" + in.release},
 		buildPluginCmd(),
 	)
 	in.say("go.mod: will pin buf-plugin-dedo-lint as a Go tool and build it into %s", pluginPath())

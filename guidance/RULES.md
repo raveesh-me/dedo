@@ -8,7 +8,7 @@
 | `ZALANDO_*` | [Zalando's RESTful API guidelines](https://opensource.zalando.com/restful-api-guidelines/) | API ownership, audience, OAuth scope names, caching, deprecation, money |
 | `DEDO_*` | dedo itself | What dedo needs to serve one proto as RPC, REST, docs and MCP tools |
 
-A fourth prefix, `HOUSE_*`, is reserved for your organisation's own rules, in a plugin of its own (see [House rules](#house-rules)). dedo never ships a `HOUSE_*` rule, so yours never clash with an upgrade.
+A fourth prefix, `HOUSE_*`, is reserved for your organisation's own rules, written as CEL checks in `rules.yml` (see [House rules](#house-rules)). dedo never ships a `HOUSE_*` rule, so yours never clash with an upgrade.
 
 ```yaml
 lint:
@@ -79,25 +79,45 @@ dedo checks only the Zalando guidelines a proto can express. It does not follow 
 
 ## House rules
 
-`HOUSE_*` rules are your organisation's own, for conventions dedo has no business knowing: your domain names, your team list, your field naming quirks. They live in a separate Buf check plugin that every service lists next to `buf-plugin-dedo-lint`:
+`HOUSE_*` rules are your organisation's own, for conventions dedo has no business knowing: your domain names, your REST roots, your field naming. You write them in `rules.yml` next to `buf.yaml`, as [CEL](https://cel.dev) checks, and `buf-plugin-dedo-lint` runs them with dedo's own rules. No plugin to write, build or release.
 
 ```yaml
-plugins:
-  - plugin: .tools/buf-plugin-dedo-lint
-  - plugin: .tools/buf-plugin-house
-    options:
-      resource_domain: example.com
-lint:
-  use:
-    - AIP_NOLANG
-    - DEDO
-    - ZALANDO
-    - HOUSE
+# rules.yml
+imports:
+  - git: https://github.com/acme/api-standards.git   # your organisation's shared rules
+    ref: v3                                           # a tag or a commit
+    path: rules.yml                                   # the default
+  - path: ../platform-rules                           # a folder (its rules.yml) or a file
+disable: [HOUSE_PLURAL_COLLECTIONS]                   # imported rules this repository opts out of
+rules:
+  - id: HOUSE_REST_ROOT
+    on: method
+    check: http_path == '' || http_path.startsWith('/commerce/')
+    message: REST paths start with /commerce/, the commerce platform's root.
+    doc: https://wiki.acme.com/api/rest-roots
 ```
 
-To share the rules across repositories, keep the plugin in one repository of its own, as a Go module: each service pins it in `go.mod` with `go get -tool` and builds it into `.tools/`, the way it does dedo's plugin. [`examples/house-lint`](../examples/house-lint) is a working starting point with one rule; `examples/todo` follows it and `examples/bad-todo` breaks it.
+Add `HOUSE` to `lint.use` in `buf.yaml` (`dedo init` does it when `rules.yml` exists). Each rule is a Buf rule of its own, so `except: [HOUSE_REST_ROOT]` and `// buf:lint:ignore HOUSE_REST_ROOT` work as for any other rule, and a finding shows the rule's `message` and `doc` link.
 
-House rules rank below everything above: they may add constraints, but not contradict a DEDO, AIP or ZALANDO rule.
+**Shared rules.** An organisation keeps its rules in one repository and tags it; each service imports it with `git` and `ref`. Imports nest: a shared file can import others. `dedo tools` (and `make tools`, `dedo init`, `dedo upgrade`) fetches git imports into `.tools/rules/`; the lint itself never touches the network, so it stays fast in the editor. A missing import fails the lint with "run dedo tools". `disable` lets a service opt out of an imported rule, by ID.
+
+**Checks.** `check` is a CEL expression that is true when the element passes. `on` picks the element, and these are the names a check can use:
+
+| `on` | Variables |
+| --- | --- |
+| `file` | `name` (the path), `proto_package`, `imports` |
+| `service` | `name`, `full_name`, `file`, `proto_package`, `methods` |
+| `method` | `name`, `full_name`, `file`, `proto_package`, `service`, `input`, `output`, `client_streaming`, `server_streaming`, `idempotency` (`NO_SIDE_EFFECTS`, `IDEMPOTENT`, `UNKNOWN`), `http_verb`, `http_path`, `scopes`, `errors` (reasons), `deprecated` |
+| `message` | `name`, `full_name`, `file`, `proto_package`, `fields` |
+| `field` | `name`, `full_name`, `file`, `proto_package`, `message`, `type` (a scalar kind such as `string`, or a message or enum full name), `repeated`, `optional`, `behaviors` (such as `REQUIRED`), `json_name` |
+| `enum` | `name`, `full_name`, `file`, `proto_package`, `values` |
+| `resource` | `name`, `full_name`, `file`, `proto_package`, `type`, `patterns`, `singular`, `plural` |
+
+Lists are lists of strings (`'shop.cart.read' in scopes`, `fields.size() < 30`); booleans are booleans. CEL's string extensions are on (`split`, `lowerAscii`, `replace`, `trim`). A check that does not compile, or is not a bool, stops the lint and names the rule and its file.
+
+House rules run in the native plugin, which reads `rules.yml`; the WebAssembly plugin on the BSR cannot read files, so a repository without Go does not run them. [`examples/house-rules`](../examples/house-rules) holds shared rules that both todo examples import, each adding one of its own: `examples/todo` follows them and `examples/bad-todo` breaks them.
+
+House rules rank below everything above: they may add constraints, but not contradict a DEDO, AIP or ZALANDO rule. A contract that lints clean under all of them is the proof they agree; keep one (your service, or dedo's starter) in CI.
 
 ## dedo's rules
 

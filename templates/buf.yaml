@@ -7,7 +7,7 @@ deps:
   - buf.build/bufbuild/protovalidate
   # The options module, at the same release as the lint plugin, generators
   # and runtime pinned in go.mod. dedo upgrade moves them together.
-  - buf.build/r-a/dedo:v0.11.0
+  - buf.build/r-a/dedo:v0.11.1
 lint:
   use:
     - STANDARD
@@ -48,8 +48,6 @@ plugins:
   # machine without Go can list the BSR plugin instead
   # (buf.build/r-a/dedo-lint), at about 5 s per lint.
   - plugin: .tools/buf-plugin-dedo-lint
-  # Your organisation's own HOUSE_* rules, if it has any (add HOUSE to
-  # lint.use too). See guidance/RULES.md#house-rules in the dedo repository.
-  # - plugin: .tools/buf-plugin-house
-  #   options:
-  #     resource_domain: YOUR_DOMAIN
+  # Your organisation's own HOUSE_* rules come from rules.yml next to this
+  # file; buf-plugin-dedo-lint runs them (add HOUSE to lint.use). See
+  # guidance/RULES.md#house-rules in the dedo repository.

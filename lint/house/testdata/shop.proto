@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+package shop.cart.v1;
+
+import "dedo/v1/options.proto";
+import "google/api/annotations.proto";
+import "google/api/field_behavior.proto";
+import "google/api/resource.proto";
+
+// CartService manages carts.
+service CartService {
+  // GetCart returns a cart.
+  rpc GetCart(GetCartRequest) returns (Cart) {
+    option (google.api.http) = {get: "/v1/{name=carts/*}"};
+    option (dedo.v1.method) = {scopes: "shop.cart.read"};
+  }
+}
+
+// A cart.
+message Cart {
+  option (google.api.resource) = {
+    type: "shop.example.com/Cart"
+    pattern: "carts/{cart}"
+  };
+
+  // The resource name.
+  string name = 1 [(google.api.field_behavior) = IDENTIFIER];
+  // Who owns it.
+  string owner_id = 2;
+}
+
+// GetCartRequest asks for a cart.
+message GetCartRequest {
+  // The cart's name.
+  string name = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// A cart's state.
+enum State {
+  // Unset.
+  STATE_UNSPECIFIED = 0;
+}

@@ -1,0 +1,14 @@
+# An organisation's shared house rules. In a real organisation this file
+# lives in a repository of its own, and services import it at a tag:
+#
+#   imports:
+#     - git: https://github.com/acme/api-standards.git
+#       ref: v3
+#
+# Here it is a folder next to the examples, which import it by path.
+rules:
+  - id: HOUSE_RESOURCE_TYPE_DOMAIN
+    on: resource
+    check: type.split('/')[0].endsWith('.raveesh.me')
+    message: Resource types live under raveesh.me, such as todo.raveesh.me/Todo.
+    doc: https://github.com/raveesh-me/dedo/blob/main/guidance/RULES.md#house-rules
