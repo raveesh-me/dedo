@@ -203,6 +203,9 @@ func (in *initer) generators() error {
 		[]string{"go", "get", "-tool", "github.com/raveesh-me/dedo/openapi/cmd/protoc-gen-dedo-openapi@" + in.release},
 	)
 	in.say("go.mod: will pin %s as Go tools", strings.Join(generators, ", "))
+	if err := in.removeStaleSchemas(); err != nil {
+		return err
+	}
 	src := in.genTemplate()
 	doc, ok, err := loadYAML(in.path("buf.gen.yaml"))
 	if err != nil {
@@ -235,6 +238,30 @@ func (in *initer) generators() error {
 		return nil
 	}
 	return saveYAML(in.path("buf.gen.yaml"), doc)
+}
+
+// removeStaleSchemas deletes the *.mcp_schema.pb.go files that
+// protoc-gen-dedo-mcp wrote before v0.9.0. It now writes *.mcp.pb.go with the
+// same declarations, and buf generate does not remove the old files, so
+// keeping them breaks the build.
+func (in *initer) removeStaleSchemas() error {
+	return filepath.WalkDir(in.p.dir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() && path != in.p.dir && (d.Name() == ".git" || d.Name() == "node_modules" || d.Name() == "vendor") {
+			return filepath.SkipDir
+		}
+		if d.IsDir() || !strings.HasSuffix(path, ".mcp_schema.pb.go") {
+			return nil
+		}
+		if err := os.Remove(path); err != nil {
+			return err
+		}
+		rel, _ := filepath.Rel(in.p.dir, path)
+		in.say("%s: removed; buf generate now writes %s", rel, strings.TrimSuffix(filepath.Base(path), ".mcp_schema.pb.go")+".mcp.pb.go")
+		return nil
+	})
 }
 
 // genTemplate is templates/buf.gen.yaml for this repository.
@@ -412,7 +439,7 @@ func (in *initer) printMain() error {
 // render fills a Go template with this repository's names, or with
 // placeholders when it has no service yet.
 func (in *initer) render(name string) ([]byte, error) {
-	svc := service{Name: "YourService", GoPkg: "yourv1", GoImport: in.p.module + "/gen/go/your/package/v1", FileVar: "File_your_package_v1_your_proto"}
+	svc := service{Name: "YourService", GoPkg: "yourv1", GoImport: in.p.module + "/gen/go/your/package/v1"}
 	if in.p.service != nil {
 		svc = *in.p.service
 	}

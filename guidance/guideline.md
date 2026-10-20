@@ -53,8 +53,8 @@ my-service/
    ```sh
    go get -tool google.golang.org/protobuf/cmd/protoc-gen-go
    go get -tool connectrpc.com/connect/cmd/protoc-gen-connect-go
-   go get -tool github.com/raveesh-me/dedo/mcp/cmd/protoc-gen-dedo-mcp@v0.8.0
-   go get -tool github.com/raveesh-me/dedo/openapi/cmd/protoc-gen-dedo-openapi@v0.8.0
+   go get -tool github.com/raveesh-me/dedo/mcp/cmd/protoc-gen-dedo-mcp@v0.9.0
+   go get -tool github.com/raveesh-me/dedo/openapi/cmd/protoc-gen-dedo-openapi@v0.9.0
    ```
 
    Pin the dedo modules to the latest release explicitly. Go's module proxy can lag behind a new tag.
@@ -180,7 +180,7 @@ make api-generate
 This writes, for each service:
 
 - `gen/go/.../<pkg>.pb.go` and `<pkg>connect/` for the API
-- `gen/go/.../<pkg>.mcp_schema.pb.go` with the MCP tools' input and output schemas
+- `gen/go/.../<pkg>.mcp.pb.go` with `<Service>MCPTools()`: the MCP tools, their input and output schemas, and typed forwarders
 - `docs/openapi.json` for the REST reference
 
 Commit all of it. CI fails when the committed output is stale.
@@ -202,15 +202,11 @@ path, handler := productsv1connect.NewProductServiceHandler(server, connect.With
 transcoder, err := vanguard.NewTranscoder([]*vanguard.Service{vanguard.NewService(path, handler)})
 api := flowid.Middleware(auth.Middleware(transcoder))
 
-// MCP: every RPC is a tool, forwarded to the API in-process with the caller's
-// token, using the schemas protoc-gen-dedo-mcp generated.
+// MCP: every RPC is a tool, as protoc-gen-dedo-mcp generated it, forwarded
+// to the API in-process with the caller's token.
 mcpServer := mcp.NewServer(&mcp.Implementation{Name: "products", Version: "v1"}, nil)
-err = mcpserver.New(mcpServer, mcpserver.Config{
-	Services:      []protoreflect.ServiceDescriptor{serviceDescriptor},
-	InputSchemas:  productsv1.MCPInputSchemas,
-	OutputSchemas: productsv1.MCPOutputSchemas,
-	Client:        mcpserver.InProcessClient(api),
-}) // fails if an RPC has no schema, or two RPCs share a tool name
+err = mcpserver.AddTools(mcpServer, mcpserver.Target{Client: mcpserver.InProcessClient(api)},
+	productsv1.ProductServiceMCPTools()...) // fails if two RPCs share a tool name
 
 mux := http.NewServeMux()
 mux.Handle("GET /openapi.json", docs.Spec()) // embeds docs/openapi.json

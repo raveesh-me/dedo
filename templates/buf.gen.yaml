@@ -31,8 +31,7 @@ plugins:
     out: gen/go
     opt: paths=source_relative
   # MCP tool input and output schemas, with field descriptions and
-  # field_behavior: pass <package>.MCPInputSchemas and MCPOutputSchemas to
-  # github.com/raveesh-me/dedo/mcp/mcpserver.New, which serves the tools.
+  # field_behavior, and <Service>MCPTools() for mcpserver.AddTools.
   - local: ["go", "tool", "protoc-gen-dedo-mcp"]
     out: gen/go
     opt: paths=source_relative

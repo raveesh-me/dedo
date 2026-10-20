@@ -153,7 +153,7 @@ func TestInitFreshRepository(t *testing.T) {
 	}
 	for _, want := range []string{
 		`time_counterv1 "github.com/acme/time-counter/gen/go/acme/time_counter/v1"`,
-		`time_counterv1.File_acme_time_counter_v1_time_counter_proto.Services().ByName("CounterService")`,
+		`mcpserver.AddTools(mcpServer, target, time_counterv1.CounterServiceMCPTools()...)`,
 		`"reader": {"time_counter.counter.read"}`,
 		`"writer": {"time_counter.counter.read", "time_counter.counter.write"}`,
 	} {
@@ -353,5 +353,25 @@ func TestTemplatesCommand(t *testing.T) {
 	}
 	if err := run([]string{"templates", "nope"}, &one); err == nil {
 		t.Error("an unknown template printed")
+	}
+}
+
+// Upgrading from a release before v0.9.0 removes the old generated schema
+// files, which would otherwise duplicate the new ones' declarations.
+func TestInitRemovesStaleSchemaFiles(t *testing.T) {
+	dir := repo(t, map[string]string{
+		"go.mod":                               "module example.com/shop\n",
+		"gen/go/shop/v1/shop.mcp_schema.pb.go": "package shopv1\n",
+		"gen/go/shop/v1/shop.pb.go":            "package shopv1\n",
+	})
+	out := initOffline(t, dir)
+	if _, err := os.Stat(filepath.Join(dir, "gen/go/shop/v1/shop.mcp_schema.pb.go")); !os.IsNotExist(err) {
+		t.Errorf("stale schema file kept: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "gen/go/shop/v1/shop.pb.go")); err != nil {
+		t.Errorf("other generated code removed: %v", err)
+	}
+	if !strings.Contains(out, "shop.mcp.pb.go") {
+		t.Errorf("output does not explain the removal:\n%s", out)
 	}
 }

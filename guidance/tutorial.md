@@ -12,7 +12,7 @@ Every step below was run as written. [install.md](install.md) lists the same set
 - The `dedo` command:
 
   ```sh
-  go install github.com/raveesh-me/dedo/cmd/dedo@v0.8.0
+  go install github.com/raveesh-me/dedo/cmd/dedo@v0.9.0
   ```
 
 ## 1. Decide the names
@@ -245,7 +245,7 @@ go mod tidy
 
 This writes:
 
-- `gen/go/acme/time_counter/v1/` with the messages and `time_counter.mcp_schema.pb.go` (MCP tool input and output schemas, with field descriptions), and `time_counterv1connect/` with the RPC handlers and clients
+- `gen/go/acme/time_counter/v1/` with the messages and `time_counter.mcp.pb.go` (`CounterServiceMCPTools`: every RPC as an MCP tool, with its input and output schemas, with field descriptions), and `time_counterv1connect/` with the RPC handlers and clients
 - `docs/openapi.json`, the REST reference
 
 Commit all of it. CI fails when it is stale.
@@ -362,7 +362,6 @@ import (
 	"github.com/raveesh-me/dedo/interceptor"
 	"github.com/raveesh-me/dedo/mcp/mcpserver"
 	"github.com/raveesh-me/dedo/policy"
-	"google.golang.org/protobuf/reflect/protoreflect"
 
 	"github.com/acme/time-counter/docs"
 	time_counterv1 "github.com/acme/time-counter/gen/go/acme/time_counter/v1"
@@ -410,15 +409,11 @@ func newHandler(log *slog.Logger) (http.Handler, error) {
 	}
 	api := flowid.Middleware(authMiddleware(rest))
 
-	// MCP: every RPC is a tool, called through the same API with the caller's
-	// token, using the schemas protoc-gen-dedo-mcp generated.
+	// MCP: every RPC is a tool, as protoc-gen-dedo-mcp generated it, called
+	// through the same API with the caller's token.
 	mcpServer := mcp.NewServer(&mcp.Implementation{Name: "time-counter", Version: "v1"}, nil)
-	if err := mcpserver.New(mcpServer, mcpserver.Config{
-		Services:      []protoreflect.ServiceDescriptor{time_counterv1.File_acme_time_counter_v1_time_counter_proto.Services().ByName("CounterService")},
-		InputSchemas:  time_counterv1.MCPInputSchemas,
-		OutputSchemas: time_counterv1.MCPOutputSchemas,
-		Client:        mcpserver.InProcessClient(api),
-	}); err != nil {
+	target := mcpserver.Target{Client: mcpserver.InProcessClient(api)}
+	if err := mcpserver.AddTools(mcpServer, target, time_counterv1.CounterServiceMCPTools()...); err != nil {
 		return nil, err
 	}
 
@@ -513,5 +508,5 @@ The same RPCs also answer over Connect and gRPC at `/acme.time_counter.v1.Counte
 | `go: updates to go.mod needed` while generating | Run `go mod tidy`, then generate again. |
 | `bind: address already in use` | Something else holds port 8080. Run with `ADDR=:9090`. |
 | No findings in the editor | The lint plugins are missing from `.tools/`. Run `make tools`, then reload the editor. |
-| `reading github.com/raveesh-me/dedo/go.mod at revision v0.0.0: unknown revision` | `go get` picked an old commit instead of a release. Add `@v0.8.0` (or the latest release) to the module path. |
+| `reading github.com/raveesh-me/dedo/go.mod at revision v0.0.0: unknown revision` | `go get` picked an old commit instead of a release. Add `@v0.9.0` (or the latest release) to the module path. |
 | `Module buf.build/bufbuild/protovalidate is declared ... but is unused` | A warning only. Remove the dependency from `buf.yaml` if you don't use protovalidate. |

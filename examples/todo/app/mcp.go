@@ -4,7 +4,6 @@ import (
 	"net/http"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
-	"google.golang.org/protobuf/reflect/protoreflect"
 
 	todov1 "github.com/raveesh-me/dedo/examples/todo/gen/go/raveesh_me/todo/v1"
 	"github.com/raveesh-me/dedo/mcp/mcpserver"
@@ -16,12 +15,8 @@ import (
 // policy code of its own.
 func newMCP(api http.Handler) (http.Handler, error) {
 	server := mcp.NewServer(&mcp.Implementation{Name: "todo", Version: "v1"}, nil)
-	if err := mcpserver.New(server, mcpserver.Config{
-		Services:      []protoreflect.ServiceDescriptor{todov1.File_raveesh_me_todo_v1_todo_proto.Services().ByName("TodoService")},
-		InputSchemas:  todov1.MCPInputSchemas,
-		OutputSchemas: todov1.MCPOutputSchemas,
-		Client:        mcpserver.InProcessClient(api),
-	}); err != nil {
+	target := mcpserver.Target{Client: mcpserver.InProcessClient(api)}
+	if err := mcpserver.AddTools(server, target, todov1.TodoServiceMCPTools()...); err != nil {
 		return nil, err
 	}
 	handler := mcp.NewStreamableHTTPHandler(

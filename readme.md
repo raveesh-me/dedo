@@ -14,7 +14,7 @@
 
 New here? Everything is in [`guidance/`](guidance): [install.md](guidance/install.md) adds dedo to a Go service, one part at a time or all at once with `dedo init`, [tutorial.md](guidance/tutorial.md) builds a new product from scratch, [guideline.md](guidance/guideline.md) explains the reasoning, [RULES.md](guidance/RULES.md) documents every lint rule, and [claude.md](guidance/claude.md) is guidance for coding agents to append to your `AGENTS.md` or `CLAUDE.md`.
 
-**Latest release: [v0.8.0](https://github.com/raveesh-me/dedo/releases/tag/v0.8.0).** The options module is [`buf.build/r-a/dedo`](https://buf.build/r-a/dedo). The lint plugin comes as native binaries on the GitHub release (`make tools`) and as a Wasm plugin on the BSR. The Go modules are `github.com/raveesh-me/dedo/...@v0.8.0`.
+**Latest release: [v0.9.0](https://github.com/raveesh-me/dedo/releases/tag/v0.9.0).** The options module is [`buf.build/r-a/dedo`](https://buf.build/r-a/dedo). The lint plugin comes as native binaries on the GitHub release (`make tools`) and as a Wasm plugin on the BSR. The Go modules are `github.com/raveesh-me/dedo/...@v0.9.0`.
 
 Contract rules come from Google's AIPs. Operational rules (audience, ownership, scopes, caching, deprecation, error reasons) come from Zalando's guidelines. Both live in the schema.
 
@@ -118,7 +118,7 @@ Suppress one finding with `// buf:lint:ignore ZALANDO_MONEY_FIELD_TYPE` above th
 ## Using it in a service repository
 
 ```sh
-go install github.com/raveesh-me/dedo/cmd/dedo@v0.8.0
+go install github.com/raveesh-me/dedo/cmd/dedo@v0.9.0
 dedo init
 ```
 
@@ -127,7 +127,7 @@ dedo init
 1. `dedo init` (or by hand: copy `buf.yaml`, `buf.gen.yaml`, `Makefile.api` from `templates/`, pin the generators with `go get -tool`, run `make tools` and `buf dep update`).
 2. Fill in `CODEOWNERS` and the VS Code settings from `templates/` if you use them.
 3. Write the contract, then `make api-check` (lint, format, breaking) and `buf generate` (Go, Connect, MCP tools, REST docs).
-4. Wire the runtime: `policy.Build` for the policy table, `interceptor.New` for scopes and headers, Vanguard for REST, `mcpserver.New` with the generated `MCPInputSchemas` for MCP, and the docs handler. Start with `EnforceScopes: false` (audit mode), then enforce.
+4. Wire the runtime: `policy.Build` for the policy table, `interceptor.New` for scopes and headers, Vanguard for REST, `mcpserver.AddTools` with the generated `<Service>MCPTools()` for MCP, and the docs handler. Start with `EnforceScopes: false` (audit mode), then enforce.
 5. Add `templates/policy_table_test.go.tmpl` as a test, so a missing declaration fails before deploy.
 
 `buf.gen.yaml` uses managed mode. A module-scoped `go_package_prefix` override points imports of the options module at this repository's Go module, so generated code links against the runtime's types.

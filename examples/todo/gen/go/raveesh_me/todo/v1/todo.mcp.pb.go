@@ -3,9 +3,15 @@
 
 package todov1
 
+import (
+	json "encoding/json"
+	mcp "github.com/modelcontextprotocol/go-sdk/mcp"
+	mcpserver "github.com/raveesh-me/dedo/mcp/mcpserver"
+)
+
 // MCPInputSchemas maps each unary RPC's full name to the JSON Schema of its
 // MCP tool input, built from the request message, its field comments and
-// google.api.field_behavior. Pass it to mcpserver.New.
+// google.api.field_behavior.
 var MCPInputSchemas = map[string]string{
 	"raveesh_me.todo.v1.TodoService.CreateTodo": "{\"description\":\"The to-do to create, and optionally its ID.\",\"properties\":{\"todo\":{\"description\":\"The to-do to create. One item on the to-do list.\",\"properties\":{\"assignee_email\":{\"description\":\"The email of the person it is assigned to.\",\"format\":\"email\",\"type\":\"string\"},\"budget_amount\":{\"description\":\"What doing it may cost. Represents an amount of money with its currency type.\",\"properties\":{\"currency_code\":{\"description\":\"The three-letter currency code defined in ISO 4217.\",\"pattern\":\"^[A-Z]{3}$\",\"type\":\"string\"},\"nanos\":{\"description\":\"Number of nano (10^-9) units of the amount. The value must be between -999,999,999 and +999,999,999 inclusive. If `units` is positive, `nanos` must be positive or zero. If `units` is zero, `nanos` can be positive, zero, or negative. If `units` is negative, `nanos` must be negative or zero. For example $-1.75 is represented as `units`=-1 and `nanos`=-750,000,000.\",\"maximum\":999999999,\"minimum\":-999999999,\"type\":\"integer\"},\"units\":{\"description\":\"The whole units of the amount. For example if `currencyCode` is `\\\"USD\\\"`, then 1 unit is one US dollar. A 64-bit integer: a JSON number, or a decimal string for values beyond 2^53.\",\"type\":[\"string\",\"integer\"]}},\"type\":\"object\"},\"done\":{\"description\":\"Whether it is done.\",\"type\":\"boolean\"},\"title\":{\"description\":\"What needs doing.\",\"type\":\"string\"}},\"required\":[\"title\"],\"type\":\"object\"},\"todo_id\":{\"description\":\"The ID to give the to-do, which becomes the last segment of its name. The server picks one when it is empty.\",\"type\":\"string\"}},\"required\":[\"todo\"],\"type\":\"object\"}",
 	"raveesh_me.todo.v1.TodoService.DeleteTodo": "{\"description\":\"Which to-do to delete.\",\"properties\":{\"name\":{\"description\":\"The resource name of the to-do.\",\"pattern\":\"^todos/[^/]+$\",\"type\":\"string\"}},\"required\":[\"name\"],\"type\":\"object\"}",
@@ -17,7 +23,7 @@ var MCPInputSchemas = map[string]string{
 
 // MCPOutputSchemas maps each unary RPC's full name to the JSON Schema of its
 // MCP tool output: the response message as mcpserver encodes it in
-// structuredContent. Pass it to mcpserver.New.
+// structuredContent.
 var MCPOutputSchemas = map[string]string{
 	"raveesh_me.todo.v1.TodoService.CreateTodo": "{\"description\":\"The created to-do.\",\"properties\":{\"todo\":{\"description\":\"The created to-do. One item on the to-do list.\",\"properties\":{\"assignee_email\":{\"description\":\"The email of the person it is assigned to.\",\"type\":\"string\"},\"budget_amount\":{\"description\":\"What doing it may cost. Represents an amount of money with its currency type.\",\"properties\":{\"currency_code\":{\"description\":\"The three-letter currency code defined in ISO 4217.\",\"type\":\"string\"},\"nanos\":{\"description\":\"Number of nano (10^-9) units of the amount. The value must be between -999,999,999 and +999,999,999 inclusive. If `units` is positive, `nanos` must be positive or zero. If `units` is zero, `nanos` can be positive, zero, or negative. If `units` is negative, `nanos` must be negative or zero. For example $-1.75 is represented as `units`=-1 and `nanos`=-750,000,000.\",\"type\":\"integer\"},\"units\":{\"description\":\"The whole units of the amount. For example if `currencyCode` is `\\\"USD\\\"`, then 1 unit is one US dollar. A 64-bit integer, as a decimal string.\",\"type\":\"string\"}},\"type\":\"object\"},\"create_time\":{\"description\":\"When it was created.\",\"format\":\"date-time\",\"type\":\"string\"},\"done\":{\"description\":\"Whether it is done.\",\"type\":\"boolean\"},\"name\":{\"description\":\"The resource name, such as todos/abc.\",\"type\":\"string\"},\"title\":{\"description\":\"What needs doing.\",\"type\":\"string\"}},\"type\":\"object\"}},\"type\":\"object\"}",
 	"raveesh_me.todo.v1.TodoService.DeleteTodo": "{\"description\":\"Empty on success.\",\"properties\":{},\"type\":\"object\"}",
@@ -25,4 +31,94 @@ var MCPOutputSchemas = map[string]string{
 	"raveesh_me.todo.v1.TodoService.ListTodos":  "{\"description\":\"One page of to-dos.\",\"properties\":{\"next_page_token\":{\"description\":\"The token of the next page, or empty on the last page.\",\"type\":\"string\"},\"todos\":{\"description\":\"The to-dos.\",\"items\":{\"description\":\"One item on the to-do list.\",\"properties\":{\"assignee_email\":{\"description\":\"The email of the person it is assigned to.\",\"type\":\"string\"},\"budget_amount\":{\"description\":\"What doing it may cost. Represents an amount of money with its currency type.\",\"properties\":{\"currency_code\":{\"description\":\"The three-letter currency code defined in ISO 4217.\",\"type\":\"string\"},\"nanos\":{\"description\":\"Number of nano (10^-9) units of the amount. The value must be between -999,999,999 and +999,999,999 inclusive. If `units` is positive, `nanos` must be positive or zero. If `units` is zero, `nanos` can be positive, zero, or negative. If `units` is negative, `nanos` must be negative or zero. For example $-1.75 is represented as `units`=-1 and `nanos`=-750,000,000.\",\"type\":\"integer\"},\"units\":{\"description\":\"The whole units of the amount. For example if `currencyCode` is `\\\"USD\\\"`, then 1 unit is one US dollar. A 64-bit integer, as a decimal string.\",\"type\":\"string\"}},\"type\":\"object\"},\"create_time\":{\"description\":\"When it was created.\",\"format\":\"date-time\",\"type\":\"string\"},\"done\":{\"description\":\"Whether it is done.\",\"type\":\"boolean\"},\"name\":{\"description\":\"The resource name, such as todos/abc.\",\"type\":\"string\"},\"title\":{\"description\":\"What needs doing.\",\"type\":\"string\"}},\"type\":\"object\"},\"type\":\"array\"}},\"type\":\"object\"}",
 	"raveesh_me.todo.v1.TodoService.RemoveTodo": "{\"description\":\"Empty on success.\",\"properties\":{},\"type\":\"object\"}",
 	"raveesh_me.todo.v1.TodoService.UpdateTodo": "{\"description\":\"The updated to-do.\",\"properties\":{\"todo\":{\"description\":\"The updated to-do. One item on the to-do list.\",\"properties\":{\"assignee_email\":{\"description\":\"The email of the person it is assigned to.\",\"type\":\"string\"},\"budget_amount\":{\"description\":\"What doing it may cost. Represents an amount of money with its currency type.\",\"properties\":{\"currency_code\":{\"description\":\"The three-letter currency code defined in ISO 4217.\",\"type\":\"string\"},\"nanos\":{\"description\":\"Number of nano (10^-9) units of the amount. The value must be between -999,999,999 and +999,999,999 inclusive. If `units` is positive, `nanos` must be positive or zero. If `units` is zero, `nanos` can be positive, zero, or negative. If `units` is negative, `nanos` must be negative or zero. For example $-1.75 is represented as `units`=-1 and `nanos`=-750,000,000.\",\"type\":\"integer\"},\"units\":{\"description\":\"The whole units of the amount. For example if `currencyCode` is `\\\"USD\\\"`, then 1 unit is one US dollar. A 64-bit integer, as a decimal string.\",\"type\":\"string\"}},\"type\":\"object\"},\"create_time\":{\"description\":\"When it was created.\",\"format\":\"date-time\",\"type\":\"string\"},\"done\":{\"description\":\"Whether it is done.\",\"type\":\"boolean\"},\"name\":{\"description\":\"The resource name, such as todos/abc.\",\"type\":\"string\"},\"title\":{\"description\":\"What needs doing.\",\"type\":\"string\"}},\"type\":\"object\"}},\"type\":\"object\"}",
+}
+
+// TodoServiceMCPTools returns TodoService's unary, non-deprecated RPCs as MCP tools.
+// Register them with mcpserver.AddTools.
+func TodoServiceMCPTools() []mcpserver.Tool {
+	return []mcpserver.Tool{
+		{
+			Tool: &mcp.Tool{
+				Name:        "get_todo",
+				Title:       "Get a to-do",
+				Description: "Returns one to-do by its resource name, such as todos/1. Use it when you already know which to-do you want.\n\nErrors: TODO_NOT_FOUND (NOT_FOUND).",
+				Annotations: &mcp.ToolAnnotations{
+					Title:          "Get a to-do",
+					ReadOnlyHint:   true,
+					IdempotentHint: false,
+					OpenWorldHint:  mcpserver.Bool(false),
+				},
+				InputSchema:  json.RawMessage(MCPInputSchemas["raveesh_me.todo.v1.TodoService.GetTodo"]),
+				OutputSchema: json.RawMessage(MCPOutputSchemas["raveesh_me.todo.v1.TodoService.GetTodo"]),
+			},
+			Call: mcpserver.Unary[GetTodoRequest, GetTodoResponse]("/raveesh_me.todo.v1.TodoService/GetTodo"),
+		},
+		{
+			Tool: &mcp.Tool{
+				Name:        "list_todos",
+				Title:       "List to-dos",
+				Description: "Returns to-dos oldest first, one page at a time. Pass next_page_token back as page_token to read the next page.\n\nErrors: INVALID_PAGE_TOKEN (INVALID_ARGUMENT).",
+				Annotations: &mcp.ToolAnnotations{
+					Title:          "List to-dos",
+					ReadOnlyHint:   true,
+					IdempotentHint: false,
+					OpenWorldHint:  mcpserver.Bool(false),
+				},
+				InputSchema:  json.RawMessage(MCPInputSchemas["raveesh_me.todo.v1.TodoService.ListTodos"]),
+				OutputSchema: json.RawMessage(MCPOutputSchemas["raveesh_me.todo.v1.TodoService.ListTodos"]),
+			},
+			Call: mcpserver.Unary[ListTodosRequest, ListTodosResponse]("/raveesh_me.todo.v1.TodoService/ListTodos"),
+		},
+		{
+			Tool: &mcp.Tool{
+				Name:        "create_todo",
+				Title:       "Create a to-do",
+				Description: "Adds a to-do with a title, and optionally a budget and an assignee. Pass todo_id to choose its ID; otherwise the server picks one.\n\nErrors: TITLE_REQUIRED (INVALID_ARGUMENT), TODO_ALREADY_EXISTS (ALREADY_EXISTS).",
+				Annotations: &mcp.ToolAnnotations{
+					Title:           "Create a to-do",
+					ReadOnlyHint:    false,
+					IdempotentHint:  false,
+					DestructiveHint: mcpserver.Bool(false),
+					OpenWorldHint:   mcpserver.Bool(false),
+				},
+				InputSchema:  json.RawMessage(MCPInputSchemas["raveesh_me.todo.v1.TodoService.CreateTodo"]),
+				OutputSchema: json.RawMessage(MCPOutputSchemas["raveesh_me.todo.v1.TodoService.CreateTodo"]),
+			},
+			Call: mcpserver.Unary[CreateTodoRequest, CreateTodoResponse]("/raveesh_me.todo.v1.TodoService/CreateTodo"),
+		},
+		{
+			Tool: &mcp.Tool{
+				Name:        "update_todo",
+				Title:       "Update a to-do",
+				Description: "Changes fields of an existing to-do: the ones named in update_mask, or, without update_mask, the ones you set. Fields you leave out keep their values. To mark a to-do done, send its name and done: true.\n\nErrors: TODO_NOT_FOUND (NOT_FOUND), TITLE_REQUIRED (INVALID_ARGUMENT).",
+				Annotations: &mcp.ToolAnnotations{
+					Title:           "Update a to-do",
+					ReadOnlyHint:    false,
+					IdempotentHint:  true,
+					DestructiveHint: mcpserver.Bool(true),
+					OpenWorldHint:   mcpserver.Bool(false),
+				},
+				InputSchema:  json.RawMessage(MCPInputSchemas["raveesh_me.todo.v1.TodoService.UpdateTodo"]),
+				OutputSchema: json.RawMessage(MCPOutputSchemas["raveesh_me.todo.v1.TodoService.UpdateTodo"]),
+			},
+			Call: mcpserver.Unary[UpdateTodoRequest, UpdateTodoResponse]("/raveesh_me.todo.v1.TodoService/UpdateTodo"),
+		},
+		{
+			Tool: &mcp.Tool{
+				Name:        "delete_todo",
+				Title:       "Delete a to-do",
+				Description: "Removes a to-do for good. It cannot be recovered.\n\nErrors: TODO_NOT_FOUND (NOT_FOUND).",
+				Annotations: &mcp.ToolAnnotations{
+					Title:           "Delete a to-do",
+					ReadOnlyHint:    false,
+					IdempotentHint:  true,
+					DestructiveHint: mcpserver.Bool(true),
+					OpenWorldHint:   mcpserver.Bool(false),
+				},
+				InputSchema:  json.RawMessage(MCPInputSchemas["raveesh_me.todo.v1.TodoService.DeleteTodo"]),
+				OutputSchema: json.RawMessage(MCPOutputSchemas["raveesh_me.todo.v1.TodoService.DeleteTodo"]),
+			},
+			Call: mcpserver.Unary[DeleteTodoRequest, DeleteTodoResponse]("/raveesh_me.todo.v1.TodoService/DeleteTodo"),
+		},
+	}
 }

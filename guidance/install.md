@@ -3,7 +3,7 @@
 Each section adds one part of dedo to an existing Go module. `dedo init` does all of them, editing what is already there:
 
 ```sh
-go install github.com/raveesh-me/dedo/cmd/dedo@v0.8.0
+go install github.com/raveesh-me/dedo/cmd/dedo@v0.9.0
 dedo init
 ```
 
@@ -78,8 +78,8 @@ Pin the generators as Go tools:
 ```sh
 go get -tool google.golang.org/protobuf/cmd/protoc-gen-go
 go get -tool connectrpc.com/connect/cmd/protoc-gen-connect-go
-go get -tool github.com/raveesh-me/dedo/mcp/cmd/protoc-gen-dedo-mcp@v0.8.0
-go get -tool github.com/raveesh-me/dedo/openapi/cmd/protoc-gen-dedo-openapi@v0.8.0
+go get -tool github.com/raveesh-me/dedo/mcp/cmd/protoc-gen-dedo-mcp@v0.9.0
+go get -tool github.com/raveesh-me/dedo/openapi/cmd/protoc-gen-dedo-openapi@v0.9.0
 ```
 
 Add them to `buf.gen.yaml` ([templates/buf.gen.yaml](../templates/buf.gen.yaml) is a complete one):
@@ -131,7 +131,7 @@ make api-generate   # buf generate
 Add the runtime libraries. Pin Vanguard to `v0.4.0`: later versions need connect-go v2.
 
 ```sh
-go get github.com/raveesh-me/dedo@v0.8.0 github.com/raveesh-me/dedo/mcp@v0.8.0
+go get github.com/raveesh-me/dedo@v0.9.0 github.com/raveesh-me/dedo/mcp@v0.9.0
 go get connectrpc.com/vanguard@v0.4.0
 ```
 
@@ -168,14 +168,11 @@ func newHandler(log *slog.Logger) (http.Handler, error) {
 	}
 	api := flowid.Middleware(authMiddleware(rest))
 
-	// MCP: every RPC is a tool, called through the same API with the caller's token.
+	// MCP: every RPC is a tool, as protoc-gen-dedo-mcp generated it, called
+	// through the same API with the caller's token.
 	mcpServer := mcp.NewServer(&mcp.Implementation{Name: "time-counter", Version: "v1"}, nil)
-	if err := mcpserver.New(mcpServer, mcpserver.Config{
-		Services:      []protoreflect.ServiceDescriptor{time_counterv1.File_acme_time_counter_v1_time_counter_proto.Services().ByName("CounterService")},
-		InputSchemas:  time_counterv1.MCPInputSchemas,
-		OutputSchemas: time_counterv1.MCPOutputSchemas,
-		Client:        mcpserver.InProcessClient(api),
-	}); err != nil {
+	target := mcpserver.Target{Client: mcpserver.InProcessClient(api)}
+	if err := mcpserver.AddTools(mcpServer, target, time_counterv1.CounterServiceMCPTools()...); err != nil {
 		return nil, err
 	}
 
@@ -204,5 +201,5 @@ Append [claude.md](claude.md) to your `AGENTS.md` or `CLAUDE.md` (`dedo template
 
 ## Updating
 
-- **dedo itself:** `go install github.com/raveesh-me/dedo/cmd/dedo@<new version>`, then `dedo init` again. It moves `DEDO_VERSION`, re-pins the generators and runtime, and replaces plugin entries earlier releases used.
+- **dedo itself:** `go install github.com/raveesh-me/dedo/cmd/dedo@<new version>`, then `dedo init` again. It moves `DEDO_VERSION`, re-pins the generators and runtime, replaces plugin entries earlier releases used, and deletes `*.mcp_schema.pb.go` files from before v0.9.0 (`buf generate` now writes `*.mcp.pb.go`). Then run `make api-generate`.
 - **The options module:** `buf dep update`.
