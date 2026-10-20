@@ -1,0 +1,108 @@
+// Command {{.Name}} serves {{.Service}} over Connect, gRPC, REST and MCP.
+package main
+
+import (
+	"context"
+	"log/slog"
+	"net/http"
+	"os"
+	"strings"
+
+	"connectrpc.com/connect"
+	"connectrpc.com/vanguard"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
+	"github.com/raveesh-me/dedo/flowid"
+	"github.com/raveesh-me/dedo/interceptor"
+	"github.com/raveesh-me/dedo/mcp/mcpserver"
+	"github.com/raveesh-me/dedo/policy"
+	"google.golang.org/protobuf/reflect/protoreflect"
+
+	"{{.Module}}/docs"
+	{{.GoPkg}} "{{.GoImport}}"
+	"{{.GoImport}}/{{.GoPkg}}connect"
+)
+
+func main() {
+	log := slog.New(slog.NewJSONHandler(os.Stderr, nil))
+	handler, err := newHandler(log)
+	if err != nil {
+		log.Error("startup failed", "error", err)
+		os.Exit(1)
+	}
+	addr := os.Getenv("ADDR")
+	if addr == "" {
+		addr = ":8080"
+	}
+	log.Info("listening", "addr", addr)
+	if err := http.ListenAndServe(addr, handler); err != nil {
+		log.Error("server stopped", "error", err)
+		os.Exit(1)
+	}
+}
+
+func newHandler(log *slog.Logger) (http.Handler, error) {
+	// The API: scopes and policy come from the .proto, not from handlers.
+	table, err := policy.Build({{.GoPkg}}connect.{{.Service}}Name)
+	if err != nil {
+		return nil, err
+	}
+	guard, err := interceptor.New(interceptor.Config{
+		Table:         table,
+		Scopes:        scopesFromContext,
+		EnforceScopes: true,
+		Log:           log,
+	})
+	if err != nil {
+		return nil, err
+	}
+	// newServer returns your implementation of {{.GoPkg}}connect.{{.Service}}Handler.
+	path, rpc := {{.GoPkg}}connect.New{{.Service}}Handler(newServer(), connect.WithInterceptors(guard))
+	rest, err := vanguard.NewTranscoder([]*vanguard.Service{vanguard.NewService(path, rpc)})
+	if err != nil {
+		return nil, err
+	}
+	api := flowid.Middleware(authMiddleware(rest))
+
+	// MCP: every RPC is a tool, called through the same API with the caller's
+	// token, using the schemas protoc-gen-dedo-mcp generated.
+	mcpServer := mcp.NewServer(&mcp.Implementation{Name: "{{.Name}}", Version: "v1"}, nil)
+	if err := mcpserver.New(mcpServer, mcpserver.Config{
+		Services:      []protoreflect.ServiceDescriptor{ {{- .GoPkg}}.{{.FileVar}}.Services().ByName("{{.Service}}")},
+		InputSchemas:  {{.GoPkg}}.MCPInputSchemas,
+		OutputSchemas: {{.GoPkg}}.MCPOutputSchemas,
+		Client:        mcpserver.InProcessClient(api),
+	}); err != nil {
+		return nil, err
+	}
+
+	mux := http.NewServeMux()
+	mux.Handle("GET /openapi.json", docs.Spec())
+	mux.Handle("GET /docs", docs.Page())
+	// Cross-origin protection: the MCP transport requires an Origin check.
+	mux.Handle("/mcp", flowid.Middleware(http.NewCrossOriginProtection().Handler(mcp.NewStreamableHTTPHandler(
+		func(*http.Request) *mcp.Server { return mcpServer },
+		&mcp.StreamableHTTPOptions{Stateless: true, JSONResponse: true}))))
+	mux.Handle("/", api)
+	return mux, nil
+}
+
+// devTokens stands in for real token verification. Replace authMiddleware
+// with your identity platform's middleware before shipping.
+var devTokens = map[string][]string{
+	"reader": { {{- range $i, $s := .ReadScopes}}{{if $i}}, {{end}}"{{$s}}"{{end -}} },
+	"writer": { {{- range $i, $s := .AllScopes}}{{if $i}}, {{end}}"{{$s}}"{{end -}} },
+}
+
+type scopesKey struct{}
+
+func authMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		token, _ := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
+		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), scopesKey{}, devTokens[token])))
+	})
+}
+
+func scopesFromContext(ctx context.Context) []string {
+	scopes, _ := ctx.Value(scopesKey{}).([]string)
+	return scopes
+}

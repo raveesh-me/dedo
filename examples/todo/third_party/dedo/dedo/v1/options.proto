@@ -7,6 +7,10 @@ import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";
 import "google/rpc/code.proto";
 
+// The generated Go code ships in github.com/raveesh-me/dedo, so services
+// generate against it with or without Buf's managed mode.
+option go_package = "github.com/raveesh-me/dedo/gen/go/dedo/v1;dedov1";
+
 // Audience is who may call an API. Mirrors Zalando rule 219.
 enum Audience {
   // The audience is unset. Lint rejects it.

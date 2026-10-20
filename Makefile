@@ -4,7 +4,7 @@ DIST              := dist
 # their tag, so each plugin version links to its own rule docs.
 DOCS_REF          ?= main
 
-.PHONY: all check generate format lint breaking test plugin plugins wasm-plugins release-binaries templates-archive examples example-todo example-bad-todo vendored-options clean
+.PHONY: all check generate format lint breaking test plugin plugins wasm-plugins release-binaries examples example-todo example-bad-todo vendored-options clean
 
 all: check
 
@@ -31,7 +31,7 @@ breaking:
 test:
 	go vet ./...
 	go test -race -cover ./...
-	for mod in lint openapi mcp examples/house-lint; do (cd $$mod && go vet ./... && go test -race -cover ./...) || exit 1; done
+	for mod in lint openapi mcp cmd/dedo examples/house-lint; do (cd $$mod && go vet ./... && go test -race -cover ./...) || exit 1; done
 
 # Lint plugins run natively: about 17 times faster per `buf lint` than the
 # same plugins as WebAssembly, which matters in the editor. buf.yaml refers
@@ -66,8 +66,8 @@ wasm-plugins: $(LINT_SRC)
 	cd lint && GOOS=wasip1 GOARCH=wasm go build -trimpath -ldflags "$(DEDO_LDFLAGS)" \
 		-o ../$(DIST)/wasm/buf-plugin-dedo-lint.wasm $(DEDO_CMD)
 
-## release-binaries: the lint plugin and the generators natively for every release platform
-release-binaries: $(LINT_SRC) templates-archive
+## release-binaries: the lint plugin, the generators and the dedo command natively for every release platform
+release-binaries: $(LINT_SRC)
 	mkdir -p $(DIST)/release
 	for platform in $(RELEASE_PLATFORMS); do \
 		os=$${platform%/*}; arch=$${platform#*/}; \
@@ -77,20 +77,9 @@ release-binaries: $(LINT_SRC) templates-archive
 			-o ../$(DIST)/release/protoc-gen-dedo-mcp_$${os}_$${arch} ./cmd/protoc-gen-dedo-mcp) || exit 1; \
 		(cd openapi && GOOS=$$os GOARCH=$$arch go build -trimpath \
 			-o ../$(DIST)/release/protoc-gen-dedo-openapi_$${os}_$${arch} ./cmd/protoc-gen-dedo-openapi) || exit 1; \
+		(cd cmd/dedo && GOOS=$$os GOARCH=$$arch go build -trimpath \
+			-o ../../$(DIST)/release/dedo_$${os}_$${arch} .) || exit 1; \
 	done
-
-## templates-archive: what a service copies, as one release asset:
-## templates/, the REST docs page and the agent guidance
-# Staged under a directory starting with "_", which Go ignores, so the
-# copied docs.go never joins the root module's build.
-STAGE := $(DIST)/_stage
-
-templates-archive:
-	rm -rf $(STAGE) && mkdir -p $(STAGE)/dedo-templates/docs $(DIST)/release
-	cp -R templates/. $(STAGE)/dedo-templates/
-	cp examples/todo/docs/docs.go examples/todo/docs/index.html $(STAGE)/dedo-templates/docs/
-	cp guidance/claude.md $(STAGE)/dedo-templates/
-	tar -czf $(DIST)/release/dedo-templates.tar.gz -C $(STAGE) dedo-templates
 
 ## examples: run both example services as consumer repositories
 examples: vendored-options example-todo example-bad-todo
@@ -98,6 +87,7 @@ examples: vendored-options example-todo example-bad-todo
 # Each example owns a copy of the options module until it is on the BSR.
 vendored-options:
 	for ex in todo bad-todo; do diff -r proto/dedo examples/$$ex/third_party/dedo/dedo || exit 1; done
+	diff templates/docs/docs.go.tmpl examples/todo/docs/docs.go
 
 ## example-todo: the compliant service lints clean and passes its tests
 example-todo: plugins

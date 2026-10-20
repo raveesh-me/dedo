@@ -1,6 +1,6 @@
 # Building an API with dedo: guidance for coding agents
 
-Append this file to your repository's `AGENTS.md` or `CLAUDE.md`; every dedo release ships it in `dedo-templates.tar.gz`. dedo's full guidance: [install.md](https://github.com/raveesh-me/dedo/blob/main/guidance/install.md) builds a service step by step, [guideline.md](https://github.com/raveesh-me/dedo/blob/main/guidance/guideline.md) explains the reasoning, and [RULES.md](https://github.com/raveesh-me/dedo/blob/main/guidance/RULES.md) documents every lint rule. It tells a coding agent how a service built with [dedo](https://github.com/raveesh-me/dedo) works and which mistakes to avoid.
+Append this file to your repository's `AGENTS.md` or `CLAUDE.md`; `dedo init` does it for you. dedo's full guidance: [install.md](https://github.com/raveesh-me/dedo/blob/main/guidance/install.md) sets a service up, [tutorial.md](https://github.com/raveesh-me/dedo/blob/main/guidance/tutorial.md) builds one from scratch, [guideline.md](https://github.com/raveesh-me/dedo/blob/main/guidance/guideline.md) explains the reasoning, and [RULES.md](https://github.com/raveesh-me/dedo/blob/main/guidance/RULES.md) documents every lint rule. It tells a coding agent how a service built with [dedo](https://github.com/raveesh-me/dedo) works and which mistakes to avoid.
 
 ## The proto is the source of truth
 

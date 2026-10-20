@@ -1,0 +1,517 @@
+package main
+
+import (
+	"bytes"
+	"errors"
+	"fmt"
+	"io"
+	"io/fs"
+	"os"
+	"os/exec"
+	"path"
+	"path/filepath"
+	"regexp"
+	"strings"
+	"text/template"
+
+	"gopkg.in/yaml.v3"
+
+	"github.com/raveesh-me/dedo"
+)
+
+const (
+	lintPlugin     = ".tools/buf-plugin-dedo-lint"
+	optionsModule  = "buf.build/r-a/dedo"
+	googleapis     = "buf.build/googleapis/googleapis"
+	protovalidate  = "buf.build/bufbuild/protovalidate"
+	guidanceMarker = "# Building an API with dedo: guidance for coding agents"
+)
+
+// oldPlugins are plugin paths earlier dedo releases told services to list.
+var oldPlugins = []string{".tools/buf-plugin-dedo", ".tools/buf-plugin-aip"}
+
+// generators are the code generators buf.gen.yaml runs through go tool.
+var generators = []string{"protoc-gen-go", "protoc-gen-connect-go", "protoc-gen-dedo-mcp", "protoc-gen-dedo-openapi"}
+
+// initer runs dedo init: each step reports what it changed.
+type initer struct {
+	p       *project
+	release string
+	out     io.Writer
+	cmds    [][]string // network steps, run at the end or printed
+}
+
+func initRepo(dir, release string, offline bool, out io.Writer) error {
+	p, err := analyze(dir)
+	if err != nil {
+		return err
+	}
+	in := &initer{p: p, release: release, out: out}
+	fmt.Fprintf(out, "dedo %s: setting up %s (protos in %s/)\n", release, p.module, p.protoRoot)
+	steps := []struct {
+		title string
+		run   func() error
+	}{
+		{"options package", in.options},
+		{"linter", in.linter},
+		{"code generators", in.generators},
+		{"server package", in.server},
+		{"agent guidance", in.guidance},
+	}
+	for _, s := range steps {
+		fmt.Fprintf(out, "\nadding %s...\n", s.title)
+		if err := s.run(); err != nil {
+			return fmt.Errorf("%s: %w", s.title, err)
+		}
+	}
+	if err := in.runCommands(offline); err != nil {
+		return err
+	}
+	return in.printMain()
+}
+
+func (in *initer) say(format string, args ...any) {
+	fmt.Fprintf(in.out, "  "+format+"\n", args...)
+}
+
+func (in *initer) path(rel string) string { return filepath.Join(in.p.dir, rel) }
+
+// asset reads an embedded file from the dedo module.
+func asset(name string) []byte {
+	b, err := fs.ReadFile(dedo.Files, name)
+	if err != nil {
+		panic(err) // embedded at build time
+	}
+	return b
+}
+
+// options adds the options module and the modules it builds on to buf.yaml,
+// creating buf.yaml from the template when it is missing.
+func (in *initer) options() error {
+	doc, ok, err := loadYAML(in.path("buf.yaml"))
+	if err != nil {
+		return fmt.Errorf("buf.yaml: %w", err)
+	}
+	if !ok {
+		src := string(asset("templates/buf.yaml"))
+		src = strings.Replace(src, "# Copy into a service repository.\n", "", 1)
+		src = strings.Replace(src, "  - path: proto\n", "  - path: "+in.p.protoRoot+"\n", 1)
+		if err := os.WriteFile(in.path("buf.yaml"), []byte(src), 0o644); err != nil {
+			return err
+		}
+		in.say("buf.yaml: created, with %s, %s and %s", optionsModule, googleapis, protovalidate)
+		in.cmds = append(in.cmds, []string{"buf", "dep", "update"})
+		return nil
+	}
+	if v := lookup(root(doc), "version"); v == nil || v.Value != "v2" {
+		return errors.New("buf.yaml is not version v2: run buf config migrate first")
+	}
+	added := addScalars(child(root(doc), "deps", yaml.SequenceNode), googleapis, protovalidate, optionsModule)
+	if len(added) == 0 {
+		in.say("buf.yaml: deps already in place")
+		return nil
+	}
+	in.say("buf.yaml: added deps %s", strings.Join(added, ", "))
+	in.cmds = append(in.cmds, []string{"buf", "dep", "update"})
+	return saveYAML(in.path("buf.yaml"), doc)
+}
+
+// linter lists the lint plugin and its categories in buf.yaml, and adds the
+// Makefile targets that download it.
+func (in *initer) linter() error {
+	doc, _, err := loadYAML(in.path("buf.yaml"))
+	if err != nil {
+		return fmt.Errorf("buf.yaml: %w", err)
+	}
+	tmpl, err := parseYAML(asset("templates/buf.yaml"))
+	if err != nil {
+		return err
+	}
+	changed := false
+	lint := lookup(root(doc), "lint")
+	if lint == nil {
+		set(root(doc), "lint", lookup(root(tmpl), "lint"))
+		in.say("buf.yaml: added the lint section")
+		changed = true
+	} else {
+		if added := addScalars(child(lint, "use", yaml.SequenceNode), "AIP_NOLANG", "DEDO", "ZALANDO"); len(added) > 0 {
+			in.say("buf.yaml: lint.use gained %s", strings.Join(added, ", "))
+			changed = true
+		}
+		skips := scalars(lookup(lookup(root(tmpl), "lint"), "except"))
+		if added := addScalars(child(lint, "except", yaml.SequenceNode), skips...); len(added) > 0 {
+			in.say("buf.yaml: lint.except gained the %d AIP rules dedo skips (see RULES.md)", len(added))
+			changed = true
+		}
+	}
+	plugins := child(root(doc), "plugins", yaml.SequenceNode)
+	kept := plugins.Content[:0]
+	for _, item := range plugins.Content {
+		if p := lookup(item, "plugin"); p != nil && isOldPlugin(p.Value) {
+			in.say("buf.yaml: removed %s, which buf-plugin-dedo-lint replaces", p.Value)
+			changed = true
+			continue
+		}
+		kept = append(kept, item)
+	}
+	plugins.Content = kept
+	if findItem(plugins, func(n *yaml.Node) bool { return lookup(n, "plugin") != nil && lookup(n, "plugin").Value == lintPlugin }) == nil {
+		item := &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map"}
+		set(item, "plugin", scalar(lintPlugin))
+		plugins.Content = append(plugins.Content, item)
+		in.say("buf.yaml: added the plugin %s", lintPlugin)
+		changed = true
+	}
+	if changed {
+		if err := saveYAML(in.path("buf.yaml"), doc); err != nil {
+			return err
+		}
+	} else {
+		in.say("buf.yaml: lint plugin and categories already in place")
+	}
+	makefileAPI := regexp.MustCompile(`(?m)^DEDO_VERSION \?= \S+`).
+		ReplaceAll(asset("templates/Makefile.api"), []byte("DEDO_VERSION ?= "+in.release))
+	if err := in.writeFile("Makefile.api", makefileAPI, true); err != nil {
+		return err
+	}
+	if err := in.ensureLine("Makefile", "include Makefile.api"); err != nil {
+		return err
+	}
+	if err := in.ensureLine(".gitignore", ".tools/"); err != nil {
+		return err
+	}
+	in.cmds = append(in.cmds, []string{"make", "tools"})
+	return nil
+}
+
+func isOldPlugin(p string) bool {
+	for _, old := range oldPlugins {
+		if p == old || strings.HasSuffix(p, "/"+path.Base(old)) {
+			return true
+		}
+	}
+	return false
+}
+
+// generators pins the code generators as Go tools and lists them in
+// buf.gen.yaml, creating it from the template when it is missing.
+func (in *initer) generators() error {
+	in.cmds = append(in.cmds,
+		[]string{"go", "get", "-tool", "google.golang.org/protobuf/cmd/protoc-gen-go"},
+		[]string{"go", "get", "-tool", "connectrpc.com/connect/cmd/protoc-gen-connect-go"},
+		[]string{"go", "get", "-tool", "github.com/raveesh-me/dedo/mcp/cmd/protoc-gen-dedo-mcp@" + in.release},
+		[]string{"go", "get", "-tool", "github.com/raveesh-me/dedo/openapi/cmd/protoc-gen-dedo-openapi@" + in.release},
+	)
+	in.say("go.mod: will pin %s as Go tools", strings.Join(generators, ", "))
+	src := in.genTemplate()
+	doc, ok, err := loadYAML(in.path("buf.gen.yaml"))
+	if err != nil {
+		return fmt.Errorf("buf.gen.yaml: %w", err)
+	}
+	if !ok {
+		if err := os.WriteFile(in.path("buf.gen.yaml"), src, 0o644); err != nil {
+			return err
+		}
+		in.say("buf.gen.yaml: created; Go code goes to gen/go, the OpenAPI document to docs/")
+		return nil
+	}
+	tmpl, err := parseYAML(src)
+	if err != nil {
+		return err
+	}
+	changed := in.mergeManaged(doc, tmpl)
+	plugins := child(root(doc), "plugins", yaml.SequenceNode)
+	for _, gen := range generators {
+		uses := func(n *yaml.Node) bool { return strings.Contains(strings.Join(allStrings(n), " "), gen) }
+		if findItem(plugins, uses) != nil {
+			continue
+		}
+		plugins.Content = append(plugins.Content, findItem(lookup(root(tmpl), "plugins"), uses))
+		in.say("buf.gen.yaml: added %s", gen)
+		changed = true
+	}
+	if !changed {
+		in.say("buf.gen.yaml: generators already in place")
+		return nil
+	}
+	return saveYAML(in.path("buf.gen.yaml"), doc)
+}
+
+// genTemplate is templates/buf.gen.yaml for this repository.
+func (in *initer) genTemplate() []byte {
+	src := string(asset("templates/buf.gen.yaml"))
+	if i := strings.Index(src, "version: v2"); i > 0 {
+		src = "# Generators run through `go tool`, pinned in go.mod. Set up by dedo init.\n" + src[i:]
+	}
+	r := strings.NewReplacer(
+		"github.com/YOUR_ORG/YOUR_REPO/gen/go", in.p.module+"/gen/go",
+		"YOUR_API_TITLE", apiTitle(in.p.module),
+		"https://YOUR_HOST", "http://localhost:8080",
+		"  - directory: proto\n", "  - directory: "+in.p.protoRoot+"\n",
+	)
+	return []byte(r.Replace(src))
+}
+
+// mergeManaged adds what managed mode needs for dedo: the options module's
+// Go package and the modules that ship their own Go code.
+func (in *initer) mergeManaged(doc, tmpl *yaml.Node) bool {
+	managed := lookup(root(doc), "managed")
+	if managed == nil {
+		// Turning managed mode on would move existing generated code; the
+		// options module sets its own go_package, so dedo needs none.
+		in.say("buf.gen.yaml: managed mode is off; left off")
+		return false
+	}
+	changed := false
+	tm := lookup(root(tmpl), "managed")
+	byModule := func(module string) func(*yaml.Node) bool {
+		return func(n *yaml.Node) bool { return lookup(n, "module") != nil && lookup(n, "module").Value == module }
+	}
+	override := child(managed, "override", yaml.SequenceNode)
+	if findItem(override, byModule(optionsModule)) == nil {
+		override.Content = append(override.Content, findItem(lookup(tm, "override"), byModule(optionsModule)))
+		in.say("buf.gen.yaml: added the go_package_prefix override for %s", optionsModule)
+		changed = true
+	}
+	disable := child(managed, "disable", yaml.SequenceNode)
+	for _, module := range []string{googleapis, protovalidate} {
+		if findItem(disable, byModule(module)) == nil {
+			disable.Content = append(disable.Content, findItem(lookup(tm, "disable"), byModule(module)))
+			in.say("buf.gen.yaml: managed mode leaves %s alone", module)
+			changed = true
+		}
+	}
+	return changed
+}
+
+// server adds the runtime modules and the REST reference page, and the
+// policy-table test when the repository already has a service.
+func (in *initer) server() error {
+	in.cmds = append(in.cmds, []string{"go", "get",
+		"github.com/raveesh-me/dedo@" + in.release,
+		"github.com/raveesh-me/dedo/mcp@" + in.release,
+		// Later versions need connect-go v2.
+		"connectrpc.com/vanguard@v0.4.0",
+	})
+	in.say("go.mod: will add github.com/raveesh-me/dedo and its mcp module at %s", in.release)
+	if err := os.MkdirAll(in.path("docs"), 0o755); err != nil {
+		return err
+	}
+	if err := in.writeFile("docs/docs.go", asset("templates/docs/docs.go.tmpl"), false); err != nil {
+		return err
+	}
+	page := bytes.Replace(asset("templates/docs/index.html"), []byte("YOUR_API_TITLE"), []byte(apiTitle(in.p.module)), 1)
+	if err := in.writeFile("docs/index.html", page, false); err != nil {
+		return err
+	}
+	if in.p.service == nil {
+		in.say("policy_table_test.go: skipped until the repository has a service")
+		return nil
+	}
+	test, err := in.render("templates/policy_table_test.go.tmpl")
+	if err != nil {
+		return err
+	}
+	return in.writeFile("policy_table_test.go", test, false)
+}
+
+// guidance appends the agent guidance to CLAUDE.md and AGENTS.md where they
+// lack it, and creates AGENTS.md when neither file exists.
+func (in *initer) guidance() error {
+	text := asset("guidance/claude.md")
+	found := false
+	for _, name := range []string{"CLAUDE.md", "AGENTS.md"} {
+		b, err := os.ReadFile(in.path(name))
+		if errors.Is(err, fs.ErrNotExist) {
+			continue
+		}
+		if err != nil {
+			return err
+		}
+		found = true
+		if bytes.Contains(b, []byte(guidanceMarker)) {
+			in.say("%s: already has the dedo guidance", name)
+			continue
+		}
+		var add []byte
+		if len(b) > 0 && !bytes.HasSuffix(b, []byte("\n\n")) {
+			add = []byte("\n")
+			if !bytes.HasSuffix(b, []byte("\n")) {
+				add = []byte("\n\n")
+			}
+		}
+		if err := appendFile(in.path(name), append(add, text...)); err != nil {
+			return err
+		}
+		in.say("%s: appended the dedo guidance", name)
+	}
+	if found {
+		return nil
+	}
+	if err := os.WriteFile(in.path("AGENTS.md"), text, 0o644); err != nil {
+		return err
+	}
+	in.say("AGENTS.md: created with the dedo guidance")
+	return nil
+}
+
+// runCommands runs the network steps, or prints them when offline or when a
+// tool is missing.
+func (in *initer) runCommands(offline bool) error {
+	fmt.Fprintln(in.out, "\nfetching...")
+	var todo [][]string
+	for _, c := range in.cmds {
+		if offline {
+			todo = append(todo, c)
+			continue
+		}
+		if _, err := exec.LookPath(c[0]); err != nil {
+			in.say("%s is not installed; run it yourself later", c[0])
+			todo = append(todo, c)
+			continue
+		}
+		in.say("$ %s", strings.Join(c, " "))
+		cmd := exec.Command(c[0], c[1:]...)
+		cmd.Dir = in.p.dir
+		cmd.Stdout, cmd.Stderr = in.out, in.out
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("%s: %w", strings.Join(c, " "), err)
+		}
+	}
+	if len(todo) > 0 {
+		in.say("run these in %s:", in.p.dir)
+		for _, c := range todo {
+			in.say("  %s", strings.Join(c, " "))
+		}
+	}
+	return nil
+}
+
+// printMain prints a main.go that serves the first service on every
+// transport, for the user to adapt.
+func (in *initer) printMain() error {
+	src, err := in.render("templates/main.go.tmpl")
+	if err != nil {
+		return err
+	}
+	fmt.Fprintln(in.out, "\nnext:")
+	if in.p.service == nil {
+		in.say("1. write your service in %s/ (see guidance/tutorial.md)", in.p.protoRoot)
+		in.say("2. make api-check api-generate, then run dedo init again for a main.go that names it")
+	} else {
+		in.say("1. make api-check api-generate")
+		in.say("2. save the main.go below, implement newServer, then go mod tidy && go run .")
+		if in.p.others > 0 {
+			in.say("   it serves %s; %d more services need the same three lines each", in.p.service.Name, in.p.others)
+		}
+	}
+	fmt.Fprintf(in.out, "\n// ---- main.go ----\n%s", src)
+	return nil
+}
+
+// render fills a Go template with this repository's names, or with
+// placeholders when it has no service yet.
+func (in *initer) render(name string) ([]byte, error) {
+	svc := service{Name: "YourService", GoPkg: "yourv1", GoImport: in.p.module + "/gen/go/your/package/v1", FileVar: "File_your_package_v1_your_proto"}
+	if in.p.service != nil {
+		svc = *in.p.service
+	}
+	var read []string
+	for _, s := range in.p.scopes {
+		if strings.HasSuffix(s, ".read") {
+			read = append(read, s)
+		}
+	}
+	data := struct {
+		service
+		Module, Service, Name string
+		ReadScopes, AllScopes []string
+	}{svc, in.p.module, svc.Name, path.Base(in.p.module), read, in.p.scopes}
+	t, err := template.New(name).Parse(string(asset(name)))
+	if err != nil {
+		return nil, err
+	}
+	var buf bytes.Buffer
+	if err := t.Execute(&buf, data); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+// writeFile writes a file. An existing file is kept unless replace is set,
+// which updates it when its content differs.
+func (in *initer) writeFile(rel string, content []byte, replace bool) error {
+	old, err := os.ReadFile(in.path(rel))
+	switch {
+	case err == nil && bytes.Equal(old, content):
+		in.say("%s: already in place", rel)
+		return nil
+	case err == nil && !replace:
+		in.say("%s: exists; left as it is", rel)
+		return nil
+	case err != nil && !errors.Is(err, fs.ErrNotExist):
+		return err
+	}
+	if err := os.WriteFile(in.path(rel), content, 0o644); err != nil {
+		return err
+	}
+	if old != nil {
+		in.say("%s: updated", rel)
+	} else {
+		in.say("%s: created", rel)
+	}
+	return nil
+}
+
+// ensureLine appends a line to a file that lacks it, creating the file.
+func (in *initer) ensureLine(rel, line string) error {
+	b, err := os.ReadFile(in.path(rel))
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return err
+	}
+	for _, l := range strings.Split(string(b), "\n") {
+		if strings.TrimSpace(l) == line {
+			in.say("%s: already has %q", rel, line)
+			return nil
+		}
+	}
+	add := line + "\n"
+	if len(b) > 0 && !bytes.HasSuffix(b, []byte("\n")) {
+		add = "\n" + add
+	}
+	if err := appendFile(in.path(rel), []byte(add)); err != nil {
+		return err
+	}
+	in.say("%s: added %q", rel, line)
+	return nil
+}
+
+func appendFile(path string, b []byte) error {
+	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+	if err != nil {
+		return err
+	}
+	if _, err := f.Write(b); err != nil {
+		f.Close()
+		return err
+	}
+	return f.Close()
+}
+
+func saveYAML(path string, doc *yaml.Node) error {
+	b, err := encodeYAML(doc)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(path, b, 0o644)
+}
+
+// apiTitle turns a module path's last element into a title:
+// github.com/acme/time-counter becomes "Time Counter API".
+func apiTitle(module string) string {
+	words := strings.FieldsFunc(path.Base(module), func(r rune) bool { return r == '-' || r == '_' || r == '.' })
+	for i, w := range words {
+		words[i] = strings.ToUpper(w[:1]) + w[1:]
+	}
+	return strings.Join(words, " ") + " API"
+}
