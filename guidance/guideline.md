@@ -21,7 +21,7 @@ Your handlers contain business logic only. Scope checks, cache and deprecation h
 Install:
 
 - Go 1.25 or later
-- The [Buf CLI](https://buf.build/docs/installation) and `jq`
+- The [Buf CLI](https://buf.build/docs/installation)
 - VS Code with the Buf extension (`bufbuild.vscode-buf`). Remove other Protobuf extensions.
 
 Decide two names with your team:

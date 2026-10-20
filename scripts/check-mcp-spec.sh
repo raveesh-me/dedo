@@ -8,7 +8,7 @@
 # attention: a newer spec version, a changed Tool definition, or tools that
 # no longer match.
 #
-# Needs gh (authenticated), jq, python3 and go.
+# Needs gh (authenticated), python3 and go.
 set -euo pipefail
 
 report=${1:?usage: check-mcp-spec.sh <report.md>}
@@ -18,7 +18,12 @@ repo=modelcontextprotocol/modelcontextprotocol
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 
-pinned=$(jq -r '."$comment"' "$snapshot" | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}')
+# Prints a Tool schema without its $comment, which names the version.
+without_comment() {
+	python3 -I -c 'import json, sys; d = json.load(open(sys.argv[1])); d.pop("$comment", None); print(json.dumps(d, indent=2, sort_keys=True))' "$1"
+}
+
+pinned=$(python3 -I -c 'import json, sys; print(json.load(open(sys.argv[1]))["$comment"])' "$snapshot" | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}')
 latest=$(gh api "repos/$repo/contents/schema" -q '.[].name' | grep -E '^[0-9]{4}-[0-9]{2}-[0-9]{2}$' | sort | tail -1)
 attention=0
 
@@ -40,8 +45,7 @@ attention=0
 for version in $(printf '%s\n' "$latest" draft | sort -u); do
 	gh api -H 'Accept: application/vnd.github.raw' "repos/$repo/contents/schema/$version/schema.json" > "$work/$version.json"
 	python3 -I "$root/scripts/mcp-tool-schema.py" "$work/$version.json" "$version" > "$work/$version-tool.json"
-	# The $comment names the version, so leave it out of the comparison.
-	diff_out=$(diff -u <(jq 'del(."$comment")' "$snapshot") <(jq 'del(."$comment")' "$work/$version-tool.json")) || true
+	diff_out=$(diff -u <(without_comment "$snapshot") <(without_comment "$work/$version-tool.json")) || true
 	test_out=$(cd "$root/mcp" && MCP_TOOL_SCHEMA="$work/$version-tool.json" go test -count=1 -run TestToolsMatchSpec ./mcpserver/ 2>&1) && passed=1 || passed=0
 	{
 		echo "## \`$version\`"

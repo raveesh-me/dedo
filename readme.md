@@ -176,7 +176,7 @@ make wasm-plugins   # both lint plugins as WebAssembly, for the BSR
 make breaking       # options module against main
 ```
 
-`make check` needs `buf` and `jq`. Code generators are pinned in each `go.mod` as Go tools and run through `go tool`. The root `buf.yaml` lints the options module (Buf rules only, since it defines the extensions) and `examples/library` (all rules, with the locally built plugin from `dist/`).
+`make check` needs `buf`. Code generators are pinned in each `go.mod` as Go tools and run through `go tool`. The root `buf.yaml` lints the options module (Buf rules only, since it defines the extensions) and `examples/library` (all rules, with the locally built plugin from `dist/`).
 
 Lint rule tests live in `lint/rules/testdata/<rule>/{pass,fail}`. A pass fixture must produce no finding. A fail fixture marks each line that must produce one with `// want`.
 
