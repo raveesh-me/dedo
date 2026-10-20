@@ -7,7 +7,7 @@
 | RPC over Connect and gRPC | connect-go |
 | REST, with resource-style URLs | `google.api.http` annotations, served by Vanguard |
 | REST reference docs (OpenAPI 3.1) | `protoc-gen-dedo-openapi` |
-| MCP tools for AI agents | `protoc-gen-go-mcp` with the `mcpserver` adapter |
+| MCP tools for AI agents | `protoc-gen-go-mcp` (Redpanda) generates the tool registration; `protoc-gen-dedo-mcp` writes each tool's input schema; `mcpserver` serves them with the declared text, hints and error reasons |
 | Authorization, cache and deprecation headers, flow IDs, error audit | The policy runtime, read from options in the `.proto` |
 
 **First-class lint guidance.** A Buf check plugin turns the standard into findings in your editor as you type, each linked to an explanation in [HOUSE_RULES.md](HOUSE_RULES.md). The same `buf lint` gates CI. Handlers carry business logic only.
