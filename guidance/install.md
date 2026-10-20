@@ -9,11 +9,6 @@ Every step below was run as written. Read [guideline.md](guideline.md) for the r
 - Go 1.25 or later
 - The [Buf CLI](https://buf.build/docs/installation)
 - An editor with Buf's language server: VS Code with the Buf extension (`bufbuild.vscode-buf`), or Zed. Remove other Protobuf extensions.
-- A clone of this repository, for the templates:
-
-  ```sh
-  git clone https://github.com/raveesh-me/dedo ~/src/dedo
-  ```
 
 ## 1. Decide the names
 
@@ -30,14 +25,19 @@ Every step below was run as written. Read [guideline.md](guideline.md) for the r
 ```sh
 mkdir time-counter && cd time-counter && git init
 go mod init github.com/acme/time-counter
-DEDO=~/src/dedo
-cp $DEDO/templates/buf.yaml $DEDO/templates/buf.gen.yaml $DEDO/templates/Makefile.api .
+# The templates of the release you build against; step 5 uses them once
+# more, then you delete them.
+DEDO_VERSION=v0.6.0
+curl -fsSL https://github.com/raveesh-me/dedo/releases/download/$DEDO_VERSION/dedo-templates.tar.gz | tar xz
+DEDO=dedo-templates
+cp $DEDO/buf.yaml $DEDO/buf.gen.yaml $DEDO/Makefile.api .
 mkdir -p .github .vscode docs proto/acme/time_counter/v1
-cp $DEDO/templates/CODEOWNERS .github/
-cp $DEDO/templates/vscode/*.json .vscode/
-cp $DEDO/examples/todo/docs/docs.go $DEDO/examples/todo/docs/index.html docs/
+cp $DEDO/CODEOWNERS .github/
+cp $DEDO/vscode/*.json .vscode/
+cp $DEDO/docs/docs.go $DEDO/docs/index.html docs/
+cat $DEDO/claude.md >> AGENTS.md   # guidance for coding agents
 printf 'include Makefile.api\n' > Makefile
-printf '.tools/\n' > .gitignore
+printf '.tools/\ndedo-templates/\n' > .gitignore
 ```
 
 Replace the placeholders:
@@ -479,9 +479,10 @@ Add the policy-table test, so a missing declaration fails before deploy:
 ```sh
 sed -e 's#libraryv1connect "github.com/YOUR_ORG/YOUR_REPO/gen/go/raveesh_me/library/v1/libraryv1connect"#"github.com/acme/time-counter/gen/go/acme/time_counter/v1/time_counterv1connect"#' \
     -e 's#libraryv1connect.LibraryServiceName#time_counterv1connect.CounterServiceName#' \
-    $DEDO/templates/policy_table_test.go.tmpl > policy_table_test.go
+    $DEDO/policy_table_test.go.tmpl > policy_table_test.go
 gofmt -w policy_table_test.go
 go test ./...
+rm -rf dedo-templates
 ```
 
 ## 6. Run it and try every transport
@@ -516,7 +517,7 @@ The same RPCs also answer over Connect and gRPC at `/acme.time_counter.v1.Counte
 
 - Replace `authMiddleware` and `devTokens` in `main.go` with your identity platform's token verification. It must put the caller's scopes in the request context.
 - Commit to `main`, then run `make api-check`. It also runs `buf breaking` against `main`.
-- Add the CI stage from `templates/Jenkinsfile.api-stage`, or the same commands in your CI.
+- Add the CI stage from `Jenkinsfile.api-stage` in the release's `dedo-templates.tar.gz`, or the same commands in your CI.
 - Check that the teams in `.github/CODEOWNERS` exist. Every change under `proto/` then needs an API review.
 
 ## Updating later

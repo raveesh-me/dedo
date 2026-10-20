@@ -29,7 +29,7 @@ Contract rules come from Google's AIPs. Operational rules (audience, ownership, 
 | Policy interceptor | `interceptor/` | Checks scopes, sets `Cache-Control`, `Deprecation` and `Sunset`, and logs undeclared error reasons. |
 | REST doc generator | `openapi/` | `protoc-gen-dedo-openapi`: an OpenAPI 3.1 document from the `google.api.http` bindings, with scopes, error reasons, deprecation and the declared descriptions. Connect routes are left out. |
 | MCP adapter and schemas | `mcp/` | `protoc-gen-dedo-mcp` writes each tool's input schema at code-generation time: field descriptions from comments, `OUTPUT_ONLY` fields left out, partial-update and create semantics from AIP. `mcpserver` registers every unary RPC as a tool under a short snake_case name (`get_todo`), with those schemas, the declared title, description, `ToolAnnotations` and error reasons, and without deprecated RPCs. It forwards each call over Connect through the service's own HTTP stack, so tool calls run through the same auth and policy as REST. |
-| Templates | `templates/` | `buf.yaml`, `buf.gen.yaml`, `Makefile.api`, VS Code settings, a Jenkins stage and a policy-table test for service repositories. |
+| Templates | `templates/` | `buf.yaml`, `buf.gen.yaml`, `Makefile.api`, VS Code settings, a Jenkins stage and a policy-table test for service repositories. Each release attaches them as `dedo-templates.tar.gz`, with the REST docs page and `guidance/claude.md`. |
 | Examples | `examples/` | `library`: a contract-only module. `todo` and `bad-todo`: two runnable services with the same interface, one compliant and one breaking every rule. |
 
 The root Go module (`github.com/raveesh-me/dedo`) holds the runtime and the generated options code. `lint/`, `openapi/` and `mcp/` are separate modules, so services pull in only what they use. A `go.work` workspace builds them against each other locally, so no `go.mod` carries a `replace` and `go install <module>@<version>` works.
@@ -119,7 +119,7 @@ Suppress one finding with `// buf:lint:ignore ZALANDO_MONEY_FIELD_TYPE` above th
 
 [install.md](guidance/install.md) walks through it end to end with a working example. In short:
 
-1. Copy the files in `templates/` (`buf.yaml`, `buf.gen.yaml`, `Makefile.api`, `CODEOWNERS`, VS Code settings, the Jenkins stage) and replace the `YOUR_*` placeholders.
+1. Download `dedo-templates.tar.gz` from the release (`templates/`, the REST docs page and the agent guidance `claude.md`; no clone needed), copy its files (`buf.yaml`, `buf.gen.yaml`, `Makefile.api`, `CODEOWNERS`, VS Code settings, the Jenkins stage) and replace the `YOUR_*` placeholders.
 2. Pin the code generators in `go.mod` with `go get -tool`, run `make tools` for the native lint plugins, and run `buf dep update`.
 3. Write the contract, then `make api-check` (lint, format, breaking) and `buf generate` (Go, Connect, MCP tools, REST docs).
 4. Wire the runtime: `policy.Build` for the policy table, `interceptor.New` for scopes and headers, Vanguard for REST, `mcpserver.New` with the generated `MCPInputSchemas` for MCP, and the docs handler. Start with `EnforceScopes: false` (audit mode), then enforce.
@@ -192,7 +192,7 @@ The `v*` tag runs `.github/workflows/ci.yaml`, which publishes one version every
 
 - `buf push` of the options module with the tag and `main` as labels; `main` is the default label that unpinned dependencies resolve to
 - `buf plugin push` of `buf.build/r-a/dedo-lint`
-- a GitHub release carrying the lint plugin and both generators (`protoc-gen-dedo-mcp`, `protoc-gen-dedo-openapi`) as native binaries for macOS and Linux (arm64 and amd64), and the lint plugin as a `.wasm` file. `make tools` downloads the lint plugin.
+- a GitHub release carrying `dedo-templates.tar.gz`, the lint plugin and both generators (`protoc-gen-dedo-mcp`, `protoc-gen-dedo-openapi`) as native binaries for macOS and Linux (arm64 and amd64), and the lint plugin as a `.wasm` file. `make tools` downloads the lint plugin.
 
 The Go module version is the same tag. The job reads a `BUF_KEY` repository secret: a Buf token for the `r-a` organization with module and plugin create and push scopes.
 

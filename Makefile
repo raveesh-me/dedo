@@ -4,7 +4,7 @@ DIST              := dist
 # their tag, so each plugin version links to its own rule docs.
 DOCS_REF          ?= main
 
-.PHONY: all check generate format lint breaking test plugin plugins wasm-plugins release-binaries examples example-todo example-bad-todo vendored-options clean
+.PHONY: all check generate format lint breaking test plugin plugins wasm-plugins release-binaries templates-archive examples example-todo example-bad-todo vendored-options clean
 
 all: check
 
@@ -67,7 +67,7 @@ wasm-plugins: $(LINT_SRC)
 		-o ../$(DIST)/wasm/buf-plugin-dedo.wasm $(DEDO_CMD)
 
 ## release-binaries: the lint plugin and the generators natively for every release platform
-release-binaries: $(LINT_SRC)
+release-binaries: $(LINT_SRC) templates-archive
 	mkdir -p $(DIST)/release
 	for platform in $(RELEASE_PLATFORMS); do \
 		os=$${platform%/*}; arch=$${platform#*/}; \
@@ -78,6 +78,15 @@ release-binaries: $(LINT_SRC)
 		(cd openapi && GOOS=$$os GOARCH=$$arch go build -trimpath \
 			-o ../$(DIST)/release/protoc-gen-dedo-openapi_$${os}_$${arch} ./cmd/protoc-gen-dedo-openapi) || exit 1; \
 	done
+
+## templates-archive: what a service copies, as one release asset:
+## templates/, the REST docs page and the agent guidance
+templates-archive:
+	rm -rf $(DIST)/dedo-templates && mkdir -p $(DIST)/dedo-templates/docs $(DIST)/release
+	cp -R templates/. $(DIST)/dedo-templates/
+	cp examples/todo/docs/docs.go examples/todo/docs/index.html $(DIST)/dedo-templates/docs/
+	cp guidance/claude.md $(DIST)/dedo-templates/
+	tar -czf $(DIST)/release/dedo-templates.tar.gz -C $(DIST) dedo-templates
 
 ## examples: run both example services as consumer repositories
 examples: vendored-options example-todo example-bad-todo

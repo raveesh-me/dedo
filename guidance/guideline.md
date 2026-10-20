@@ -47,7 +47,7 @@ my-service/
   main.go
 ```
 
-1. Copy the files from `templates/` and replace every `YOUR_*` placeholder.
+1. Copy the files from `dedo-templates.tar.gz`, attached to every [release](https://github.com/raveesh-me/dedo/releases) (the same files as `templates/`, plus the REST docs page and `claude.md` for your `AGENTS.md`), and replace every `YOUR_*` placeholder. No clone of dedo is needed.
 2. Pin the code generators in `go.mod`, so every machine generates the same code:
 
    ```sh
