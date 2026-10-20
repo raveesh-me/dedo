@@ -20,10 +20,21 @@ $(TOOLS_STAMP):
 api-update:
 	buf dep update
 
+## api-check: format, lint, and breaking changes against API_BASE
+# The branch breaking changes are checked against. A new repository, or a
+# base without protos yet, has nothing to break, so that check is skipped.
+API_BASE ?= main
+
 api-check: tools
 	buf format --diff --exit-code
 	buf lint
-	buf breaking --against '.git#branch=main'
+	@if git rev-parse --verify --quiet 'refs/heads/$(API_BASE)' >/dev/null && \
+		git ls-tree -r --name-only '$(API_BASE)' | grep -q '\.proto$$'; then \
+		echo "buf breaking --against '.git#branch=$(API_BASE)'"; \
+		buf breaking --against '.git#branch=$(API_BASE)'; \
+	else \
+		echo "buf breaking: skipped; branch $(API_BASE) has no .proto files yet (set API_BASE to compare with another branch)"; \
+	fi
 
 api-generate:
 	buf generate
