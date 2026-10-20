@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file dedo/v1/options.proto.
  */
 export const file_dedo_v1_options: GenFile = /*@__PURE__*/
-  fileDesc("ChVkZWRvL3YxL29wdGlvbnMucHJvdG8SB2RlZG8udjEiRwoMU2VydmljZVJ1bGVzEiMKCGF1ZGllbmNlGAEgASgOMhEuZGVkby52MS5BdWRpZW5jZRISCgpvd25lcl90ZWFtGAIgASgJIscBCgtDYWNoZVBvbGljeRIzCgp2aXNpYmlsaXR5GAEgASgOMh8uZGVkby52MS5DYWNoZVBvbGljeS5WaXNpYmlsaXR5EioKB21heF9hZ2UYAiABKAsyGS5nb29nbGUucHJvdG9idWYuRHVyYXRpb24iVwoKVmlzaWJpbGl0eRIaChZWSVNJQklMSVRZX1VOU1BFQ0lGSUVEEAASFgoSVklTSUJJTElUWV9QUklWQVRFEAESFQoRVklTSUJJTElUWV9QVUJMSUMQAiKHAQoLRGVwcmVjYXRpb24SNAoQZGVwcmVjYXRpb25fdGltZRgBIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLwoLc3Vuc2V0X3RpbWUYAiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhEKCXN1Y2Nlc3NvchgDIAEoCSI9CgtFcnJvclJlYXNvbhIOCgZyZWFzb24YASABKAkSHgoEY29kZRgCIAEoDjIQLmdvb2dsZS5ycGMuQ29kZSJZCgRUb29sEg0KBXRpdGxlGAEgASgJEhMKC2Rlc2NyaXB0aW9uGAIgASgJEi0KC2Fubm90YXRpb25zGAMgASgLMhguZGVkby52MS5Ub29sQW5ub3RhdGlvbnMi2QEKD1Rvb2xBbm5vdGF0aW9ucxIbCg5yZWFkX29ubHlfaGludBgBIAEoCEgAiAEBEh0KEGRlc3RydWN0aXZlX2hpbnQYAiABKAhIAYgBARIcCg9pZGVtcG90ZW50X2hpbnQYAyABKAhIAogBARIcCg9vcGVuX3dvcmxkX2hpbnQYBCABKAhIA4gBAUIRCg9fcmVhZF9vbmx5X2hpbnRCEwoRX2Rlc3RydWN0aXZlX2hpbnRCEgoQX2lkZW1wb3RlbnRfaGludEISChBfb3Blbl93b3JsZF9oaW50IrABCgtNZXRob2RSdWxlcxIOCgZzY29wZXMYASADKAkSIwoFY2FjaGUYAiABKAsyFC5kZWRvLnYxLkNhY2hlUG9saWN5EikKC2RlcHJlY2F0aW9uGAMgASgLMhQuZGVkby52MS5EZXByZWNhdGlvbhIkCgZlcnJvcnMYBCADKAsyFC5kZWRvLnYxLkVycm9yUmVhc29uEhsKBHRvb2wYBSABKAsyDS5kZWRvLnYxLlRvb2wiIwoMTWVzc2FnZVJ1bGVzEhMKC2Rlc2NyaXB0aW9uGAEgASgJIh8KCkZpZWxkUnVsZXMSEQoJc2Vuc2l0aXZlGAEgASgIKsYBCghBdWRpZW5jZRIYChRBVURJRU5DRV9VTlNQRUNJRklFRBAAEh8KG0FVRElFTkNFX0NPTVBPTkVOVF9JTlRFUk5BTBABEiMKH0FVRElFTkNFX0JVU0lORVNTX1VOSVRfSU5URVJOQUwQAhIdChlBVURJRU5DRV9DT01QQU5ZX0lOVEVSTkFMEAMSHQoZQVVESUVOQ0VfRVhURVJOQUxfUEFSVE5FUhAEEhwKGEFVRElFTkNFX0VYVEVSTkFMX1BVQkxJQxAFOlIKB3NlcnZpY2USHy5nb29nbGUucHJvdG9idWYuU2VydmljZU9wdGlvbnMYtIcDIAEoCzIVLmRlZG8udjEuU2VydmljZVJ1bGVzUgdzZXJ2aWNlOk4KBm1ldGhvZBIeLmdvb2dsZS5wcm90b2J1Zi5NZXRob2RPcHRpb25zGLWHAyABKAsyFC5kZWRvLnYxLk1ldGhvZFJ1bGVzUgZtZXRob2Q6UgoHbWVzc2FnZRIfLmdvb2dsZS5wcm90b2J1Zi5NZXNzYWdlT3B0aW9ucxi4hwMgASgLMhUuZGVkby52MS5NZXNzYWdlUnVsZXNSB21lc3NhZ2U6SgoFZmllbGQSHS5nb29nbGUucHJvdG9idWYuRmllbGRPcHRpb25zGLeHAyABKAsyEy5kZWRvLnYxLkZpZWxkUnVsZXNSBWZpZWxkQjJaMGdpdGh1Yi5jb20vcmF2ZWVzaC1tZS9kZWRvL2dlbi9nby9kZWRvL3YxO2RlZG92MWIGcHJvdG8z", [file_google_protobuf_descriptor, file_google_protobuf_duration, file_google_protobuf_timestamp, file_google_rpc_code]);
+  fileDesc("ChVkZWRvL3YxL29wdGlvbnMucHJvdG8SB2RlZG8udjEiagoMU2VydmljZVJ1bGVzEiMKCGF1ZGllbmNlGAEgASgOMhEuZGVkby52MS5BdWRpZW5jZRISCgpvd25lcl90ZWFtGAIgASgJEiEKB3RlbmFuY3kYAyABKAsyEC5kZWRvLnYxLlRlbmFuY3kiHQoHVGVuYW5jeRISCgpjb2xsZWN0aW9uGAEgASgJIscBCgtDYWNoZVBvbGljeRIzCgp2aXNpYmlsaXR5GAEgASgOMh8uZGVkby52MS5DYWNoZVBvbGljeS5WaXNpYmlsaXR5EioKB21heF9hZ2UYAiABKAsyGS5nb29nbGUucHJvdG9idWYuRHVyYXRpb24iVwoKVmlzaWJpbGl0eRIaChZWSVNJQklMSVRZX1VOU1BFQ0lGSUVEEAASFgoSVklTSUJJTElUWV9QUklWQVRFEAESFQoRVklTSUJJTElUWV9QVUJMSUMQAiKHAQoLRGVwcmVjYXRpb24SNAoQZGVwcmVjYXRpb25fdGltZRgBIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLwoLc3Vuc2V0X3RpbWUYAiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhEKCXN1Y2Nlc3NvchgDIAEoCSI9CgtFcnJvclJlYXNvbhIOCgZyZWFzb24YASABKAkSHgoEY29kZRgCIAEoDjIQLmdvb2dsZS5ycGMuQ29kZSJZCgRUb29sEg0KBXRpdGxlGAEgASgJEhMKC2Rlc2NyaXB0aW9uGAIgASgJEi0KC2Fubm90YXRpb25zGAMgASgLMhguZGVkby52MS5Ub29sQW5ub3RhdGlvbnMi2QEKD1Rvb2xBbm5vdGF0aW9ucxIbCg5yZWFkX29ubHlfaGludBgBIAEoCEgAiAEBEh0KEGRlc3RydWN0aXZlX2hpbnQYAiABKAhIAYgBARIcCg9pZGVtcG90ZW50X2hpbnQYAyABKAhIAogBARIcCg9vcGVuX3dvcmxkX2hpbnQYBCABKAhIA4gBAUIRCg9fcmVhZF9vbmx5X2hpbnRCEwoRX2Rlc3RydWN0aXZlX2hpbnRCEgoQX2lkZW1wb3RlbnRfaGludEISChBfb3Blbl93b3JsZF9oaW50IsYBCgtNZXRob2RSdWxlcxIOCgZzY29wZXMYASADKAkSIwoFY2FjaGUYAiABKAsyFC5kZWRvLnYxLkNhY2hlUG9saWN5EikKC2RlcHJlY2F0aW9uGAMgASgLMhQuZGVkby52MS5EZXByZWNhdGlvbhIkCgZlcnJvcnMYBCADKAsyFC5kZWRvLnYxLkVycm9yUmVhc29uEhsKBHRvb2wYBSABKAsyDS5kZWRvLnYxLlRvb2wSFAoMY3Jvc3NfdGVuYW50GAYgASgIIiMKDE1lc3NhZ2VSdWxlcxITCgtkZXNjcmlwdGlvbhgBIAEoCSIfCgpGaWVsZFJ1bGVzEhEKCXNlbnNpdGl2ZRgBIAEoCCrGAQoIQXVkaWVuY2USGAoUQVVESUVOQ0VfVU5TUEVDSUZJRUQQABIfChtBVURJRU5DRV9DT01QT05FTlRfSU5URVJOQUwQARIjCh9BVURJRU5DRV9CVVNJTkVTU19VTklUX0lOVEVSTkFMEAISHQoZQVVESUVOQ0VfQ09NUEFOWV9JTlRFUk5BTBADEh0KGUFVRElFTkNFX0VYVEVSTkFMX1BBUlRORVIQBBIcChhBVURJRU5DRV9FWFRFUk5BTF9QVUJMSUMQBTpSCgdzZXJ2aWNlEh8uZ29vZ2xlLnByb3RvYnVmLlNlcnZpY2VPcHRpb25zGLSHAyABKAsyFS5kZWRvLnYxLlNlcnZpY2VSdWxlc1IHc2VydmljZTpOCgZtZXRob2QSHi5nb29nbGUucHJvdG9idWYuTWV0aG9kT3B0aW9ucxi1hwMgASgLMhQuZGVkby52MS5NZXRob2RSdWxlc1IGbWV0aG9kOlIKB21lc3NhZ2USHy5nb29nbGUucHJvdG9idWYuTWVzc2FnZU9wdGlvbnMYuIcDIAEoCzIVLmRlZG8udjEuTWVzc2FnZVJ1bGVzUgdtZXNzYWdlOkoKBWZpZWxkEh0uZ29vZ2xlLnByb3RvYnVmLkZpZWxkT3B0aW9ucxi3hwMgASgLMhMuZGVkby52MS5GaWVsZFJ1bGVzUgVmaWVsZEIyWjBnaXRodWIuY29tL3JhdmVlc2gtbWUvZGVkby9nZW4vZ28vZGVkby92MTtkZWRvdjFiBnByb3RvMw", [file_google_protobuf_descriptor, file_google_protobuf_duration, file_google_protobuf_timestamp, file_google_rpc_code]);
 
 /**
  * ServiceRules is the ownership and audience of a service.
@@ -35,6 +35,14 @@ export type ServiceRules = Message<"dedo.v1.ServiceRules"> & {
    * @generated from field: string owner_team = 2;
    */
   ownerTeam: string;
+
+  /**
+   * Present on a multi-tenant service. The runtime then checks the tenant of
+   * every request against the caller's.
+   *
+   * @generated from field: dedo.v1.Tenancy tenancy = 3;
+   */
+  tenancy?: Tenancy | undefined;
 };
 
 /**
@@ -43,6 +51,31 @@ export type ServiceRules = Message<"dedo.v1.ServiceRules"> & {
  */
 export const ServiceRulesSchema: GenMessage<ServiceRules> = /*@__PURE__*/
   messageDesc(file_dedo_v1_options, 0);
+
+/**
+ * Tenancy declares that a service partitions its data between tenants. The
+ * tenant is the root of the resource hierarchy: every resource name of the
+ * service starts with the tenant's, such as locations/1/todos/2, and every
+ * request names its tenant in the field its HTTP path binds, such as
+ * {parent=locations/*}.
+ *
+ * @generated from message dedo.v1.Tenancy
+ */
+export type Tenancy = Message<"dedo.v1.Tenancy"> & {
+  /**
+   * The collection ID of the tenant resource, such as "locations".
+   *
+   * @generated from field: string collection = 1;
+   */
+  collection: string;
+};
+
+/**
+ * Describes the message dedo.v1.Tenancy.
+ * Use `create(TenancySchema)` to create a new message.
+ */
+export const TenancySchema: GenMessage<Tenancy> = /*@__PURE__*/
+  messageDesc(file_dedo_v1_options, 1);
 
 /**
  * CachePolicy is the HTTP cache behaviour of a read-only method.
@@ -70,7 +103,7 @@ export type CachePolicy = Message<"dedo.v1.CachePolicy"> & {
  * Use `create(CachePolicySchema)` to create a new message.
  */
 export const CachePolicySchema: GenMessage<CachePolicy> = /*@__PURE__*/
-  messageDesc(file_dedo_v1_options, 1);
+  messageDesc(file_dedo_v1_options, 2);
 
 /**
  * Visibility is who may store a cached response.
@@ -104,7 +137,7 @@ export enum CachePolicy_Visibility {
  * Describes the enum dedo.v1.CachePolicy.Visibility.
  */
 export const CachePolicy_VisibilitySchema: GenEnum<CachePolicy_Visibility> = /*@__PURE__*/
-  enumDesc(file_dedo_v1_options, 1, 0);
+  enumDesc(file_dedo_v1_options, 2, 0);
 
 /**
  * Deprecation is the retirement schedule of a method.
@@ -139,7 +172,7 @@ export type Deprecation = Message<"dedo.v1.Deprecation"> & {
  * Use `create(DeprecationSchema)` to create a new message.
  */
 export const DeprecationSchema: GenMessage<Deprecation> = /*@__PURE__*/
-  messageDesc(file_dedo_v1_options, 2);
+  messageDesc(file_dedo_v1_options, 3);
 
 /**
  * ErrorReason is one error a method may return.
@@ -167,7 +200,7 @@ export type ErrorReason = Message<"dedo.v1.ErrorReason"> & {
  * Use `create(ErrorReasonSchema)` to create a new message.
  */
 export const ErrorReasonSchema: GenMessage<ErrorReason> = /*@__PURE__*/
-  messageDesc(file_dedo_v1_options, 3);
+  messageDesc(file_dedo_v1_options, 4);
 
 /**
  * Tool is how an RPC is presented as an MCP tool, and as an operation in
@@ -208,7 +241,7 @@ export type Tool = Message<"dedo.v1.Tool"> & {
  * Use `create(ToolSchema)` to create a new message.
  */
 export const ToolSchema: GenMessage<Tool> = /*@__PURE__*/
-  messageDesc(file_dedo_v1_options, 4);
+  messageDesc(file_dedo_v1_options, 5);
 
 /**
  * ToolAnnotations mirrors ToolAnnotations in the MCP specification
@@ -260,7 +293,7 @@ export type ToolAnnotations = Message<"dedo.v1.ToolAnnotations"> & {
  * Use `create(ToolAnnotationsSchema)` to create a new message.
  */
 export const ToolAnnotationsSchema: GenMessage<ToolAnnotations> = /*@__PURE__*/
-  messageDesc(file_dedo_v1_options, 5);
+  messageDesc(file_dedo_v1_options, 6);
 
 /**
  * MethodRules is the operational contract of one RPC.
@@ -302,6 +335,15 @@ export type MethodRules = Message<"dedo.v1.MethodRules"> & {
    * @generated from field: dedo.v1.Tool tool = 5;
    */
   tool?: Tool | undefined;
+
+  /**
+   * In a multi-tenant service, the RPC is not scoped to one tenant, such as
+   * listing the tenants themselves. The runtime does no tenant check, so its
+   * scopes alone guard it.
+   *
+   * @generated from field: bool cross_tenant = 6;
+   */
+  crossTenant: boolean;
 };
 
 /**
@@ -309,7 +351,7 @@ export type MethodRules = Message<"dedo.v1.MethodRules"> & {
  * Use `create(MethodRulesSchema)` to create a new message.
  */
 export const MethodRulesSchema: GenMessage<MethodRules> = /*@__PURE__*/
-  messageDesc(file_dedo_v1_options, 6);
+  messageDesc(file_dedo_v1_options, 7);
 
 /**
  * MessageRules documents a message for API consumers and models.
@@ -331,7 +373,7 @@ export type MessageRules = Message<"dedo.v1.MessageRules"> & {
  * Use `create(MessageRulesSchema)` to create a new message.
  */
 export const MessageRulesSchema: GenMessage<MessageRules> = /*@__PURE__*/
-  messageDesc(file_dedo_v1_options, 7);
+  messageDesc(file_dedo_v1_options, 8);
 
 /**
  * FieldRules classifies the data in a field.
@@ -352,7 +394,7 @@ export type FieldRules = Message<"dedo.v1.FieldRules"> & {
  * Use `create(FieldRulesSchema)` to create a new message.
  */
 export const FieldRulesSchema: GenMessage<FieldRules> = /*@__PURE__*/
-  messageDesc(file_dedo_v1_options, 8);
+  messageDesc(file_dedo_v1_options, 9);
 
 /**
  * Audience is who may call an API. Mirrors Zalando rule 219.
