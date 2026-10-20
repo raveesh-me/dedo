@@ -3,6 +3,7 @@ package rules
 import (
 	"context"
 	"regexp"
+	"slices"
 	"strings"
 
 	"buf.build/go/bufplugin/check"
@@ -101,7 +102,18 @@ func checkRequestTenant(_ context.Context, w check.ResponseWriter, _ check.Reque
 		w.AddAnnotation(check.WithDescriptor(m),
 			messagef(idMultiTenantRequestTenant, "RPC %q is cross_tenant, but its service declares no tenancy.", m.Name()))
 		return nil
-	case collection == "" || crossTenant:
+	case collection == "":
+		return nil
+	case crossTenant:
+		// A cross-tenant RPC whose path names a tenant would skip the check
+		// on a request that is about one tenant.
+		for _, path := range policy.HTTPPaths(httpRule(m)) {
+			if _, ok := policy.TenantField(path, collection); ok {
+				w.AddAnnotation(check.WithDescriptor(m),
+					messagef(idMultiTenantRequestTenant, "RPC %q is cross_tenant, but HTTP path %q names a tenant, which the runtime would not check.", m.Name(), path))
+				return nil
+			}
+		}
 		return nil
 	}
 	if _, err := policy.MethodTenant(m, httpRule(m), collection); err != nil {
@@ -136,7 +148,7 @@ func packageCollections(req check.Request, pkg protoreflect.FullName) []string {
 			continue
 		}
 		for i := 0; i < f.Services().Len(); i++ {
-			if c := tenantCollection(f.Services().Get(i)); c != "" && !contains(collections, c) {
+			if c := tenantCollection(f.Services().Get(i)); c != "" && !slices.Contains(collections, c) {
 				collections = append(collections, c)
 			}
 		}
@@ -149,15 +161,6 @@ func packageCollections(req check.Request, pkg protoreflect.FullName) []string {
 func underTenant(pattern string, collections []string) bool {
 	for _, c := range collections {
 		if strings.HasPrefix(pattern, c+"/{") {
-			return true
-		}
-	}
-	return false
-}
-
-func contains(list []string, s string) bool {
-	for _, v := range list {
-		if v == s {
 			return true
 		}
 	}

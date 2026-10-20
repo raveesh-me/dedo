@@ -19,6 +19,9 @@ const (
 	GetTenantThing    = "/" + TenantService + "/GetThing"    // {name=locations/*/things/*}
 	UpdateTenantThing = "/" + TenantService + "/UpdateThing" // {thing.name=locations/*/things/*}
 	ListTenants       = "/" + TenantService + "/ListTenants" // cross-tenant
+	// MoveThing names its tenant in name, and references more resources in
+	// destination, copies and target.location.
+	MoveThing = "/" + TenantService + "/MoveThing"
 )
 
 // TenantEdit changes the multi-tenant descriptor before it is registered.
@@ -72,6 +75,11 @@ func tenantFile() *descriptorpb.FileDescriptorProto {
 		}
 		return f
 	}
+	reference := func(f *descriptorpb.FieldDescriptorProto) *descriptorpb.FieldDescriptorProto {
+		f.Options = &descriptorpb.FieldOptions{}
+		proto.SetExtension(f.Options, annotations.E_ResourceReference, &annotations.ResourceReference{Type: "tenant.raveesh.me/Thing"})
+		return f
+	}
 	message := func(name string, fields ...*descriptorpb.FieldDescriptorProto) *descriptorpb.DescriptorProto {
 		return &descriptorpb.DescriptorProto{Name: proto.String(name), Field: fields}
 	}
@@ -91,6 +99,18 @@ func tenantFile() *descriptorpb.FileDescriptorProto {
 			message("UpdateThingRequest", field("thing", 1, msg, ".raveesh_me.tenant.v1.Thing")),
 			message("ListTenantsRequest"),
 			message("ListTenantsResponse"),
+			message("Target", reference(field("location", 1, str, ""))),
+			message("MoveThingRequest",
+				field("name", 1, str, ""),
+				reference(field("destination", 2, str, "")),
+				func() *descriptorpb.FieldDescriptorProto {
+					f := reference(field("copies", 3, str, ""))
+					f.Label = descriptorpb.FieldDescriptorProto_LABEL_REPEATED.Enum()
+					return f
+				}(),
+				field("target", 4, msg, ".raveesh_me.tenant.v1.Target"),
+				field("note", 5, str, ""),
+			),
 		},
 		Service: []*descriptorpb.ServiceDescriptorProto{{
 			Name: proto.String("TenantService"),
@@ -110,6 +130,8 @@ func tenantFile() *descriptorpb.FileDescriptorProto {
 					tenantMethodOptions(&annotations.HttpRule{Pattern: &annotations.HttpRule_Patch{Patch: "/v1/{thing.name=locations/*/things/*}"}, Body: "thing"}, false)),
 				method("ListTenants", "ListTenantsRequest", "ListTenantsResponse",
 					tenantMethodOptions(&annotations.HttpRule{Pattern: &annotations.HttpRule_Get{Get: "/v1/locations"}}, true)),
+				method("MoveThing", "MoveThingRequest", "Thing",
+					tenantMethodOptions(&annotations.HttpRule{Pattern: &annotations.HttpRule_Post{Post: "/v1/{name=locations/*/things/*}:move"}, Body: "*"}, false)),
 			},
 		}},
 	}

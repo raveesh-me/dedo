@@ -29,6 +29,16 @@ service TodoService {
   rpc CountTodos(CountTodosRequest) returns (google.protobuf.Empty) { // want
     option (google.api.http) = {get: "/commerce/todo/v1/{location=locations/*}/todoCount"};
   }
+  rpc ExportTodos(ListTodosRequest) returns (google.protobuf.Empty) { // want
+    option (google.api.http) = {get: "/commerce/todo/v1/{parent=locations/*}/todos:export"};
+    option (dedo.v1.method) = {cross_tenant: true};
+  }
+  rpc CopyTodo(CopyTodoRequest) returns (Todo) { // want
+    option (google.api.http) = {
+      post: "/commerce/todo/v1/{name=locations/*/todos/*}/{destination=locations/*}:copy"
+      body: "*"
+    };
+  }
 }
 
 service StatusService {
@@ -51,6 +61,11 @@ message ListTodosRequest {
 }
 
 message MoveTodoRequest {
+  string name = 1;
+  string destination = 2;
+}
+
+message CopyTodoRequest {
   string name = 1;
   string destination = 2;
 }

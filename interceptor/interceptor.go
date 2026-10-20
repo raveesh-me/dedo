@@ -83,7 +83,7 @@ func (i *guard) wrap(next connect.ServerFunc) connect.ServerFunc {
 		if err := next(ctx, spec, stream); err != nil {
 			// A tenant denial is the guard's own answer, not the handler's,
 			// so it is not audited against the declared reasons.
-			if tenants == nil || !tenants.denied {
+			if tenants == nil || tenants.denial == nil || !errors.Is(err, tenants.denial) {
 				i.auditError(ctx, m, err)
 			}
 			return err

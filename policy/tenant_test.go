@@ -1,6 +1,7 @@
 package policy_test
 
 import (
+	"slices"
 	"strings"
 	"testing"
 
@@ -83,6 +84,13 @@ func TestTenantOf(t *testing.T) {
 		{"empty id", "locations//things/2", "", false},
 		{"empty", "", "", false},
 		{"prefix only", "locationsx/1", "", false},
+		// The whole name must be well formed, so a handler that cleans it
+		// cannot land in another tenant.
+		{"dot-dot", "locations/1/../2/things/3", "", false},
+		{"dot", "locations/1/./things/3", "", false},
+		{"trailing slash", "locations/1/things/", "", false},
+		{"space", "locations/1/things/ 2", "", false},
+		{"newline", "locations/1\n/things/2", "", false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -104,6 +112,68 @@ func TestTenantOf(t *testing.T) {
 	if got, ok := table[testsvc.UpdateTenantThing].Tenant.Of(update); got != "7" || !ok {
 		t.Errorf("nested Of = %q, %v; want 7", got, ok)
 	}
+}
+
+// Every resource reference in a request that names a tenant is a tenant the
+// caller must be allowed in, so a move cannot reach into another tenant.
+func TestTenantsOfReferences(t *testing.T) {
+	files, err := testsvc.TenantFiles()
+	if err != nil {
+		t.Fatal(err)
+	}
+	table, err := policy.BuildFrom(files, testsvc.TenantService)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tenant := table[testsvc.MoveThing].Tenant
+	tests := []struct {
+		name    string
+		set     func(*dynamicpb.Message)
+		want    []string
+		wantBad bool
+	}{
+		{"tenant field only", func(*dynamicpb.Message) {}, []string{"1"}, false},
+		{"reference in the same tenant", func(m *dynamicpb.Message) { setString(m, "destination", "locations/1/things/9") }, []string{"1"}, false},
+		{"reference in another tenant", func(m *dynamicpb.Message) { setString(m, "destination", "locations/2") }, []string{"1", "2"}, false},
+		{"list of references", func(m *dynamicpb.Message) {
+			list := m.Mutable(m.Descriptor().Fields().ByName("copies")).List()
+			list.Append(protoreflect.ValueOfString("locations/1/things/8"))
+			list.Append(protoreflect.ValueOfString("locations/3/things/8"))
+		}, []string{"1", "3"}, false},
+		{"nested reference", func(m *dynamicpb.Message) {
+			target := m.Mutable(m.Descriptor().Fields().ByName("target")).Message()
+			target.Set(target.Descriptor().Fields().ByName("location"), protoreflect.ValueOfString("locations/4"))
+		}, []string{"1", "4"}, false},
+		{"reference outside the tenants", func(m *dynamicpb.Message) { setString(m, "destination", "catalog/7") }, []string{"1"}, false},
+		{"field that is not a reference", func(m *dynamicpb.Message) { setString(m, "note", "locations/5") }, []string{"1"}, false},
+		{"malformed reference", func(m *dynamicpb.Message) { setString(m, "destination", "locations/1/../2") }, nil, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := newRequest(t, files, "raveesh_me.tenant.v1.MoveThingRequest")
+			setString(req, "name", "locations/1/things/2")
+			tt.set(req)
+			got, ok := tenant.Tenants(req)
+			if ok == tt.wantBad || !slices.Equal(got, tt.want) {
+				t.Fatalf("Tenants = %v, %v; want %v, %v", got, ok, tt.want, !tt.wantBad)
+			}
+		})
+	}
+}
+
+// A path that binds two fields to the tenant is ambiguous.
+func TestTenantFieldTwiceFailsClosed(t *testing.T) {
+	files, err := testsvc.TenantFiles(testsvc.WithHTTPGet("/v1/{name=locations/*/things/*}/{name2=locations/*}"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := policy.BuildFrom(files, testsvc.TenantService); err == nil || !strings.Contains(err.Error(), "more than one field") {
+		t.Fatalf("err = %v", err)
+	}
+}
+
+func setString(m *dynamicpb.Message, field, value string) {
+	m.Set(m.Descriptor().Fields().ByName(protoreflect.Name(field)), protoreflect.ValueOfString(value))
 }
 
 func TestTenantField(t *testing.T) {

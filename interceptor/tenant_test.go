@@ -58,6 +58,7 @@ func newTenantFixture(t *testing.T, tenants ...string) tenantFixture {
 		testsvc.GetTenantThing:    "GetThingRequest",
 		testsvc.UpdateTenantThing: "UpdateThingRequest",
 		testsvc.ListTenants:       "ListTenantsRequest",
+		testsvc.MoveThing:         "MoveThingRequest",
 	} {
 		reqType := message(t, files, in)
 		server.Register(connect.Method{Spec: unarySpec(procedure), Handler: func(_ context.Context, _ connect.Spec, stream connect.ServerStream) error {
@@ -181,6 +182,73 @@ func TestTenantNestedField(t *testing.T) {
 	}
 	if err := f.call(t, testsvc.UpdateTenantThing, update("locations/8/things/1")); connect.CodeOf(err) != connect.CodePermissionDenied {
 		t.Fatalf("err = %v, want permission_denied", err)
+	}
+}
+
+// A request may not act in its own tenant while naming another one.
+func TestTenantReferencesChecked(t *testing.T) {
+	f := newTenantFixture(t, "1")
+	move := func(destination string) proto.Message {
+		req := dynamicpb.NewMessage(message(t, f.files, "MoveThingRequest"))
+		req.Set(req.Descriptor().Fields().ByName("name"), protoreflect.ValueOfString("locations/1/things/2"))
+		req.Set(req.Descriptor().Fields().ByName("destination"), protoreflect.ValueOfString(destination))
+		return req
+	}
+	if err := f.call(t, testsvc.MoveThing, move("locations/1/things/3")); err != nil {
+		t.Fatalf("move within the tenant: %v", err)
+	}
+	if err := f.call(t, testsvc.MoveThing, move("locations/2")); connect.CodeOf(err) != connect.CodePermissionDenied {
+		t.Fatalf("move to another tenant: err = %v, want permission_denied", err)
+	}
+	if err := f.call(t, testsvc.MoveThing, move("locations/1/../2")); connect.CodeOf(err) != connect.CodeInvalidArgument {
+		t.Fatalf("malformed destination: err = %v, want invalid_argument", err)
+	}
+}
+
+// A handler that ignores the denial holds none of the other tenant's
+// names, and an error it then returns is audited like any other.
+func TestTenantDenialClearsRequest(t *testing.T) {
+	files, err := testsvc.TenantFiles()
+	if err != nil {
+		t.Fatal(err)
+	}
+	table, err := policy.BuildFrom(files, testsvc.TenantService)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var log bytes.Buffer
+	guard, err := interceptor.New(interceptor.Config{
+		Table:         table,
+		Scopes:        func(context.Context) []string { return []string{testsvc.ReadScope} },
+		EnforceScopes: true,
+		Tenants:       func(context.Context, string) bool { return false },
+		Log:           slog.New(slog.NewTextHandler(&log, nil)),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	reqType := message(t, files, "GetThingRequest")
+	var seen string
+	server := connect.NewServer(guard)
+	server.Register(connect.Method{Spec: unarySpec(testsvc.GetTenantThing), Handler: func(_ context.Context, _ connect.Spec, stream connect.ServerStream) error {
+		req := dynamicpb.NewMessage(reqType)
+		_ = stream.Receive(req) // a careless handler
+		seen = req.Get(reqType.Fields().ByName("name")).String()
+		return connect.NewError(connect.CodeInternal, "careless")
+	}})
+	mux := http.NewServeMux()
+	connecthttp.Mount(mux, server)
+	srv := httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+	f := tenantFixture{url: srv.URL, files: files}
+	if err := f.call(t, testsvc.GetTenantThing, f.getThing(t, "locations/2/things/2")); err == nil {
+		t.Fatal("want error")
+	}
+	if seen != "" {
+		t.Errorf("the handler saw %q after the denial", seen)
+	}
+	if !strings.Contains(log.String(), "error without ErrorInfo") {
+		t.Errorf("the handler's own error was not audited: %s", log.String())
 	}
 }
 

@@ -241,7 +241,7 @@ When the data is partitioned between tenants (customers, sub-accounts, business 
 3. Add `DEDO_MULTI_TENANT` to `lint.use` (`dedo init` does), so the lint checks that every resource and every request names its tenant.
 4. Pass `Tenants` to `interceptor.Config`: a function that says whether the caller may act in a tenant ID. Your auth interceptor puts what it needs in the context, as for scopes.
 
-The interceptor then reads the tenant from every request, on every transport, and answers `PERMISSION_DENIED` for another tenant's data before your handler runs. The service will not start if an RPC names no tenant, or if `Tenants` is missing. [RULES.md](RULES.md#multi-tenant-rules) has the details, and [`examples/contacts`](../examples/contacts) a complete contract.
+The interceptor then reads the tenants of every request, on every transport, from the field the path binds and from every field with a `google.api.resource_reference`, and answers `PERMISSION_DENIED` for another tenant's data before your handler runs. The service will not start if an RPC names no tenant, or if `Tenants` is missing. [RULES.md](RULES.md#multi-tenant-rules) has the details, and [`examples/contacts`](../examples/contacts) a complete contract.
 
 ## 8. Change the API safely
 
