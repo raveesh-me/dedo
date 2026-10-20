@@ -1,6 +1,6 @@
 # Building an API with dedo
 
-This guide explains how the pieces fit and why. For a copy-paste walkthrough of a new product, follow [install.md](install.md).
+This guide explains how the pieces fit and why. To set a service up, run `dedo init` or follow [install.md](install.md); for a walkthrough of a new product, follow [tutorial.md](tutorial.md).
 
 This guide takes you from an empty repository to a running service. Read it once end to end before you start. `examples/todo` is the reference: every step below exists there in working form.
 
@@ -47,14 +47,14 @@ my-service/
   main.go
 ```
 
-1. Copy the files from `dedo-templates.tar.gz`, attached to every [release](https://github.com/raveesh-me/dedo/releases) (the same files as `templates/`, plus the REST docs page and `claude.md` for your `AGENTS.md`), and replace every `YOUR_*` placeholder. No clone of dedo is needed.
+1. Run `dedo init`, or copy the files from `templates/` (`dedo templates NAME` prints any of them) and replace every `YOUR_*` placeholder. No clone of dedo is needed.
 2. Pin the code generators in `go.mod`, so every machine generates the same code:
 
    ```sh
    go get -tool google.golang.org/protobuf/cmd/protoc-gen-go
    go get -tool connectrpc.com/connect/cmd/protoc-gen-connect-go
-   go get -tool github.com/raveesh-me/dedo/mcp/cmd/protoc-gen-dedo-mcp@v0.7.0
-   go get -tool github.com/raveesh-me/dedo/openapi/cmd/protoc-gen-dedo-openapi@v0.7.0
+   go get -tool github.com/raveesh-me/dedo/mcp/cmd/protoc-gen-dedo-mcp@v0.8.0
+   go get -tool github.com/raveesh-me/dedo/openapi/cmd/protoc-gen-dedo-openapi@v0.8.0
    ```
 
    Pin the dedo modules to the latest release explicitly. Go's module proxy can lag behind a new tag.

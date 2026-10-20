@@ -12,9 +12,9 @@
 
 **First-class lint guidance.** A Buf check plugin turns the standard into findings in your editor as you type, each linked to an explanation in [RULES.md](guidance/RULES.md). The same `buf lint` gates CI. Handlers carry business logic only.
 
-New here? Everything is in [`guidance/`](guidance): [install.md](guidance/install.md) builds a new product from scratch, step by step, [guideline.md](guidance/guideline.md) explains the reasoning, [RULES.md](guidance/RULES.md) documents every lint rule, and [claude.md](guidance/claude.md) is guidance for coding agents to append to your `AGENTS.md` or `CLAUDE.md`.
+New here? Everything is in [`guidance/`](guidance): [install.md](guidance/install.md) adds dedo to a Go service, one part at a time or all at once with `dedo init`, [tutorial.md](guidance/tutorial.md) builds a new product from scratch, [guideline.md](guidance/guideline.md) explains the reasoning, [RULES.md](guidance/RULES.md) documents every lint rule, and [claude.md](guidance/claude.md) is guidance for coding agents to append to your `AGENTS.md` or `CLAUDE.md`.
 
-**Latest release: [v0.7.0](https://github.com/raveesh-me/dedo/releases/tag/v0.7.0).** The options module is [`buf.build/r-a/dedo`](https://buf.build/r-a/dedo). The lint plugin comes as native binaries on the GitHub release (`make tools`) and as a Wasm plugin on the BSR. The Go modules are `github.com/raveesh-me/dedo/...@v0.7.0`.
+**Latest release: [v0.8.0](https://github.com/raveesh-me/dedo/releases/tag/v0.8.0).** The options module is [`buf.build/r-a/dedo`](https://buf.build/r-a/dedo). The lint plugin comes as native binaries on the GitHub release (`make tools`) and as a Wasm plugin on the BSR. The Go modules are `github.com/raveesh-me/dedo/...@v0.8.0`.
 
 Contract rules come from Google's AIPs. Operational rules (audience, ownership, scopes, caching, deprecation, error reasons) come from Zalando's guidelines. Both live in the schema.
 
@@ -29,7 +29,7 @@ Contract rules come from Google's AIPs. Operational rules (audience, ownership, 
 | Policy interceptor | `interceptor/` | Checks scopes, sets `Cache-Control`, `Deprecation` and `Sunset`, and logs undeclared error reasons. |
 | REST doc generator | `openapi/` | `protoc-gen-dedo-openapi`: an OpenAPI 3.1 document from the `google.api.http` bindings, with scopes, error reasons, deprecation and the declared descriptions. Connect routes are left out. |
 | MCP adapter and schemas | `mcp/` | `protoc-gen-dedo-mcp` writes each tool's input schema at code-generation time: field descriptions from comments, `OUTPUT_ONLY` fields left out, partial-update and create semantics from AIP. `mcpserver` registers every unary RPC as a tool under a short snake_case name (`get_todo`), with those schemas, the declared title, description, `ToolAnnotations` and error reasons, and without deprecated RPCs. It forwards each call over Connect through the service's own HTTP stack, so tool calls run through the same auth and policy as REST. |
-| Templates | `templates/` | `buf.yaml`, `buf.gen.yaml`, `Makefile.api`, VS Code settings, a Jenkins stage and a policy-table test for service repositories. Each release attaches them as `dedo-templates.tar.gz`, with the REST docs page and `guidance/claude.md`. |
+| Templates | `templates/` | `buf.yaml`, `buf.gen.yaml`, `Makefile.api`, VS Code settings, a Jenkins stage and a policy-table test for service repositories. The `dedo` command (`cmd/dedo`) bundles them, with `guidance/claude.md`. |
 | Examples | `examples/` | `library`: a contract-only module. `todo` and `bad-todo`: two runnable services with the same interface, one compliant and one breaking every rule. |
 
 The root Go module (`github.com/raveesh-me/dedo`) holds the runtime and the generated options code. `lint/`, `openapi/` and `mcp/` are separate modules, so services pull in only what they use. A `go.work` workspace builds them against each other locally, so no `go.mod` carries a `replace` and `go install <module>@<version>` works.
@@ -117,10 +117,15 @@ Suppress one finding with `// buf:lint:ignore ZALANDO_MONEY_FIELD_TYPE` above th
 
 ## Using it in a service repository
 
-[install.md](guidance/install.md) walks through it end to end with a working example. In short:
+```sh
+go install github.com/raveesh-me/dedo/cmd/dedo@v0.8.0
+dedo init
+```
 
-1. Download `dedo-templates.tar.gz` from the release (`templates/`, the REST docs page and the agent guidance `claude.md`; no clone needed), copy its files (`buf.yaml`, `buf.gen.yaml`, `Makefile.api`, `CODEOWNERS`, VS Code settings, the Jenkins stage) and replace the `YOUR_*` placeholders.
-2. Pin the code generators in `go.mod` with `go get -tool`, run `make tools` for the native lint plugins, and run `buf dep update`.
+`dedo init` adds the options module, the lint plugin, the code generators, the server libraries and the agent guidance where they are missing, then prints a `main.go` for your service. The templates are bundled into the binary (`dedo templates` lists them), so nothing is cloned. [install.md](guidance/install.md) shows each step by hand, and [tutorial.md](guidance/tutorial.md) builds a service from scratch. In short:
+
+1. `dedo init` (or by hand: copy `buf.yaml`, `buf.gen.yaml`, `Makefile.api` from `templates/`, pin the generators with `go get -tool`, run `make tools` and `buf dep update`).
+2. Fill in `CODEOWNERS` and the VS Code settings from `templates/` if you use them.
 3. Write the contract, then `make api-check` (lint, format, breaking) and `buf generate` (Go, Connect, MCP tools, REST docs).
 4. Wire the runtime: `policy.Build` for the policy table, `interceptor.New` for scopes and headers, Vanguard for REST, `mcpserver.New` with the generated `MCPInputSchemas` for MCP, and the docs handler. Start with `EnforceScopes: false` (audit mode), then enforce.
 5. Add `templates/policy_table_test.go.tmpl` as a test, so a missing declaration fails before deploy.
@@ -184,15 +189,15 @@ Lint rule tests live in `lint/rules/testdata/<rule>/{pass,fail}`. A pass fixture
 
 A pull request that breaks the options module fails CI's `buf breaking` check. When the break is deliberate, label the PR `allow-breaking`, re-run the check, and release a new minor version.
 
-Before tagging, set the new version in `templates/Makefile.api` (`DEDO_VERSION`), the `@vX.Y.Z` pins in `guidance/install.md` and `guidance/guideline.md`, and the readme's "Latest release" line. The release job runs `scripts/check-release-versions.sh` first and stops if any of them names another version.
+Before tagging, set the new version in `templates/Makefile.api` (`DEDO_VERSION`), the `@vX.Y.Z` pins in `guidance/install.md`, `guidance/tutorial.md` and `guidance/guideline.md`, the `version` constant in `cmd/dedo/main.go`, and the readme's "Latest release" line. The release job runs `scripts/check-release-versions.sh` first and stops if any of them names another version.
 
-To release, tag the merge commit on `main` with `lint/vX.Y.Z`, `openapi/vX.Y.Z` and `mcp/vX.Y.Z` (so `go get` works for the nested modules) and push those first. Then push `vX.Y.Z` **on its own**: GitHub starts no workflow when more than three tags arrive in one push.
+To release, tag the merge commit on `main` with `lint/vX.Y.Z`, `openapi/vX.Y.Z`, `mcp/vX.Y.Z` and `cmd/dedo/vX.Y.Z` (so `go get` and `go install` work for the nested modules) and push those first, at most three per push. Then push `vX.Y.Z` **on its own**: GitHub starts no workflow when more than three tags arrive in one push.
 
 The `v*` tag runs `.github/workflows/ci.yaml`, which publishes one version everywhere:
 
 - `buf push` of the options module with the tag and `main` as labels; `main` is the default label that unpinned dependencies resolve to
 - `buf plugin push` of `buf.build/r-a/dedo-lint`
-- a GitHub release carrying `dedo-templates.tar.gz`, the lint plugin and both generators (`protoc-gen-dedo-mcp`, `protoc-gen-dedo-openapi`) as native binaries for macOS and Linux (arm64 and amd64), and the lint plugin as a `.wasm` file. `make tools` downloads the lint plugin.
+- a GitHub release carrying the `dedo` command, the lint plugin and both generators (`protoc-gen-dedo-mcp`, `protoc-gen-dedo-openapi`) as native binaries for macOS and Linux (arm64 and amd64), and the lint plugin as a `.wasm` file. `make tools` downloads the lint plugin.
 
 The Go module version is the same tag. The job reads a `BUF_KEY` repository secret: a Buf token for the `r-a` organization with module and plugin create and push scopes.
 
