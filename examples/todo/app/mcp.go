@@ -24,8 +24,12 @@ func newMCP(api http.Handler) (http.Handler, error) {
 	}); err != nil {
 		return nil, err
 	}
-	return mcp.NewStreamableHTTPHandler(
+	handler := mcp.NewStreamableHTTPHandler(
 		func(*http.Request) *mcp.Server { return server },
 		&mcp.StreamableHTTPOptions{Stateless: true, JSONResponse: true},
-	), nil
+	)
+	// The MCP transport requires servers to check Origin, so a web page on
+	// another site cannot drive the tools (DNS rebinding). MCP clients send
+	// no Origin and pass.
+	return http.NewCrossOriginProtection().Handler(handler), nil
 }
