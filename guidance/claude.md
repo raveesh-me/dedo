@@ -1,6 +1,6 @@
 # Building an API with dedo: guidance for coding agents
 
-This folder holds all of dedo's guidance: [install.md](install.md) builds a service step by step, [guideline.md](guideline.md) explains the reasoning, and [RULES.md](RULES.md) documents every lint rule. Append this file to your repository's `AGENTS.md` or `CLAUDE.md`. It tells a coding agent how a service built with [dedo](https://github.com/raveesh-me/dedo) works and which mistakes to avoid.
+Append this file to your repository's `AGENTS.md` or `CLAUDE.md`; every dedo release ships it in `dedo-templates.tar.gz`. dedo's full guidance: [install.md](https://github.com/raveesh-me/dedo/blob/main/guidance/install.md) builds a service step by step, [guideline.md](https://github.com/raveesh-me/dedo/blob/main/guidance/guideline.md) explains the reasoning, and [RULES.md](https://github.com/raveesh-me/dedo/blob/main/guidance/RULES.md) documents every lint rule. It tells a coding agent how a service built with [dedo](https://github.com/raveesh-me/dedo) works and which mistakes to avoid.
 
 ## The proto is the source of truth
 
@@ -12,7 +12,7 @@ This folder holds all of dedo's guidance: [install.md](install.md) builds a serv
 
 ## Lint classes and precedence
 
-`buf-plugin-dedo` reports four classes of rules:
+`buf-plugin-dedo-lint` reports four classes of rules:
 
 | Prefix | Source |
 | --- | --- |
@@ -28,7 +28,7 @@ When sources disagree, **DEDO > AIP > ZALANDO**, and HOUSE rules may add constra
 - JSON field names are the protojson default. Never set `json_name`.
 - Errors are `google.rpc.Status` with `ErrorInfo`, not Problem JSON. Pagination is `page_token`/`next_page_token`.
 
-RULES.md lists every rule dedo skips on purpose, by source. Do not re-enable them.
+[RULES.md](https://github.com/raveesh-me/dedo/blob/main/guidance/RULES.md#skipped-rules) lists every rule dedo skips on purpose, by source. Do not re-enable them.
 
 ## MCP tools
 
@@ -79,4 +79,4 @@ The official suite, `@modelcontextprotocol/conformance server --url <url>`, most
 ### Connecting a local client
 
 - Claude Code: `claude mcp add --transport http <name> http://localhost:<port>/mcp --header "Authorization: Bearer <token>"`
-- Claude Desktop needs HTTPS with OAuth for custom connectors. For a local server, bridge it with `mcp-remote`, run in a container, with `--allow-http` (see [the todo example's MCP.md](../examples/todo/MCP.md)). A static bearer token is for local development only; production MCP authorization is OAuth 2.1.
+- Claude Desktop needs HTTPS with OAuth for custom connectors. For a local server, bridge it with `mcp-remote`, run in a container, with `--allow-http` (see [the todo example's MCP.md](https://github.com/raveesh-me/dedo/blob/main/examples/todo/MCP.md)). A static bearer token is for local development only; production MCP authorization is OAuth 2.1.

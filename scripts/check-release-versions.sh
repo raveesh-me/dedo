@@ -22,6 +22,7 @@ check() {
 }
 check templates/Makefile.api 'DEDO_VERSION \?= v[0-9.]+'
 check guidance/install.md 'raveesh-me/dedo[a-z/-]*@v[0-9.]+'
+check guidance/install.md 'DEDO_VERSION=v[0-9.]+'
 check guidance/guideline.md 'raveesh-me/dedo[a-z/-]*@v[0-9.]+'
 check readme.md 'Latest release: \[v[0-9.]+\]'
 # Inside the repository: the workspace replacements and every module's

@@ -9,11 +9,6 @@ Every step below was run as written. Read [guideline.md](guideline.md) for the r
 - Go 1.25 or later
 - The [Buf CLI](https://buf.build/docs/installation)
 - An editor with Buf's language server: VS Code with the Buf extension (`bufbuild.vscode-buf`), or Zed. Remove other Protobuf extensions.
-- A clone of this repository, for the templates:
-
-  ```sh
-  git clone https://github.com/raveesh-me/dedo ~/src/dedo
-  ```
 
 ## 1. Decide the names
 
@@ -30,14 +25,19 @@ Every step below was run as written. Read [guideline.md](guideline.md) for the r
 ```sh
 mkdir time-counter && cd time-counter && git init
 go mod init github.com/acme/time-counter
-DEDO=~/src/dedo
-cp $DEDO/templates/buf.yaml $DEDO/templates/buf.gen.yaml $DEDO/templates/Makefile.api .
+# The templates of the release you build against; step 5 uses them once
+# more, then you delete them.
+DEDO_VERSION=v0.7.0
+curl -fsSL https://github.com/raveesh-me/dedo/releases/download/$DEDO_VERSION/dedo-templates.tar.gz | tar xz
+DEDO=dedo-templates
+cp $DEDO/buf.yaml $DEDO/buf.gen.yaml $DEDO/Makefile.api .
 mkdir -p .github .vscode docs proto/acme/time_counter/v1
-cp $DEDO/templates/CODEOWNERS .github/
-cp $DEDO/templates/vscode/*.json .vscode/
-cp $DEDO/examples/todo/docs/docs.go $DEDO/examples/todo/docs/index.html docs/
+cp $DEDO/CODEOWNERS .github/
+cp $DEDO/vscode/*.json .vscode/
+cp $DEDO/docs/docs.go $DEDO/docs/index.html docs/
+cat $DEDO/claude.md >> AGENTS.md   # guidance for coding agents
 printf 'include Makefile.api\n' > Makefile
-printf '.tools/\n' > .gitignore
+printf '.tools/\ndedo-templates/\n' > .gitignore
 ```
 
 Replace the placeholders:
@@ -51,8 +51,8 @@ Pin the code generators, so every machine and CI generate the same code:
 ```sh
 go get -tool google.golang.org/protobuf/cmd/protoc-gen-go
 go get -tool connectrpc.com/connect/cmd/protoc-gen-connect-go
-go get -tool github.com/raveesh-me/dedo/mcp/cmd/protoc-gen-dedo-mcp@v0.6.0
-go get -tool github.com/raveesh-me/dedo/openapi/cmd/protoc-gen-dedo-openapi@v0.6.0
+go get -tool github.com/raveesh-me/dedo/mcp/cmd/protoc-gen-dedo-mcp@v0.7.0
+go get -tool github.com/raveesh-me/dedo/openapi/cmd/protoc-gen-dedo-openapi@v0.7.0
 ```
 
 Give the dedo modules an explicit version, the latest [release](https://github.com/raveesh-me/dedo/releases). Right after a release, Go's module proxy can still report an older version as the latest.
@@ -469,7 +469,7 @@ func scopesFromContext(ctx context.Context) []string {
 Add the runtime libraries, and pin Vanguard to `v0.4.0`. Later versions need connect-go v2. Pin it after the code exists, or `go mod tidy` replaces it with the latest.
 
 ```sh
-go get github.com/raveesh-me/dedo@v0.6.0 github.com/raveesh-me/dedo/mcp@v0.6.0
+go get github.com/raveesh-me/dedo@v0.7.0 github.com/raveesh-me/dedo/mcp@v0.7.0
 go get connectrpc.com/vanguard@v0.4.0
 go mod tidy
 ```
@@ -479,9 +479,10 @@ Add the policy-table test, so a missing declaration fails before deploy:
 ```sh
 sed -e 's#libraryv1connect "github.com/YOUR_ORG/YOUR_REPO/gen/go/raveesh_me/library/v1/libraryv1connect"#"github.com/acme/time-counter/gen/go/acme/time_counter/v1/time_counterv1connect"#' \
     -e 's#libraryv1connect.LibraryServiceName#time_counterv1connect.CounterServiceName#' \
-    $DEDO/templates/policy_table_test.go.tmpl > policy_table_test.go
+    $DEDO/policy_table_test.go.tmpl > policy_table_test.go
 gofmt -w policy_table_test.go
 go test ./...
+rm -rf dedo-templates
 ```
 
 ## 6. Run it and try every transport
@@ -516,7 +517,7 @@ The same RPCs also answer over Connect and gRPC at `/acme.time_counter.v1.Counte
 
 - Replace `authMiddleware` and `devTokens` in `main.go` with your identity platform's token verification. It must put the caller's scopes in the request context.
 - Commit to `main`, then run `make api-check`. It also runs `buf breaking` against `main`.
-- Add the CI stage from `templates/Jenkinsfile.api-stage`, or the same commands in your CI.
+- Add the CI stage from `Jenkinsfile.api-stage` in the release's `dedo-templates.tar.gz`, or the same commands in your CI.
 - Check that the teams in `.github/CODEOWNERS` exist. Every change under `proto/` then needs an API review.
 
 ## Updating later
@@ -535,5 +536,5 @@ The same RPCs also answer over Connect and gRPC at `/acme.time_counter.v1.Counte
 | `go: updates to go.mod needed` while generating | Run `go mod tidy`, then generate again. |
 | `bind: address already in use` | Something else holds port 8080. Run with `ADDR=:9090`. |
 | No findings in the editor | The lint plugins are missing from `.tools/`. Run `make tools`, then reload the editor. |
-| `reading github.com/raveesh-me/dedo/go.mod at revision v0.0.0: unknown revision` | `go get` picked an old commit instead of a release. Add `@v0.6.0` (or the latest release) to the module path. |
+| `reading github.com/raveesh-me/dedo/go.mod at revision v0.0.0: unknown revision` | `go get` picked an old commit instead of a release. Add `@v0.7.0` (or the latest release) to the module path. |
 | `Module buf.build/bufbuild/protovalidate is declared ... but is unused` | A warning only. Remove the dependency from `buf.yaml` if you don't use protovalidate. |

@@ -1,6 +1,6 @@
 # Lint rules
 
-`buf-plugin-dedo` is one Buf check plugin with three classes of rules. Each class is a lint category named after its rule prefix:
+`buf-plugin-dedo-lint` is one Buf check plugin with three classes of rules. Each class is a lint category named after its rule prefix:
 
 | Class | Source | What it checks |
 | --- | --- | --- |
@@ -79,11 +79,11 @@ dedo checks only the Zalando guidelines a proto can express. It does not follow 
 
 ## House rules
 
-`HOUSE_*` rules are your organisation's own, for conventions dedo has no business knowing: your domain names, your team list, your field naming quirks. They live in a separate Buf check plugin that every service lists next to `buf-plugin-dedo`:
+`HOUSE_*` rules are your organisation's own, for conventions dedo has no business knowing: your domain names, your team list, your field naming quirks. They live in a separate Buf check plugin that every service lists next to `buf-plugin-dedo-lint`:
 
 ```yaml
 plugins:
-  - plugin: .tools/buf-plugin-dedo
+  - plugin: .tools/buf-plugin-dedo-lint
   - plugin: .tools/buf-plugin-house
     options:
       resource_domain: example.com

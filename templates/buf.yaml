@@ -45,7 +45,7 @@ plugins:
   # lints about 17 times faster than the WebAssembly version on the BSR
   # (buf.build/r-a/dedo-lint), which needs no download and also works on
   # Windows.
-  - plugin: .tools/buf-plugin-dedo
+  - plugin: .tools/buf-plugin-dedo-lint
   # Your organisation's own HOUSE_* rules, if it has any (add HOUSE to
   # lint.use too). See guidance/RULES.md#house-rules in the dedo repository.
   # - plugin: .tools/buf-plugin-house
