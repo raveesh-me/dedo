@@ -58,6 +58,7 @@ github.com/mattn/go-isatty v0.0.24/go.mod h1:nMCL3Zebbrt45jsMDgnfIwz6ydEQApk5oEI
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/raveesh-me/dedo v0.6.0 h1:HObxAj1yfN38uCy0hGp70h1hyrWETEGh/xaQWRpOB1c=
 github.com/raveesh-me/dedo v0.6.0/go.mod h1:Pkk3HMHHutqV+RPbXCERJe3YJw5ok6hTM7RGL1XJzqc=
+github.com/raveesh-me/dedo v0.11.0/go.mod h1:ccl+U0K16ozEE0KL3MF5c8oKC4aZfxmVPAThJI2eAXI=
 github.com/rodaine/protogofakeit v0.1.1 h1:ZKouljuRM3A+TArppfBqnH8tGZHOwM/pjvtXe9DaXH8=
 github.com/rodaine/protogofakeit v0.1.1/go.mod h1:pXn/AstBYMaSfc1/RqH3N82pBuxtWgejz1AlYpY1mI0=
 github.com/spf13/pflag v1.0.10 h1:4EBh2KAYBwaONj6b2Ye1GiHfwjqyROoF4RwYO+vPwFk=

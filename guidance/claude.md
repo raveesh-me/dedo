@@ -22,7 +22,7 @@ Append this file to your repository's `AGENTS.md` or `CLAUDE.md`; `dedo init` do
 | `AIP_*` | Google's AIPs, through api-linter |
 | `ZALANDO_*` | The Zalando RESTful API guidelines dedo adopts |
 | `DEDO_*` | dedo's own conventions |
-| `HOUSE_*` | Your organisation's own plugin, if it has one |
+| `HOUSE_*` | Your organisation's own rules, as CEL checks in `rules.yml` (and the shared files it imports) |
 
 When sources disagree, **DEDO > AIP > ZALANDO**, and HOUSE rules may add constraints but never contradict the others. So:
 

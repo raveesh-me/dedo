@@ -3,7 +3,7 @@
 Each numbered section below adds one part of dedo to a repository. `dedo init` does all of them, editing what is already there:
 
 ```sh
-go install github.com/raveesh-me/dedo/cmd/dedo@v0.11.0
+go install github.com/raveesh-me/dedo/cmd/dedo@v0.11.1
 dedo init
 ```
 
@@ -22,7 +22,7 @@ version: v2
 deps:
   - buf.build/googleapis/googleapis
   - buf.build/bufbuild/protovalidate
-  - buf.build/r-a/dedo:v0.11.0   # the same release as the lint plugin and runtime
+  - buf.build/r-a/dedo:v0.11.1   # the same release as the lint plugin and runtime
 ```
 
 ```sh
@@ -44,7 +44,7 @@ import "dedo/v1/options.proto";
 Pin the plugin in `go.mod` like the generators, and build it into `.tools/`:
 
 ```sh
-go get -tool github.com/raveesh-me/dedo/lint/cmd/buf-plugin-dedo-lint@v0.11.0
+go get -tool github.com/raveesh-me/dedo/lint/cmd/buf-plugin-dedo-lint@v0.11.1
 dedo tools          # builds .tools/buf-plugin-dedo-lint from the pin
 printf '.tools/\n' >> .gitignore
 ```
@@ -75,7 +75,9 @@ make api-check      # buf format, buf lint, buf breaking against main
 
 The breaking check compares with the `main` branch, and is skipped while `main` has no `.proto` files. Compare with another branch with `make api-check API_BASE=develop`.
 
-Without Go on a machine, list the Wasm plugin from the BSR instead: `- plugin: buf.build/r-a/dedo-lint` (about 5 s per lint).
+Your organisation's own rules go in `rules.yml` next to `buf.yaml`, as CEL checks that can import shared rules from a git repository; add `HOUSE` to `lint.use`. [RULES.md](RULES.md#house-rules) has the format.
+
+Without Go on a machine, list the Wasm plugin from the BSR instead: `- plugin: buf.build/r-a/dedo-lint` (about 5 s per lint; it cannot read `rules.yml`, so house rules do not run).
 
 ## 3. Code generators
 
@@ -84,8 +86,8 @@ Pin the generators as Go tools:
 ```sh
 go get -tool google.golang.org/protobuf/cmd/protoc-gen-go
 go get -tool connectrpc.com/connect/v2/cmd/protoc-gen-connect-go@v2.0.1
-go get -tool github.com/raveesh-me/dedo/mcp/cmd/protoc-gen-dedo-mcp@v0.11.0
-go get -tool github.com/raveesh-me/dedo/openapi/cmd/protoc-gen-dedo-openapi@v0.11.0
+go get -tool github.com/raveesh-me/dedo/mcp/cmd/protoc-gen-dedo-mcp@v0.11.1
+go get -tool github.com/raveesh-me/dedo/openapi/cmd/protoc-gen-dedo-openapi@v0.11.1
 ```
 
 Add them to `buf.gen.yaml` ([templates/buf.gen.yaml](../templates/buf.gen.yaml) is a complete one):
@@ -137,7 +139,7 @@ make api-generate   # buf generate
 Add the runtime libraries. dedo is built on connect-go v2, where one `connect.Server` holds the interceptors and every transport mounts on it:
 
 ```sh
-go get github.com/raveesh-me/dedo@v0.11.0 github.com/raveesh-me/dedo/mcp@v0.11.0
+go get github.com/raveesh-me/dedo@v0.11.1 github.com/raveesh-me/dedo/mcp@v0.11.1
 go get connectrpc.com/connect/v2@v2.0.1 connectrpc.com/vanguard@v0.5.0 connectrpc.com/validate@v0.9.0
 ```
 

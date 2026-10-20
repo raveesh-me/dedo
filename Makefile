@@ -4,12 +4,12 @@ DIST              := dist
 # their tag, so each plugin version links to its own rule docs.
 DOCS_REF          ?= main
 
-.PHONY: all check generate format lint breaking test plugin plugins wasm-plugins release-binaries examples example-todo example-bad-todo vendored-options clean
+.PHONY: all check starter generate format lint breaking test plugin plugins wasm-plugins release-binaries examples example-todo example-bad-todo vendored-options clean
 
 all: check
 
 ## check: everything CI runs
-check: format generate test plugin lint examples
+check: format generate test plugin lint examples starter
 
 ## generate: regenerate Go code for the options module and fail if it changed
 generate:
@@ -31,7 +31,7 @@ breaking:
 test:
 	go vet ./...
 	go test -race -cover ./...
-	for mod in lint openapi mcp cmd/dedo examples/house-lint; do (cd $$mod && go vet ./... && go test -race -cover ./...) || exit 1; done
+	for mod in lint openapi mcp cmd/dedo; do (cd $$mod && go vet ./... && go test -race -cover ./...) || exit 1; done
 
 # Lint plugins run natively: about 17 times faster per `buf lint` than the
 # same plugins as WebAssembly, which matters in the editor. buf.yaml refers
@@ -50,15 +50,8 @@ $(DIST)/buf-plugin-dedo-lint: $(LINT_SRC)
 	mkdir -p $(DIST)
 	cd lint && go build -trimpath -ldflags "$(DEDO_LDFLAGS)" -o ../$@ $(DEDO_CMD)
 
-# An organisation's own HOUSE_* plugin; in this repository, the example one.
-HOUSE_SRC := $(shell find examples/house-lint -name '*.go') examples/house-lint/go.mod examples/house-lint/go.sum
-
-$(DIST)/buf-plugin-house: $(HOUSE_SRC)
-	mkdir -p $(DIST)
-	cd examples/house-lint && go build -trimpath -o ../../$@ ./cmd/buf-plugin-house
-
 ## plugins: every lint plugin for this machine, as the examples' buf.yaml use them
-plugins: plugin $(DIST)/buf-plugin-house
+plugins: plugin
 
 ## wasm-plugins: buf-plugin-dedo-lint as WebAssembly, for the BSR
 wasm-plugins: $(LINT_SRC)
@@ -80,6 +73,18 @@ release-binaries: $(LINT_SRC)
 		(cd cmd/dedo && GOOS=$$os GOARCH=$$arch go build -trimpath \
 			-o ../../$(DIST)/release/dedo_$${os}_$${arch} .) || exit 1; \
 	done
+
+## starter: the starter service dedo init writes passes every rule, so no two
+## rules contradict each other on it (with the todo example and the library)
+STARTER := $(DIST)/_starter
+
+starter: plugins
+	rm -rf $(STARTER) && mkdir -p $(STARTER)/svc $(STARTER)/lint
+	printf 'module example.com/starter\n' > $(STARTER)/svc/go.mod
+	cd cmd/dedo && go run . init -offline -dir $(CURDIR)/$(STARTER)/svc > /dev/null
+	cp -R examples/todo/buf.yaml examples/todo/buf.lock examples/todo/third_party $(STARTER)/svc/proto $(STARTER)/lint/
+	sed -i.bak -e '/^    - HOUSE$$/d' -e 's#\.\./\.\./dist/buf-plugin-dedo-lint#$(CURDIR)/$(DIST)/buf-plugin-dedo-lint#' $(STARTER)/lint/buf.yaml
+	cd $(STARTER)/lint && buf lint proto
 
 ## examples: run both example services as consumer repositories
 examples: vendored-options example-todo example-bad-todo

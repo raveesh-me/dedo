@@ -16,7 +16,7 @@
 
 New here? Everything is in [`guidance/`](guidance): [install.md](guidance/install.md) adds dedo to a Go service, one part at a time or all at once with `dedo init`, [tutorial.md](guidance/tutorial.md) builds a new product from scratch, [guideline.md](guidance/guideline.md) explains the reasoning, [RULES.md](guidance/RULES.md) documents every lint rule, and [claude.md](guidance/claude.md) is guidance for coding agents to append to your `AGENTS.md` or `CLAUDE.md`.
 
-**Latest release: [v0.11.0](https://github.com/raveesh-me/dedo/releases/tag/v0.11.0).** The options module is [`buf.build/r-a/dedo`](https://buf.build/r-a/dedo). The lint plugin comes as native binaries on the GitHub release (`make tools`) and as a Wasm plugin on the BSR. The Go modules are `github.com/raveesh-me/dedo/...@v0.11.0`.
+**Latest release: [v0.11.1](https://github.com/raveesh-me/dedo/releases/tag/v0.11.1).** The options module is [`buf.build/r-a/dedo`](https://buf.build/r-a/dedo). The lint plugin comes as native binaries on the GitHub release (`make tools`) and as a Wasm plugin on the BSR. The Go modules are `github.com/raveesh-me/dedo/...@v0.11.1`.
 
 Contract rules come from Google's AIPs. Operational rules (audience, ownership, scopes, caching, deprecation, error reasons) come from Zalando's guidelines. Both live in the schema.
 
@@ -33,7 +33,7 @@ Contract rules come from Google's AIPs. Operational rules (audience, ownership, 
 | REST doc generator | `openapi/` | `protoc-gen-dedo-openapi`: an OpenAPI 3.1 document from the `google.api.http` bindings, with scopes, error reasons, deprecation and the declared descriptions. Connect routes are left out. |
 | MCP tools | `mcp/` | `protoc-gen-dedo-mcp` generates `<Service>MCPTools()` for every service: each unary, non-deprecated RPC as a tool under a snake_case name (`get_todo`), with its declared title, description, `ToolAnnotations` and error reasons, input and output schemas (field descriptions from comments, constraints from `field_behavior`, resource patterns and `buf.validate`, partial-update and create semantics from AIP), and a typed call. `mcpserver.AddTools` serves them on the official MCP Go SDK, with no reflection while serving. Each call goes over Connect through the service's own HTTP stack, so tool calls run through the same auth, validation and policy as REST. |
 | Templates | `templates/` | `buf.yaml`, `buf.gen.yaml`, `Makefile.api`, VS Code settings, a Jenkins stage and a policy-table test for service repositories. The `dedo` command (`cmd/dedo`) bundles them, with `guidance/claude.md`. |
-| Examples | `examples/` | `library`: a contract-only module. `todo` and `bad-todo`: two runnable services with the same interface, one compliant and one breaking every rule. `house-lint`: an organisation's own `HOUSE_*` lint plugin. |
+| Examples | `examples/` | `library`: a contract-only module. `todo` and `bad-todo`: two runnable services with the same interface, one compliant and one breaking every rule. `house-rules`: an organisation's shared `HOUSE_*` rules, which both import. |
 
 The root Go module (`github.com/raveesh-me/dedo`) holds the runtime and the generated options code. `lint/`, `openapi/`, `mcp/` and `cmd/dedo/` are separate modules, so services pull in only what they use. A `go.work` workspace builds them against each other locally, so no `go.mod` carries a `replace` and `go install <module>@<version>` works.
 
@@ -95,7 +95,7 @@ See `examples/library/proto` for a complete module.
 
 ## Lint rules
 
-`buf-plugin-dedo-lint` runs three classes of rules: `AIP_*` (Google's AIPs, through api-linter), `ZALANDO_*` (the Zalando guidelines dedo adopts) and `DEDO_*` (dedo's own). When they disagree, DEDO wins over AIP, and AIP over ZALANDO. `HOUSE_*` is left for your organisation's own plugin; [`examples/house-lint`](examples/house-lint) shows one. [RULES.md](guidance/RULES.md) has the tiebreakers and every rule dedo skips, by source.
+`buf-plugin-dedo-lint` runs three classes of rules: `AIP_*` (Google's AIPs, through api-linter), `ZALANDO_*` (the Zalando guidelines dedo adopts) and `DEDO_*` (dedo's own). When they disagree, DEDO wins over AIP, and AIP over ZALANDO. `HOUSE_*` rules are your organisation's own, written as CEL checks in `rules.yml` and importable from a shared git repository; [`examples/house-rules`](examples/house-rules) shows them. [RULES.md](guidance/RULES.md) has the tiebreakers and every rule dedo skips, by source.
 
 | Rule ID | Checks |
 | --- | --- |
@@ -121,7 +121,7 @@ Suppress one finding with `// buf:lint:ignore ZALANDO_MONEY_FIELD_TYPE` above th
 ## Using it in a service repository
 
 ```sh
-go install github.com/raveesh-me/dedo/cmd/dedo@v0.11.0
+go install github.com/raveesh-me/dedo/cmd/dedo@v0.11.1
 dedo init
 ```
 
@@ -146,7 +146,7 @@ Every transport reaches one connect-go v2 `connect.Server`, so its interceptors 
 Two Go services, each laid out like a service repository built from `templates/`, with its own `buf.yaml`, `buf.gen.yaml`, `go.mod` and proto files. Both serve the same `TodoService` over Connect, gRPC and REST (through Vanguard), with the same server code and the full runtime: policy table, scope interceptor, flow IDs and error audit.
 
 - `examples/todo` follows the standard. `buf lint` is clean. Its tests check scopes, CRUD, pagination, cache and deprecation headers, REST unwrapping and the error audit end to end. It also serves the REST reference at `/docs` (Stoplight Elements, rendering the generated `/openapi.json`) and an MCP server at `/mcp`, from the generated `TodoServiceMCPTools()`. Its tests check that MCP tools carry the declared text and `ToolAnnotations` and enforce the same scopes, and that a change made through MCP reaches an open `WatchTodos` stream at once.
-- `examples/bad-todo` breaks all fourteen ZALANDO and DEDO rules, plus one Buf rule, one AIP rule and the example HOUSE rule. Open `proto/raveesh_me/todo/v1/todo.proto` in VS Code to see the findings. `expected-lint.txt` lists them, and `app/app_test.go` shows what each mistake does at runtime: a misnamed scope locks out writers, an unversioned path moves the endpoint, undeclared reasons show up in logs, and a custom `json_name` renames the field for every JSON client.
+- `examples/bad-todo` breaks all fourteen ZALANDO and DEDO rules, plus one Buf rule, one AIP rule and both example HOUSE rules. Open `proto/raveesh_me/todo/v1/todo.proto` in VS Code to see the findings. `expected-lint.txt` lists them, and `app/app_test.go` shows what each mistake does at runtime: a misnamed scope locks out writers, an unversioned path moves the endpoint, undeclared reasons show up in logs, and a custom `json_name` renames the field for every JSON client.
 
 `examples/todo` also runs as a deployment, with everything built in containers (podman, kind and kubectl are the only host tools):
 

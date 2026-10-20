@@ -3,17 +3,15 @@
 #
 # The lint plugin is pinned in go.mod as a Go tool, like the generators
 # (go get -tool github.com/raveesh-me/dedo/lint/cmd/buf-plugin-dedo-lint@vX.Y.Z),
-# and built into .tools/, where buf.yaml finds it. `dedo tools` does the same
-# without make.
-LINT_PLUGIN := github.com/raveesh-me/dedo/lint/cmd/buf-plugin-dedo-lint
+# and built into .tools/, where buf.yaml finds it, by dedo, which is pinned
+# as a Go tool too.
 
 .PHONY: tools api-update api-check api-generate
 
-## tools: build the lint plugin pinned in go.mod into .tools/, again whenever go.mod changes
-tools: .tools/buf-plugin-dedo-lint
-
-.tools/buf-plugin-dedo-lint: go.mod go.sum
-	go build -o $@ $(LINT_PLUGIN)
+## tools: build the lint plugin pinned in go.mod into .tools/, and fetch the
+## house rules rules.yml imports from git
+tools:
+	go tool dedo tools
 
 ## api-update: move deps to their latest versions
 api-update:
