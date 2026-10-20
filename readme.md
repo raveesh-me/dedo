@@ -137,7 +137,7 @@ The options module sets its own `go_package`, so generated code links against th
 
 Clients need nothing from dedo: a dedo API is a Buf module, so connect-es, connect-query, Buf's generated SDKs or any OpenAPI client generator (from `docs/openapi.json`) work as with any other.
 
-Upgrading: install the new `dedo` and run `dedo init` again. It moves every pin, replaces plugin entries earlier releases used, and removes generated files that changed name.
+Upgrading: `dedo update` installs the latest `dedo`, and `dedo upgrade` moves a repository to it: the options module, the lint plugin, the generators and the runtime as one release, then `buf.lock` and the generated code. In an existing Buf repository, `dedo init` keeps your generators (remote plugins included) and adds only dedo's; a repository of protos without Go gets the options and the BSR lint plugin. [install.md](guidance/install.md#adding-dedo-to-an-existing-buf-repository) has the details.
 
 Known gaps: error responses carry no deprecation headers, and streaming calls get the scope check only, with no error audit.
 

@@ -108,7 +108,7 @@ func TestInitFreshRepository(t *testing.T) {
 	out := initOffline(t, dir)
 
 	buf := yamlAt(t, dir, "buf.yaml")
-	if got := scalars(lookup(buf, "deps")); !slices.Contains(got, optionsModule) {
+	if got := scalars(lookup(buf, "deps")); !slices.Contains(got, optionsModule+":"+version) {
 		t.Errorf("buf.yaml deps = %v", got)
 	}
 	if got := lookup(lookup(buf, "modules").Content[0], "path").Value; got != "proto" {
@@ -226,7 +226,7 @@ plugins:
 	out := initOffline(t, dir)
 
 	buf := yamlAt(t, dir, "buf.yaml")
-	if got := scalars(lookup(buf, "deps")); !slices.Equal(got, []string{"buf.build/acme/common", googleapis, protovalidate, optionsModule}) {
+	if got := scalars(lookup(buf, "deps")); !slices.Equal(got, []string{"buf.build/acme/common", googleapis, protovalidate, optionsModule + ":" + version}) {
 		t.Errorf("deps = %v", got)
 	}
 	if got := scalars(lookup(lookup(buf, "lint"), "use")); !slices.Equal(got, []string{"DEFAULT", "AIP_NOLANG", "DEDO", "ZALANDO"}) {
@@ -529,5 +529,125 @@ func TestToolsNeedsThePin(t *testing.T) {
 	dir := repo(t, map[string]string{"go.mod": "module example.com/notes\n"})
 	if err := run([]string{"tools", "-dir", dir}, &out); err == nil || !strings.Contains(err.Error(), "go get -tool "+lintPluginPkg+"@"+version) {
 		t.Errorf("without the pin: %v", err)
+	}
+}
+
+// A repository generating with Buf's remote plugins keeps them: dedo adds
+// only its own generators, into the same Go output, and main.go imports the
+// packages the files' go_package names.
+func TestInitFitsRemotePluginsAndGoPackage(t *testing.T) {
+	dir := repo(t, map[string]string{
+		"go.mod": "module example.com/shop\n",
+		"buf.gen.yaml": `version: v2
+plugins:
+  - remote: buf.build/protocolbuffers/go:v1.36.10
+    out: gen
+    opt: paths=source_relative
+  - remote: buf.build/connectrpc/go
+    out: gen
+    opt: paths=source_relative
+  - local: protoc-gen-go-grpc
+    out: gen
+inputs:
+  - directory: proto
+`,
+		"proto/shop/cart/v1/cart.proto": "syntax = \"proto3\";\npackage shop.cart.v1;\noption go_package = \"example.com/shop/gen/shop/cart/v1;cartv1\";\nservice CartService {}\n",
+	})
+	out := initOffline(t, dir)
+	gen := yamlAt(t, dir, "buf.gen.yaml")
+	plugins := lookup(gen, "plugins").Content
+	count := func(g string) int {
+		n := 0
+		for _, p := range plugins {
+			if runsGenerator(p, g) {
+				n++
+			}
+		}
+		return n
+	}
+	for _, g := range []string{"protoc-gen-go", "protoc-gen-connect-go", "protoc-gen-dedo-mcp", "protoc-gen-dedo-openapi"} {
+		if count(g) != 1 {
+			t.Errorf("%s runs %d times", g, count(g))
+		}
+	}
+	mcp := findItem(lookup(gen, "plugins"), func(n *yaml.Node) bool { return runsGenerator(n, "protoc-gen-dedo-mcp") })
+	if lookup(mcp, "out").Value != "gen" || lookup(mcp, "opt").Value != "paths=source_relative" {
+		t.Errorf("protoc-gen-dedo-mcp writes to %s with %v, want gen with paths=source_relative", lookup(mcp, "out").Value, allStrings(lookup(mcp, "opt")))
+	}
+	if strings.Contains(out, "go get -tool google.golang.org/protobuf/cmd/protoc-gen-go") {
+		t.Error("protoc-gen-go pinned although the remote plugin generates it")
+	}
+	main := mainGo(t, dir, out)
+	if !strings.Contains(main, `cartv1 "example.com/shop/gen/shop/cart/v1"`) {
+		t.Errorf("main.go does not import the go_package:\n%s", main)
+	}
+}
+
+// With managed mode, the prefix names the Go packages.
+func TestInitUsesManagedGoPrefix(t *testing.T) {
+	dir := repo(t, map[string]string{
+		"go.mod": "module example.com/shop\n",
+		"buf.gen.yaml": `version: v2
+managed:
+  enabled: true
+  override:
+    - file_option: go_package_prefix
+      value: example.com/shop/internal/pb
+plugins: []
+`,
+		"proto/shop/cart/v1/cart.proto": "syntax = \"proto3\";\npackage shop.cart.v1;\noption go_package = \"ignored/by/managed;x\";\nservice CartService {}\n",
+	})
+	out := initOffline(t, dir)
+	if main := mainGo(t, dir, out); !strings.Contains(main, `cartv1 "example.com/shop/internal/pb/shop/cart/v1"`) {
+		t.Errorf("main.go does not use the managed prefix:\n%s", main)
+	}
+}
+
+// A repository of protos without Go gets the options module and the BSR
+// lint plugin, both at this release, and nothing that needs Go.
+func TestInitSchemaRepository(t *testing.T) {
+	dir := repo(t, map[string]string{
+		"proto/shop/cart/v1/cart.proto": "syntax = \"proto3\";\npackage shop.cart.v1;\nservice CartService {}\n",
+		"buf.yaml":                      "version: v2\nmodules:\n  - path: proto\nplugins:\n  - plugin: .tools/buf-plugin-dedo-lint\n",
+	})
+	out := initOffline(t, dir)
+	buf := read(t, dir, "buf.yaml")
+	for _, want := range []string{"plugin: " + remotePlugin + ":" + version, optionsModule + ":" + version} {
+		if !strings.Contains(buf, want) {
+			t.Errorf("buf.yaml lacks %s:\n%s", want, buf)
+		}
+	}
+	if strings.Contains(buf, ".tools/buf-plugin-dedo-lint") {
+		t.Error("the native plugin, which needs Go, is still listed")
+	}
+	for _, name := range []string{"go.mod", "Makefile.api", "buf.gen.yaml", "main.go", "server.go"} {
+		if _, err := os.Stat(filepath.Join(dir, name)); err == nil {
+			t.Errorf("%s written into a schema repository", name)
+		}
+	}
+	if !strings.Contains(out, "buf plugin update") || !strings.HasPrefix(read(t, dir, "AGENTS.md"), guidanceMarker) {
+		t.Errorf("output:\n%s", out)
+	}
+	// An upgrade moves the plugin's label too.
+	if err := os.WriteFile(filepath.Join(dir, "buf.yaml"), []byte(strings.ReplaceAll(buf, version, "v0.1.0")), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var up bytes.Buffer
+	if err := run([]string{"upgrade", "-offline", "-dir", dir}, &up); err != nil {
+		t.Fatalf("dedo upgrade: %v\n%s", err, up.String())
+	}
+	if got := read(t, dir, "buf.yaml"); strings.Contains(got, "v0.1.0") {
+		t.Errorf("upgrade left old labels:\n%s", got)
+	}
+}
+
+// Services without dedo declarations are named up front, with what fails.
+func TestInitNamesUndeclaredServices(t *testing.T) {
+	dir := repo(t, map[string]string{
+		"go.mod":                        "module example.com/shop\n",
+		"proto/shop/cart/v1/cart.proto": "syntax = \"proto3\";\npackage shop.cart.v1;\nservice CartService {}\n",
+	})
+	if out := initOffline(t, dir); !strings.Contains(out, "CartService declare nothing for dedo yet") {
+		t.Errorf("no hint about CartService:\n%s", out)
 	}
 }

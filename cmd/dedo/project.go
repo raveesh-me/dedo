@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -21,6 +22,12 @@ type project struct {
 	scopes    []string
 	protos    int    // proto files found
 	rootPkg   string // the Go package of the repository root, if it has one
+	goPrefix  string // managed mode's go_package_prefix, if buf.gen.yaml sets one
+	// schemaOnly marks a repository of protos without a Go module: it gets
+	// the options module and the BSR lint plugin, and no Go parts.
+	schemaOnly bool
+	// undeclared lists services whose files do not import dedo's options.
+	undeclared []string
 }
 
 // service is the first service found, with the Go names that buf generate
@@ -35,6 +42,8 @@ var (
 	moduleLine = regexp.MustCompile(`(?m)^module\s+(\S+)`)
 	protoPkg   = regexp.MustCompile(`(?m)^\s*package\s+([\w.]+)\s*;`)
 	protoSvc   = regexp.MustCompile(`(?m)^\s*service\s+(\w+)\s*\{`)
+	nonIdent   = regexp.MustCompile(`[^a-zA-Z0-9_]`)
+	goPackage  = regexp.MustCompile(`(?m)^\s*option\s+go_package\s*=\s*"([^"]+)"\s*;`)
 	scopeLit   = regexp.MustCompile(`"([a-z][a-z0-9_]*\.[a-z][a-z0-9_]*\.(?:read|write))"`)
 )
 
@@ -42,23 +51,29 @@ var (
 var skipDirs = []string{".git", ".tools", "gen", "third_party", "node_modules", "vendor", "dist"}
 
 func analyze(dir string) (*project, error) {
+	p := &project{dir: dir}
 	gomod, err := os.ReadFile(filepath.Join(dir, "go.mod"))
-	if errors.Is(err, fs.ErrNotExist) {
-		return nil, fmt.Errorf("no go.mod in %s: run go mod init first", dir)
-	}
-	if err != nil {
+	switch {
+	case errors.Is(err, fs.ErrNotExist):
+		if found, _ := findProtos(dir); len(found) == 0 {
+			return nil, fmt.Errorf("no go.mod and no .proto files in %s: for a Go service run go mod init first; for a schema repository add your protos first", dir)
+		}
+		p.schemaOnly = true
+	case err != nil:
 		return nil, err
+	default:
+		m := moduleLine.FindSubmatch(gomod)
+		if m == nil {
+			return nil, fmt.Errorf("%s: no module line", filepath.Join(dir, "go.mod"))
+		}
+		p.module = string(m[1])
 	}
-	m := moduleLine.FindSubmatch(gomod)
-	if m == nil {
-		return nil, fmt.Errorf("%s: no module line", filepath.Join(dir, "go.mod"))
-	}
-	p := &project{dir: dir, module: string(m[1])}
 	protos, err := findProtos(dir)
 	if err != nil {
 		return nil, err
 	}
 	p.protos = len(protos)
+	p.goPrefix = managedGoPrefix(dir)
 	p.rootPkg = rootPackage(dir)
 	p.protoRoot = bufModuleRoot(dir)
 	if p.protoRoot == "" {
@@ -85,6 +100,11 @@ func (p *project) read(rel string) error {
 	}
 	svcs := protoSvc.FindAllSubmatch(src, -1)
 	pkg := protoPkg.FindSubmatch(src)
+	if !strings.Contains(string(src), `"dedo/v1/options.proto"`) {
+		for _, s := range svcs {
+			p.undeclared = append(p.undeclared, string(s[1]))
+		}
+	}
 	if len(svcs) == 0 || pkg == nil {
 		return nil
 	}
@@ -103,7 +123,41 @@ func (p *project) read(rel string) error {
 		GoPkg:    goPackageName(string(pkg[1])),
 		GoImport: p.module + "/gen/go/" + filepath.ToSlash(filepath.Dir(inRoot)),
 	}
+	switch gp := goPackage.FindSubmatch(src); {
+	case p.goPrefix != "":
+		// Managed mode overrides go_package with its prefix.
+		p.service.GoImport = p.goPrefix + "/" + filepath.ToSlash(filepath.Dir(inRoot))
+	case gp != nil:
+		// The file names its own Go package: "import/path;name" or
+		// "import/path", whose last element protoc-gen-go then uses.
+		importPath, name, ok := strings.Cut(string(gp[1]), ";")
+		if !ok {
+			name = nonIdent.ReplaceAllString(path.Base(importPath), "_")
+		}
+		p.service.GoImport, p.service.GoPkg = importPath, name
+	}
 	return nil
+}
+
+// managedGoPrefix returns the go_package_prefix that buf.gen.yaml's managed
+// mode gives the repository's own files: the override without a module or
+// path. It returns "" when managed mode is off or sets none.
+func managedGoPrefix(dir string) string {
+	doc, ok, err := loadYAML(filepath.Join(dir, "buf.gen.yaml"))
+	if err != nil || !ok {
+		return ""
+	}
+	managed := lookup(root(doc), "managed")
+	if managed == nil || lookup(managed, "enabled") == nil || lookup(managed, "enabled").Value != "true" {
+		return ""
+	}
+	for _, o := range lookup(managed, "override").Content {
+		if lookup(o, "file_option") != nil && lookup(o, "file_option").Value == "go_package_prefix" &&
+			lookup(o, "module") == nil && lookup(o, "path") == nil && lookup(o, "value") != nil {
+			return lookup(o, "value").Value
+		}
+	}
+	return ""
 }
 
 // goPackageName mirrors buf's managed mode: the last two package elements,

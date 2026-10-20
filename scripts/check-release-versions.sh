@@ -21,6 +21,8 @@ check() {
   fi
 }
 check guidance/install.md 'raveesh-me/dedo[a-z/-]*@v[0-9.]+'
+check templates/buf.yaml 'r-a/dedo:v[0-9.]+'
+check guidance/install.md 'r-a/dedo:v[0-9.]+'
 check guidance/tutorial.md 'raveesh-me/dedo[a-z/-]*@v[0-9.]+'
 check cmd/dedo/main.go 'const version = "v[0-9.]+"'
 check guidance/guideline.md 'raveesh-me/dedo[a-z/-]*@v[0-9.]+'

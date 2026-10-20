@@ -1,6 +1,6 @@
-# Install dedo in a Go service
+# Install dedo
 
-Each section adds one part of dedo to an existing Go module. `dedo init` does all of them, editing what is already there:
+Each numbered section below adds one part of dedo to a repository. `dedo init` does all of them, editing what is already there:
 
 ```sh
 go install github.com/raveesh-me/dedo/cmd/dedo@v0.10.0
@@ -9,7 +9,7 @@ dedo init
 
 It never removes your own deps, plugins or generators, and running it again changes nothing that is in place. In a module with no protos yet, it writes a starter service that passes lint, with a `server.go` stub, so the first lint, generate and build all succeed. If one of its `go`, `buf` or `make` commands fails, it runs the rest and lists what to fix. It ends by writing a `main.go` that serves your service, or, when you have one, printing dedo's to compare. `dedo init -offline` edits the files only and prints the `go`, `buf` and `make` commands instead of running them.
 
-New to dedo? [tutorial.md](tutorial.md) builds a whole service from an empty directory.
+New to dedo? [tutorial.md](tutorial.md) builds a whole service from an empty directory. Already on Buf? Read [Adding dedo to an existing Buf repository](#adding-dedo-to-an-existing-buf-repository) first.
 
 You need Go 1.25 or later and the [Buf CLI](https://buf.build/docs/installation).
 
@@ -22,12 +22,14 @@ version: v2
 deps:
   - buf.build/googleapis/googleapis
   - buf.build/bufbuild/protovalidate
-  - buf.build/r-a/dedo
+  - buf.build/r-a/dedo:v0.10.0   # the same release as the lint plugin and runtime
 ```
 
 ```sh
 buf dep update
 ```
+
+Pin the label to the dedo release you install, so the options, the lint rules that check them and the runtime that enforces them always agree. `dedo upgrade` moves all of them together.
 
 Then import it in your `.proto` files and declare each service's and RPC's contract:
 
@@ -203,7 +205,35 @@ go run .
 
 Append [claude.md](claude.md) to your `AGENTS.md` or `CLAUDE.md` (`dedo templates claude.md >> AGENTS.md`). `dedo init` does this where the file lacks it, and creates `AGENTS.md` when neither exists.
 
-## Updating
+## Adding dedo to an existing Buf repository
 
-- **dedo itself:** `go install github.com/raveesh-me/dedo/cmd/dedo@<new version>`, then `dedo init` again. It re-pins the lint plugin, the generators and the runtime, rebuilds the plugin, replaces plugin entries earlier releases used, and deletes `*.mcp_schema.pb.go` files from before v0.9.0 (`buf generate` now writes `*.mcp.pb.go`). Then run `make api-generate`.
-- **The options module:** `buf dep update`.
+`dedo init` adds to what is there and changes nothing you rely on. What it does depends on the repository:
+
+| The repository | What `dedo init` does |
+| --- | --- |
+| A Go module with protos and `buf.gen.yaml` | Keeps your generators, including Buf's remote `protocolbuffers/go` and `connectrpc/go` plugins, and adds only dedo's two, writing to the same `out` with the same `paths=` option. Reads each file's `go_package`, or managed mode's `go_package_prefix`, for the Go names in `main.go`. Leaves managed mode as it is. |
+| A Go module with protos, no `buf.gen.yaml` | Writes `buf.gen.yaml` with managed mode and four generators run through `go tool`. |
+| Protos and `buf.yaml`, but no Go module (a schema repository) | Adds the options module and the lint plugin from the BSR (`buf.build/r-a/dedo-lint:<release>`, about 5 s per lint, no Go needed), both pinned to the release. Nothing that needs Go. Run `go mod init` and `dedo init` again when you want generated code and a server. |
+| A Go module without protos | Writes a starter service that passes lint. |
+
+In `buf.yaml` it adds the deps, the lint categories, the AIP rules dedo skips, and the plugin. It keeps your own deps, categories, exceptions and plugins, and its comments. It needs `buf.yaml` version v2: run `buf config migrate` first if yours is v1.
+
+Your existing services declare nothing for dedo yet, and `dedo init` names them. Until they do, `buf lint` lists what each RPC needs, and the policy-table test and the server's startup fail on purpose, naming the first missing declaration. Declare one service at a time; [guideline.md](guideline.md#3-write-the-contract) shows a complete one.
+
+`main.go` and `server.go` are written only if you have none, and only in a `package main` root. A library repository keeps its package.
+
+## Upgrading
+
+```sh
+dedo update     # installs the latest dedo
+dedo upgrade    # moves this repository to it
+```
+
+`dedo update` replaces the `dedo` command and changes no repository. `dedo upgrade`, run in each repository, moves everything to the release of the `dedo` you run, as one version:
+
+- the lint plugin, the generators and the runtime in `go.mod`, and the plugin rebuilt into `.tools/`;
+- the options module's label in `buf.yaml`, then `buf.lock` (`buf dep update`); in a schema repository, the BSR lint plugin's label too (`buf plugin update`);
+- `Makefile.api`, and plugin entries and generated files that earlier releases named differently;
+- the generated code (`buf generate`) and `go.mod` (`go mod tidy`).
+
+It keeps your `main.go` and `server.go`, and prints dedo's current `main.go` beside yours to compare. `dedo update -version vX.Y.Z` installs a given release instead of the latest.

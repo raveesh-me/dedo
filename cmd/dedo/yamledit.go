@@ -145,3 +145,27 @@ func allStrings(n *yaml.Node) []string {
 	}
 	return out
 }
+
+// remove deletes key from a mapping.
+func remove(m *yaml.Node, key string) {
+	for i := 0; i+1 < len(m.Content); i += 2 {
+		if m.Content[i].Value == key {
+			m.Content = append(m.Content[:i:i], m.Content[i+2:]...)
+			return
+		}
+	}
+}
+
+// cloneNode deep-copies a node, so a template entry can be edited without
+// changing the template.
+func cloneNode(n *yaml.Node) *yaml.Node {
+	if n == nil {
+		return nil
+	}
+	c := *n
+	c.Content = make([]*yaml.Node, len(n.Content))
+	for i, child := range n.Content {
+		c.Content[i] = cloneNode(child)
+	}
+	return &c
+}

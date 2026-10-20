@@ -10,6 +10,8 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"regexp"
+	"slices"
 	"strings"
 	"text/template"
 
@@ -47,6 +49,10 @@ func initRepo(dir, release string, offline bool, out io.Writer) error {
 		return err
 	}
 	in := &initer{p: p, release: release, out: out}
+	if p.schemaOnly {
+		fmt.Fprintf(out, "dedo %s: setting up a schema repository (protos in %s/, no go.mod): the options module and the lint plugin, no Go parts\n", release, p.protoRoot)
+		return in.initSchema(offline)
+	}
 	fmt.Fprintf(out, "dedo %s: setting up %s (protos in %s/)\n", release, p.module, p.protoRoot)
 	type step struct {
 		title string
@@ -77,6 +83,75 @@ func initRepo(dir, release string, offline bool, out io.Writer) error {
 		return fmt.Errorf("%d commands failed: %s; fix the cause and run dedo init again", len(failed), strings.Join(failed, "; "))
 	}
 	return nil
+}
+
+// remotePlugin is the lint plugin on the BSR, for repositories without Go.
+const remotePlugin = "buf.build/r-a/dedo-lint"
+
+// pinRemotePlugin lists the BSR lint plugin at this release, replacing any
+// other label of it. It reports whether buf.yaml changed.
+func (in *initer) pinRemotePlugin(plugins *yaml.Node) bool {
+	want := remotePlugin + ":" + in.release
+	for _, item := range plugins.Content {
+		p := lookup(item, "plugin")
+		if p == nil || (p.Value != remotePlugin && !strings.HasPrefix(p.Value, remotePlugin+":")) {
+			continue
+		}
+		if p.Value == want {
+			return false
+		}
+		p.Value = want
+		in.say("buf.yaml: lint plugin pinned to %s", want)
+		return true
+	}
+	item := &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map"}
+	set(item, "plugin", scalar(want))
+	plugins.Content = append(plugins.Content, item)
+	in.say("buf.yaml: added the plugin %s (from the BSR; it runs without Go, at about 5 s per lint)", want)
+	return true
+}
+
+// initSchema sets up a schema repository: options, lint, agent guidance.
+func (in *initer) initSchema(offline bool) error {
+	for _, s := range []struct {
+		title string
+		run   func() error
+	}{{"options package", in.options}, {"linter", in.linter}, {"agent guidance", in.guidance}} {
+		fmt.Fprintf(in.out, "\nadding %s...\n", s.title)
+		if err := s.run(); err != nil {
+			return fmt.Errorf("%s: %w", s.title, err)
+		}
+	}
+	failed := in.runCommands(offline)
+	fmt.Fprintln(in.out, "\nnext:")
+	in.say("1. buf lint: it lists the declarations each service still needs")
+	in.say("2. for generated code and a server, add a go.mod (go mod init) and run dedo init again")
+	if len(failed) > 0 {
+		return fmt.Errorf("%d commands failed: %s; fix the cause and run dedo init again", len(failed), strings.Join(failed, "; "))
+	}
+	return nil
+}
+
+// optionsPin matches the labelled options module in the buf.yaml template,
+// such as buf.build/r-a/dedo:v0.10.0 (not the dedo-lint plugin beside it).
+var optionsPin = regexp.MustCompile(regexp.QuoteMeta(optionsModule) + `:[A-Za-z0-9._]+`)
+
+// pinOptions pins the options module to this release, so the options and
+// the lint plugin, generators and runtime in go.mod are one version. It
+// returns the dep it wrote, or "" when the pin was already right.
+func (in *initer) pinOptions(deps *yaml.Node) string {
+	want := optionsModule + ":" + in.release
+	for _, n := range deps.Content {
+		if n.Value == want {
+			return ""
+		}
+		if n.Value == optionsModule || strings.HasPrefix(n.Value, optionsModule+":") {
+			n.Value = want
+			return want
+		}
+	}
+	deps.Content = append(deps.Content, scalar(want))
+	return want
 }
 
 // depUpdate queues buf dep update once.
@@ -115,6 +190,7 @@ func (in *initer) options() error {
 		src := string(asset("templates/buf.yaml"))
 		src = strings.Replace(src, "# Copy into a service repository.\n", "", 1)
 		src = strings.Replace(src, "  - path: proto\n", "  - path: "+in.p.protoRoot+"\n", 1)
+		src = optionsPin.ReplaceAllString(src, optionsModule+":"+in.release)
 		if err := os.WriteFile(in.path("buf.yaml"), []byte(src), 0o644); err != nil {
 			return err
 		}
@@ -126,16 +202,23 @@ func (in *initer) options() error {
 	if v := lookup(root(doc), "version"); v == nil || v.Value != "v2" {
 		return errors.New("buf.yaml is not version v2: run buf config migrate first")
 	}
-	added := addScalars(child(root(doc), "deps", yaml.SequenceNode), googleapis, protovalidate, optionsModule)
+	deps := child(root(doc), "deps", yaml.SequenceNode)
+	added := addScalars(deps, googleapis, protovalidate)
+	pinned := in.pinOptions(deps)
 	if _, err := os.Stat(in.path("buf.lock")); err != nil {
 		in.say("buf.lock: missing; buf dep update will write it")
 		in.depUpdate()
 	}
-	if len(added) == 0 {
+	if len(added) == 0 && pinned == "" {
 		in.say("buf.yaml: deps already in place")
 		return nil
 	}
-	in.say("buf.yaml: added deps %s", strings.Join(added, ", "))
+	if len(added) > 0 {
+		in.say("buf.yaml: added deps %s", strings.Join(added, ", "))
+	}
+	if pinned != "" {
+		in.say("buf.yaml: options module pinned to %s, the release of the lint plugin and runtime", pinned)
+	}
 	in.depUpdate()
 	return saveYAML(in.path("buf.yaml"), doc)
 }
@@ -171,7 +254,7 @@ func (in *initer) linter() error {
 	plugins := child(root(doc), "plugins", yaml.SequenceNode)
 	kept := plugins.Content[:0]
 	for _, item := range plugins.Content {
-		if p := lookup(item, "plugin"); p != nil && isOldPlugin(p.Value) {
+		if p := lookup(item, "plugin"); p != nil && (isOldPlugin(p.Value) || in.p.schemaOnly && p.Value == lintPlugin) {
 			in.say("buf.yaml: removed %s, which buf-plugin-dedo-lint replaces", p.Value)
 			changed = true
 			continue
@@ -179,7 +262,9 @@ func (in *initer) linter() error {
 		kept = append(kept, item)
 	}
 	plugins.Content = kept
-	if findItem(plugins, func(n *yaml.Node) bool { return lookup(n, "plugin") != nil && lookup(n, "plugin").Value == lintPlugin }) == nil {
+	if in.p.schemaOnly {
+		changed = in.pinRemotePlugin(plugins) || changed
+	} else if findItem(plugins, func(n *yaml.Node) bool { return lookup(n, "plugin") != nil && lookup(n, "plugin").Value == lintPlugin }) == nil {
 		item := &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map"}
 		set(item, "plugin", scalar(lintPlugin))
 		plugins.Content = append(plugins.Content, item)
@@ -195,11 +280,24 @@ func (in *initer) linter() error {
 	} else {
 		in.say("buf.yaml: lint plugin and categories already in place")
 	}
+	if in.p.schemaOnly {
+		// No Go: the plugin is the BSR's, which buf.lock pins.
+		in.cmds = append(in.cmds, []string{"buf", "plugin", "update"})
+		return nil
+	}
 	if err := in.writeFile("Makefile.api", asset("templates/Makefile.api"), true); err != nil {
 		return err
 	}
 	if err := in.ensureLine("Makefile", "include Makefile.api"); err != nil {
 		return err
+	}
+	// Releases before v0.11.0 downloaded the plugin and left a stamp file
+	// named after their version in .tools/.
+	if stamps, _ := filepath.Glob(in.path(filepath.Join(".tools", "v[0-9]*"))); len(stamps) > 0 {
+		for _, s := range stamps {
+			_ = os.Remove(s)
+		}
+		in.say(".tools/: removed the download stamp of an earlier release")
 	}
 	if err := in.ensureLine(".gitignore", ".tools/"); err != nil {
 		return err
@@ -227,17 +325,14 @@ func isOldPlugin(p string) bool {
 // generators pins the code generators as Go tools and lists them in
 // buf.gen.yaml, creating it from the template when it is missing.
 func (in *initer) generators() error {
-	in.cmds = append(in.cmds,
-		[]string{"go", "get", "-tool", "google.golang.org/protobuf/cmd/protoc-gen-go"},
-		[]string{"go", "get", "-tool", "connectrpc.com/connect/cmd/protoc-gen-connect-go"},
-		[]string{"go", "get", "-tool", "github.com/raveesh-me/dedo/mcp/cmd/protoc-gen-dedo-mcp@" + in.release},
-		[]string{"go", "get", "-tool", "github.com/raveesh-me/dedo/openapi/cmd/protoc-gen-dedo-openapi@" + in.release},
-	)
-	in.say("go.mod: will pin %s as Go tools", strings.Join(generators, ", "))
 	if err := in.removeStaleSchemas(); err != nil {
 		return err
 	}
 	src := in.genTemplate()
+	tmpl, err := parseYAML(src)
+	if err != nil {
+		return err
+	}
 	doc, ok, err := loadYAML(in.path("buf.gen.yaml"))
 	if err != nil {
 		return fmt.Errorf("buf.gen.yaml: %w", err)
@@ -247,28 +342,123 @@ func (in *initer) generators() error {
 			return err
 		}
 		in.say("buf.gen.yaml: created; Go code goes to gen/go, the OpenAPI document to docs/")
+		in.pinGenerators(generators)
 		return nil
-	}
-	tmpl, err := parseYAML(src)
-	if err != nil {
-		return err
 	}
 	changed := in.mergeManaged(doc, tmpl)
 	plugins := child(root(doc), "plugins", yaml.SequenceNode)
+	// dedo's generators write into the same Go packages as the repository's
+	// own protoc-gen-go, so they go where it goes, with its paths= option.
+	goEntry := findItem(plugins, func(n *yaml.Node) bool { return runsGenerator(n, "protoc-gen-go") })
+	var pinned []string
 	for _, gen := range generators {
-		uses := func(n *yaml.Node) bool { return strings.Contains(strings.Join(allStrings(n), " "), gen) }
-		if findItem(plugins, uses) != nil {
+		if existing := findItem(plugins, func(n *yaml.Node) bool { return runsGenerator(n, gen) }); existing != nil {
+			if !isGoTool(existing, gen) {
+				in.say("buf.gen.yaml: %s already runs as %s; left as it is", gen, strings.Join(allStrings(pluginRef(existing)), " "))
+			}
 			continue
 		}
-		plugins.Content = append(plugins.Content, findItem(lookup(root(tmpl), "plugins"), uses))
-		in.say("buf.gen.yaml: added %s", gen)
+		entry := cloneNode(findItem(lookup(root(tmpl), "plugins"), func(n *yaml.Node) bool { return runsGenerator(n, gen) }))
+		if goEntry != nil && gen != "protoc-gen-dedo-openapi" {
+			alignWith(entry, goEntry)
+		}
+		plugins.Content = append(plugins.Content, entry)
+		in.say("buf.gen.yaml: added %s, writing to %s", gen, lookup(entry, "out").Value)
+		pinned = append(pinned, gen)
 		changed = true
 	}
+	in.pinGenerators(pinned)
 	if !changed {
 		in.say("buf.gen.yaml: generators already in place")
 		return nil
 	}
 	return saveYAML(in.path("buf.gen.yaml"), doc)
+}
+
+// generatorTools are the Go tools buf.gen.yaml runs each generator as.
+func (in *initer) generatorTools() map[string]string {
+	return map[string]string{
+		"protoc-gen-go":           "google.golang.org/protobuf/cmd/protoc-gen-go",
+		"protoc-gen-connect-go":   "connectrpc.com/connect/cmd/protoc-gen-connect-go",
+		"protoc-gen-dedo-mcp":     "github.com/raveesh-me/dedo/mcp/cmd/protoc-gen-dedo-mcp@" + in.release,
+		"protoc-gen-dedo-openapi": "github.com/raveesh-me/dedo/openapi/cmd/protoc-gen-dedo-openapi@" + in.release,
+	}
+}
+
+// pinGenerators pins the given generators, and dedo's own two always, so an
+// upgrade moves them to this release.
+func (in *initer) pinGenerators(gens []string) {
+	tools := in.generatorTools()
+	want := map[string]bool{"protoc-gen-dedo-mcp": true, "protoc-gen-dedo-openapi": true}
+	for _, g := range gens {
+		want[g] = true
+	}
+	var names []string
+	for _, gen := range generators {
+		if want[gen] {
+			in.cmds = append(in.cmds, []string{"go", "get", "-tool", tools[gen]})
+			names = append(names, gen)
+		}
+	}
+	in.say("go.mod: will pin %s as Go tools", strings.Join(names, ", "))
+}
+
+// generatorRefs are the Buf remote plugins that produce what a generator
+// does, so a repository using them gets no second copy of that code.
+var generatorRefs = map[string][]string{
+	"protoc-gen-go":         {"buf.build/protocolbuffers/go"},
+	"protoc-gen-connect-go": {"buf.build/connectrpc/go", "buf.build/connectrpc/gosimple"},
+}
+
+// runsGenerator reports whether a buf.gen.yaml plugin entry runs gen: as a
+// local binary or go tool, or as an equivalent remote plugin. It matches
+// whole names, so protoc-gen-go-grpc is not protoc-gen-go.
+func runsGenerator(n *yaml.Node, gen string) bool {
+	for _, s := range allStrings(pluginRef(n)) {
+		ref, _, _ := strings.Cut(s, ":")
+		if s == gen || path.Base(s) == gen || slices.Contains(generatorRefs[gen], ref) {
+			return true
+		}
+	}
+	return false
+}
+
+// pluginRef is what a plugin entry runs: its local, remote or
+// protoc_builtin value.
+func pluginRef(n *yaml.Node) *yaml.Node {
+	for _, key := range []string{"local", "remote", "protoc_builtin"} {
+		if v := lookup(n, key); v != nil {
+			return v
+		}
+	}
+	return nil
+}
+
+// isGoTool reports whether an entry runs gen through go tool, as dedo
+// writes it.
+func isGoTool(n *yaml.Node, gen string) bool {
+	return strings.Join(allStrings(pluginRef(n)), " ") == "go tool "+gen
+}
+
+// alignWith points a new Go generator entry at the repository's existing
+// Go output: the same out, and the same paths= option.
+func alignWith(entry, goEntry *yaml.Node) {
+	if out := lookup(goEntry, "out"); out != nil {
+		set(entry, "out", scalar(out.Value))
+	}
+	pathsOpt := ""
+	for _, o := range allStrings(lookup(goEntry, "opt")) {
+		for _, part := range strings.Split(o, ",") {
+			if strings.HasPrefix(part, "paths=") {
+				pathsOpt = part
+			}
+		}
+	}
+	if pathsOpt == "" {
+		remove(entry, "opt")
+		return
+	}
+	set(entry, "opt", scalar(pathsOpt))
 }
 
 // removeStaleSchemas deletes the *.mcp_schema.pb.go files that
@@ -506,6 +696,9 @@ func (in *initer) printMain() error {
 		fmt.Fprintf(in.out, "\nmain.go: created; it serves %s on Connect, gRPC, REST, /docs and /mcp\n", in.p.service.Name)
 	}
 	fmt.Fprintln(in.out, "\nnext:")
+	if len(in.p.undeclared) > 0 {
+		in.say("0. %s declare nothing for dedo yet: buf lint lists what each needs, and until it is declared the policy test and the server's startup fail on purpose", strings.Join(in.p.undeclared, ", "))
+	}
 	if in.p.service == nil {
 		in.say("1. write your service in %s/ (see guidance/tutorial.md)", in.p.protoRoot)
 		in.say("2. run dedo init again: it writes server.go and main.go for it")

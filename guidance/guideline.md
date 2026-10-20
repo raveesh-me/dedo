@@ -285,4 +285,4 @@ Point an MCP client at `http://localhost:8080/mcp`, with the header `Authorizati
 
 If they join Buf's plugin catalog, `remote: buf.build/community/...` becomes a fourth option that needs no install.
 
-**How do I update dedo?** Install the new `dedo` and run `dedo init` again: it moves the lint plugin, the generators and the runtime to the new release in `go.mod`, rebuilds the plugin, and removes generated files that changed name. Then run `make api-generate`. CI builds the plugin from the same `go.mod`, so the editor and CI always run the same rules.
+**How do I update dedo?** `dedo update`, then `dedo upgrade` in each repository: it moves the options module's label in `buf.yaml` and the lint plugin, generators and runtime in `go.mod` to the new release together, refreshes `buf.lock`, rebuilds the plugin and regenerates the code. CI builds the plugin from the same `go.mod`, so the editor and CI always run the same rules.
