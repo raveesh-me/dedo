@@ -1,0 +1,30 @@
+# Weekly dependency updates. Each PR runs CI, so a new api-linter release
+# (new or changed AIP_* rules) shows up as a change in bad-todo's
+# expected-lint.txt, and a new MCP go-sdk as a failing mcpserver test.
+version: 2
+updates:
+  - package-ecosystem: gomod
+    directories:
+      - /lint
+      - /mcp
+    schedule:
+      interval: weekly
+    groups:
+      # api-linter carries the AIP rules: always its own PR.
+      api-linter:
+        patterns: ["github.com/googleapis/api-linter/*"]
+      mcp-sdk:
+        patterns: ["github.com/modelcontextprotocol/go-sdk"]
+      other:
+        patterns: ["*"]
+        exclude-patterns:
+          - "github.com/googleapis/api-linter/*"
+          - "github.com/modelcontextprotocol/go-sdk"
+          - "github.com/raveesh-me/dedo*"
+    ignore:
+      # Released together from this repository.
+      - dependency-name: "github.com/raveesh-me/dedo*"
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

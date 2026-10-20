@@ -1,0 +1,36 @@
+# Weekly: compare protoc-gen-dedo-mcp and mcpserver with the latest MCP
+# specification (scripts/check-mcp-spec.sh). When something needs attention,
+# one open issue labelled mcp-spec carries the latest report.
+name: mcp-spec
+on:
+  schedule:
+    - cron: "0 5 * * 1"
+  workflow_dispatch:
+permissions:
+  contents: read
+  issues: write
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26.x"
+      - name: Compare with the latest specification
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: scripts/check-mcp-spec.sh "$RUNNER_TEMP/report.md" || echo "attention=true" >> "$GITHUB_OUTPUT"
+      - name: Open or update the mcp-spec issue
+        if: steps.check.outputs.attention == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh label create mcp-spec --force --color 1d76db --description "The MCP specification changed"
+          issue=$(gh issue list --label mcp-spec --state open --json number -q '.[0].number')
+          if [ -z "$issue" ]; then
+            gh issue create --label mcp-spec --title "MCP specification changed" --body-file "$RUNNER_TEMP/report.md"
+          else
+            gh issue edit "$issue" --body-file "$RUNNER_TEMP/report.md"
+          fi

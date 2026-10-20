@@ -198,6 +198,13 @@ The Go module version is the same tag. The job reads a `BUF_KEY` repository secr
 
 The `AIP_*` rules run Google's [api-linter](https://github.com/googleapis/api-linter) inside buf-plugin-dedo, an approach adapted from [hestiatechnology/buf-plugin-aip](https://github.com/hestiatechnology/buf-plugin-aip) (both Apache-2.0; see `NOTICE`). Dependabot keeps api-linter current.
 
+## Keeping up with the standards
+
+Two weekly jobs keep dedo current with the sources it follows:
+
+- **AIPs.** Dependabot (`.github/dependabot.yml`) opens a pull request for each new release of api-linter, which carries the `AIP_*` rules. If a new or changed rule fires on `examples/bad-todo`, CI fails on `expected-lint.txt`; decide whether to follow the rule or skip it, and record the decision in [RULES.md](RULES.md#skipped-rules). The MCP go-sdk gets its own pull request the same way.
+- **MCP specification.** `.github/workflows/mcp-spec.yaml` runs `scripts/check-mcp-spec.sh` every Monday. It compares the newest dated specification and the draft with the `Tool` definition vendored in `mcp/mcpserver/testdata`, and checks the tools `mcpserver` serves against each. When a newer version is out, the definition changed, or the tools no longer match, it opens (or updates) one issue labelled `mcp-spec` with the report. Run it locally with `scripts/check-mcp-spec.sh report.md`.
+
 ## Why "dedo"?
 
 dedo stands for *define once, deploy everywhere*.
