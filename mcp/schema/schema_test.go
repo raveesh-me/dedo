@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/bufbuild/protocompile"
-	"github.com/santhosh-tekuri/jsonschema/v6"
+	"github.com/google/jsonschema-go/jsonschema"
 	"google.golang.org/protobuf/compiler/protogen"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protodesc"
@@ -78,32 +78,29 @@ func methods(t *testing.T) map[string]*protogen.Method {
 	return out
 }
 
-// compiled checks the schema is valid JSON Schema 2020-12 and returns it.
-func compiled(t *testing.T, name string, s Object) *jsonschema.Schema {
+// compiled checks the schema is valid JSON Schema with jsonschema-go, the
+// library the MCP Go SDK validates tool arguments with, and returns it.
+func compiled(t *testing.T, name string, s Object) *jsonschema.Resolved {
 	t.Helper()
 	b, err := json.Marshal(s)
 	if err != nil {
 		t.Fatal(err)
 	}
-	doc, err := jsonschema.UnmarshalJSON(strings.NewReader(string(b)))
-	if err != nil {
+	var sch jsonschema.Schema
+	if err := json.Unmarshal(b, &sch); err != nil {
 		t.Fatal(err)
 	}
-	c := jsonschema.NewCompiler()
-	if err := c.AddResource(name+".json", doc); err != nil {
-		t.Fatal(err)
-	}
-	sch, err := c.Compile(name + ".json")
+	resolved, err := sch.Resolve(&jsonschema.ResolveOptions{ValidateDefaults: true})
 	if err != nil {
-		t.Fatalf("%s: not valid JSON Schema: %v", name, err)
+		t.Fatalf("%s: not a valid schema: %v", name, err)
 	}
-	return sch
+	return resolved
 }
 
-func validate(t *testing.T, sch *jsonschema.Schema, args string) error {
+func validate(t *testing.T, sch *jsonschema.Resolved, args string) error {
 	t.Helper()
-	v, err := jsonschema.UnmarshalJSON(strings.NewReader(args))
-	if err != nil {
+	var v map[string]any
+	if err := json.Unmarshal([]byte(args), &v); err != nil {
 		t.Fatal(err)
 	}
 	return sch.Validate(v)

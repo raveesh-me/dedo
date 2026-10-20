@@ -53,7 +53,6 @@ my-service/
    ```sh
    go get -tool google.golang.org/protobuf/cmd/protoc-gen-go
    go get -tool connectrpc.com/connect/cmd/protoc-gen-connect-go
-   go get -tool github.com/redpanda-data/protoc-gen-go-mcp/cmd/protoc-gen-go-mcp
    go get -tool github.com/raveesh-me/dedo/mcp/cmd/protoc-gen-dedo-mcp@v0.5.0
    go get -tool github.com/raveesh-me/dedo/openapi/cmd/protoc-gen-dedo-openapi@v0.5.0
    ```
@@ -191,15 +190,15 @@ path, handler := productsv1connect.NewProductServiceHandler(server, connect.With
 transcoder, err := vanguard.NewTranscoder([]*vanguard.Service{vanguard.NewService(path, handler)})
 api := flowid.Middleware(auth.Middleware(transcoder))
 
-// MCP: tools forward to the API in-process, with the caller's token.
+// MCP: every RPC is a tool, forwarded to the API in-process with the caller's
+// token, using the schemas protoc-gen-dedo-mcp generated.
 mcpServer := mcp.NewServer(&mcp.Implementation{Name: "products", Version: "v1"}, nil)
-client := productsv1connect.NewProductServiceClient(mcpserver.InProcessClient(api), "http://in-process",
-	connect.WithInterceptors(mcpserver.ForwardHeaders(), flowid.ClientInterceptor()))
-tools, err := mcpserver.New(mcpServer, mcpserver.Config{
-	Services:     []protoreflect.ServiceDescriptor{serviceDescriptor},
-	InputSchemas: productsv1.MCPInputSchemas, // from protoc-gen-dedo-mcp
-}) // fails if two RPCs share a tool name
-productsv1mcp.ForwardToConnectProductServiceClient(tools, client)
+err = mcpserver.New(mcpServer, mcpserver.Config{
+	Services:      []protoreflect.ServiceDescriptor{serviceDescriptor},
+	InputSchemas:  productsv1.MCPInputSchemas,
+	OutputSchemas: productsv1.MCPOutputSchemas,
+	Client:        mcpserver.InProcessClient(api),
+}) // fails if an RPC has no schema, or two RPCs share a tool name
 
 mux := http.NewServeMux()
 mux.Handle("GET /openapi.json", docs.Spec()) // embeds docs/openapi.json
