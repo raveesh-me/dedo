@@ -30,6 +30,8 @@ func main() {
 
 const usage = `usage:
   dedo init [-dir DIR] [-offline]   set up the repository in DIR (default .)
+  dedo upgrade [-dir DIR]           move the repository to this dedo's release: pins, templates, buf.lock, generated code
+  dedo update [-version V]          install the latest dedo (or V); then run dedo upgrade
   dedo tools [-dir DIR]             build the lint plugin pinned in go.mod into .tools/
   dedo templates [NAME]             list the bundled templates, or print one
   dedo version                      print the dedo release this command installs
@@ -50,6 +52,23 @@ func run(args []string, out io.Writer) error {
 			return err
 		}
 		return initRepo(*dir, *release, *offline, out)
+	case "upgrade":
+		flags := flag.NewFlagSet("upgrade", flag.ContinueOnError)
+		flags.SetOutput(out)
+		dir := flags.String("dir", ".", "the repository to upgrade")
+		offline := flags.Bool("offline", false, "edit files only; print the go and buf commands instead of running them")
+		if err := flags.Parse(args[1:]); err != nil {
+			return err
+		}
+		return upgrade(*dir, *offline, out)
+	case "update":
+		flags := flag.NewFlagSet("update", flag.ContinueOnError)
+		flags.SetOutput(out)
+		release := flags.String("version", "", "the dedo release to install (default: the latest)")
+		if err := flags.Parse(args[1:]); err != nil {
+			return err
+		}
+		return update(*release, out)
 	case "tools":
 		flags := flag.NewFlagSet("tools", flag.ContinueOnError)
 		flags.SetOutput(out)

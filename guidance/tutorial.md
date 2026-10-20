@@ -496,8 +496,7 @@ The same RPCs also answer over Connect and gRPC at `/acme.time_counter.v1.Counte
 
 ## Updating later
 
-- **A new dedo release:** `go install github.com/raveesh-me/dedo/cmd/dedo@<version>`, then `dedo init` and `make api-generate`. `dedo init` moves every pin and removes generated files that changed name.
-- **New options module:** run `buf dep update`.
+- **A new dedo release:** `dedo update`, then `dedo upgrade`. The options module, the lint plugin, the generators and the runtime move together, and the code is regenerated. [install.md](install.md#upgrading) lists what changes.
 - **A new RPC:** add it to the `.proto`, then run `buf lint`, `buf generate` and `go mod tidy`, and implement the method in `server.go`. The REST route, the docs and the MCP tool follow from the `.proto`.
 
 ## Troubleshooting
