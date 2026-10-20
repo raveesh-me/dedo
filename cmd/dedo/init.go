@@ -353,6 +353,10 @@ func (in *initer) generators() error {
 	var pinned []string
 	for _, gen := range generators {
 		if existing := findItem(plugins, func(n *yaml.Node) bool { return runsGenerator(n, gen) }); existing != nil {
+			if isGoTool(existing, gen) {
+				// dedo's own entry: re-pin it, so an upgrade moves it too.
+				pinned = append(pinned, gen)
+			}
 			if ref := strings.Join(allStrings(pluginRef(existing)), " "); connectV1Remote.MatchString(ref) {
 				in.say("buf.gen.yaml: WARNING %s generates connect-go v1 code; dedo needs v2: use buf.build/connectrpc/go:%s", ref, connectRelease)
 			}
@@ -397,6 +401,11 @@ func (in *initer) pinGenerators(gens []string) {
 		want[g] = true
 	}
 	var names []string
+	if want["protoc-gen-connect-go"] && in.pinsConnectV1Tool() {
+		// Releases before v0.11.0 pinned the v1 generator under the same
+		// tool name; go tool would find both.
+		in.cmds = append(in.cmds, []string{"go", "get", "-tool", connectV1Tool + "@none"})
+	}
 	for _, gen := range generators {
 		if want[gen] {
 			in.cmds = append(in.cmds, []string{"go", "get", "-tool", tools[gen]})
@@ -404,6 +413,15 @@ func (in *initer) pinGenerators(gens []string) {
 		}
 	}
 	in.say("go.mod: will pin %s as Go tools", strings.Join(names, ", "))
+}
+
+// connectV1Tool is the connect-go v1 generator earlier releases pinned.
+const connectV1Tool = "connectrpc.com/connect/cmd/protoc-gen-connect-go"
+
+// pinsConnectV1Tool reports whether go.mod still pins the v1 generator.
+func (in *initer) pinsConnectV1Tool() bool {
+	b, err := os.ReadFile(in.path("go.mod"))
+	return err == nil && regexp.MustCompile(`(?m)^\s*(tool\s+)?`+regexp.QuoteMeta(connectV1Tool)+`\s*$`).Match(b)
 }
 
 // The connect-go v2 releases dedo is built and tested with.
@@ -721,7 +739,7 @@ func (in *initer) printMain() error {
 		in.say("1. make api-check api-generate")
 		in.say("2. go mod tidy && go run .")
 		in.say("3. implement the RPCs in server.go; until then they answer Unimplemented")
-		in.say("4. before shipping, replace authMiddleware and devTokens in main.go with your token verification")
+		in.say("4. before shipping, replace auth and devTokens in main.go with your token verification")
 		if in.p.others > 0 {
 			in.say("   main.go serves %s; %d more services need the same three lines each", in.p.service.Name, in.p.others)
 		}
