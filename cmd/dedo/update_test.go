@@ -128,3 +128,29 @@ func TestUpgradeLeavesConnectV2Alone(t *testing.T) {
 		t.Error("migration tool run on a v2 repository")
 	}
 }
+
+// An upgrade re-pins the generators dedo set up, and replaces the
+// connect-go v1 generator earlier releases pinned under the same name.
+func TestUpgradeRepinsGenerators(t *testing.T) {
+	dir := repo(t, map[string]string{
+		"go.mod":       "module example.com/notes\n\ntool (\n\tconnectrpc.com/connect/cmd/protoc-gen-connect-go\n\tgithub.com/raveesh-me/dedo/mcp/cmd/protoc-gen-dedo-mcp\n)\n",
+		"buf.lock":     "version: v2\n",
+		"buf.gen.yaml": "version: v2\nplugins:\n  - local: [\"go\", \"tool\", \"protoc-gen-go\"]\n    out: gen/go\n  - local: [\"go\", \"tool\", \"protoc-gen-connect-go\"]\n    out: gen/go\n",
+	})
+	var out bytes.Buffer
+	if err := run([]string{"upgrade", "-offline", "-dir", dir}, &out); err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"go get -tool connectrpc.com/connect/cmd/protoc-gen-connect-go@none",
+		"go get -tool connectrpc.com/connect/v2/cmd/protoc-gen-connect-go@" + connectRelease,
+		"go get -tool google.golang.org/protobuf/cmd/protoc-gen-go",
+	} {
+		if !strings.Contains(out.String(), want) {
+			t.Errorf("upgrade lacks %q:\n%s", want, out.String())
+		}
+	}
+	if i, j := strings.Index(out.String(), "protoc-gen-connect-go@none"), strings.Index(out.String(), "v2/cmd/protoc-gen-connect-go@"); j < i {
+		t.Error("the v1 generator must be removed before the v2 one is pinned")
+	}
+}
