@@ -1,8 +1,6 @@
 # Building an API with dedo
 
-This guide explains how the pieces fit and why. To set a service up, run `dedo init` or follow [install.md](install.md); for a walkthrough of a new product, follow [tutorial.md](tutorial.md).
-
-This guide takes you from an empty repository to a running service. Read it once end to end before you start. `examples/todo` is the reference: every step below exists there in working form.
+This guide explains how the pieces fit and why, in the order you meet them. To set a service up, run `dedo init` or follow [install.md](install.md); for a walkthrough of a new product, follow [tutorial.md](tutorial.md). `examples/todo` is the reference: every step below exists there in working form.
 
 ## What you get
 
@@ -11,7 +9,7 @@ You write one `.proto` file per API. From it you get:
 - **Three transports with one behaviour.** Connect, gRPC and REST serve the same handlers. REST paths come from `google.api.http` annotations.
 - **Authorization without code.** Each RPC declares its scopes. The runtime rejects callers without one, on every transport.
 - **REST docs.** `protoc-gen-dedo-openapi` writes an OpenAPI 3.1 document of the REST API only. Connect's own routes stay out of it.
-- **MCP tools.** Every unary RPC becomes an MCP tool for AI agents, named after the RPC in snake_case (`GetProduct` becomes `get_product`). Tool calls pass through the same scope checks as REST calls.
+- **MCP tools.** Every unary RPC becomes an MCP tool for AI agents, named after the RPC in snake_case (`GetProduct` becomes `get_product`). `protoc-gen-dedo-mcp` generates the tools; tool calls pass through the same scope checks and validation as REST calls.
 - **A blocking review gate.** `buf lint` runs Buf's rules and buf-plugin-dedo-lint's rules (`AIP_*` from Google's AIPs, `ZALANDO_*` from Zalando's guidelines, `DEDO_*` of its own), plus any `HOUSE_*` rules your organisation adds, in your editor and in CI. [RULES.md](RULES.md) lists them, says which side wins when two sources disagree, and which rules dedo skips.
 
 Your handlers contain business logic only. Scope checks, cache and deprecation headers, flow IDs and error auditing come from the runtime.
@@ -22,7 +20,8 @@ Install:
 
 - Go 1.25 or later
 - The [Buf CLI](https://buf.build/docs/installation)
-- VS Code with the Buf extension (`bufbuild.vscode-buf`). Remove other Protobuf extensions.
+- VS Code with the Buf extension (`bufbuild.vscode-buf`), or Zed. Remove other Protobuf extensions.
+- The `dedo` command: `go install github.com/raveesh-me/dedo/cmd/dedo@v0.9.0`
 
 Decide two names with your team:
 
@@ -35,33 +34,30 @@ Every REST path is `<root>/v<major>/<resource path>`, for example `/commerce/pim
 
 ## 2. Create the repository
 
+In a Go module (`go mod init`), run `dedo init`. A service repository then looks like this:
+
 ```text
 my-service/
   proto/acme/products/v1/products.proto
-  buf.yaml            # from templates/buf.yaml
-  buf.gen.yaml        # from templates/buf.gen.yaml
-  Makefile            # include templates/Makefile.api
-  .github/CODEOWNERS  # from templates/CODEOWNERS
-  .vscode/            # from templates/vscode/
-  go.mod
-  main.go
+  buf.yaml               # deps, lint categories and the lint plugin
+  buf.gen.yaml           # the four generators, run through go tool
+  Makefile               # include Makefile.api
+  Makefile.api           # make tools, api-check, api-generate
+  docs/                  # serves the REST reference
+  policy_table_test.go   # fails on a missing declaration
+  AGENTS.md              # guidance for coding agents
+  .github/CODEOWNERS     # from templates/CODEOWNERS
+  go.mod                 # the generators as tools, the dedo runtime
+  main.go                # printed by dedo init
 ```
 
-1. Run `dedo init`, or copy the files from `templates/` (`dedo templates NAME` prints any of them) and replace every `YOUR_*` placeholder. No clone of dedo is needed.
-2. Pin the code generators in `go.mod`, so every machine generates the same code:
+Why it is set up this way:
 
-   ```sh
-   go get -tool google.golang.org/protobuf/cmd/protoc-gen-go
-   go get -tool connectrpc.com/connect/cmd/protoc-gen-connect-go
-   go get -tool github.com/raveesh-me/dedo/mcp/cmd/protoc-gen-dedo-mcp@v0.9.0
-   go get -tool github.com/raveesh-me/dedo/openapi/cmd/protoc-gen-dedo-openapi@v0.9.0
-   ```
+- **The generators are Go tools** pinned in `go.mod`, so every machine and CI generate the same code without Buf's remote plugins.
+- **The lint plugin is a native binary** in `.tools/` (`make tools`, ignored by git), pinned by `DEDO_VERSION` in `Makefile.api`, so the editor and CI run the same version. Commit `buf.lock`.
+- **Vanguard stays at `v0.4.0`**: later versions need connect-go v2.
 
-   Pin the dedo modules to the latest release explicitly. Go's module proxy can lag behind a new tag.
-
-   Then point the `buf.gen.yaml` plugins at them with `local: ["go", "tool", "<generator>"]`, as `examples/todo/buf.gen.yaml` does.
-3. Run `make tools` to download the native lint plugins for your machine into `.tools/`, and add `.tools/` to `.gitignore`. Run `make api-update` (`buf dep update`) and commit `buf.lock`.
-4. Pin `connectrpc.com/vanguard` to `v0.4.0`. Later versions need connect-go v2.
+[install.md](install.md) shows each part by hand, for repositories that prefer not to run `dedo init`. Add `.github/CODEOWNERS` yourself (`dedo templates CODEOWNERS`) so every change under `proto/` needs an API review.
 
 ## 3. Write the contract
 
@@ -220,7 +216,7 @@ mux.Handle("/", api)
 
 Return errors with a declared reason in a `google.rpc.ErrorInfo` detail. `examples/todo/app/errors.go` has a helper.
 
-Add `templates/policy_table_test.go.tmpl` as a test, so a missing declaration fails before deploy.
+`dedo init` prints this `main.go` with your names, and writes `policy_table_test.go`, so a missing declaration fails `go test` before deploy.
 
 ## 7. Authorization: what is declared and what is not
 
@@ -276,16 +272,16 @@ Point an MCP client at `http://localhost:8080/mcp`, with the header `Authorizati
 
 **Why both a proto comment and a `tool.description`?** The comment is for people who maintain the API. The description is published to API readers and AI agents, and the lint makes sure it exists.
 
-**Where do the options and plugins come from?** A service depends on `buf.build/r-a/dedo` in `buf.yaml` and gets the lint plugins with `make tools`. The examples in this repository are the exception: they test the working tree, so they vendor `options.proto` under `third_party/` and load the plugins from `dist/`.
+**Where do the options and the lint plugin come from?** A service depends on `buf.build/r-a/dedo` in `buf.yaml` and gets the lint plugin with `make tools`. The examples in this repository are the exception: they test the working tree, so they vendor `options.proto` under `third_party/` and load the plugins from `dist/`.
 
-**Why native plugin binaries instead of the BSR plugins?** Speed in the editor. One lint takes about 0.3 s with native plugins and about 6 s with the WebAssembly ones, and the editor reruns it as you type. The BSR plugin (`buf.build/r-a/dedo-lint`) needs no download and works on Windows. Use it there.
+**Why a native plugin binary instead of the BSR plugin?** Speed in the editor. One lint takes about 0.3 s with the native binary and about 5 s with the WebAssembly one, and the editor reruns it as you type. The BSR plugin (`buf.build/r-a/dedo-lint`) needs no download and works on Windows. Use it there.
 
 **How do I run the generators, `protoc-gen-dedo-mcp` and `protoc-gen-dedo-openapi`?** They run on your machine, the same way in the editor, locally and in CI. Pick one:
 
-- **Go repositories:** pin them with `go get -tool ...@vX.Y.Z` and refer to them in `buf.gen.yaml` as `local: ["go", "tool", "protoc-gen-dedo-mcp"]`. This is the default in `templates/` and `install.md`.
+- **Go repositories:** pin them with `go get -tool ...@vX.Y.Z` and refer to them in `buf.gen.yaml` as `local: ["go", "tool", "protoc-gen-dedo-mcp"]`. This is what `dedo init` sets up.
 - **Any repository, without Go:** download the binary for your platform from the GitHub release (`protoc-gen-dedo-openapi_darwin_arm64` and so on) into `.tools/`, and refer to it as `local: .tools/protoc-gen-dedo-openapi`.
 - **Installed on your PATH:** `go install github.com/raveesh-me/dedo/openapi/cmd/protoc-gen-dedo-openapi@vX.Y.Z`, then `local: protoc-gen-dedo-openapi`.
 
 If they join Buf's plugin catalog, `remote: buf.build/community/...` becomes a fourth option that needs no install.
 
-**How do I update the lint rules?** Bump `DEDO_VERSION` in `Makefile.api` and run `make tools`. CI does the same, so the editor and CI always run the same version.
+**How do I update dedo?** Install the new `dedo` and run `dedo init` again: it moves `DEDO_VERSION` (the lint plugin), the generators and the runtime to the new release, and removes generated files that changed name. Then run `make tools` and `make api-generate`. CI reads the same `DEDO_VERSION`, so the editor and CI always run the same rules.

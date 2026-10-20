@@ -7,8 +7,10 @@
 | RPC over Connect and gRPC | connect-go |
 | REST, with resource-style URLs | `google.api.http` annotations, served by Vanguard |
 | REST reference docs (OpenAPI 3.1) | `protoc-gen-dedo-openapi` |
-| MCP tools for AI agents | `protoc-gen-dedo-mcp` writes each tool's input and output schema; `mcpserver` registers and serves the tools with the declared text, hints and error reasons |
+| MCP tools for AI agents | `protoc-gen-dedo-mcp` generates each service's tools (schemas, declared text, hints and error reasons, typed calls); `mcpserver.AddTools` serves them |
 | Authorization, cache and deprecation headers, flow IDs, error audit | The policy runtime, read from options in the `.proto` |
+
+**One command to set up.** `dedo init` adds all of it to a Go repository and prints a `main.go` for your service.
 
 **First-class lint guidance.** A Buf check plugin turns the standard into findings in your editor as you type, each linked to an explanation in [RULES.md](guidance/RULES.md). The same `buf lint` gates CI. Handlers carry business logic only.
 
@@ -24,15 +26,16 @@ Contract rules come from Google's AIPs. Operational rules (audience, ownership, 
 | --- | --- | --- |
 | Options module | `proto/dedo/v1/options.proto` | Declares audience, owner, scopes, cache policy, deprecation, error reasons, sensitive fields, message descriptions, and how each RPC appears as an MCP tool (title, description and the MCP specification's `ToolAnnotations`). Published as `buf.build/r-a/dedo`. |
 | Lint plugin | `lint/` | `buf-plugin-dedo-lint`: Google's AIP rules (`AIP_*`, through api-linter), five Zalando rules (`ZALANDO_*`) and nine dedo rules (`DEDO_*`), each in the category of its prefix. [RULES.md](guidance/RULES.md) documents every rule, the tiebreakers between sources and what dedo skips. Released as native binaries per platform (fast in editors) and as the Wasm check plugin `buf.build/r-a/dedo-lint`. |
+| `dedo` command | `cmd/dedo` | `dedo init` sets a Go repository up: the options module, the lint plugin and its categories, the generators, the server libraries, the REST docs page, a policy-table test and the agent guidance, editing existing `buf.yaml` and `buf.gen.yaml` in place. It prints a `main.go` for the repository's service. The templates are bundled into the binary; `dedo templates` prints them. |
 | Policy table | `policy/` | Reads the options from descriptors at startup. Fails on a missing declaration. |
 | Flow ID | `flowid/` | Reads or creates `X-Flow-ID` and propagates it on outbound calls. |
 | Policy interceptor | `interceptor/` | Checks scopes, sets `Cache-Control`, `Deprecation` and `Sunset`, and logs undeclared error reasons. |
 | REST doc generator | `openapi/` | `protoc-gen-dedo-openapi`: an OpenAPI 3.1 document from the `google.api.http` bindings, with scopes, error reasons, deprecation and the declared descriptions. Connect routes are left out. |
-| MCP adapter and schemas | `mcp/` | `protoc-gen-dedo-mcp` writes each tool's input schema at code-generation time: field descriptions from comments, `OUTPUT_ONLY` fields left out, partial-update and create semantics from AIP. `mcpserver` registers every unary RPC as a tool under a short snake_case name (`get_todo`), with those schemas, the declared title, description, `ToolAnnotations` and error reasons, and without deprecated RPCs. It forwards each call over Connect through the service's own HTTP stack, so tool calls run through the same auth and policy as REST. |
+| MCP tools | `mcp/` | `protoc-gen-dedo-mcp` generates `<Service>MCPTools()` for every service: each unary, non-deprecated RPC as a tool under a snake_case name (`get_todo`), with its declared title, description, `ToolAnnotations` and error reasons, input and output schemas (field descriptions from comments, constraints from `field_behavior`, resource patterns and `buf.validate`, partial-update and create semantics from AIP), and a typed call. `mcpserver.AddTools` serves them on the official MCP Go SDK, with no reflection while serving. Each call goes over Connect through the service's own HTTP stack, so tool calls run through the same auth, validation and policy as REST. |
 | Templates | `templates/` | `buf.yaml`, `buf.gen.yaml`, `Makefile.api`, VS Code settings, a Jenkins stage and a policy-table test for service repositories. The `dedo` command (`cmd/dedo`) bundles them, with `guidance/claude.md`. |
-| Examples | `examples/` | `library`: a contract-only module. `todo` and `bad-todo`: two runnable services with the same interface, one compliant and one breaking every rule. |
+| Examples | `examples/` | `library`: a contract-only module. `todo` and `bad-todo`: two runnable services with the same interface, one compliant and one breaking every rule. `house-lint`: an organisation's own `HOUSE_*` lint plugin. |
 
-The root Go module (`github.com/raveesh-me/dedo`) holds the runtime and the generated options code. `lint/`, `openapi/` and `mcp/` are separate modules, so services pull in only what they use. A `go.work` workspace builds them against each other locally, so no `go.mod` carries a `replace` and `go install <module>@<version>` works.
+The root Go module (`github.com/raveesh-me/dedo`) holds the runtime and the generated options code. `lint/`, `openapi/`, `mcp/` and `cmd/dedo/` are separate modules, so services pull in only what they use. A `go.work` workspace builds them against each other locally, so no `go.mod` carries a `replace` and `go install <module>@<version>` works.
 
 ## Declaring a contract
 
@@ -128,9 +131,13 @@ dedo init
 2. Fill in `CODEOWNERS` and the VS Code settings from `templates/` if you use them.
 3. Write the contract, then `make api-check` (lint, format, breaking) and `buf generate` (Go, Connect, MCP tools, REST docs).
 4. Wire the runtime: `policy.Build` for the policy table, `interceptor.New` for scopes and headers, Vanguard for REST, `mcpserver.AddTools` with the generated `<Service>MCPTools()` for MCP, and the docs handler. Start with `EnforceScopes: false` (audit mode), then enforce.
-5. Add `templates/policy_table_test.go.tmpl` as a test, so a missing declaration fails before deploy.
+5. Keep the policy-table test `dedo init` writes, so a missing declaration fails `go test` before deploy.
 
-`buf.gen.yaml` uses managed mode. A module-scoped `go_package_prefix` override points imports of the options module at this repository's Go module, so generated code links against the runtime's types.
+The options module sets its own `go_package`, so generated code links against the runtime's types with or without Buf's managed mode. With managed mode, `buf.gen.yaml` keeps a module-scoped override for it (`dedo init` adds it).
+
+Clients need nothing from dedo: a dedo API is a Buf module, so connect-es, connect-query, Buf's generated SDKs or any OpenAPI client generator (from `docs/openapi.json`) work as with any other.
+
+Upgrading: install the new `dedo` and run `dedo init` again. It moves every pin, replaces plugin entries earlier releases used, and removes generated files that changed name.
 
 Known gaps: error responses carry no deprecation headers, and streaming calls get the scope check only, with no error audit.
 
@@ -138,7 +145,7 @@ Known gaps: error responses carry no deprecation headers, and streaming calls ge
 
 Two Go services, each laid out like a service repository built from `templates/`, with its own `buf.yaml`, `buf.gen.yaml`, `go.mod` and proto files. Both serve the same `TodoService` over Connect, gRPC and REST (through Vanguard), with the same server code and the full runtime: policy table, scope interceptor, flow IDs and error audit.
 
-- `examples/todo` follows the standard. `buf lint` is clean. Its tests check scopes, CRUD, pagination, cache and deprecation headers, REST unwrapping and the error audit end to end. It also serves the REST reference at `/docs` (Stoplight Elements, rendering the generated `/openapi.json`) and an MCP server at `/mcp`. Its tests check that MCP tools carry the declared text and `ToolAnnotations` and enforce the same scopes, and that a change made through MCP reaches an open `WatchTodos` stream at once.
+- `examples/todo` follows the standard. `buf lint` is clean. Its tests check scopes, CRUD, pagination, cache and deprecation headers, REST unwrapping and the error audit end to end. It also serves the REST reference at `/docs` (Stoplight Elements, rendering the generated `/openapi.json`) and an MCP server at `/mcp`, from the generated `TodoServiceMCPTools()`. Its tests check that MCP tools carry the declared text and `ToolAnnotations` and enforce the same scopes, and that a change made through MCP reaches an open `WatchTodos` stream at once.
 - `examples/bad-todo` breaks all fourteen ZALANDO and DEDO rules, plus one Buf rule, one AIP rule and the example HOUSE rule. Open `proto/raveesh_me/todo/v1/todo.proto` in VS Code to see the findings. `expected-lint.txt` lists them, and `app/app_test.go` shows what each mistake does at runtime: a misnamed scope locks out writers, an unversioned path moves the endpoint, undeclared reasons show up in logs, and a custom `json_name` renames the field for every JSON client.
 
 `examples/todo` also runs as a deployment, with everything built in containers (podman, kind and kubectl are the only host tools):
@@ -163,21 +170,21 @@ open http://localhost:8080/docs
 
 ## Lint performance
 
-The plugins run natively wherever they can. On `examples/todo`, one `buf lint` with both plugins takes:
+The plugin runs natively wherever it can. On `examples/todo`, one `buf lint` with `buf-plugin-dedo-lint` takes:
 
 | Plugin form | Time |
 | --- | --- |
-| Native binaries (default) | 0.34 s |
-| WebAssembly | 6.0 s |
+| Native binary (default) | 0.30 s |
+| WebAssembly | 5.0 s |
 
-The editor reruns the lint as you type, so this is the difference between findings that keep up and findings that lag. Most of the WebAssembly time is the AIP plugin: a 45 MB module. Buf caches the compiled module, so the cost is in running it, and a smaller build does not help. `buf.yaml` refers to the native binaries by path, so an editor started outside a shell finds them too. The WebAssembly plugins on the BSR stay available for setups that cannot download binaries, such as Windows.
+The editor reruns the lint as you type, so this is the difference between findings that keep up and findings that lag. The WebAssembly module is 40 MB, most of it Google's api-linter. Buf caches the compiled module, so the cost is in running it, and a smaller build does not help. `buf.yaml` refers to the native binary by path, so an editor started outside a shell finds it too. The WebAssembly plugin on the BSR stays available for setups that cannot download binaries, such as Windows.
 
 ## Developing
 
 ```sh
 make check          # format, generate, Go tests, plugin builds, buf lint, examples
-make plugins        # both lint plugins, natively for this machine, into dist/
-make wasm-plugins   # both lint plugins as WebAssembly, for the BSR
+make plugins        # buf-plugin-dedo-lint and the example house plugin, natively, into dist/
+make wasm-plugins   # buf-plugin-dedo-lint as WebAssembly, for the BSR
 make breaking       # options module against main
 ```
 

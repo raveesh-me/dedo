@@ -6,6 +6,7 @@ Append this file to your repository's `AGENTS.md` or `CLAUDE.md`; `dedo init` do
 
 - One `.proto` defines the API. dedo serves it as Connect/gRPC, REST (`google.api.http`, through Vanguard), an OpenAPI 3.1 reference and MCP tools. Change the proto, never the generated output.
 - Never edit anything under `gen/` or `docs/openapi.json`. Run `make api-generate` and commit the result; CI fails on stale output.
+- Set up and upgrade dedo with `dedo init` (after `go install github.com/raveesh-me/dedo/cmd/dedo@<version>`), not by hand-editing pins: it moves `DEDO_VERSION`, the generators and the runtime together.
 - Before you finish a change to `proto/`, run `make api-check` (format, lint, breaking). Fix findings in the proto. Suppress one only with `// buf:lint:ignore <RULE_ID>` and a written reason.
 - Scopes, cache policy, deprecation and error reasons are declared in the proto (`dedo.v1` options) and enforced by the runtime. Do not write scope checks, cache headers or deprecation headers in handlers.
 - Return errors with a declared reason in a `google.rpc.ErrorInfo` detail. Undeclared reasons are logged as audit findings.
@@ -32,7 +33,7 @@ When sources disagree, **DEDO > AIP > ZALANDO**, and HOUSE rules may add constra
 
 ## MCP tools
 
-Every unary RPC becomes an MCP tool named after it in snake_case (`GetTodo` becomes `get_todo`). Calls go through the same auth, scopes and validation as REST and Connect.
+Every unary, non-deprecated RPC becomes an MCP tool named after it in snake_case (`GetTodo` becomes `get_todo`). `protoc-gen-dedo-mcp` generates them as `<Service>MCPTools()`, and `main.go` serves them with `mcpserver.AddTools(server, mcpserver.Target{Client: mcpserver.InProcessClient(api)}, <pkg>.<Service>MCPTools()...)`. Never write tool definitions by hand: change the proto and regenerate. Calls go through the same auth, scopes and validation as REST and Connect.
 
 ### What the model sees
 

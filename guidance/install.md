@@ -92,7 +92,7 @@ plugins:
   - local: ["go", "tool", "protoc-gen-connect-go"]
     out: gen/go
     opt: paths=source_relative
-  # MCP tool input and output schemas.
+  # The MCP tools: <Service>MCPTools() with their schemas, text and typed calls.
   - local: ["go", "tool", "protoc-gen-dedo-mcp"]
     out: gen/go
     opt: paths=source_relative
