@@ -494,7 +494,7 @@ The same RPCs also answer over Connect and gRPC at `/acme.time_counter.v1.Counte
 
 ## Updating later
 
-- **New lint rules:** bump `DEDO_VERSION` in `Makefile.api`, then run `make tools`.
+- **A new dedo release:** `go install github.com/raveesh-me/dedo/cmd/dedo@<version>`, then `dedo init`, `make tools` and `make api-generate`. `dedo init` moves every pin and removes generated files that changed name.
 - **New options module:** run `buf dep update`.
 - **A new RPC:** add it to the `.proto`, then run `buf lint`, `buf generate` and `go mod tidy`, and implement the method in `server.go`. The REST route, the docs and the MCP tool follow from the `.proto`.
 
@@ -507,6 +507,6 @@ The same RPCs also answer over Connect and gRPC at `/acme.time_counter.v1.Counte
 | `undefined: vanguard.NewTranscoder` | Vanguard was upgraded to a version for connect-go v2. Run `go get connectrpc.com/vanguard@v0.4.0`. |
 | `go: updates to go.mod needed` while generating | Run `go mod tidy`, then generate again. |
 | `bind: address already in use` | Something else holds port 8080. Run with `ADDR=:9090`. |
-| No findings in the editor | The lint plugins are missing from `.tools/`. Run `make tools`, then reload the editor. |
+| No findings in the editor | The lint plugin is missing from `.tools/`. Run `make tools`, then reload the editor. |
 | `reading github.com/raveesh-me/dedo/go.mod at revision v0.0.0: unknown revision` | `go get` picked an old commit instead of a release. Add `@v0.9.0` (or the latest release) to the module path. |
 | `Module buf.build/bufbuild/protovalidate is declared ... but is unused` | A warning only. Remove the dependency from `buf.yaml` if you don't use protovalidate. |
