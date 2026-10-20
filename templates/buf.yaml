@@ -11,7 +11,8 @@ lint:
     - STANDARD
     - COMMENTS
     - AIP_NOLANG
-    - HOUSE
+    - DEDO
+    - ZALANDO
   except:
     # Every response is a unique <Rpc>Response; REST unwraps it with response_body.
     - AIP_0131_RESPONSE_MESSAGE_NAME
@@ -39,11 +40,14 @@ breaking:
     - FILE
   ignore_unstable_packages: true
 plugins:
-  # Native plugin binaries for this machine, fetched by `make tools`. They are
-  # referred to by path, so editors started outside a shell find them too.
-  # They lint about 17 times faster than the WebAssembly versions on the BSR
-  # (buf.build/r-a/buf-plugin-aip and
-  # buf.build/r-a/dedo-lint), which need no download
-  # and also work on Windows.
-  - plugin: .tools/buf-plugin-aip
+  # The native plugin binary for this machine, fetched by `make tools`. It is
+  # referred to by path, so editors started outside a shell find it too. It
+  # lints about 17 times faster than the WebAssembly version on the BSR
+  # (buf.build/r-a/dedo-lint), which needs no download and also works on
+  # Windows.
   - plugin: .tools/buf-plugin-dedo
+  # Your organisation's own HOUSE_* rules, if it has any (add HOUSE to
+  # lint.use too). See RULES.md#house-rules.
+  # - plugin: .tools/buf-plugin-house
+  #   options:
+  #     resource_domain: YOUR_DOMAIN

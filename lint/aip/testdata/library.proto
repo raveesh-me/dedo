@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+package example.library.v1;
+
+import "google/api/annotations.proto";
+
+// A library of books.
+service LibraryService {
+  // Gets a book.
+  rpc GetBook(GetBookRequest) returns (Book) {
+    option (google.api.http) = {
+      post: "/v1/{name=books/*}"
+      body: "*"
+    };
+  }
+}
+
+// The request for GetBook.
+message GetBookRequest {
+  // The book's resource name.
+  string name = 1;
+}
+
+// A book.
+message Book {
+  // The book's resource name.
+  string name = 1;
+}

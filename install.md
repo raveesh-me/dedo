@@ -2,7 +2,7 @@
 
 This page takes you from nothing to a running API, using a product called **time_counter** as the example. It counts time spent on tasks. At the end the same `.proto` serves RPC (Connect and gRPC), REST with reference docs, and MCP tools, linted in your editor and in CI.
 
-Every step below was run as written. Read [guideline.md](guideline.md) for the reasons behind the steps, and [HOUSE_RULES.md](HOUSE_RULES.md) when a finding needs explaining.
+Every step below was run as written. Read [guideline.md](guideline.md) for the reasons behind the steps, and [RULES.md](RULES.md) when a finding needs explaining.
 
 ## 0. Install once per machine
 
@@ -242,7 +242,7 @@ message AddTimeResponse {
 }
 ```
 
-`tool` is how each RPC appears as an MCP tool. The model always sees `description`; `annotations` are the MCP specification's hints for the client. `AddTime` only adds time, so it is not destructive; a delete would be. [HOUSE_RULES.md](HOUSE_RULES.md#house_tool_annotations) explains how to set each hint.
+`tool` is how each RPC appears as an MCP tool. The model always sees `description`; `annotations` are the MCP specification's hints for the client. `AddTime` only adds time, so it is not destructive; a delete would be. [RULES.md](RULES.md#dedo_tool_annotations) explains how to set each hint.
 
 Then resolve the dependencies and lint:
 

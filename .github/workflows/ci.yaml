@@ -64,23 +64,17 @@ jobs:
       - uses: bufbuild/buf-action@v1
         with:
           setup_only: true
-      - name: Build both plugins, linking findings to this tag's HOUSE_RULES.md
+      - name: Build the plugins, linking findings to this tag's RULES.md
         run: make wasm-plugins release-binaries DOCS_REF="$GITHUB_REF_NAME"
       - name: Push the options module
         run: >-
           buf push proto --exclude-unnamed
           --label "$GITHUB_REF_NAME" --label main --source-control-url "$SOURCE_URL"
           --create --create-visibility public
-      - name: Push the house plugin
+      - name: Push the lint plugin
         run: >-
           buf plugin push buf.build/r-a/dedo-lint
           --binary dist/wasm/buf-plugin-dedo.wasm
-          --label "$GITHUB_REF_NAME" --label main --source-control-url "$SOURCE_URL"
-          --create --create-type check --create-visibility public
-      - name: Push the pinned AIP plugin
-        run: >-
-          buf plugin push buf.build/r-a/buf-plugin-aip
-          --binary dist/wasm/buf-plugin-aip.wasm
           --label "$GITHUB_REF_NAME" --label main --source-control-url "$SOURCE_URL"
           --create --create-type check --create-visibility public
       - name: Attach the native and Wasm plugins to the GitHub release

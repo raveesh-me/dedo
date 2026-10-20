@@ -188,7 +188,7 @@ service TodoService {
 // Todo is one item on the list.
 message Todo {
   option (google.api.resource) = {
-    type: "todo.raveesh.me/Todo"
+    type: "todo.example.com/Todo"
     pattern: "todos/{todo}"
     singular: "todo"
     plural: "todos"
@@ -220,7 +220,7 @@ message GetTodoRequest {
   // The resource name of the to-do.
   string name = 1 [
     (google.api.field_behavior) = REQUIRED,
-    (google.api.resource_reference) = {type: "todo.raveesh.me/Todo"}
+    (google.api.resource_reference) = {type: "todo.example.com/Todo"}
   ];
 }
 
@@ -296,7 +296,7 @@ message DeleteTodoRequest {
   // The resource name of the to-do.
   string name = 1 [
     (google.api.field_behavior) = REQUIRED,
-    (google.api.resource_reference) = {type: "todo.raveesh.me/Todo"}
+    (google.api.resource_reference) = {type: "todo.example.com/Todo"}
   ];
 }
 
@@ -312,7 +312,7 @@ message RemoveTodoRequest {
   // The resource name of the to-do.
   string name = 1 [
     (google.api.field_behavior) = REQUIRED,
-    (google.api.resource_reference) = {type: "todo.raveesh.me/Todo"}
+    (google.api.resource_reference) = {type: "todo.example.com/Todo"}
   ];
 }
 

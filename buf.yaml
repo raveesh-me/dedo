@@ -5,7 +5,7 @@ modules:
   - path: proto
     name: buf.build/r-a/dedo
     # The options module defines the extensions; it is not an API, so the
-    # house rules do not apply to it.
+    # dedo rules do not apply to it.
     lint:
       use:
         - STANDARD
@@ -17,7 +17,8 @@ lint:
   use:
     - STANDARD
     - COMMENTS
-    - HOUSE
+    - DEDO
+    - ZALANDO
   enum_zero_value_suffix: _UNSPECIFIED
   service_suffix: Service
   rpc_allow_google_protobuf_empty_requests: false

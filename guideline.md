@@ -12,7 +12,7 @@ You write one `.proto` file per API. From it you get:
 - **Authorization without code.** Each RPC declares its scopes. The runtime rejects callers without one, on every transport.
 - **REST docs.** `protoc-gen-dedo-openapi` writes an OpenAPI 3.1 document of the REST API only. Connect's own routes stay out of it.
 - **MCP tools.** Every unary RPC becomes an MCP tool for AI agents, named after the RPC in snake_case (`GetProduct` becomes `get_product`). Tool calls pass through the same scope checks as REST calls.
-- **A blocking review gate.** `buf lint` runs Buf's rules, Google's AIP rules and 14 house rules (category `HOUSE`), in your editor and in CI.
+- **A blocking review gate.** `buf lint` runs Buf's rules and buf-plugin-dedo's rules (`AIP_*` from Google's AIPs, `ZALANDO_*` from Zalando's guidelines, `DEDO_*` of its own), plus any `HOUSE_*` rules your organisation adds, in your editor and in CI. [RULES.md](RULES.md) lists them, says which side wins when two sources disagree, and which rules dedo skips.
 
 Your handlers contain business logic only. Scope checks, cache and deprecation headers, flow IDs and error auditing come from the runtime.
 
@@ -138,24 +138,24 @@ make api-check     # format, lint, breaking-change check
 
 The same findings appear in VS Code as you type. To suppress one, put `// buf:lint:ignore <RULE_ID>` above the element, followed by the reason. Reviewers treat every suppression as a decision to justify.
 
-House rules (each finding links to its section in [HOUSE_RULES.md](HOUSE_RULES.md), which explains the rule with examples):
+dedo's own rules (each finding links to its section in [RULES.md](RULES.md), which explains the rule with examples; the AIP rules link to linter.aip.dev):
 
 | Rule | Fix |
 | --- | --- |
-| `HOUSE_SERVICE_RULES_REQUIRED` | Add the service option with an audience and an owner team. |
-| `HOUSE_METHOD_RULES_REQUIRED` | Add the method option with a scope and an error reason. |
-| `HOUSE_SCOPE_NAME_FORMAT` | Name scopes `<app>.<resource>.<read\|write>`. |
-| `HOUSE_ERROR_REASON_FORMAT` | Use UPPER_SNAKE_CASE reasons. Do not use the codes `OK` or `UNKNOWN`. |
-| `HOUSE_CACHE_REQUIRES_NO_SIDE_EFFECTS` | Cache only `NO_SIDE_EFFECTS` RPCs, with a visibility and a max age. |
-| `HOUSE_DEPRECATION_CONSISTENT` | Set `deprecated = true` and a deprecation schedule together. Sunset after deprecation. Name a successor that exists. |
-| `HOUSE_READ_METHOD_NO_SIDE_EFFECTS` | Set `idempotency_level = NO_SIDE_EFFECTS` on unary `Get*` and `List*`. |
-| `HOUSE_HTTP_RESPONSE_BODY` | Set `response_body` on `Get*`, `Create*` and `Update*` HTTP rules. |
-| `HOUSE_HTTP_PATH_VERSION` | Put `/v<major>/` in every path, after the same root for the whole service. |
-| `HOUSE_NO_JSON_NAME` | Remove `json_name`. JSON uses the protojson default, lowerCamelCase. |
-| `HOUSE_MONEY_FIELD_TYPE` | Use `google.type.Money` for `price`, `amount`, `*_price` and `*_amount`. |
-| `HOUSE_TOOL_REQUIRED` | Give every unary RPC a tool title and description. |
-| `HOUSE_TOOL_ANNOTATIONS` | Declare the MCP hints. They must match `idempotency_level`, and Delete and Remove are destructive. |
-| `HOUSE_MESSAGE_DESCRIPTION_REQUIRED` | Give every message a `message.description`. |
+| `ZALANDO_SERVICE_RULES_REQUIRED` | Add the service option with an audience and an owner team. |
+| `DEDO_METHOD_RULES_REQUIRED` | Add the method option with a scope and an error reason. |
+| `ZALANDO_SCOPE_NAME_FORMAT` | Name scopes `<app>.<resource>.<read\|write>`. |
+| `DEDO_ERROR_REASON_FORMAT` | Use UPPER_SNAKE_CASE reasons. Do not use the codes `OK` or `UNKNOWN`. |
+| `ZALANDO_CACHE_REQUIRES_NO_SIDE_EFFECTS` | Cache only `NO_SIDE_EFFECTS` RPCs, with a visibility and a max age. |
+| `ZALANDO_DEPRECATION_CONSISTENT` | Set `deprecated = true` and a deprecation schedule together. Sunset after deprecation. Name a successor that exists. |
+| `DEDO_READ_METHOD_NO_SIDE_EFFECTS` | Set `idempotency_level = NO_SIDE_EFFECTS` on unary `Get*` and `List*`. |
+| `DEDO_HTTP_RESPONSE_BODY` | Set `response_body` on `Get*`, `Create*` and `Update*` HTTP rules. |
+| `DEDO_HTTP_PATH_VERSION` | Put `/v<major>/` in every path, after the same root for the whole service. |
+| `DEDO_NO_JSON_NAME` | Remove `json_name`. JSON uses the protojson default, lowerCamelCase. |
+| `ZALANDO_MONEY_FIELD_TYPE` | Use `google.type.Money` for `price`, `amount`, `*_price` and `*_amount`. |
+| `DEDO_TOOL_REQUIRED` | Give every unary RPC a tool title and description. |
+| `DEDO_TOOL_ANNOTATIONS` | Declare the MCP hints. They must match `idempotency_level`, and Delete and Remove are destructive. |
+| `DEDO_MESSAGE_DESCRIPTION_REQUIRED` | Give every message a `message.description`. |
 
 `examples/bad-todo` breaks every rule once. Its `expected-lint.txt` lists the findings, and its tests show what each mistake does at runtime.
 
@@ -237,7 +237,7 @@ Roll out with `EnforceScopes: false` first. The runtime logs every call that wou
 | Check | Fails when |
 | --- | --- |
 | `buf format --diff --exit-code` | A `.proto` file is not formatted |
-| `buf lint` | Any Buf, AIP or house rule is broken |
+| `buf lint` | Any Buf, AIP, Zalando, dedo or house rule is broken |
 | `buf breaking --against '.git#branch=main'` | The change breaks clients |
 | `buf generate && git diff --exit-code gen/ docs/` | Generated code or docs are stale |
 | `go test ./...` | The policy table test or your tests fail |
@@ -269,7 +269,7 @@ Point an MCP client at `http://localhost:8080/mcp`, with the header `Authorizati
 
 **Where do the options and plugins come from?** A service depends on `buf.build/r-a/dedo` in `buf.yaml` and gets the lint plugins with `make tools`. The examples in this repository are the exception: they test the working tree, so they vendor `options.proto` under `third_party/` and load the plugins from `dist/`.
 
-**Why native plugin binaries instead of the BSR plugins?** Speed in the editor. One lint takes about 0.3 s with native plugins and about 6 s with the WebAssembly ones, and the editor reruns it as you type. The BSR plugins (`buf.build/r-a/dedo-lint` and `buf.build/r-a/buf-plugin-aip`) need no download and work on Windows. Use them there.
+**Why native plugin binaries instead of the BSR plugins?** Speed in the editor. One lint takes about 0.3 s with native plugins and about 6 s with the WebAssembly ones, and the editor reruns it as you type. The BSR plugin (`buf.build/r-a/dedo-lint`) needs no download and works on Windows. Use it there.
 
 **How do I run the generators, `protoc-gen-dedo-mcp` and `protoc-gen-dedo-openapi`?** They run on your machine, the same way in the editor, locally and in CI. Pick one:
 
