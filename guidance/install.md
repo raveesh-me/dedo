@@ -7,7 +7,7 @@ Every step below was run as written. Read [guideline.md](guideline.md) for the r
 ## 0. Install once per machine
 
 - Go 1.25 or later
-- The [Buf CLI](https://buf.build/docs/installation), and `jq`
+- The [Buf CLI](https://buf.build/docs/installation)
 - An editor with Buf's language server: VS Code with the Buf extension (`bufbuild.vscode-buf`), or Zed. Remove other Protobuf extensions.
 - A clone of this repository, for the templates:
 

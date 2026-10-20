@@ -96,7 +96,7 @@ example-todo: plugins
 ## example-bad-todo: the rule-breaking service reports exactly the expected findings
 example-bad-todo: plugins
 	cd examples/bad-todo && buf format --diff --exit-code
-	cd examples/bad-todo && buf lint proto --error-format=json | jq -r '"\(.start_line) \(.type)"' | sort -k1,1n -k2,2 | diff -u expected-lint.txt -
+	cd examples/bad-todo && buf lint proto --error-format=msvs | sed -E 's/^[^(]*\(([0-9]+),[0-9]+\) : [a-z]+ ([A-Z0-9_]+) : .*/\1 \2/' | sort -k1,1n -k2,2 | diff -u expected-lint.txt -
 	cd examples/bad-todo && buf generate && git diff --exit-code gen/
 	cd examples/bad-todo && go vet ./... && go test -race ./...
 
