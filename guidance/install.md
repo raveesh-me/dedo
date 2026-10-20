@@ -7,7 +7,7 @@ go install github.com/raveesh-me/dedo/cmd/dedo@v0.10.0
 dedo init
 ```
 
-It never removes your own deps, plugins or generators, and running it again changes nothing that is in place. It ends by printing a `main.go` for your service. `dedo init -offline` edits the files only and prints the `go`, `buf` and `make` commands instead of running them.
+It never removes your own deps, plugins or generators, and running it again changes nothing that is in place. In a module with no protos yet, it writes a starter service that passes lint, with a `server.go` stub, so the first lint, generate and build all succeed. If one of its `go`, `buf` or `make` commands fails, it runs the rest and lists what to fix. It ends by writing a `main.go` that serves your service, or, when you have one, printing dedo's to compare. `dedo init -offline` edits the files only and prints the `go`, `buf` and `make` commands instead of running them.
 
 New to dedo? [tutorial.md](tutorial.md) builds a whole service from an empty directory.
 
@@ -143,7 +143,7 @@ dedo templates docs/docs.go.tmpl > docs/docs.go
 dedo templates docs/index.html > docs/index.html   # then set its <title>
 ```
 
-Then wire everything in `main.go`. `dedo init` prints this with your names filled in; here `CounterService` from `acme.time_counter.v1`:
+Then wire everything in `main.go`. `dedo init` writes it with your names filled in (or prints it, when you have a `main.go` already); here `CounterService` from `acme.time_counter.v1`:
 
 ```go
 func newHandler(log *slog.Logger) (http.Handler, error) {

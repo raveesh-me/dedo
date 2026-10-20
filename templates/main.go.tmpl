@@ -83,6 +83,10 @@ func newHandler(log *slog.Logger) (http.Handler, error) {
 
 // devTokens stands in for real token verification. Replace authMiddleware
 // with your identity platform's middleware before shipping.
+{{- if not .AllScopes}}
+// The proto declares no scopes yet, so every call is denied: add scopes to
+// each RPC's dedo.v1.method option and run dedo init again.
+{{- end}}
 var devTokens = map[string][]string{
 	"reader": { {{- range $i, $s := .ReadScopes}}{{if $i}}, {{end}}"{{$s}}"{{end -}} },
 	"writer": { {{- range $i, $s := .AllScopes}}{{if $i}}, {{end}}"{{$s}}"{{end -}} },

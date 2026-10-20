@@ -54,6 +54,15 @@ func initOffline(t *testing.T, dir string) string {
 	return out.String()
 }
 
+// mainGo returns the main.go dedo init wrote, or else the one it printed.
+func mainGo(t *testing.T, dir, out string) string {
+	t.Helper()
+	if i := strings.Index(out, "// ---- main.go"); i >= 0 {
+		return out[i+strings.Index(out[i:], "\n")+1:]
+	}
+	return read(t, dir, "main.go")
+}
+
 func read(t *testing.T, dir, name string) string {
 	t.Helper()
 	b, err := os.ReadFile(filepath.Join(dir, name))
@@ -143,7 +152,7 @@ func TestInitFreshRepository(t *testing.T) {
 			t.Errorf("output lacks %q", want)
 		}
 	}
-	main := out[strings.Index(out, "// ---- main.go ----")+len("// ---- main.go ----\n"):]
+	main := mainGo(t, dir, out)
 	formatted, err := format.Source([]byte(main))
 	if err != nil {
 		t.Fatalf("main.go does not parse: %v\n%s", err, main)
@@ -275,16 +284,131 @@ func TestInitRejectsBufV1(t *testing.T) {
 	}
 }
 
-// Without a service, main.go still parses, with placeholders.
-func TestInitWithoutProtos(t *testing.T) {
-	dir := repo(t, map[string]string{"go.mod": "module example.com/empty\n"})
+// An empty module gets a starter service named after it, a server stub and
+// a policy test, so lint, generate and build work from the first run.
+func TestInitWritesStarterService(t *testing.T) {
+	dir := repo(t, map[string]string{"go.mod": "module github.com/acme/time-counter\n"})
 	out := initOffline(t, dir)
-	main := out[strings.Index(out, "// ---- main.go ----")+len("// ---- main.go ----\n"):]
-	if _, err := format.Source([]byte(main)); err != nil {
-		t.Fatalf("main.go does not parse: %v", err)
+	starter := read(t, dir, "proto/acme/time_counter/v1/time_counter.proto")
+	for _, want := range []string{
+		"package acme.time_counter.v1;",
+		"service TimeCounterService {",
+		`owner_team: "time-counter-team"`,
+		`get: "/timeCounter/v1/{name=items/*}"`,
+		`scopes: "time_counter.item.read"`,
+		`type: "time-counter.acme.com/Item"`,
+	} {
+		if !strings.Contains(starter, want) {
+			t.Errorf("starter lacks %s", want)
+		}
 	}
-	if _, err := os.Stat(filepath.Join(dir, "policy_table_test.go")); err == nil {
-		t.Error("policy_table_test.go written without a service")
+	if !strings.Contains(read(t, dir, "server.go"), "time_counterv1connect.UnimplementedTimeCounterServiceHandler") {
+		t.Errorf("server.go:\n%s", read(t, dir, "server.go"))
+	}
+	if !strings.Contains(read(t, dir, "policy_table_test.go"), "time_counterv1connect.TimeCounterServiceName") {
+		t.Error("policy test does not name the starter service")
+	}
+	main := mainGo(t, dir, out)
+	for _, want := range []string{"time_counterv1.TimeCounterServiceMCPTools()", `"writer": {"time_counter.item.read", "time_counter.item.write"}`} {
+		if !strings.Contains(main, want) {
+			t.Errorf("main.go lacks %s", want)
+		}
+	}
+	for _, src := range []string{read(t, dir, "server.go"), read(t, dir, "policy_table_test.go"), main} {
+		if _, err := format.Source([]byte(src)); err != nil {
+			t.Errorf("generated Go does not parse: %v\n%s", err, src)
+		}
+	}
+	// The starter exists now, so a second run writes nothing new.
+	before := snapshot(t, dir)
+	initOffline(t, dir)
+	if !maps(before, snapshot(t, dir)) {
+		t.Error("a second dedo init changed files")
+	}
+}
+
+// Without scopes, the printed main.go says why every call is denied.
+func TestInitExplainsMissingScopes(t *testing.T) {
+	dir := repo(t, map[string]string{
+		"go.mod":                     "module example.com/notes\n",
+		"proto/notes/v1/notes.proto": "syntax = \"proto3\";\npackage notes.v1;\nservice NoteService {}\n",
+	})
+	out := initOffline(t, dir)
+	if !strings.Contains(mainGo(t, dir, out), "declares no scopes yet") {
+		t.Error("main.go does not explain the empty devTokens")
+	}
+	if _, err := os.Stat(filepath.Join(dir, "proto/example/notes/v1/notes.proto")); err == nil {
+		t.Error("a starter was written next to existing protos")
+	}
+}
+
+// A library repository keeps its package: no server stub or package main test.
+func TestInitSkipsServerFilesOutsidePackageMain(t *testing.T) {
+	dir := repo(t, map[string]string{
+		"go.mod":                     "module example.com/notes\n",
+		"lib.go":                     "package notes\n",
+		"proto/notes/v1/notes.proto": "syntax = \"proto3\";\npackage notes.v1;\nservice NoteService {}\n",
+	})
+	out := initOffline(t, dir)
+	for _, name := range []string{"server.go", "policy_table_test.go"} {
+		if _, err := os.Stat(filepath.Join(dir, name)); err == nil {
+			t.Errorf("%s written into package notes", name)
+		}
+	}
+	if !strings.Contains(out, "package notes, not main") {
+		t.Errorf("output does not say why:\n%s", out)
+	}
+}
+
+// An existing newServer is kept.
+func TestInitKeepsExistingServer(t *testing.T) {
+	dir := repo(t, map[string]string{
+		"go.mod":                     "module example.com/notes\n",
+		"handlers.go":                "package main\n\nfunc newServer() any { return nil }\n",
+		"proto/notes/v1/notes.proto": "syntax = \"proto3\";\npackage notes.v1;\nservice NoteService {}\n",
+	})
+	initOffline(t, dir)
+	if _, err := os.Stat(filepath.Join(dir, "server.go")); err == nil {
+		t.Error("server.go written beside an existing newServer")
+	}
+}
+
+// A missing buf.lock queues buf dep update, even when the deps are in place.
+func TestInitRestoresMissingLock(t *testing.T) {
+	dir := repo(t, map[string]string{
+		"go.mod":                     "module example.com/notes\n",
+		"buf.yaml":                   "version: v2\ndeps:\n  - buf.build/googleapis/googleapis\n  - buf.build/bufbuild/protovalidate\n  - buf.build/r-a/dedo\n",
+		"proto/notes/v1/notes.proto": "syntax = \"proto3\";\npackage notes.v1;\n",
+	})
+	out := initOffline(t, dir)
+	if !strings.Contains(out, "buf.lock: missing") || !strings.Contains(out, "  buf dep update") {
+		t.Errorf("buf dep update not queued:\n%s", out)
+	}
+}
+
+// A failed command does not stop the ones after it.
+func TestRunCommandsCarriesOn(t *testing.T) {
+	var out bytes.Buffer
+	in := &initer{p: &project{dir: t.TempDir()}, out: &out, cmds: [][]string{{"false"}, {"true"}, {"false"}}}
+	failed := in.runCommands(false)
+	if len(failed) != 2 || strings.Count(out.String(), "$ ") != 3 {
+		t.Errorf("failed = %v, output:\n%s", failed, out.String())
+	}
+}
+
+func TestNamesFor(t *testing.T) {
+	tests := map[string]starterNames{
+		"github.com/acme/time-counter": {Package: "acme.time_counter.v1", Service: "TimeCounterService", Root: "/timeCounter", Domain: "time-counter.acme.com"},
+		"example.com/notes":            {Package: "example.notes.v1", Service: "NotesService", Root: "/notes", Domain: "notes.example.com"},
+		"github.com/acme/shop-api/v2":  {Package: "acme.shop_api.v1", Service: "ShopApiService", Root: "/shopApi", Domain: "shop-api.acme.com"},
+		"notes":                        {Package: "example.notes.v1", Service: "NotesService", Root: "/notes", Domain: "notes.example.com"},
+		"gitlab.com/Big-Co/3d-printer": {Package: "big_co.d_printer.v1", Service: "DPrinterService", Root: "/dPrinter", Domain: "d-printer.big-co.com"},
+	}
+	for module, want := range tests {
+		got := namesFor(module)
+		if got.Package != want.Package || got.Service != want.Service || got.Root != want.Root || got.Domain != want.Domain {
+			t.Errorf("namesFor(%q) = %+v", module, got)
+		}
 	}
 }
 
@@ -373,5 +497,25 @@ func TestInitRemovesStaleSchemaFiles(t *testing.T) {
 	}
 	if !strings.Contains(out, "shop.mcp.pb.go") {
 		t.Errorf("output does not explain the removal:\n%s", out)
+	}
+}
+
+// main.go is written once; after that the user's file is kept and the
+// template is printed beside it for comparison.
+func TestInitWritesMainOnce(t *testing.T) {
+	dir := repo(t, map[string]string{"go.mod": "module example.com/notes\n"})
+	out := initOffline(t, dir)
+	if !strings.Contains(out, "main.go: created") || !strings.Contains(read(t, dir, "main.go"), "NotesServiceMCPTools()") {
+		t.Fatalf("main.go not written:\n%s", out)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main\n\nfunc main() {}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	out = initOffline(t, dir)
+	if read(t, dir, "main.go") != "package main\n\nfunc main() {}\n" {
+		t.Error("the user's main.go was replaced")
+	}
+	if !strings.Contains(out, "dedo's template, to compare with yours") {
+		t.Errorf("template not printed for comparison:\n%s", out)
 	}
 }
