@@ -508,6 +508,7 @@ The same RPCs also answer over Connect and gRPC at `/acme.time_counter.v1.Counte
 | `Fields representing timestamps should use google.protobuf.Timestamp` on a field like `seconds` | AIP reads `seconds` as time. Use `google.protobuf.Duration` for spans of time and `Timestamp` for points in time. |
 | `undefined: vanguard.NewTranscoder` | Vanguard was upgraded to a version for connect-go v2. Run `go get connectrpc.com/vanguard@v0.4.0`. |
 | `go: updates to go.mod needed` while generating | Run `go mod tidy`, then generate again. |
+| `buf breaking: skipped; branch main has no .proto files yet` | Nothing to compare with yet: commit the contract to `main`. If your default branch has another name, run `make api-check API_BASE=<branch>`. |
 | `bind: address already in use` | Something else holds port 8080. Run with `ADDR=:9090`. |
 | No findings in the editor | The lint plugin is missing from `.tools/`. Run `make tools`, then reload the editor. |
 | `reading github.com/raveesh-me/dedo/go.mod at revision v0.0.0: unknown revision` | `go get` picked an old commit instead of a release. Add `@v0.10.0` (or the latest release) to the module path. |

@@ -69,6 +69,8 @@ plugins:
 make api-check      # buf format, buf lint, buf breaking against main
 ```
 
+The breaking check compares with the `main` branch, and is skipped while `main` has no `.proto` files. Compare with another branch with `make api-check API_BASE=develop`.
+
 On Windows, use the Wasm plugin from the BSR instead: `- plugin: buf.build/r-a/dedo-lint`.
 
 ## 3. Code generators
