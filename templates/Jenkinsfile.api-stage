@@ -6,7 +6,8 @@ stage('API contract') {
     sh 'buf format --diff --exit-code'
     sh 'buf lint --error-format=junit > buf-lint.xml || (cat buf-lint.xml; exit 1)'
     sh "buf breaking --against '.git#branch=main'"
-    sh 'buf generate && git diff --exit-code gen/'
+    sh 'buf generate && git diff --exit-code gen/ docs/'
+    sh 'go test ./...'
   }
   post {
     always { junit allowEmptyResults: true, testResults: 'buf-lint.xml' }

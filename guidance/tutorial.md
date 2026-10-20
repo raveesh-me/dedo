@@ -343,7 +343,6 @@ func apiError(code connect.Code, reason, message string) error {
 
 `main.go` is the one `dedo init` wrote in step 3. Running `dedo init` again keeps it, and prints dedo's template to compare with any changes you make.
 
-
 `main.go` wires the API, the REST reference and MCP. Scopes and policy come from the `.proto`, so the handlers above contain no authorization code. `devTokens` holds the scopes declared in the `.proto`:
 
 ```go
@@ -513,6 +512,7 @@ The same RPCs also answer over Connect and gRPC at `/acme.time_counter.v1.Counte
 
 - **A new dedo release:** `dedo update`, then `dedo upgrade`. The options module, the lint plugin, the generators and the runtime move together, and the code is regenerated. [install.md](install.md#upgrading) lists what changes.
 - **A new RPC:** add it to the `.proto`, then run `buf lint`, `buf generate` and `go mod tidy`, and implement the method in `server.go`. The REST route, the docs and the MCP tool follow from the `.proto`.
+- **Your organisation's own rules:** write them as CEL checks in `rules.yml` next to `buf.yaml`, or import your organisation's shared file from git, then run `dedo init` again. It adds `HOUSE` to `buf.yaml` and fetches the imports; `buf lint` then reports them like any other rule. [RULES.md](RULES.md#house-rules) has the format.
 
 ## Troubleshooting
 
