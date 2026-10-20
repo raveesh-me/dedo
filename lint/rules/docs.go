@@ -15,7 +15,7 @@ var DocsRef = "main"
 
 const docsBase = "https://github.com/raveesh-me/dedo/blob/"
 
-// The ZALANDO_* and DEDO_* rule IDs. Each has a heading of the same name in RULES.md.
+// The ZALANDO_* and DEDO_* rule IDs. Each has a heading of the same name in guidance/RULES.md.
 const (
 	idServiceRulesRequired       = "ZALANDO_SERVICE_RULES_REQUIRED"
 	idMethodRulesRequired        = "DEDO_METHOD_RULES_REQUIRED"
@@ -33,9 +33,9 @@ const (
 	idMessageDescriptionRequired = "DEDO_MESSAGE_DESCRIPTION_REQUIRED"
 )
 
-// DocsURL returns the link to a rule's section in RULES.md.
+// DocsURL returns the link to a rule's section in guidance/RULES.md.
 func DocsURL(ruleID string) string {
-	return docsBase + DocsRef + "/RULES.md#" + strings.ToLower(ruleID)
+	return docsBase + DocsRef + "/guidance/RULES.md#" + strings.ToLower(ruleID)
 }
 
 // messagef formats an annotation message and appends the rule's

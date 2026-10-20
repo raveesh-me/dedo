@@ -844,12 +844,14 @@ var File_raveesh_me_todo_v1_todo_proto protoreflect.FileDescriptor
 
 const file_raveesh_me_todo_v1_todo_proto_rawDesc = "" +
 	"\n" +
-	"\x1draveesh_me/todo/v1/todo.proto\x12\x12raveesh_me.todo.v1\x1a\x1bbuf/validate/validate.proto\x1a\x15dedo/v1/options.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x17google/api/client.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x19google/api/resource.proto\x1a google/protobuf/field_mask.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x17google/type/money.proto\"\xec\x02\n" +
+	"\x1draveesh_me/todo/v1/todo.proto\x12\x12raveesh_me.todo.v1\x1a\x1bbuf/validate/validate.proto\x1a\x15dedo/v1/options.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x17google/api/client.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x19google/api/resource.proto\x1a google/protobuf/field_mask.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x17google/type/money.proto\"\xfc\x03\n" +
 	"\x04Todo\x12\x18\n" +
 	"\x04name\x18\x01 \x01(\tB\x04\xe2A\x01\bR\x04name\x12\x1a\n" +
 	"\x05title\x18\x02 \x01(\tB\x04\xe2A\x01\x02R\x05title\x12\x18\n" +
-	"\x04done\x18\x03 \x01(\bB\x04\xe2A\x01\x01R\x04done\x12=\n" +
-	"\rbudget_amount\x18\x04 \x01(\v2\x12.google.type.MoneyB\x04\xe2A\x01\x01R\fbudgetAmount\x12;\n" +
+	"\x04done\x18\x03 \x01(\bB\x04\xe2A\x01\x01R\x04done\x12\xcc\x01\n" +
+	"\rbudget_amount\x18\x04 \x01(\v2\x12.google.type.MoneyB\x92\x01\xe2A\x01\x01\xbaH\x8a\x01\xba\x01\x86\x01\n" +
+	"\n" +
+	"money.sign\x12,units and nanos must not have opposite signs\x1aJthis.units == 0 || this.nanos == 0 || (this.units > 0) == (this.nanos > 0)R\fbudgetAmount\x12;\n" +
 	"\x0eassignee_email\x18\x05 \x01(\tB\x14\xe2A\x01\x01\xbaH\a\xd8\x01\x01r\x02`\x01\xba\xbb\x18\x02\b\x01R\rassigneeEmail\x12A\n" +
 	"\vcreate_time\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampB\x04\xe2A\x01\x03R\n" +
 	"createTime:U\xeaA1\n" +

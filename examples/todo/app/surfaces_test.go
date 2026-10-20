@@ -11,6 +11,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/pb33f/libopenapi"
+	"google.golang.org/genproto/googleapis/type/money"
 
 	"github.com/raveesh-me/dedo/examples/todo/app"
 	todov1 "github.com/raveesh-me/dedo/examples/todo/gen/go/raveesh_me/todo/v1"
@@ -261,8 +262,50 @@ func TestValidationRules(t *testing.T) {
 	if connect.CodeOf(err) != connect.CodeInvalidArgument {
 		t.Errorf("Connect CreateTodo with an invalid email: %v, want InvalidArgument", err)
 	}
+	_, err = e.client(app.WriterToken).CreateTodo(context.Background(), connect.NewRequest(&todov1.CreateTodoRequest{
+		Todo: &todov1.Todo{Title: "x", BudgetAmount: &money.Money{CurrencyCode: "EUR", Units: 1, Nanos: -500000000}},
+	}))
+	if connect.CodeOf(err) != connect.CodeInvalidArgument {
+		t.Errorf("CreateTodo with units and nanos of opposite signs: %v, want InvalidArgument", err)
+	}
 	_, err = e.client(app.ReaderToken).ListTodos(context.Background(), connect.NewRequest(&todov1.ListTodosRequest{PageSize: -1}))
 	if connect.CodeOf(err) != connect.CodeInvalidArgument {
 		t.Errorf("ListTodos with page_size -1: %v, want InvalidArgument", err)
+	}
+}
+
+// A browser page on another origin cannot call the MCP endpoint (the MCP
+// transport's Origin check, against DNS rebinding); MCP clients, which send
+// no Origin, and same-origin pages can.
+func TestMCPRejectsCrossOrigin(t *testing.T) {
+	e := newEnv(t)
+	body := `{"jsonrpc":"2.0","id":1,"method":"tools/list"}`
+	tests := []struct {
+		origin string
+		want   int
+	}{
+		{"", http.StatusOK},
+		{e.url, http.StatusOK},
+		{"http://evil.example", http.StatusForbidden},
+	}
+	for _, tt := range tests {
+		req, err := http.NewRequest(http.MethodPost, e.url+"/mcp", strings.NewReader(body))
+		if err != nil {
+			t.Fatal(err)
+		}
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Accept", "application/json, text/event-stream")
+		req.Header.Set("Authorization", "Bearer "+app.ReaderToken)
+		if tt.origin != "" {
+			req.Header.Set("Origin", tt.origin)
+		}
+		res, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		res.Body.Close()
+		if res.StatusCode != tt.want {
+			t.Errorf("Origin %q: status %d, want %d", tt.origin, res.StatusCode, tt.want)
+		}
 	}
 }

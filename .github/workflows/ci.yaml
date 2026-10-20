@@ -64,7 +64,7 @@ jobs:
       - uses: bufbuild/buf-action@v1
         with:
           setup_only: true
-      - name: Build the plugins, linking findings to this tag's RULES.md
+      - name: Build the plugins, linking findings to this tag's guidance/RULES.md
         run: make wasm-plugins release-binaries DOCS_REF="$GITHUB_REF_NAME"
       - name: Push the options module
         run: >-

@@ -47,7 +47,7 @@ plugins:
   # Windows.
   - plugin: .tools/buf-plugin-dedo
   # Your organisation's own HOUSE_* rules, if it has any (add HOUSE to
-  # lint.use too). See RULES.md#house-rules.
+  # lint.use too). See guidance/RULES.md#house-rules in the dedo repository.
   # - plugin: .tools/buf-plugin-house
   #   options:
   #     resource_domain: YOUR_DOMAIN

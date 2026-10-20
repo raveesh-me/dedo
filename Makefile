@@ -1,6 +1,6 @@
 # Build, test and release dedo.
 DIST              := dist
-# The git ref that lint findings link to in RULES.md. Releases pass
+# The git ref that lint findings link to in guidance/RULES.md. Releases pass
 # their tag, so each plugin version links to its own rule docs.
 DOCS_REF          ?= main
 

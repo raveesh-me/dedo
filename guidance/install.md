@@ -436,9 +436,10 @@ func newHandler(log *slog.Logger) (http.Handler, error) {
 	mux := http.NewServeMux()
 	mux.Handle("GET /openapi.json", docs.Spec())
 	mux.Handle("GET /docs", docs.Page())
-	mux.Handle("/mcp", flowid.Middleware(mcp.NewStreamableHTTPHandler(
+	// Cross-origin protection: the MCP transport requires an Origin check.
+	mux.Handle("/mcp", flowid.Middleware(http.NewCrossOriginProtection().Handler(mcp.NewStreamableHTTPHandler(
 		func(*http.Request) *mcp.Server { return mcpServer },
-		&mcp.StreamableHTTPOptions{Stateless: true, JSONResponse: true})))
+		&mcp.StreamableHTTPOptions{Stateless: true, JSONResponse: true}))))
 	mux.Handle("/", api)
 	return mux, nil
 }

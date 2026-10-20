@@ -238,7 +238,14 @@ message Todo {
   // Whether it is done.
   bool done = 3 [(google.api.field_behavior) = OPTIONAL];
   // What doing it may cost.
-  google.type.Money budget_amount = 4 [(google.api.field_behavior) = OPTIONAL];
+  google.type.Money budget_amount = 4 [
+    (google.api.field_behavior) = OPTIONAL,
+    (buf.validate.field).cel = {
+      id: "money.sign"
+      message: "units and nanos must not have opposite signs"
+      expression: "this.units == 0 || this.nanos == 0 || (this.units > 0) == (this.nanos > 0)"
+    }
+  ];
   // The email of the person it is assigned to.
   string assignee_email = 5 [
     (google.api.field_behavior) = OPTIONAL,
