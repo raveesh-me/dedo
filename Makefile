@@ -19,7 +19,7 @@ generate:
 format:
 	buf format --diff --exit-code
 
-## lint: buf lint the options module with buf-plugin-dedo
+## lint: buf lint the options module with buf-plugin-dedo-lint
 lint: plugin
 	buf lint
 
@@ -36,17 +36,17 @@ test:
 # Lint plugins run natively: about 17 times faster per `buf lint` than the
 # same plugins as WebAssembly, which matters in the editor. buf.yaml refers
 # to them by path, so editors started outside a shell still find them.
-DEDO_CMD     := ./cmd/buf-plugin-dedo
+DEDO_CMD     := ./cmd/buf-plugin-dedo-lint
 DEDO_LDFLAGS := -X github.com/raveesh-me/dedo/lint/rules.DocsRef=$(DOCS_REF)
 LINT_SRC      := $(shell find lint gen -name '*.go') lint/go.mod lint/go.sum
 # Platforms the release ships native plugins for. Windows users can use the
 # WebAssembly plugins on the BSR.
 RELEASE_PLATFORMS := darwin/arm64 darwin/amd64 linux/arm64 linux/amd64
 
-## plugin: build buf-plugin-dedo for this machine
-plugin: $(DIST)/buf-plugin-dedo
+## plugin: build buf-plugin-dedo-lint for this machine
+plugin: $(DIST)/buf-plugin-dedo-lint
 
-$(DIST)/buf-plugin-dedo: $(LINT_SRC)
+$(DIST)/buf-plugin-dedo-lint: $(LINT_SRC)
 	mkdir -p $(DIST)
 	cd lint && go build -trimpath -ldflags "$(DEDO_LDFLAGS)" -o ../$@ $(DEDO_CMD)
 
@@ -60,11 +60,11 @@ $(DIST)/buf-plugin-house: $(HOUSE_SRC)
 ## plugins: every lint plugin for this machine, as the examples' buf.yaml use them
 plugins: plugin $(DIST)/buf-plugin-house
 
-## wasm-plugins: buf-plugin-dedo as WebAssembly, for the BSR
+## wasm-plugins: buf-plugin-dedo-lint as WebAssembly, for the BSR
 wasm-plugins: $(LINT_SRC)
 	mkdir -p $(DIST)/wasm
 	cd lint && GOOS=wasip1 GOARCH=wasm go build -trimpath -ldflags "$(DEDO_LDFLAGS)" \
-		-o ../$(DIST)/wasm/buf-plugin-dedo.wasm $(DEDO_CMD)
+		-o ../$(DIST)/wasm/buf-plugin-dedo-lint.wasm $(DEDO_CMD)
 
 ## release-binaries: the lint plugin and the generators natively for every release platform
 release-binaries: $(LINT_SRC) templates-archive
@@ -72,7 +72,7 @@ release-binaries: $(LINT_SRC) templates-archive
 	for platform in $(RELEASE_PLATFORMS); do \
 		os=$${platform%/*}; arch=$${platform#*/}; \
 		(cd lint && GOOS=$$os GOARCH=$$arch go build -trimpath -ldflags "$(DEDO_LDFLAGS)" \
-			-o ../$(DIST)/release/buf-plugin-dedo_$${os}_$${arch} $(DEDO_CMD)) || exit 1; \
+			-o ../$(DIST)/release/buf-plugin-dedo-lint_$${os}_$${arch} $(DEDO_CMD)) || exit 1; \
 		(cd mcp && GOOS=$$os GOARCH=$$arch go build -trimpath \
 			-o ../$(DIST)/release/protoc-gen-dedo-mcp_$${os}_$${arch} ./cmd/protoc-gen-dedo-mcp) || exit 1; \
 		(cd openapi && GOOS=$$os GOARCH=$$arch go build -trimpath \
@@ -81,12 +81,16 @@ release-binaries: $(LINT_SRC) templates-archive
 
 ## templates-archive: what a service copies, as one release asset:
 ## templates/, the REST docs page and the agent guidance
+# Staged under a directory starting with "_", which Go ignores, so the
+# copied docs.go never joins the root module's build.
+STAGE := $(DIST)/_stage
+
 templates-archive:
-	rm -rf $(DIST)/dedo-templates && mkdir -p $(DIST)/dedo-templates/docs $(DIST)/release
-	cp -R templates/. $(DIST)/dedo-templates/
-	cp examples/todo/docs/docs.go examples/todo/docs/index.html $(DIST)/dedo-templates/docs/
-	cp guidance/claude.md $(DIST)/dedo-templates/
-	tar -czf $(DIST)/release/dedo-templates.tar.gz -C $(DIST) dedo-templates
+	rm -rf $(STAGE) && mkdir -p $(STAGE)/dedo-templates/docs $(DIST)/release
+	cp -R templates/. $(STAGE)/dedo-templates/
+	cp examples/todo/docs/docs.go examples/todo/docs/index.html $(STAGE)/dedo-templates/docs/
+	cp guidance/claude.md $(STAGE)/dedo-templates/
+	tar -czf $(DIST)/release/dedo-templates.tar.gz -C $(STAGE) dedo-templates
 
 ## examples: run both example services as consumer repositories
 examples: vendored-options example-todo example-bad-todo

@@ -1,6 +1,6 @@
 # Include from a service Makefile: `include Makefile.api`.
 # Deps are pinned in buf.lock; commit it. Add .tools/ to .gitignore.
-DEDO_VERSION ?= v0.6.0
+DEDO_VERSION ?= v0.7.0
 DEDO_RELEASE := https://github.com/raveesh-me/dedo/releases/download/$(DEDO_VERSION)
 TOOLS_PLATFORM          := $(shell go env GOOS)_$(shell go env GOARCH)
 TOOLS_STAMP             := .tools/$(DEDO_VERSION)
@@ -12,8 +12,8 @@ tools: $(TOOLS_STAMP)
 
 $(TOOLS_STAMP):
 	rm -rf .tools && mkdir -p .tools
-	curl -fsSL -o .tools/buf-plugin-dedo $(DEDO_RELEASE)/buf-plugin-dedo_$(TOOLS_PLATFORM)
-	chmod +x .tools/buf-plugin-dedo
+	curl -fsSL -o .tools/buf-plugin-dedo-lint $(DEDO_RELEASE)/buf-plugin-dedo-lint_$(TOOLS_PLATFORM)
+	chmod +x .tools/buf-plugin-dedo-lint
 	touch $@
 
 ## api-update: move deps to their latest versions

@@ -74,7 +74,7 @@ jobs:
       - name: Push the lint plugin
         run: >-
           buf plugin push buf.build/r-a/dedo-lint
-          --binary dist/wasm/buf-plugin-dedo.wasm
+          --binary dist/wasm/buf-plugin-dedo-lint.wasm
           --label "$GITHUB_REF_NAME" --label main --source-control-url "$SOURCE_URL"
           --create --create-type check --create-visibility public
       - name: Attach the native and Wasm plugins to the GitHub release

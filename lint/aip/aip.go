@@ -1,5 +1,5 @@
 // Package aip runs Google's API linter (github.com/googleapis/api-linter)
-// as Buf lint rules, so buf-plugin-dedo checks the AIPs in the same run as
+// as Buf lint rules, so buf-plugin-dedo-lint checks the AIPs in the same run as
 // its own rules.
 //
 // Rule IDs and categories match hestiatechnology/buf-plugin-aip, whose

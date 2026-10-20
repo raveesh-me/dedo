@@ -3,7 +3,7 @@
 //   - ZALANDO_* enforce a specific Zalando RESTful API guideline.
 //   - DEDO_* enforce dedo's own conventions.
 //
-// Together with the AIP_* rules of package aip they make up buf-plugin-dedo
+// Together with the AIP_* rules of package aip they make up buf-plugin-dedo-lint
 // (see Spec). HOUSE_* is left to each organisation's own plugin, so it never
 // collides with these.
 package rules

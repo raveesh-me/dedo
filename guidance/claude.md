@@ -12,7 +12,7 @@ Append this file to your repository's `AGENTS.md` or `CLAUDE.md`; every dedo rel
 
 ## Lint classes and precedence
 
-`buf-plugin-dedo` reports four classes of rules:
+`buf-plugin-dedo-lint` reports four classes of rules:
 
 | Prefix | Source |
 | --- | --- |

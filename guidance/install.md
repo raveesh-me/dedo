@@ -27,7 +27,7 @@ mkdir time-counter && cd time-counter && git init
 go mod init github.com/acme/time-counter
 # The templates of the release you build against; step 5 uses them once
 # more, then you delete them.
-DEDO_VERSION=v0.6.0
+DEDO_VERSION=v0.7.0
 curl -fsSL https://github.com/raveesh-me/dedo/releases/download/$DEDO_VERSION/dedo-templates.tar.gz | tar xz
 DEDO=dedo-templates
 cp $DEDO/buf.yaml $DEDO/buf.gen.yaml $DEDO/Makefile.api .
@@ -51,8 +51,8 @@ Pin the code generators, so every machine and CI generate the same code:
 ```sh
 go get -tool google.golang.org/protobuf/cmd/protoc-gen-go
 go get -tool connectrpc.com/connect/cmd/protoc-gen-connect-go
-go get -tool github.com/raveesh-me/dedo/mcp/cmd/protoc-gen-dedo-mcp@v0.6.0
-go get -tool github.com/raveesh-me/dedo/openapi/cmd/protoc-gen-dedo-openapi@v0.6.0
+go get -tool github.com/raveesh-me/dedo/mcp/cmd/protoc-gen-dedo-mcp@v0.7.0
+go get -tool github.com/raveesh-me/dedo/openapi/cmd/protoc-gen-dedo-openapi@v0.7.0
 ```
 
 Give the dedo modules an explicit version, the latest [release](https://github.com/raveesh-me/dedo/releases). Right after a release, Go's module proxy can still report an older version as the latest.
@@ -469,7 +469,7 @@ func scopesFromContext(ctx context.Context) []string {
 Add the runtime libraries, and pin Vanguard to `v0.4.0`. Later versions need connect-go v2. Pin it after the code exists, or `go mod tidy` replaces it with the latest.
 
 ```sh
-go get github.com/raveesh-me/dedo@v0.6.0 github.com/raveesh-me/dedo/mcp@v0.6.0
+go get github.com/raveesh-me/dedo@v0.7.0 github.com/raveesh-me/dedo/mcp@v0.7.0
 go get connectrpc.com/vanguard@v0.4.0
 go mod tidy
 ```
@@ -536,5 +536,5 @@ The same RPCs also answer over Connect and gRPC at `/acme.time_counter.v1.Counte
 | `go: updates to go.mod needed` while generating | Run `go mod tidy`, then generate again. |
 | `bind: address already in use` | Something else holds port 8080. Run with `ADDR=:9090`. |
 | No findings in the editor | The lint plugins are missing from `.tools/`. Run `make tools`, then reload the editor. |
-| `reading github.com/raveesh-me/dedo/go.mod at revision v0.0.0: unknown revision` | `go get` picked an old commit instead of a release. Add `@v0.6.0` (or the latest release) to the module path. |
+| `reading github.com/raveesh-me/dedo/go.mod at revision v0.0.0: unknown revision` | `go get` picked an old commit instead of a release. Add `@v0.7.0` (or the latest release) to the module path. |
 | `Module buf.build/bufbuild/protovalidate is declared ... but is unused` | A warning only. Remove the dependency from `buf.yaml` if you don't use protovalidate. |

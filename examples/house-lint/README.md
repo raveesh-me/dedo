@@ -1,8 +1,8 @@
 # house-lint
 
-An example of an organisation's own lint plugin: the `HOUSE_*` rules that sit next to `buf-plugin-dedo` (see [RULES.md](../../guidance/RULES.md#house-rules)).
+An example of an organisation's own lint plugin: the `HOUSE_*` rules that sit next to `buf-plugin-dedo-lint` (see [RULES.md](../../guidance/RULES.md#house-rules)).
 
-In a real organisation this is a repository of its own, shared by every service: copy this directory, change the module path, and release it the way dedo is released (native binaries on a GitHub release, and `buf plugin push` of the Wasm build for Windows). Services pin its version and list it in `buf.yaml` next to `buf-plugin-dedo`. Here it stands in for that repository: `make plugins` at the repository root builds it into `dist/`, and both todo examples use it.
+In a real organisation this is a repository of its own, shared by every service: copy this directory, change the module path, and release it the way dedo is released (native binaries on a GitHub release, and `buf plugin push` of the Wasm build for Windows). Services pin its version and list it in `buf.yaml` next to `buf-plugin-dedo-lint`. Here it stands in for that repository: `make plugins` at the repository root builds it into `dist/`, and both todo examples use it.
 
 | Rule | Checks |
 | --- | --- |

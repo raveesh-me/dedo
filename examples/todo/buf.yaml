@@ -44,7 +44,7 @@ breaking:
     - FILE
   ignore_unstable_packages: true
 plugins:
-  - plugin: ../../dist/buf-plugin-dedo
+  - plugin: ../../dist/buf-plugin-dedo-lint
   # The organisation's own HOUSE_* rules: see examples/house-lint.
   - plugin: ../../dist/buf-plugin-house
     options:

@@ -28,4 +28,4 @@ breaking:
     - FILE
 plugins:
   # Built natively by `make plugin`.
-  - plugin: dist/buf-plugin-dedo
+  - plugin: dist/buf-plugin-dedo-lint

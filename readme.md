@@ -14,7 +14,7 @@
 
 New here? Everything is in [`guidance/`](guidance): [install.md](guidance/install.md) builds a new product from scratch, step by step, [guideline.md](guidance/guideline.md) explains the reasoning, [RULES.md](guidance/RULES.md) documents every lint rule, and [claude.md](guidance/claude.md) is guidance for coding agents to append to your `AGENTS.md` or `CLAUDE.md`.
 
-**Latest release: [v0.6.0](https://github.com/raveesh-me/dedo/releases/tag/v0.6.0).** The options module is [`buf.build/r-a/dedo`](https://buf.build/r-a/dedo). The lint plugin comes as native binaries on the GitHub release (`make tools`) and as a Wasm plugin on the BSR. The Go modules are `github.com/raveesh-me/dedo/...@v0.6.0`.
+**Latest release: [v0.7.0](https://github.com/raveesh-me/dedo/releases/tag/v0.7.0).** The options module is [`buf.build/r-a/dedo`](https://buf.build/r-a/dedo). The lint plugin comes as native binaries on the GitHub release (`make tools`) and as a Wasm plugin on the BSR. The Go modules are `github.com/raveesh-me/dedo/...@v0.7.0`.
 
 Contract rules come from Google's AIPs. Operational rules (audience, ownership, scopes, caching, deprecation, error reasons) come from Zalando's guidelines. Both live in the schema.
 
@@ -23,7 +23,7 @@ Contract rules come from Google's AIPs. Operational rules (audience, ownership, 
 | Component | Path | Job |
 | --- | --- | --- |
 | Options module | `proto/dedo/v1/options.proto` | Declares audience, owner, scopes, cache policy, deprecation, error reasons, sensitive fields, message descriptions, and how each RPC appears as an MCP tool (title, description and the MCP specification's `ToolAnnotations`). Published as `buf.build/r-a/dedo`. |
-| Lint plugin | `lint/` | `buf-plugin-dedo`: Google's AIP rules (`AIP_*`, through api-linter), five Zalando rules (`ZALANDO_*`) and nine dedo rules (`DEDO_*`), each in the category of its prefix. [RULES.md](guidance/RULES.md) documents every rule, the tiebreakers between sources and what dedo skips. Released as native binaries per platform (fast in editors) and as the Wasm check plugin `buf.build/r-a/dedo-lint`. |
+| Lint plugin | `lint/` | `buf-plugin-dedo-lint`: Google's AIP rules (`AIP_*`, through api-linter), five Zalando rules (`ZALANDO_*`) and nine dedo rules (`DEDO_*`), each in the category of its prefix. [RULES.md](guidance/RULES.md) documents every rule, the tiebreakers between sources and what dedo skips. Released as native binaries per platform (fast in editors) and as the Wasm check plugin `buf.build/r-a/dedo-lint`. |
 | Policy table | `policy/` | Reads the options from descriptors at startup. Fails on a missing declaration. |
 | Flow ID | `flowid/` | Reads or creates `X-Flow-ID` and propagates it on outbound calls. |
 | Policy interceptor | `interceptor/` | Checks scopes, sets `Cache-Control`, `Deprecation` and `Sunset`, and logs undeclared error reasons. |
@@ -92,7 +92,7 @@ See `examples/library/proto` for a complete module.
 
 ## Lint rules
 
-`buf-plugin-dedo` runs three classes of rules: `AIP_*` (Google's AIPs, through api-linter), `ZALANDO_*` (the Zalando guidelines dedo adopts) and `DEDO_*` (dedo's own). When they disagree, DEDO wins over AIP, and AIP over ZALANDO. `HOUSE_*` is left for your organisation's own plugin; [`examples/house-lint`](examples/house-lint) shows one. [RULES.md](guidance/RULES.md) has the tiebreakers and every rule dedo skips, by source.
+`buf-plugin-dedo-lint` runs three classes of rules: `AIP_*` (Google's AIPs, through api-linter), `ZALANDO_*` (the Zalando guidelines dedo adopts) and `DEDO_*` (dedo's own). When they disagree, DEDO wins over AIP, and AIP over ZALANDO. `HOUSE_*` is left for your organisation's own plugin; [`examples/house-lint`](examples/house-lint) shows one. [RULES.md](guidance/RULES.md) has the tiebreakers and every rule dedo skips, by source.
 
 | Rule ID | Checks |
 | --- | --- |
@@ -196,7 +196,7 @@ The `v*` tag runs `.github/workflows/ci.yaml`, which publishes one version every
 
 The Go module version is the same tag. The job reads a `BUF_KEY` repository secret: a Buf token for the `r-a` organization with module and plugin create and push scopes.
 
-The `AIP_*` rules run Google's [api-linter](https://github.com/googleapis/api-linter) inside buf-plugin-dedo, an approach adapted from [hestiatechnology/buf-plugin-aip](https://github.com/hestiatechnology/buf-plugin-aip) (both Apache-2.0; see `NOTICE`). Dependabot keeps api-linter current.
+The `AIP_*` rules run Google's [api-linter](https://github.com/googleapis/api-linter) inside buf-plugin-dedo-lint, an approach adapted from [hestiatechnology/buf-plugin-aip](https://github.com/hestiatechnology/buf-plugin-aip) (both Apache-2.0; see `NOTICE`). Dependabot keeps api-linter current.
 
 ## Keeping up with the standards
 
