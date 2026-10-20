@@ -53,8 +53,8 @@ my-service/
    ```sh
    go get -tool google.golang.org/protobuf/cmd/protoc-gen-go
    go get -tool connectrpc.com/connect/cmd/protoc-gen-connect-go
-   go get -tool github.com/raveesh-me/dedo/mcp/cmd/protoc-gen-dedo-mcp@v0.5.0
-   go get -tool github.com/raveesh-me/dedo/openapi/cmd/protoc-gen-dedo-openapi@v0.5.0
+   go get -tool github.com/raveesh-me/dedo/mcp/cmd/protoc-gen-dedo-mcp@v0.6.0
+   go get -tool github.com/raveesh-me/dedo/openapi/cmd/protoc-gen-dedo-openapi@v0.6.0
    ```
 
    Pin the dedo modules to the latest release explicitly. Go's module proxy can lag behind a new tag.

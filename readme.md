@@ -14,7 +14,7 @@
 
 New here? [install.md](install.md) builds a new product from scratch, step by step. [guideline.md](guideline.md) explains the reasoning.
 
-**Latest release: [v0.5.0](https://github.com/raveesh-me/dedo/releases/tag/v0.5.0).** The options module is [`buf.build/r-a/dedo`](https://buf.build/r-a/dedo). The lint plugins come as native binaries on the GitHub release (`make tools`) and as Wasm plugins on the BSR. The Go modules are `github.com/raveesh-me/dedo/...@v0.5.0`.
+**Latest release: [v0.6.0](https://github.com/raveesh-me/dedo/releases/tag/v0.6.0).** The options module is [`buf.build/r-a/dedo`](https://buf.build/r-a/dedo). The lint plugin comes as native binaries on the GitHub release (`make tools`) and as a Wasm plugin on the BSR. The Go modules are `github.com/raveesh-me/dedo/...@v0.6.0`.
 
 Contract rules come from Google's AIPs. Operational rules (audience, ownership, scopes, caching, deprecation, error reasons) come from Zalando's guidelines. Both live in the schema.
 

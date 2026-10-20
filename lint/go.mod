@@ -5,7 +5,7 @@ go 1.26.0
 require (
 	buf.build/go/bufplugin v0.11.1
 	github.com/googleapis/api-linter/v2 v2.4.0
-	github.com/raveesh-me/dedo v0.5.0
+	github.com/raveesh-me/dedo v0.6.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20261012220534-4341edf3f941
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20261012220534-4341edf3f941
 	google.golang.org/protobuf v1.36.12
