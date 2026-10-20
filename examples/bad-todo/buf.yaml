@@ -1,7 +1,7 @@
-# Mirrors templates/buf.yaml. Until the options module and plugins are on the
-# BSR, the options module is a vendored copy under third_party/ (`make examples`
-# at the repository root fails if it drifts from proto/), and the plugins come
-# from dist/, built natively by `make plugins`.
+# Mirrors templates/buf.yaml, but tests this working tree rather than a
+# release: the options module is a vendored copy under third_party/ (`make
+# examples` at the repository root fails if it drifts from proto/), and the
+# lint plugin comes from dist/, built natively by `make plugins`.
 version: v2
 modules:
   - path: proto

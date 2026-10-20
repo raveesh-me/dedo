@@ -16,6 +16,7 @@ lint:
     - AIP_NOLANG   # every AIP rule except the language-specific ones
     - DEDO
     - ZALANDO
+    - HOUSE        # when the repository has a rules.yml
 ```
 
 `AIP_NOLANG` can be narrowed to `AIP_CORE` or widened to `AIP`. Single AIPs are categories too (`AIP_0131`). To pass an api-linter configuration file, add `options: {config: path/to/api-linter.yaml}` to the plugin entry.
