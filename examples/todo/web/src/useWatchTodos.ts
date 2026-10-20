@@ -1,6 +1,7 @@
 import { onMounted, onUnmounted, ref } from 'vue'
 import { useQueryClient } from '@tanstack/vue-query'
 import { todos } from './clients'
+import { WatchTodosResponse_Change } from './gen/raveesh_me/todo/v1/todo_pb'
 
 export type WatchState = 'connecting' | 'live' | 'reconnecting'
 
@@ -22,17 +23,13 @@ export function useWatchTodos() {
     while (!stopped) {
       abort = new AbortController()
       try {
-        const stream = todos.watchTodos({}, {
-          signal: abort.signal,
-          // The server sends headers once the watch is open: catch up on
-          // anything that changed before then.
-          onHeader: () => {
+        const stream = todos.watchTodos({}, { signal: abort.signal })
+        for await (const event of stream) {
+          if (event.change === WatchTodosResponse_Change.WATCHING) {
+            // The watch is open: catch up on anything that changed before.
             state.value = 'live'
             delay = 500
-            void refetch()
-          },
-        })
-        for await (const _change of stream) {
+          }
           void refetch()
         }
       } catch {

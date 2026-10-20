@@ -53,10 +53,10 @@ func (c *changes) publish(change todov1.WatchTodosResponse_Change, todo *todov1.
 func (s *Server) WatchTodos(ctx context.Context, _ *todov1.WatchTodosRequest, stream todov1connect.TodoServiceWatchTodosServerStream) error {
 	events, cancel := s.changes.subscribe()
 	defer cancel()
-	// Send the headers now, so the client knows the watch is open before
-	// the first change. (connect-go v2.0.1's HTTP transport does not send
-	// them until the first message yet; this works once it does.)
-	if err := stream.SendHeaders(); err != nil {
+	// Tell the client the watch is open, so it knows no later change is
+	// missed. A message, not just headers: headers alone may wait in a
+	// buffering proxy, or in the transport until the first message.
+	if err := stream.Send(&todov1.WatchTodosResponse{Change: todov1.WatchTodosResponse_CHANGE_WATCHING}); err != nil {
 		return err
 	}
 	for {

@@ -389,6 +389,9 @@ message WatchTodosResponse {
     CHANGE_UPDATED = 2;
     // The to-do was deleted.
     CHANGE_DELETED = 3;
+    // The watch is open. Sent once, first, without a to-do: no change made
+    // after it is missed.
+    CHANGE_WATCHING = 4;
   }
 
   // What happened.

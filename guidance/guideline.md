@@ -270,6 +270,8 @@ Point an MCP client at `http://localhost:8080/mcp`, with the header `Authorizati
 
 **Why is the version in the path, when Zalando advises against URL versioning?** The contract follows the AIPs, and the proto package already carries the major version. A breaking change becomes a new package and a new path, with no media-type negotiation.
 
+**How does a client know a server stream is open?** Send a first message that says so: the todo example's `WatchTodos` starts with `CHANGE_WATCHING`. Headers alone are not enough: buffering proxies hold them back, and connect-go v2.0.1's HTTP transport sends none until the first message.
+
 **Can a service skip REST for an RPC?** No. AIP-127 requires an HTTP binding on every RPC, so every RPC is reachable over every transport.
 
 **Why both a proto comment and a `tool.description`?** The comment is for people who maintain the API. The description is published to API readers and AI agents, and the lint makes sure it exists.
