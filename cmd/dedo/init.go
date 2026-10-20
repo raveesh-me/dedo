@@ -35,10 +35,11 @@ var generators = []string{"protoc-gen-go", "protoc-gen-connect-go", "protoc-gen-
 
 // initer runs dedo init: each step reports what it changed.
 type initer struct {
-	p       *project
-	release string
-	out     io.Writer
-	cmds    [][]string // network steps, run at the end or printed
+	p          *project
+	release    string
+	out        io.Writer
+	cmds       [][]string // network steps, run at the end or printed
+	createdBuf bool       // buf.yaml was written from the template this run
 }
 
 func initRepo(dir, release string, offline bool, out io.Writer) error {
@@ -48,26 +49,45 @@ func initRepo(dir, release string, offline bool, out io.Writer) error {
 	}
 	in := &initer{p: p, release: release, out: out}
 	fmt.Fprintf(out, "dedo %s: setting up %s (protos in %s/)\n", release, p.module, p.protoRoot)
-	steps := []struct {
+	type step struct {
 		title string
 		run   func() error
-	}{
+	}
+	var steps []step
+	if p.protos == 0 {
+		steps = append(steps, step{"starter service", in.starter})
+	}
+	steps = append(steps, []step{
 		{"options package", in.options},
 		{"linter", in.linter},
 		{"code generators", in.generators},
 		{"server package", in.server},
 		{"agent guidance", in.guidance},
-	}
+	}...)
 	for _, s := range steps {
 		fmt.Fprintf(out, "\nadding %s...\n", s.title)
 		if err := s.run(); err != nil {
 			return fmt.Errorf("%s: %w", s.title, err)
 		}
 	}
-	if err := in.runCommands(offline); err != nil {
+	failed := in.runCommands(offline)
+	if err := in.printMain(); err != nil {
 		return err
 	}
-	return in.printMain()
+	if len(failed) > 0 {
+		return fmt.Errorf("%d commands failed: %s; fix the cause and run dedo init again", len(failed), strings.Join(failed, "; "))
+	}
+	return nil
+}
+
+// depUpdate queues buf dep update once.
+func (in *initer) depUpdate() {
+	for _, c := range in.cmds {
+		if strings.Join(c, " ") == "buf dep update" {
+			return
+		}
+	}
+	in.cmds = append(in.cmds, []string{"buf", "dep", "update"})
 }
 
 func (in *initer) say(format string, args ...any) {
@@ -100,19 +120,24 @@ func (in *initer) options() error {
 			return err
 		}
 		in.say("buf.yaml: created, with %s, %s and %s", optionsModule, googleapis, protovalidate)
-		in.cmds = append(in.cmds, []string{"buf", "dep", "update"})
+		in.createdBuf = true
+		in.depUpdate()
 		return nil
 	}
 	if v := lookup(root(doc), "version"); v == nil || v.Value != "v2" {
 		return errors.New("buf.yaml is not version v2: run buf config migrate first")
 	}
 	added := addScalars(child(root(doc), "deps", yaml.SequenceNode), googleapis, protovalidate, optionsModule)
+	if _, err := os.Stat(in.path("buf.lock")); err != nil {
+		in.say("buf.lock: missing; buf dep update will write it")
+		in.depUpdate()
+	}
 	if len(added) == 0 {
 		in.say("buf.yaml: deps already in place")
 		return nil
 	}
 	in.say("buf.yaml: added deps %s", strings.Join(added, ", "))
-	in.cmds = append(in.cmds, []string{"buf", "dep", "update"})
+	in.depUpdate()
 	return saveYAML(in.path("buf.yaml"), doc)
 }
 
@@ -166,6 +191,8 @@ func (in *initer) linter() error {
 		if err := saveYAML(in.path("buf.yaml"), doc); err != nil {
 			return err
 		}
+	} else if in.createdBuf {
+		in.say("buf.yaml: lint plugin and categories added from the template")
 	} else {
 		in.say("buf.yaml: lint plugin and categories already in place")
 	}
@@ -332,14 +359,48 @@ func (in *initer) server() error {
 		return err
 	}
 	if in.p.service == nil {
-		in.say("policy_table_test.go: skipped until the repository has a service")
+		in.say("policy_table_test.go, server.go: skipped until the repository has a service")
+		return nil
+	}
+	if in.p.rootPkg != "" && in.p.rootPkg != "main" {
+		in.say("policy_table_test.go, server.go: skipped; the repository root is package %s, not main", in.p.rootPkg)
 		return nil
 	}
 	test, err := in.render("templates/policy_table_test.go.tmpl")
 	if err != nil {
 		return err
 	}
-	return in.writeFile("policy_table_test.go", test, false)
+	if err := in.writeFile("policy_table_test.go", test, false); err != nil {
+		return err
+	}
+	if hasNewServer(in.p.dir) {
+		in.say("server.go: newServer already exists; left as it is")
+		return nil
+	}
+	stub, err := in.render("templates/server.go.tmpl")
+	if err != nil {
+		return err
+	}
+	return in.writeFile("server.go", stub, false)
+}
+
+// hasNewServer reports whether a Go file in the repository root already
+// declares newServer, which the printed main.go calls.
+func hasNewServer(dir string) bool {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return false
+	}
+	for _, e := range entries {
+		if e.IsDir() || !strings.HasSuffix(e.Name(), ".go") || strings.HasSuffix(e.Name(), "_test.go") {
+			continue
+		}
+		src, err := os.ReadFile(filepath.Join(dir, e.Name()))
+		if err == nil && strings.Contains(string(src), "func newServer(") {
+			return true
+		}
+	}
+	return false
 }
 
 // guidance appends the agent guidance to CLAUDE.md and AGENTS.md where they
@@ -384,9 +445,14 @@ func (in *initer) guidance() error {
 
 // runCommands runs the network steps, or prints them when offline or when a
 // tool is missing.
-func (in *initer) runCommands(offline bool) error {
-	fmt.Fprintln(in.out, "\nfetching...")
+func (in *initer) runCommands(offline bool) []string {
+	if offline {
+		fmt.Fprintln(in.out, "\nfetching (skipped: -offline)...")
+	} else {
+		fmt.Fprintln(in.out, "\nfetching (a first run downloads Go modules and can take a couple of minutes)...")
+	}
 	var todo [][]string
+	var failed []string
 	for _, c := range in.cmds {
 		if offline {
 			todo = append(todo, c)
@@ -402,7 +468,10 @@ func (in *initer) runCommands(offline bool) error {
 		cmd.Dir = in.p.dir
 		cmd.Stdout, cmd.Stderr = in.out, in.out
 		if err := cmd.Run(); err != nil {
-			return fmt.Errorf("%s: %w", strings.Join(c, " "), err)
+			// Later commands do not depend on this one, so carry on and
+			// report every failure at the end.
+			in.say("failed: %v", err)
+			failed = append(failed, strings.Join(c, " "))
 		}
 	}
 	if len(todo) > 0 {
@@ -411,7 +480,7 @@ func (in *initer) runCommands(offline bool) error {
 			in.say("  %s", strings.Join(c, " "))
 		}
 	}
-	return nil
+	return failed
 }
 
 // printMain prints a main.go that serves the first service on every
@@ -421,16 +490,36 @@ func (in *initer) printMain() error {
 	if err != nil {
 		return err
 	}
+	// main.go is written only where it can be built: a service to serve, a
+	// package main root, and no main.go of the user's. Its imports also keep
+	// the pinned Vanguard in go.mod, which go mod tidy would otherwise drop.
+	_, statErr := os.Stat(in.path("main.go"))
+	write := in.p.service != nil && (in.p.rootPkg == "" || in.p.rootPkg == "main") && errors.Is(statErr, fs.ErrNotExist)
+	if write {
+		if err := os.WriteFile(in.path("main.go"), src, 0o644); err != nil {
+			return err
+		}
+		fmt.Fprintf(in.out, "\nmain.go: created; it serves %s on Connect, gRPC, REST, /docs and /mcp\n", in.p.service.Name)
+	}
 	fmt.Fprintln(in.out, "\nnext:")
 	if in.p.service == nil {
 		in.say("1. write your service in %s/ (see guidance/tutorial.md)", in.p.protoRoot)
-		in.say("2. make api-check api-generate, then run dedo init again for a main.go that names it")
+		in.say("2. run dedo init again: it writes server.go and main.go for it")
 	} else {
 		in.say("1. make api-check api-generate")
-		in.say("2. save the main.go below, implement newServer, then go mod tidy && go run .")
+		in.say("2. go mod tidy && go run .")
+		in.say("3. implement the RPCs in server.go; until then they answer Unimplemented")
+		in.say("4. before shipping, replace authMiddleware and devTokens in main.go with your token verification")
 		if in.p.others > 0 {
-			in.say("   it serves %s; %d more services need the same three lines each", in.p.service.Name, in.p.others)
+			in.say("   main.go serves %s; %d more services need the same three lines each", in.p.service.Name, in.p.others)
 		}
+	}
+	if write {
+		return nil
+	}
+	if statErr == nil {
+		fmt.Fprintf(in.out, "\n// ---- main.go: dedo's template, to compare with yours ----\n%s", src)
+		return nil
 	}
 	fmt.Fprintf(in.out, "\n// ---- main.go ----\n%s", src)
 	return nil

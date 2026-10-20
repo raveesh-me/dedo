@@ -1,0 +1,123 @@
+syntax = "proto3";
+
+package {{.Package}};
+
+import "dedo/v1/options.proto";
+import "google/api/annotations.proto";
+import "google/api/field_behavior.proto";
+import "google/api/resource.proto";
+import "google/protobuf/timestamp.proto";
+
+// {{.Service}} is a starter service written by dedo init. Rename Item to
+// your resource, keep every declaration, and run make api-check.
+service {{.Service}} {
+  option (dedo.v1.service) = {
+    audience: AUDIENCE_EXTERNAL_PUBLIC
+    owner_team: "{{.Team}}"
+  };
+
+  // GetItem returns one item.
+  rpc GetItem(GetItemRequest) returns (GetItemResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+    option (google.api.http) = {
+      get: "{{.Root}}/v1/{name=items/*}"
+      response_body: "item"
+    };
+    option (dedo.v1.method) = {
+      scopes: "{{.App}}.item.read"
+      errors: {
+        reason: "ITEM_NOT_FOUND"
+        code: NOT_FOUND
+      }
+      tool: {
+        title: "Get an item"
+        description: "Returns one item by its resource name, such as items/1."
+        annotations: {
+          read_only_hint: true
+          open_world_hint: false
+        }
+      }
+    };
+  }
+
+  // CreateItem creates an item.
+  rpc CreateItem(CreateItemRequest) returns (CreateItemResponse) {
+    option (google.api.http) = {
+      post: "{{.Root}}/v1/items"
+      body: "item"
+      response_body: "item"
+    };
+    option (dedo.v1.method) = {
+      scopes: "{{.App}}.item.write"
+      errors: {
+        reason: "DISPLAY_NAME_REQUIRED"
+        code: INVALID_ARGUMENT
+      }
+      tool: {
+        title: "Create an item"
+        description: "Creates an item with the name given in display_name and returns it."
+        annotations: {
+          read_only_hint: false
+          destructive_hint: false
+          idempotent_hint: false
+          open_world_hint: false
+        }
+      }
+    };
+  }
+}
+
+// Item is the resource this service manages.
+message Item {
+  option (google.api.resource) = {
+    type: "{{.Domain}}/Item"
+    pattern: "items/{item}"
+    singular: "item"
+    plural: "items"
+  };
+  option (dedo.v1.message) = {description: "One item."};
+
+  // The resource name, such as items/1.
+  string name = 1 [(google.api.field_behavior) = IDENTIFIER];
+  // The item's name, as people see it.
+  string display_name = 2 [(google.api.field_behavior) = REQUIRED];
+  // When the item was created.
+  google.protobuf.Timestamp create_time = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// GetItemRequest is the request of GetItem.
+message GetItemRequest {
+  option (dedo.v1.message) = {description: "Which item to get."};
+
+  // The resource name of the item.
+  string name = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference) = {type: "{{.Domain}}/Item"}
+  ];
+}
+
+// GetItemResponse is the response of GetItem.
+message GetItemResponse {
+  option (dedo.v1.message) = {description: "The requested item."};
+
+  // The item.
+  Item item = 1;
+}
+
+// CreateItemRequest is the request of CreateItem.
+message CreateItemRequest {
+  option (dedo.v1.message) = {description: "The item to create, and optionally its ID."};
+
+  // The item to create.
+  Item item = 1 [(google.api.field_behavior) = REQUIRED];
+  // The ID to give the item. The server picks one when it is empty.
+  string item_id = 2 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// CreateItemResponse is the response of CreateItem.
+message CreateItemResponse {
+  option (dedo.v1.message) = {description: "The created item."};
+
+  // The item.
+  Item item = 1;
+}

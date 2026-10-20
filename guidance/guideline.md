@@ -44,11 +44,12 @@ my-service/
   Makefile               # include Makefile.api
   Makefile.api           # make tools, api-check, api-generate
   docs/                  # serves the REST reference
+  server.go              # your handlers (dedo init writes a stub)
   policy_table_test.go   # fails on a missing declaration
   AGENTS.md              # guidance for coding agents
   .github/CODEOWNERS     # from templates/CODEOWNERS
   go.mod                 # the generators as tools, the dedo runtime
-  main.go                # printed by dedo init
+  main.go                # written by dedo init
 ```
 
 Why it is set up this way:
@@ -216,7 +217,7 @@ mux.Handle("/", api)
 
 Return errors with a declared reason in a `google.rpc.ErrorInfo` detail. `examples/todo/app/errors.go` has a helper.
 
-`dedo init` prints this `main.go` with your names, and writes `policy_table_test.go`, so a missing declaration fails `go test` before deploy.
+`dedo init` writes this `main.go` with your names when the repository has none, and `policy_table_test.go`, so a missing declaration fails `go test` before deploy.
 
 ## 7. Authorization: what is declared and what is not
 

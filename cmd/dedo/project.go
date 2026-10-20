@@ -19,6 +19,8 @@ type project struct {
 	service   *service
 	others    int // services beyond the first
 	scopes    []string
+	protos    int    // proto files found
+	rootPkg   string // the Go package of the repository root, if it has one
 }
 
 // service is the first service found, with the Go names that buf generate
@@ -56,6 +58,8 @@ func analyze(dir string) (*project, error) {
 	if err != nil {
 		return nil, err
 	}
+	p.protos = len(protos)
+	p.rootPkg = rootPackage(dir)
 	p.protoRoot = bufModuleRoot(dir)
 	if p.protoRoot == "" {
 		p.protoRoot = guessRoot(dir, protos)
@@ -172,4 +176,37 @@ func guessRoot(dir string, protos []string) string {
 		}
 	}
 	return "proto"
+}
+
+var goPackageLine = regexp.MustCompile(`(?m)^package\s+(\w+)`)
+
+// rootPackage returns the package of the .go files in the repository root,
+// or "" when it has none. Test files may use an _test package, so they are
+// read only when nothing else is there.
+func rootPackage(dir string) string {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return ""
+	}
+	pkg := ""
+	for _, e := range entries {
+		name := e.Name()
+		if e.IsDir() || !strings.HasSuffix(name, ".go") {
+			continue
+		}
+		src, err := os.ReadFile(filepath.Join(dir, name))
+		if err != nil {
+			continue
+		}
+		m := goPackageLine.FindSubmatch(src)
+		if m == nil {
+			continue
+		}
+		found := strings.TrimSuffix(string(m[1]), "_test")
+		if !strings.HasSuffix(name, "_test.go") {
+			return found
+		}
+		pkg = found
+	}
+	return pkg
 }

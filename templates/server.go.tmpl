@@ -1,0 +1,11 @@
+package main
+
+import "{{.GoImport}}/{{.GoPkg}}connect"
+
+// server implements {{.Service}}. Until you write a method, it answers
+// Unimplemented: add the methods of {{.GoPkg}}connect.{{.Service}}Handler.
+type server struct {
+	{{.GoPkg}}connect.Unimplemented{{.Service}}Handler
+}
+
+func newServer() *server { return &server{} }

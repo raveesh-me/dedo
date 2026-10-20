@@ -10,7 +10,7 @@
 | MCP tools for AI agents | `protoc-gen-dedo-mcp` generates each service's tools (schemas, declared text, hints and error reasons, typed calls); `mcpserver.AddTools` serves them |
 | Authorization, cache and deprecation headers, flow IDs, error audit | The policy runtime, read from options in the `.proto` |
 
-**One command to set up.** `dedo init` adds all of it to a Go repository and prints a `main.go` for your service.
+**One command to set up.** `dedo init` adds all of it to a Go repository and writes a `main.go` that serves your service on every transport.
 
 **First-class lint guidance.** A Buf check plugin turns the standard into findings in your editor as you type, each linked to an explanation in [RULES.md](guidance/RULES.md). The same `buf lint` gates CI. Handlers carry business logic only.
 
@@ -26,7 +26,7 @@ Contract rules come from Google's AIPs. Operational rules (audience, ownership, 
 | --- | --- | --- |
 | Options module | `proto/dedo/v1/options.proto` | Declares audience, owner, scopes, cache policy, deprecation, error reasons, sensitive fields, message descriptions, and how each RPC appears as an MCP tool (title, description and the MCP specification's `ToolAnnotations`). Published as `buf.build/r-a/dedo`. |
 | Lint plugin | `lint/` | `buf-plugin-dedo-lint`: Google's AIP rules (`AIP_*`, through api-linter), five Zalando rules (`ZALANDO_*`) and nine dedo rules (`DEDO_*`), each in the category of its prefix. [RULES.md](guidance/RULES.md) documents every rule, the tiebreakers between sources and what dedo skips. Released as native binaries per platform (fast in editors) and as the Wasm check plugin `buf.build/r-a/dedo-lint`. |
-| `dedo` command | `cmd/dedo` | `dedo init` sets a Go repository up: the options module, the lint plugin and its categories, the generators, the server libraries, the REST docs page, a policy-table test and the agent guidance, editing existing `buf.yaml` and `buf.gen.yaml` in place. It prints a `main.go` for the repository's service. The templates are bundled into the binary; `dedo templates` prints them. |
+| `dedo` command | `cmd/dedo` | `dedo init` sets a Go repository up: the options module, the lint plugin and its categories, the generators, the server libraries, the REST docs page, a policy-table test and the agent guidance, editing existing `buf.yaml` and `buf.gen.yaml` in place. It writes a `main.go` and a `server.go` stub for the repository's service, and a starter service when there is none. The templates are bundled into the binary; `dedo templates` prints them. |
 | Policy table | `policy/` | Reads the options from descriptors at startup. Fails on a missing declaration. |
 | Flow ID | `flowid/` | Reads or creates `X-Flow-ID` and propagates it on outbound calls. |
 | Policy interceptor | `interceptor/` | Checks scopes, sets `Cache-Control`, `Deprecation` and `Sunset`, and logs undeclared error reasons. |
@@ -125,7 +125,7 @@ go install github.com/raveesh-me/dedo/cmd/dedo@v0.10.0
 dedo init
 ```
 
-`dedo init` adds the options module, the lint plugin, the code generators, the server libraries and the agent guidance where they are missing, then prints a `main.go` for your service. The templates are bundled into the binary (`dedo templates` lists them), so nothing is cloned. [install.md](guidance/install.md) shows each step by hand, and [tutorial.md](guidance/tutorial.md) builds a service from scratch. In short:
+`dedo init` adds the options module, the lint plugin, the code generators, the server libraries and the agent guidance where they are missing, then writes a `main.go` for your service (or, when you have one, prints dedo's to compare). In an empty module it writes a starter service that passes lint, so `make api-generate` and `go run .` work straight away. The templates are bundled into the binary (`dedo templates` lists them), so nothing is cloned. [install.md](guidance/install.md) shows each step by hand, and [tutorial.md](guidance/tutorial.md) builds a service from scratch. In short:
 
 1. `dedo init` (or by hand: copy `buf.yaml`, `buf.gen.yaml`, `Makefile.api` from `templates/`, pin the generators with `go get -tool`, run `make tools` and `buf dep update`).
 2. Fill in `CODEOWNERS` and the VS Code settings from `templates/` if you use them.

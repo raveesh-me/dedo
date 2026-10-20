@@ -30,20 +30,9 @@ Every step below was run as written. [install.md](install.md) lists the same set
 ```sh
 mkdir time-counter && cd time-counter && git init
 go mod init github.com/acme/time-counter
-dedo init
 ```
 
-`dedo init` adds everything dedo needs, and prints what it did:
-
-- `buf.yaml` with the options module, the lint plugin and its categories, and `buf.gen.yaml` with the four generators
-- `Makefile.api` (included from `Makefile`), which downloads the lint plugin into `.tools/` (`make tools`) and runs the checks
-- the generators pinned as Go tools in `go.mod`, and the dedo runtime modules
-- `docs/`, which serves the REST reference
-- `AGENTS.md` with [the guidance for coding agents](claude.md)
-
-It ends by printing a `main.go`. There is no service yet, so that one has placeholders; step 5 runs `dedo init` again for one that names your service.
-
-Fill in `.github/CODEOWNERS` (from [templates/CODEOWNERS](../templates/CODEOWNERS)) so every change under `proto/` needs an API review, and copy [templates/vscode](../templates/vscode) to `.vscode/` if you use VS Code.
+Write the contract next, before running `dedo init`, so that `dedo init` sets the repository up around your service. (In an empty module, `dedo init` writes a starter service instead, which is the quickest way to try dedo.)
 
 ## 3. Write the contract
 
@@ -226,10 +215,26 @@ message AddTimeResponse {
 
 `tool` is how each RPC appears as an MCP tool. The model always sees `description`; `annotations` are the MCP specification's hints for the client. `AddTime` only adds time, so it is not destructive; a delete would be. [RULES.md](RULES.md#dedo_tool_annotations) explains how to set each hint.
 
-Then resolve the dependencies and lint:
+Then set the repository up around it:
 
 ```sh
-buf dep update      # writes buf.lock; commit it
+dedo init
+```
+
+`dedo init` finds `CounterService` and adds everything dedo needs, printing what it did:
+
+- `buf.yaml` with the options module, the lint plugin and its categories, and `buf.gen.yaml` with the four generators
+- `Makefile.api` (included from `Makefile`), which downloads the lint plugin into `.tools/` (`make tools`) and runs the checks
+- the generators pinned as Go tools in `go.mod`, the dedo runtime modules, and `buf.lock` (commit it)
+- `docs/`, which serves the REST reference
+- `server.go`, a stub where every RPC answers Unimplemented, and `policy_table_test.go`, which fails `go test` when a declaration is missing
+- `AGENTS.md` with [the guidance for coding agents](claude.md)
+
+It also writes `main.go`, which serves `CounterService` on every transport; step 5 explains it. Fill in `.github/CODEOWNERS` (from [templates/CODEOWNERS](../templates/CODEOWNERS)) so every change under `proto/` needs an API review, and copy [templates/vscode](../templates/vscode) to `.vscode/` if you use VS Code.
+
+Now format and lint:
+
+```sh
 buf format -w
 buf lint
 ```
@@ -252,7 +257,7 @@ Commit all of it. CI fails when it is stale.
 
 ## 5. Write the service
 
-`server.go` holds the business logic, and nothing else:
+`server.go` holds the business logic, and nothing else. Replace the stub `dedo init` wrote with:
 
 ```go
 package main
@@ -336,11 +341,8 @@ func apiError(code connect.Code, reason, message string) error {
 }
 ```
 
-Run `dedo init` again. It finds `CounterService` now, writes `policy_table_test.go` (a missing declaration then fails `go test` before deploy), and prints a `main.go` that names it. Save that as `main.go`:
+`main.go` is the one `dedo init` wrote in step 3. Running `dedo init` again keeps it, and prints dedo's template to compare with any changes you make.
 
-```sh
-dedo init
-```
 
 `main.go` wires the API, the REST reference and MCP. Scopes and policy come from the `.proto`, so the handlers above contain no authorization code. `devTokens` holds the scopes declared in the `.proto`:
 
