@@ -102,7 +102,7 @@ vendored-options:
 example-todo: plugins
 	cd examples/todo && buf format --diff --exit-code && buf lint proto
 	cd examples/todo && buf generate && git diff --exit-code gen/ docs/
-	cd examples/todo && buf generate --template buf.gen.web.yaml && git diff --exit-code web/src/gen
+	$(MAKE) -C examples/todo web-gen && git diff --exit-code examples/todo/web/src/gen
 	cd examples/todo && go vet ./... && go test -race ./...
 
 ## example-bad-todo: the rule-breaking service reports exactly the expected findings

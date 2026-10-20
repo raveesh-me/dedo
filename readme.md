@@ -143,7 +143,7 @@ make e2e     # Playwright: an agent adds a to-do over MCP and the open UI shows 
 make down
 ```
 
-The UI (`web/`) uses TanStack Query through [connect-tan-vue](https://github.com/raveesh-me/connect-tan-vue)'s `createClientWithQuery`, and stays live through the `WatchTodos` server stream. [examples/todo/MCP.md](examples/todo/MCP.md) shows how to connect Claude Code or Claude Desktop to the service's MCP endpoint.
+Every generator runs locally, nothing on Buf's servers: the Go generators through `go tool`, and the UI's `protoc-gen-es` in a Node container (`make web-gen`), pinned with the runtime it must match. The UI (`web/`) uses TanStack Query through [connect-tan-vue](https://github.com/raveesh-me/connect-tan-vue)'s `createClientWithQuery`, and stays live through the `WatchTodos` server stream. [examples/todo/MCP.md](examples/todo/MCP.md) shows how to connect Claude Code or Claude Desktop to the service's MCP endpoint.
 
 The examples test this repository's working tree, not a release: each vendors `options.proto` under `third_party/` and loads the lint plugins from `dist/`. Run `make plugins` once so the editor finds them, then `make examples`. Rerun `make plugins` after changing a rule. Service repositories use the published module and plugins instead.
 
