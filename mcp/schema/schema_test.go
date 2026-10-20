@@ -28,6 +28,7 @@ func methods(t *testing.T) map[string]*protogen.Method {
 				"../../examples/todo/proto",
 				"../../examples/todo/third_party/dedo",
 				"../../openapi/restdoc/testdata/deps",
+				"testdata/deps",
 			},
 		}),
 		SourceInfoMode: protocompile.SourceInfoStandard,
@@ -125,7 +126,7 @@ func TestUpdateIsPartial(t *testing.T) {
 		t.Error("OUTPUT_ONLY create_time is an input")
 	}
 	mask := props(s, "update_mask")["description"].(string)
-	if !strings.Contains(mask, "Valid paths: title, done, budgetAmount, assigneeEmail.") {
+	if !strings.Contains(mask, "Valid names: title, done, budget_amount, assignee_email.") {
 		t.Errorf("update_mask description = %q", mask)
 	}
 	if err := validate(t, sch, `{"todo":{"name":"todos/1","done":true},"update_mask":"done"}`); err != nil {
@@ -179,6 +180,69 @@ func TestFieldsAreDescribed(t *testing.T) {
 		walk("", s)
 		if d, _ := s["description"].(string); d == "" {
 			t.Errorf("%s: input has no description", name)
+		}
+	}
+}
+
+// Inputs state the limits the server enforces: resource name patterns,
+// google.type.Money's documented ranges, and buf.validate rules.
+func TestInputConstraints(t *testing.T) {
+	ms := methods(t)
+	get := compiled(t, "get", Input(ms["GetTodo"]))
+	if err := validate(t, get, `{"name":"todos/a"}`); err != nil {
+		t.Errorf("valid name: %v", err)
+	}
+	for _, bad := range []string{`{"name":"a"}`, `{"name":"todos/a/b"}`, `{"name":"books/a"}`} {
+		if err := validate(t, get, bad); err == nil {
+			t.Errorf("%s validated", bad)
+		}
+	}
+	list := compiled(t, "list", Input(ms["ListTodos"]))
+	if err := validate(t, list, `{"page_size":-1}`); err == nil {
+		t.Error("a negative page_size validated")
+	}
+	create := Input(ms["CreateTodo"])
+	createSchema := compiled(t, "create", create)
+	for _, bad := range []string{
+		`{"todo":{"title":"x","budget_amount":{"currency_code":"eur"}}}`,
+		`{"todo":{"title":"x","budget_amount":{"currency_code":"EUR","nanos":1000000000}}}`,
+	} {
+		if err := validate(t, createSchema, bad); err == nil {
+			t.Errorf("%s validated", bad)
+		}
+	}
+	todo := props(create, "todo")
+	if f := props(todo, "assignee_email")["format"]; f != "email" {
+		t.Errorf("assignee_email format = %v, want email", f)
+	}
+	units := props(todo, "budget_amount", "units")
+	if d, _ := units["description"].(string); !strings.Contains(d, "decimal string") {
+		t.Errorf("units description = %q, want it to explain the two types", d)
+	}
+}
+
+// Outputs carry no input constraints, and 64-bit integers are the strings
+// the JSON mapping writes.
+func TestOutputTypes(t *testing.T) {
+	out := Output(methods(t)["GetTodo"])
+	todo := props(out, "todo")
+	if p, ok := props(todo, "name")["pattern"]; ok {
+		t.Errorf("output name has pattern %v", p)
+	}
+	if typ := props(todo, "budget_amount", "units")["type"]; typ != "string" {
+		t.Errorf("output units type = %v, want string", typ)
+	}
+}
+
+func TestPatternRegexp(t *testing.T) {
+	tests := map[string][]string{
+		"^todos/[^/]+$": {"todos/{todo}"},
+		"^(?:projects/[^/]+/todos/[^/]+|todos/[^/]+)$": {"projects/{project}/todos/{todo}", "todos/{todo}"},
+		`^a\.b/[^/]+$`: {"a.b/{x}"},
+	}
+	for want, patterns := range tests {
+		if got := patternRegexp(patterns); got != want {
+			t.Errorf("patternRegexp(%v) = %s, want %s", patterns, got, want)
 		}
 	}
 }

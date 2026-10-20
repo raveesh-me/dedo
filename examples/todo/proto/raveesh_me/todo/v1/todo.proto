@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package raveesh_me.todo.v1;
 
+import "buf/validate/validate.proto";
 import "dedo/v1/options.proto";
 import "google/api/annotations.proto";
 import "google/api/client.proto";
@@ -241,7 +242,9 @@ message Todo {
   // The email of the person it is assigned to.
   string assignee_email = 5 [
     (google.api.field_behavior) = OPTIONAL,
-    (dedo.v1.field) = {sensitive: true}
+    (dedo.v1.field) = {sensitive: true},
+    (buf.validate.field).string.email = true,
+    (buf.validate.field).ignore = IGNORE_IF_ZERO_VALUE
   ];
   // When it was created.
   google.protobuf.Timestamp create_time = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
@@ -270,8 +273,12 @@ message GetTodoResponse {
 message ListTodosRequest {
   option (dedo.v1.message) = {description: "Which page of to-dos to list."};
 
-  // The maximum number of to-dos to return. The server caps it at 100.
-  int32 page_size = 1 [(google.api.field_behavior) = OPTIONAL];
+  // The maximum number of to-dos to return. Zero means the default, and the
+  // server caps it at 100.
+  int32 page_size = 1 [
+    (google.api.field_behavior) = OPTIONAL,
+    (buf.validate.field).int32.gte = 0
+  ];
   // The next_page_token of a previous call.
   string page_token = 2 [(google.api.field_behavior) = OPTIONAL];
 }
@@ -311,8 +318,8 @@ message UpdateTodoRequest {
 
   // The to-do to update. Its name selects it.
   Todo todo = 1 [(google.api.field_behavior) = REQUIRED];
-  // The fields to change. Without it, every field set in todo changes
-  // (AIP-134); name it to clear a field or set done to false.
+  // The fields to change. Without it, every field set in todo changes;
+  // name a field here to clear it or to set done to false.
   google.protobuf.FieldMask update_mask = 2 [(google.api.field_behavior) = OPTIONAL];
 }
 

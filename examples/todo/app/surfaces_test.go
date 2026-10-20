@@ -8,10 +8,12 @@ import (
 	"strings"
 	"testing"
 
+	"connectrpc.com/connect"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/pb33f/libopenapi"
 
 	"github.com/raveesh-me/dedo/examples/todo/app"
+	todov1 "github.com/raveesh-me/dedo/examples/todo/gen/go/raveesh_me/todo/v1"
 )
 
 func get(t *testing.T, url string) string {
@@ -121,7 +123,7 @@ func TestMCPToolsUseDeclaredText(t *testing.T) {
 		t.Errorf("GetTodo description lacks its error reasons: %q", get.Description)
 	}
 	update, _ := json.Marshal(tools["update_todo"].InputSchema)
-	for _, want := range []string{`"required":["name"]`, "Valid paths: title, done, budgetAmount, assigneeEmail."} {
+	for _, want := range []string{`"required":["name"]`, "Valid names: title, done, budget_amount, assignee_email."} {
 		if !strings.Contains(string(update), want) {
 			t.Errorf("update_todo input schema lacks %s: %s", want, update)
 		}
@@ -215,8 +217,52 @@ func TestMCPPartialUpdate(t *testing.T) {
 			t.Errorf("after marking done, the to-do lacks %s: %s", want, done)
 		}
 	}
-	masked := call("update_todo", map[string]any{"todo": map[string]any{"name": "todos/p"}, "update_mask": "assigneeEmail"})
+	// The mask names fields the way the input schema does; lowerCamelCase
+	// works too.
+	masked := call("update_todo", map[string]any{"todo": map[string]any{"name": "todos/p"}, "update_mask": "assignee_email"})
 	if strings.Contains(masked, "a@example.com") || !strings.Contains(masked, "keep my fields") {
-		t.Errorf("a masked update should clear only assigneeEmail: %s", masked)
+		t.Errorf("a masked update should clear only assignee_email: %s", masked)
+	}
+	camel := call("update_todo", map[string]any{"todo": map[string]any{"name": "todos/p"}, "update_mask": "budgetAmount"})
+	if strings.Contains(camel, `"units"`) {
+		t.Errorf("a lowerCamelCase mask should clear budget_amount: %s", camel)
+	}
+}
+
+// An empty list says so: the fields are present with their defaults.
+func TestMCPEmptyListIsExplicit(t *testing.T) {
+	e := newEnv(t)
+	res, err := mcpSession(t, e, app.ReaderToken).CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "list_todos", Arguments: map[string]any{},
+	})
+	if err != nil || res.IsError {
+		t.Fatalf("list_todos: %v %s", err, text(res))
+	}
+	got, _ := json.Marshal(res.StructuredContent)
+	if string(got) != `{"next_page_token":"","todos":[]}` {
+		t.Errorf("empty list = %s", got)
+	}
+}
+
+// The buf.validate rules the schemas state hold on every transport: the
+// MCP schema rejects bad input before the call, and Connect rejects it too.
+func TestValidationRules(t *testing.T) {
+	e := newEnv(t)
+	res, err := mcpSession(t, e, app.WriterToken).CallTool(context.Background(), &mcp.CallToolParams{
+		Name:      createTool,
+		Arguments: map[string]any{"todo": map[string]any{"title": "x", "assignee_email": "not-an-email"}},
+	})
+	if err == nil && !res.IsError {
+		t.Errorf("MCP accepted an invalid email: %s", text(res))
+	}
+	_, err = e.client(app.WriterToken).CreateTodo(context.Background(), connect.NewRequest(&todov1.CreateTodoRequest{
+		Todo: &todov1.Todo{Title: "x", AssigneeEmail: "not-an-email"},
+	}))
+	if connect.CodeOf(err) != connect.CodeInvalidArgument {
+		t.Errorf("Connect CreateTodo with an invalid email: %v, want InvalidArgument", err)
+	}
+	_, err = e.client(app.ReaderToken).ListTodos(context.Background(), connect.NewRequest(&todov1.ListTodosRequest{PageSize: -1}))
+	if connect.CodeOf(err) != connect.CodeInvalidArgument {
+		t.Errorf("ListTodos with page_size -1: %v, want InvalidArgument", err)
 	}
 }

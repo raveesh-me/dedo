@@ -13,6 +13,7 @@ managed:
       value: github.com/raveesh-me/dedo/gen/go
   disable:
     - module: buf.build/googleapis/googleapis
+    - module: buf.build/bufbuild/protovalidate
 plugins:
   - local: ["go", "tool", "protoc-gen-go"]
     out: gen/go

@@ -30,7 +30,7 @@
           {
             "name": "pageSize",
             "in": "query",
-            "description": "The maximum number of to-dos to return. The server caps it at 100.",
+            "description": "The maximum number of to-dos to return. Zero means the default, and the\nserver caps it at 100.",
             "schema": {
               "type": "integer",
               "format": "int32"
@@ -356,7 +356,7 @@
           {
             "name": "updateMask",
             "in": "query",
-            "description": "The fields to change. Without it, every field set in todo changes\n(AIP-134); name it to clear a field or set done to false.",
+            "description": "The fields to change. Without it, every field set in todo changes;\nname a field here to clear it or to set done to false.",
             "schema": {
               "type": "string",
               "description": "Comma-separated lowerCamelCase field paths."
