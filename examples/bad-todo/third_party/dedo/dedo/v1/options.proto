@@ -33,6 +33,19 @@ message ServiceRules {
   Audience audience = 1;
   // The team that owns the service, as named in the team registry.
   string owner_team = 2;
+  // Present on a multi-tenant service. The runtime then checks the tenant of
+  // every request against the caller's.
+  Tenancy tenancy = 3;
+}
+
+// Tenancy declares that a service partitions its data between tenants. The
+// tenant is the root of the resource hierarchy: every resource name of the
+// service starts with the tenant's, such as locations/1/todos/2, and every
+// request names its tenant in the field its HTTP path binds, such as
+// {parent=locations/*}.
+message Tenancy {
+  // The collection ID of the tenant resource, such as "locations".
+  string collection = 1;
 }
 
 // CachePolicy is the HTTP cache behaviour of a read-only method.
@@ -120,6 +133,10 @@ message MethodRules {
   repeated ErrorReason errors = 4;
   // How the RPC is presented as an MCP tool and in the REST docs.
   Tool tool = 5;
+  // In a multi-tenant service, the RPC is not scoped to one tenant, such as
+  // listing the tenants themselves. The runtime does no tenant check, so its
+  // scopes alone guard it.
+  bool cross_tenant = 6;
 }
 
 // MessageRules documents a message for API consumers and models.

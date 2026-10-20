@@ -15,6 +15,8 @@ lint:
     - AIP_NOLANG
     - DEDO
     - ZALANDO
+    # Opt-in: add HOUSE with a rules.yml, and DEDO_MULTI_TENANT when the
+    # services declare tenancy. dedo init adds each when it applies.
   except:
     # Every response is a unique <Rpc>Response; REST unwraps it with response_body.
     - AIP_0131_RESPONSE_MESSAGE_NAME

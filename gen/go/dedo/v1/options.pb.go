@@ -140,7 +140,7 @@ func (x CachePolicy_Visibility) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use CachePolicy_Visibility.Descriptor instead.
 func (CachePolicy_Visibility) EnumDescriptor() ([]byte, []int) {
-	return file_dedo_v1_options_proto_rawDescGZIP(), []int{1, 0}
+	return file_dedo_v1_options_proto_rawDescGZIP(), []int{2, 0}
 }
 
 // ServiceRules is the ownership and audience of a service.
@@ -149,7 +149,10 @@ type ServiceRules struct {
 	// Who may call the service.
 	Audience Audience `protobuf:"varint,1,opt,name=audience,proto3,enum=dedo.v1.Audience" json:"audience,omitempty"`
 	// The team that owns the service, as named in the team registry.
-	OwnerTeam     string `protobuf:"bytes,2,opt,name=owner_team,json=ownerTeam,proto3" json:"owner_team,omitempty"`
+	OwnerTeam string `protobuf:"bytes,2,opt,name=owner_team,json=ownerTeam,proto3" json:"owner_team,omitempty"`
+	// Present on a multi-tenant service. The runtime then checks the tenant of
+	// every request against the caller's.
+	Tenancy       *Tenancy `protobuf:"bytes,3,opt,name=tenancy,proto3" json:"tenancy,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -198,6 +201,63 @@ func (x *ServiceRules) GetOwnerTeam() string {
 	return ""
 }
 
+func (x *ServiceRules) GetTenancy() *Tenancy {
+	if x != nil {
+		return x.Tenancy
+	}
+	return nil
+}
+
+// Tenancy declares that a service partitions its data between tenants. The
+// tenant is the root of the resource hierarchy: every resource name of the
+// service starts with the tenant's, such as locations/1/todos/2, and every
+// request names its tenant in the field its HTTP path binds, such as
+// {parent=locations/*}.
+type Tenancy struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The collection ID of the tenant resource, such as "locations".
+	Collection    string `protobuf:"bytes,1,opt,name=collection,proto3" json:"collection,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Tenancy) Reset() {
+	*x = Tenancy{}
+	mi := &file_dedo_v1_options_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Tenancy) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Tenancy) ProtoMessage() {}
+
+func (x *Tenancy) ProtoReflect() protoreflect.Message {
+	mi := &file_dedo_v1_options_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Tenancy.ProtoReflect.Descriptor instead.
+func (*Tenancy) Descriptor() ([]byte, []int) {
+	return file_dedo_v1_options_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *Tenancy) GetCollection() string {
+	if x != nil {
+		return x.Collection
+	}
+	return ""
+}
+
 // CachePolicy is the HTTP cache behaviour of a read-only method.
 type CachePolicy struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -211,7 +271,7 @@ type CachePolicy struct {
 
 func (x *CachePolicy) Reset() {
 	*x = CachePolicy{}
-	mi := &file_dedo_v1_options_proto_msgTypes[1]
+	mi := &file_dedo_v1_options_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -223,7 +283,7 @@ func (x *CachePolicy) String() string {
 func (*CachePolicy) ProtoMessage() {}
 
 func (x *CachePolicy) ProtoReflect() protoreflect.Message {
-	mi := &file_dedo_v1_options_proto_msgTypes[1]
+	mi := &file_dedo_v1_options_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -236,7 +296,7 @@ func (x *CachePolicy) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CachePolicy.ProtoReflect.Descriptor instead.
 func (*CachePolicy) Descriptor() ([]byte, []int) {
-	return file_dedo_v1_options_proto_rawDescGZIP(), []int{1}
+	return file_dedo_v1_options_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *CachePolicy) GetVisibility() CachePolicy_Visibility {
@@ -268,7 +328,7 @@ type Deprecation struct {
 
 func (x *Deprecation) Reset() {
 	*x = Deprecation{}
-	mi := &file_dedo_v1_options_proto_msgTypes[2]
+	mi := &file_dedo_v1_options_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -280,7 +340,7 @@ func (x *Deprecation) String() string {
 func (*Deprecation) ProtoMessage() {}
 
 func (x *Deprecation) ProtoReflect() protoreflect.Message {
-	mi := &file_dedo_v1_options_proto_msgTypes[2]
+	mi := &file_dedo_v1_options_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -293,7 +353,7 @@ func (x *Deprecation) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Deprecation.ProtoReflect.Descriptor instead.
 func (*Deprecation) Descriptor() ([]byte, []int) {
-	return file_dedo_v1_options_proto_rawDescGZIP(), []int{2}
+	return file_dedo_v1_options_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *Deprecation) GetDeprecationTime() *timestamppb.Timestamp {
@@ -330,7 +390,7 @@ type ErrorReason struct {
 
 func (x *ErrorReason) Reset() {
 	*x = ErrorReason{}
-	mi := &file_dedo_v1_options_proto_msgTypes[3]
+	mi := &file_dedo_v1_options_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -342,7 +402,7 @@ func (x *ErrorReason) String() string {
 func (*ErrorReason) ProtoMessage() {}
 
 func (x *ErrorReason) ProtoReflect() protoreflect.Message {
-	mi := &file_dedo_v1_options_proto_msgTypes[3]
+	mi := &file_dedo_v1_options_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -355,7 +415,7 @@ func (x *ErrorReason) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ErrorReason.ProtoReflect.Descriptor instead.
 func (*ErrorReason) Descriptor() ([]byte, []int) {
-	return file_dedo_v1_options_proto_rawDescGZIP(), []int{3}
+	return file_dedo_v1_options_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *ErrorReason) GetReason() string {
@@ -393,7 +453,7 @@ type Tool struct {
 
 func (x *Tool) Reset() {
 	*x = Tool{}
-	mi := &file_dedo_v1_options_proto_msgTypes[4]
+	mi := &file_dedo_v1_options_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -405,7 +465,7 @@ func (x *Tool) String() string {
 func (*Tool) ProtoMessage() {}
 
 func (x *Tool) ProtoReflect() protoreflect.Message {
-	mi := &file_dedo_v1_options_proto_msgTypes[4]
+	mi := &file_dedo_v1_options_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -418,7 +478,7 @@ func (x *Tool) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Tool.ProtoReflect.Descriptor instead.
 func (*Tool) Descriptor() ([]byte, []int) {
-	return file_dedo_v1_options_proto_rawDescGZIP(), []int{4}
+	return file_dedo_v1_options_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *Tool) GetTitle() string {
@@ -469,7 +529,7 @@ type ToolAnnotations struct {
 
 func (x *ToolAnnotations) Reset() {
 	*x = ToolAnnotations{}
-	mi := &file_dedo_v1_options_proto_msgTypes[5]
+	mi := &file_dedo_v1_options_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -481,7 +541,7 @@ func (x *ToolAnnotations) String() string {
 func (*ToolAnnotations) ProtoMessage() {}
 
 func (x *ToolAnnotations) ProtoReflect() protoreflect.Message {
-	mi := &file_dedo_v1_options_proto_msgTypes[5]
+	mi := &file_dedo_v1_options_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -494,7 +554,7 @@ func (x *ToolAnnotations) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ToolAnnotations.ProtoReflect.Descriptor instead.
 func (*ToolAnnotations) Descriptor() ([]byte, []int) {
-	return file_dedo_v1_options_proto_rawDescGZIP(), []int{5}
+	return file_dedo_v1_options_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *ToolAnnotations) GetReadOnlyHint() bool {
@@ -537,14 +597,18 @@ type MethodRules struct {
 	// Every error reason the method returns.
 	Errors []*ErrorReason `protobuf:"bytes,4,rep,name=errors,proto3" json:"errors,omitempty"`
 	// How the RPC is presented as an MCP tool and in the REST docs.
-	Tool          *Tool `protobuf:"bytes,5,opt,name=tool,proto3" json:"tool,omitempty"`
+	Tool *Tool `protobuf:"bytes,5,opt,name=tool,proto3" json:"tool,omitempty"`
+	// In a multi-tenant service, the RPC is not scoped to one tenant, such as
+	// listing the tenants themselves. The runtime does no tenant check, so its
+	// scopes alone guard it.
+	CrossTenant   bool `protobuf:"varint,6,opt,name=cross_tenant,json=crossTenant,proto3" json:"cross_tenant,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *MethodRules) Reset() {
 	*x = MethodRules{}
-	mi := &file_dedo_v1_options_proto_msgTypes[6]
+	mi := &file_dedo_v1_options_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -556,7 +620,7 @@ func (x *MethodRules) String() string {
 func (*MethodRules) ProtoMessage() {}
 
 func (x *MethodRules) ProtoReflect() protoreflect.Message {
-	mi := &file_dedo_v1_options_proto_msgTypes[6]
+	mi := &file_dedo_v1_options_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -569,7 +633,7 @@ func (x *MethodRules) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MethodRules.ProtoReflect.Descriptor instead.
 func (*MethodRules) Descriptor() ([]byte, []int) {
-	return file_dedo_v1_options_proto_rawDescGZIP(), []int{6}
+	return file_dedo_v1_options_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *MethodRules) GetScopes() []string {
@@ -607,6 +671,13 @@ func (x *MethodRules) GetTool() *Tool {
 	return nil
 }
 
+func (x *MethodRules) GetCrossTenant() bool {
+	if x != nil {
+		return x.CrossTenant
+	}
+	return false
+}
+
 // MessageRules documents a message for API consumers and models.
 type MessageRules struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -619,7 +690,7 @@ type MessageRules struct {
 
 func (x *MessageRules) Reset() {
 	*x = MessageRules{}
-	mi := &file_dedo_v1_options_proto_msgTypes[7]
+	mi := &file_dedo_v1_options_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -631,7 +702,7 @@ func (x *MessageRules) String() string {
 func (*MessageRules) ProtoMessage() {}
 
 func (x *MessageRules) ProtoReflect() protoreflect.Message {
-	mi := &file_dedo_v1_options_proto_msgTypes[7]
+	mi := &file_dedo_v1_options_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -644,7 +715,7 @@ func (x *MessageRules) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MessageRules.ProtoReflect.Descriptor instead.
 func (*MessageRules) Descriptor() ([]byte, []int) {
-	return file_dedo_v1_options_proto_rawDescGZIP(), []int{7}
+	return file_dedo_v1_options_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *MessageRules) GetDescription() string {
@@ -665,7 +736,7 @@ type FieldRules struct {
 
 func (x *FieldRules) Reset() {
 	*x = FieldRules{}
-	mi := &file_dedo_v1_options_proto_msgTypes[8]
+	mi := &file_dedo_v1_options_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -677,7 +748,7 @@ func (x *FieldRules) String() string {
 func (*FieldRules) ProtoMessage() {}
 
 func (x *FieldRules) ProtoReflect() protoreflect.Message {
-	mi := &file_dedo_v1_options_proto_msgTypes[8]
+	mi := &file_dedo_v1_options_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -690,7 +761,7 @@ func (x *FieldRules) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FieldRules.ProtoReflect.Descriptor instead.
 func (*FieldRules) Descriptor() ([]byte, []int) {
-	return file_dedo_v1_options_proto_rawDescGZIP(), []int{8}
+	return file_dedo_v1_options_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *FieldRules) GetSensitive() bool {
@@ -771,11 +842,16 @@ var File_dedo_v1_options_proto protoreflect.FileDescriptor
 
 const file_dedo_v1_options_proto_rawDesc = "" +
 	"\n" +
-	"\x15dedo/v1/options.proto\x12\adedo.v1\x1a google/protobuf/descriptor.proto\x1a\x1egoogle/protobuf/duration.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x15google/rpc/code.proto\"\\\n" +
+	"\x15dedo/v1/options.proto\x12\adedo.v1\x1a google/protobuf/descriptor.proto\x1a\x1egoogle/protobuf/duration.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x15google/rpc/code.proto\"\x88\x01\n" +
 	"\fServiceRules\x12-\n" +
 	"\baudience\x18\x01 \x01(\x0e2\x11.dedo.v1.AudienceR\baudience\x12\x1d\n" +
 	"\n" +
-	"owner_team\x18\x02 \x01(\tR\townerTeam\"\xdb\x01\n" +
+	"owner_team\x18\x02 \x01(\tR\townerTeam\x12*\n" +
+	"\atenancy\x18\x03 \x01(\v2\x10.dedo.v1.TenancyR\atenancy\")\n" +
+	"\aTenancy\x12\x1e\n" +
+	"\n" +
+	"collection\x18\x01 \x01(\tR\n" +
+	"collection\"\xdb\x01\n" +
 	"\vCachePolicy\x12?\n" +
 	"\n" +
 	"visibility\x18\x01 \x01(\x0e2\x1f.dedo.v1.CachePolicy.VisibilityR\n" +
@@ -806,13 +882,14 @@ const file_dedo_v1_options_proto_rawDesc = "" +
 	"\x0f_read_only_hintB\x13\n" +
 	"\x11_destructive_hintB\x12\n" +
 	"\x10_idempotent_hintB\x12\n" +
-	"\x10_open_world_hint\"\xda\x01\n" +
+	"\x10_open_world_hint\"\xfd\x01\n" +
 	"\vMethodRules\x12\x16\n" +
 	"\x06scopes\x18\x01 \x03(\tR\x06scopes\x12*\n" +
 	"\x05cache\x18\x02 \x01(\v2\x14.dedo.v1.CachePolicyR\x05cache\x126\n" +
 	"\vdeprecation\x18\x03 \x01(\v2\x14.dedo.v1.DeprecationR\vdeprecation\x12,\n" +
 	"\x06errors\x18\x04 \x03(\v2\x14.dedo.v1.ErrorReasonR\x06errors\x12!\n" +
-	"\x04tool\x18\x05 \x01(\v2\r.dedo.v1.ToolR\x04tool\"0\n" +
+	"\x04tool\x18\x05 \x01(\v2\r.dedo.v1.ToolR\x04tool\x12!\n" +
+	"\fcross_tenant\x18\x06 \x01(\bR\vcrossTenant\"0\n" +
 	"\fMessageRules\x12 \n" +
 	"\vdescription\x18\x01 \x01(\tR\vdescription\"*\n" +
 	"\n" +
@@ -844,52 +921,54 @@ func file_dedo_v1_options_proto_rawDescGZIP() []byte {
 }
 
 var file_dedo_v1_options_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_dedo_v1_options_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+var file_dedo_v1_options_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
 var file_dedo_v1_options_proto_goTypes = []any{
 	(Audience)(0),                       // 0: dedo.v1.Audience
 	(CachePolicy_Visibility)(0),         // 1: dedo.v1.CachePolicy.Visibility
 	(*ServiceRules)(nil),                // 2: dedo.v1.ServiceRules
-	(*CachePolicy)(nil),                 // 3: dedo.v1.CachePolicy
-	(*Deprecation)(nil),                 // 4: dedo.v1.Deprecation
-	(*ErrorReason)(nil),                 // 5: dedo.v1.ErrorReason
-	(*Tool)(nil),                        // 6: dedo.v1.Tool
-	(*ToolAnnotations)(nil),             // 7: dedo.v1.ToolAnnotations
-	(*MethodRules)(nil),                 // 8: dedo.v1.MethodRules
-	(*MessageRules)(nil),                // 9: dedo.v1.MessageRules
-	(*FieldRules)(nil),                  // 10: dedo.v1.FieldRules
-	(*durationpb.Duration)(nil),         // 11: google.protobuf.Duration
-	(*timestamppb.Timestamp)(nil),       // 12: google.protobuf.Timestamp
-	(code.Code)(0),                      // 13: google.rpc.Code
-	(*descriptorpb.ServiceOptions)(nil), // 14: google.protobuf.ServiceOptions
-	(*descriptorpb.MethodOptions)(nil),  // 15: google.protobuf.MethodOptions
-	(*descriptorpb.MessageOptions)(nil), // 16: google.protobuf.MessageOptions
-	(*descriptorpb.FieldOptions)(nil),   // 17: google.protobuf.FieldOptions
+	(*Tenancy)(nil),                     // 3: dedo.v1.Tenancy
+	(*CachePolicy)(nil),                 // 4: dedo.v1.CachePolicy
+	(*Deprecation)(nil),                 // 5: dedo.v1.Deprecation
+	(*ErrorReason)(nil),                 // 6: dedo.v1.ErrorReason
+	(*Tool)(nil),                        // 7: dedo.v1.Tool
+	(*ToolAnnotations)(nil),             // 8: dedo.v1.ToolAnnotations
+	(*MethodRules)(nil),                 // 9: dedo.v1.MethodRules
+	(*MessageRules)(nil),                // 10: dedo.v1.MessageRules
+	(*FieldRules)(nil),                  // 11: dedo.v1.FieldRules
+	(*durationpb.Duration)(nil),         // 12: google.protobuf.Duration
+	(*timestamppb.Timestamp)(nil),       // 13: google.protobuf.Timestamp
+	(code.Code)(0),                      // 14: google.rpc.Code
+	(*descriptorpb.ServiceOptions)(nil), // 15: google.protobuf.ServiceOptions
+	(*descriptorpb.MethodOptions)(nil),  // 16: google.protobuf.MethodOptions
+	(*descriptorpb.MessageOptions)(nil), // 17: google.protobuf.MessageOptions
+	(*descriptorpb.FieldOptions)(nil),   // 18: google.protobuf.FieldOptions
 }
 var file_dedo_v1_options_proto_depIdxs = []int32{
 	0,  // 0: dedo.v1.ServiceRules.audience:type_name -> dedo.v1.Audience
-	1,  // 1: dedo.v1.CachePolicy.visibility:type_name -> dedo.v1.CachePolicy.Visibility
-	11, // 2: dedo.v1.CachePolicy.max_age:type_name -> google.protobuf.Duration
-	12, // 3: dedo.v1.Deprecation.deprecation_time:type_name -> google.protobuf.Timestamp
-	12, // 4: dedo.v1.Deprecation.sunset_time:type_name -> google.protobuf.Timestamp
-	13, // 5: dedo.v1.ErrorReason.code:type_name -> google.rpc.Code
-	7,  // 6: dedo.v1.Tool.annotations:type_name -> dedo.v1.ToolAnnotations
-	3,  // 7: dedo.v1.MethodRules.cache:type_name -> dedo.v1.CachePolicy
-	4,  // 8: dedo.v1.MethodRules.deprecation:type_name -> dedo.v1.Deprecation
-	5,  // 9: dedo.v1.MethodRules.errors:type_name -> dedo.v1.ErrorReason
-	6,  // 10: dedo.v1.MethodRules.tool:type_name -> dedo.v1.Tool
-	14, // 11: dedo.v1.service:extendee -> google.protobuf.ServiceOptions
-	15, // 12: dedo.v1.method:extendee -> google.protobuf.MethodOptions
-	16, // 13: dedo.v1.message:extendee -> google.protobuf.MessageOptions
-	17, // 14: dedo.v1.field:extendee -> google.protobuf.FieldOptions
-	2,  // 15: dedo.v1.service:type_name -> dedo.v1.ServiceRules
-	8,  // 16: dedo.v1.method:type_name -> dedo.v1.MethodRules
-	9,  // 17: dedo.v1.message:type_name -> dedo.v1.MessageRules
-	10, // 18: dedo.v1.field:type_name -> dedo.v1.FieldRules
-	19, // [19:19] is the sub-list for method output_type
-	19, // [19:19] is the sub-list for method input_type
-	15, // [15:19] is the sub-list for extension type_name
-	11, // [11:15] is the sub-list for extension extendee
-	0,  // [0:11] is the sub-list for field type_name
+	3,  // 1: dedo.v1.ServiceRules.tenancy:type_name -> dedo.v1.Tenancy
+	1,  // 2: dedo.v1.CachePolicy.visibility:type_name -> dedo.v1.CachePolicy.Visibility
+	12, // 3: dedo.v1.CachePolicy.max_age:type_name -> google.protobuf.Duration
+	13, // 4: dedo.v1.Deprecation.deprecation_time:type_name -> google.protobuf.Timestamp
+	13, // 5: dedo.v1.Deprecation.sunset_time:type_name -> google.protobuf.Timestamp
+	14, // 6: dedo.v1.ErrorReason.code:type_name -> google.rpc.Code
+	8,  // 7: dedo.v1.Tool.annotations:type_name -> dedo.v1.ToolAnnotations
+	4,  // 8: dedo.v1.MethodRules.cache:type_name -> dedo.v1.CachePolicy
+	5,  // 9: dedo.v1.MethodRules.deprecation:type_name -> dedo.v1.Deprecation
+	6,  // 10: dedo.v1.MethodRules.errors:type_name -> dedo.v1.ErrorReason
+	7,  // 11: dedo.v1.MethodRules.tool:type_name -> dedo.v1.Tool
+	15, // 12: dedo.v1.service:extendee -> google.protobuf.ServiceOptions
+	16, // 13: dedo.v1.method:extendee -> google.protobuf.MethodOptions
+	17, // 14: dedo.v1.message:extendee -> google.protobuf.MessageOptions
+	18, // 15: dedo.v1.field:extendee -> google.protobuf.FieldOptions
+	2,  // 16: dedo.v1.service:type_name -> dedo.v1.ServiceRules
+	9,  // 17: dedo.v1.method:type_name -> dedo.v1.MethodRules
+	10, // 18: dedo.v1.message:type_name -> dedo.v1.MessageRules
+	11, // 19: dedo.v1.field:type_name -> dedo.v1.FieldRules
+	20, // [20:20] is the sub-list for method output_type
+	20, // [20:20] is the sub-list for method input_type
+	16, // [16:20] is the sub-list for extension type_name
+	12, // [12:16] is the sub-list for extension extendee
+	0,  // [0:12] is the sub-list for field type_name
 }
 
 func init() { file_dedo_v1_options_proto_init() }
@@ -897,14 +976,14 @@ func file_dedo_v1_options_proto_init() {
 	if File_dedo_v1_options_proto != nil {
 		return
 	}
-	file_dedo_v1_options_proto_msgTypes[5].OneofWrappers = []any{}
+	file_dedo_v1_options_proto_msgTypes[6].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_dedo_v1_options_proto_rawDesc), len(file_dedo_v1_options_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   9,
+			NumMessages:   10,
 			NumExtensions: 4,
 			NumServices:   0,
 		},

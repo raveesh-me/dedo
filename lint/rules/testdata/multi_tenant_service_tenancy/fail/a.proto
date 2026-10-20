@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package raveesh_me.todo.v1;
+
+import "dedo/v1/options.proto";
+import "google/protobuf/empty.proto";
+
+service NoOptionService { // want
+  rpc Ping(google.protobuf.Empty) returns (google.protobuf.Empty);
+}
+
+service NoTenancyService { // want
+  option (dedo.v1.service) = {
+    audience: AUDIENCE_EXTERNAL_PUBLIC
+    owner_team: "todo-team"
+  };
+  rpc Ping(google.protobuf.Empty) returns (google.protobuf.Empty);
+}
+
+service BadCollectionService { // want
+  option (dedo.v1.service) = {
+    audience: AUDIENCE_EXTERNAL_PUBLIC
+    owner_team: "todo-team"
+    tenancy: {collection: "sub-accounts"}
+  };
+  rpc Ping(google.protobuf.Empty) returns (google.protobuf.Empty);
+}

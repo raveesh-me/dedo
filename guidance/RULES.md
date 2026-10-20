@@ -10,6 +10,8 @@
 
 A fourth prefix, `HOUSE_*`, is reserved for your organisation's own rules, written as CEL checks in `rules.yml` (see [House rules](#house-rules)). dedo never ships a `HOUSE_*` rule, so yours never clash with an upgrade.
 
+`DEDO_MULTI_TENANT_*` rules are dedo's own too, but opt-in: they are in the `DEDO_MULTI_TENANT` category rather than `DEDO`, for services that partition their data between tenants (see [Multi-tenant rules](#multi-tenant-rules)).
+
 ```yaml
 lint:
   use:
@@ -17,6 +19,7 @@ lint:
     - DEDO
     - ZALANDO
     - HOUSE        # when the repository has a rules.yml
+    - DEDO_MULTI_TENANT   # when its services are multi-tenant
 ```
 
 `AIP_NOLANG` can be narrowed to `AIP_CORE` or widened to `AIP`. Single AIPs are categories too (`AIP_0131`). To pass an api-linter configuration file, add `options: {config: path/to/api-linter.yaml}` to the plugin entry.
@@ -408,3 +411,89 @@ message GetProductRequest {
 ```
 
 **Fix.** Add the option. Describe what the message represents for a caller.
+
+## Multi-tenant rules
+
+The `DEDO_MULTI_TENANT_*` rules are for services that partition their data between tenants: a SaaS's customers, a platform's sub-accounts or business locations. They are in a category of their own, `DEDO_MULTI_TENANT`, which is not part of `DEDO`, so they run only where `lint.use` lists it. `dedo init` adds it when a service declares tenancy.
+
+```yaml
+lint:
+  use:
+    - DEDO
+    - DEDO_MULTI_TENANT   # this repository's services are multi-tenant
+```
+
+**The model.** The tenant is the root of the resource hierarchy, as AIP-122 lays it out: every resource name starts with the tenant's (`locations/1/contacts/2`), so every request names its tenant in the field its HTTP path binds (`{name=locations/*/contacts/*}`, `{parent=locations/*}`). A service declares the tenant collection once:
+
+```protobuf
+service ContactService {
+  option (dedo.v1.service) = {
+    audience: AUDIENCE_EXTERNAL_PUBLIC
+    owner_team: "contacts-team"
+    tenancy: {collection: "locations"}
+  };
+}
+```
+
+**The runtime.** `policy.Build` finds each RPC's tenant field from its HTTP binding, and refuses to start when one has none. The interceptor reads the tenants of every request message, on every transport (Connect, gRPC, REST and MCP, streams included), and asks the `interceptor.Config.Tenants` function you supply whether the caller may act in each: the tenant of the field the path binds, which must be set, and the tenant of every other field that references a resource (`google.api.resource_reference`) and holds a name under the tenant collection, anywhere in the request. So a move from `locations/1/contacts/2` to `destination: "locations/2"` needs access to both. A request naming a tenant the caller may not act in gets `PERMISSION_DENIED`, the same answer whether or not the resource exists (AIP-211), before validation or your handler sees it, and the message is cleared. A malformed name, such as one outside the tenant or with an empty, `.` or `..` segment, gets `INVALID_ARGUMENT`. Give every field that holds a resource name a `resource_reference`, as AIP-122 asks: a field without one is not checked. There is no audit mode: a tenant boundary is enforced from the start. A read across tenants with AIP-159's wildcard (`locations/-/contacts`) reaches your function as the tenant `-`; grant it only to callers who may see every tenant, and filter the results in the handler.
+
+RPCs that are not about one tenant, such as listing the caller's own tenants, set `cross_tenant: true` in `dedo.v1.method`. The runtime does no tenant check for them, so their scopes alone guard them. [`examples/contacts`](../examples/contacts) is a multi-tenant contract that CI lints with every rule, these included.
+
+| Rule | Checks |
+| --- | --- |
+| [`DEDO_MULTI_TENANT_SERVICE_TENANCY`](#dedo_multi_tenant_service_tenancy) | Services declare their tenant collection |
+| [`DEDO_MULTI_TENANT_RESOURCE_PATTERN`](#dedo_multi_tenant_resource_pattern) | Resource patterns start with the tenant |
+| [`DEDO_MULTI_TENANT_REQUEST_TENANT`](#dedo_multi_tenant_request_tenant) | Requests name their tenant in a field the HTTP path binds |
+| [`DEDO_MULTI_TENANT_CACHE_PRIVATE`](#dedo_multi_tenant_cache_private) | Shared caches never store tenant data |
+
+### DEDO_MULTI_TENANT_SERVICE_TENANCY
+
+**Checks** that every service sets `dedo.v1.service.tenancy.collection` to a collection ID in lowerCamelCase, such as `locations` or `subAccounts`.
+
+**Why.** In a repository that opts into these rules, a service without tenancy would serve every tenant's data to any caller with the scope. The declaration is what turns the runtime's tenant check on.
+
+**Fix.** Declare the collection of the tenant resource: `tenancy: {collection: "locations"}`.
+
+### DEDO_MULTI_TENANT_RESOURCE_PATTERN
+
+**Checks** that every resource pattern declared in a package with a multi-tenant service, on messages and in `google.api.resource_definition`, starts with a tenant collection: `locations/{location}/contacts/{contact}`, or the tenant's own `locations/{location}`.
+
+**Why.** The runtime finds the tenant in resource names. A resource outside the hierarchy, such as `contacts/{contact}`, has no tenant to check, and its IDs would have to be unique across every tenant.
+
+```protobuf
+// Fails: the contact belongs to no tenant.
+option (google.api.resource) = {type: "contacts.acme.com/Contact" pattern: "contacts/{contact}"};
+
+// Passes.
+option (google.api.resource) = {type: "contacts.acme.com/Contact" pattern: "locations/{location}/contacts/{contact}"};
+```
+
+**Fix.** Put the resource under the tenant, and its HTTP paths with it.
+
+### DEDO_MULTI_TENANT_REQUEST_TENANT
+
+**Checks** that every RPC of a multi-tenant service, unless it is `cross_tenant`, binds a request field to the tenant in its HTTP path: a variable whose template starts with `<collection>/*`, such as `{parent=locations/*}` or `{contact.name=locations/*/contacts/*}`. Every additional binding must bind the same field, a path may bind only one, and the field must be a singular string. It also reports `cross_tenant` on a service without tenancy, where it means nothing, and on an RPC whose path names a tenant, which the runtime would then not check.
+
+**Why.** The runtime reads the tenant from that field on every transport, REST or not, and the service will not start without it. This rule is the same check as the runtime's (`policy.MethodTenant`), so a contract that lints clean starts.
+
+```protobuf
+// Fails: the path binds no tenant.
+rpc GetContact(GetContactRequest) returns (GetContactResponse) {
+  option (google.api.http) = {get: "/commerce/contacts/v1/{name=contacts/*}"};
+}
+
+// Passes.
+rpc GetContact(GetContactRequest) returns (GetContactResponse) {
+  option (google.api.http) = {get: "/commerce/contacts/v1/{name=locations/*/contacts/*}"};
+}
+```
+
+**Fix.** Bind the resource name, or the parent, with the tenant in its template. For an RPC that truly spans tenants, set `cross_tenant: true` and give it a scope of its own.
+
+### DEDO_MULTI_TENANT_CACHE_PRIVATE
+
+**Checks** that no RPC of a multi-tenant service has a cache policy with `VISIBILITY_PUBLIC`, `cross_tenant` ones included.
+
+**Why.** `Cache-Control: public` lets shared caches, such as a CDN, store the response and serve it to the next caller of the same URL without asking the server, so the tenant check never runs.
+
+**Fix.** Use `VISIBILITY_PRIVATE`.

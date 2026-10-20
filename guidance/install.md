@@ -77,6 +77,8 @@ The breaking check compares with the `main` branch, and is skipped while `main` 
 
 Your organisation's own rules go in `rules.yml` next to `buf.yaml`, as CEL checks that can import shared rules from a git repository; add `HOUSE` to `lint.use`. [RULES.md](RULES.md#house-rules) has the format.
 
+If your services partition their data between tenants, declare `tenancy` on each and add `DEDO_MULTI_TENANT` to `lint.use` (`dedo init` does when a service declares it); then pass `Tenants` to the interceptor in section 4. [RULES.md](RULES.md#multi-tenant-rules) explains the model.
+
 Without Go on a machine, list the Wasm plugin from the BSR instead: `- plugin: buf.build/r-a/dedo-lint` (about 5 s per lint; it cannot read `rules.yml`, so house rules do not run).
 
 ## 3. Code generators
@@ -196,6 +198,8 @@ func newHandler(log *slog.Logger) (http.Handler, error) {
 	return mux, nil
 }
 ```
+
+In a multi-tenant service, `interceptor.Config` also takes `Tenants`, a function that says whether the caller may act in a tenant ID; the server will not start without it. `dedo init` writes a development one, next to `devTokens`, when a service declares `tenancy`.
 
 Auth is a server interceptor (`auth` in the template), not HTTP middleware, so it covers MCP calls, which reach the server in-process, as well as Connect, gRPC and REST. The complete file, with `main`, imports and a development `auth`, is [templates/main.go.tmpl](../templates/main.go.tmpl) (`dedo init` fills it in). Add a policy-table test ([templates/policy_table_test.go.tmpl](../templates/policy_table_test.go.tmpl)) so a missing declaration fails `go test` before deploy.
 

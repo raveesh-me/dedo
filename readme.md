@@ -9,6 +9,7 @@
 | REST reference docs (OpenAPI 3.1) | `protoc-gen-dedo-openapi` |
 | MCP tools for AI agents | `protoc-gen-dedo-mcp` generates each service's tools (schemas, declared text, hints and error reasons, typed calls); `mcpserver.AddTools` serves them |
 | Authorization, cache and deprecation headers, flow IDs, error audit | The policy runtime, read from options in the `.proto` |
+| Tenant isolation for multi-tenant APIs (optional) | `tenancy` in the `.proto`; the runtime checks every request's tenant, and the opt-in `DEDO_MULTI_TENANT` lint rules check that every resource and request names one |
 
 **One command to set up.** `dedo init` adds all of it to a Go repository and writes a `main.go` that serves your service on every transport.
 
@@ -24,16 +25,16 @@ Contract rules come from Google's AIPs. Operational rules (audience, ownership, 
 
 | Component | Path | Job |
 | --- | --- | --- |
-| Options module | `proto/dedo/v1/options.proto` | Declares audience, owner, scopes, cache policy, deprecation, error reasons, sensitive fields, message descriptions, and how each RPC appears as an MCP tool (title, description and the MCP specification's `ToolAnnotations`). Published as `buf.build/r-a/dedo`. |
-| Lint plugin | `lint/` | `buf-plugin-dedo-lint`: Google's AIP rules (`AIP_*`, through api-linter), five Zalando rules (`ZALANDO_*`) and nine dedo rules (`DEDO_*`), each in the category of its prefix, plus your organisation's own `HOUSE_*` rules, read as CEL checks from `rules.yml`. [RULES.md](guidance/RULES.md) documents every rule, the tiebreakers between sources and what dedo skips. Released as native binaries per platform (fast in editors) and as the Wasm check plugin `buf.build/r-a/dedo-lint`. |
+| Options module | `proto/dedo/v1/options.proto` | Declares audience, owner, tenancy, scopes, cache policy, deprecation, error reasons, sensitive fields, message descriptions, and how each RPC appears as an MCP tool (title, description and the MCP specification's `ToolAnnotations`). Published as `buf.build/r-a/dedo`. |
+| Lint plugin | `lint/` | `buf-plugin-dedo-lint`: Google's AIP rules (`AIP_*`, through api-linter), five Zalando rules (`ZALANDO_*`) and nine dedo rules (`DEDO_*`), each in the category of its prefix, four opt-in rules for multi-tenant services (`DEDO_MULTI_TENANT_*`), plus your organisation's own `HOUSE_*` rules, read as CEL checks from `rules.yml`. [RULES.md](guidance/RULES.md) documents every rule, the tiebreakers between sources and what dedo skips. Released as native binaries per platform (fast in editors) and as the Wasm check plugin `buf.build/r-a/dedo-lint`. |
 | `dedo` command | `cmd/dedo` | `dedo init` sets a Go repository up: the options module, the lint plugin and its categories, the generators, the server libraries, the REST docs page, a policy-table test and the agent guidance, editing existing `buf.yaml` and `buf.gen.yaml` in place. It writes a `main.go` and a `server.go` stub for the repository's service, and a starter service when there is none. `dedo tools` builds the pinned lint plugin and fetches shared house rules, `dedo update` installs the latest `dedo`, and `dedo upgrade` moves a repository to it. The templates are bundled into the binary; `dedo templates` prints them. |
 | Policy table | `policy/` | Reads the options from descriptors at startup. Fails on a missing declaration. |
 | Flow ID | `flowid/` | Reads or creates `X-Flow-ID` and propagates it on outbound calls. |
-| Policy interceptor | `interceptor/` | Checks scopes, sets `Cache-Control`, `Deprecation` and `Sunset`, and logs undeclared error reasons. |
+| Policy interceptor | `interceptor/` | Checks scopes and, in multi-tenant services, each request's tenant; sets `Cache-Control`, `Deprecation` and `Sunset`; and logs undeclared error reasons. |
 | REST doc generator | `openapi/` | `protoc-gen-dedo-openapi`: an OpenAPI 3.1 document from the `google.api.http` bindings, with scopes, error reasons, deprecation and the declared descriptions. Connect routes are left out. |
 | MCP tools | `mcp/` | `protoc-gen-dedo-mcp` generates `<Service>MCPTools()` for every service: each unary, non-deprecated RPC as a tool under a snake_case name (`get_todo`), with its declared title, description, `ToolAnnotations` and error reasons, input and output schemas (field descriptions from comments, constraints from `field_behavior`, resource patterns and `buf.validate`, partial-update and create semantics from AIP), and a typed call. `mcpserver.AddTools` serves them on the official MCP Go SDK, with no reflection while serving. Each call goes in-process to the service's `connect.Server` (`connectinprocess`), so tool calls run through the same interceptors (auth, validation and policy) as REST. |
 | Templates | `templates/` | `buf.yaml`, `buf.gen.yaml`, `Makefile.api`, VS Code settings, a Jenkins stage and a policy-table test for service repositories. The `dedo` command (`cmd/dedo`) bundles them, with `guidance/claude.md`. |
-| Examples | `examples/` | `library`: a contract-only module. `todo` and `bad-todo`: two runnable services with the same interface, one compliant and one breaking every rule. `house-rules`: an organisation's shared `HOUSE_*` rules, which both import. |
+| Examples | `examples/` | `library`: a contract-only module. `contacts`: a contract-only multi-tenant module, linted with every rule including `DEDO_MULTI_TENANT`. `todo` and `bad-todo`: two runnable services with the same interface, one compliant and one breaking every rule. `house-rules`: an organisation's shared `HOUSE_*` rules, which both import. |
 
 The root Go module (`github.com/raveesh-me/dedo`) holds the runtime and the generated options code. `lint/`, `openapi/`, `mcp/` and `cmd/dedo/` are separate modules, so services pull in only what they use. A `go.work` workspace builds them against each other locally, so no `go.mod` carries a `replace` and `go install <module>@<version>` works.
 
@@ -114,6 +115,8 @@ See `examples/library/proto` for a complete module.
 | `DEDO_TOOL_ANNOTATIONS` | Every unary RPC declares the MCP `ToolAnnotations` hints (spec 2026-07-28), consistent with its `idempotency_level` |
 | `DEDO_MESSAGE_DESCRIPTION_REQUIRED` | Every message declares a consumer-facing description |
 
+Multi-tenant services opt into four more, in the `DEDO_MULTI_TENANT` category: the service declares its tenant collection, resource patterns start with the tenant, every request names its tenant in a field its HTTP path binds, and no tenant data is cached publicly. The runtime enforces the same declaration on every request; [RULES.md](guidance/RULES.md#multi-tenant-rules) explains the model.
+
 [RULES.md](guidance/RULES.md) explains each rule with examples. Every finding ends with a link to its section, pinned to the plugin's release tag.
 
 Suppress one finding with `// buf:lint:ignore ZALANDO_MONEY_FIELD_TYPE` above the element, followed by the reason.
@@ -188,7 +191,7 @@ make wasm-plugins   # buf-plugin-dedo-lint as WebAssembly, for the BSR
 make breaking       # options module against main
 ```
 
-`make check` needs `buf`. Code generators are pinned in each `go.mod` as Go tools and run through `go tool`. The root `buf.yaml` lints the options module (Buf rules only, since it defines the extensions) and `examples/library` (all rules, with the locally built plugin from `dist/`).
+`make check` needs `buf`. Code generators are pinned in each `go.mod` as Go tools and run through `go tool`. The root `buf.yaml` lints the options module (Buf rules only, since it defines the extensions), `examples/library` (Buf, DEDO and ZALANDO rules) and `examples/contacts` (every rule a service gets, with DEDO_MULTI_TENANT), with the locally built plugin from `dist/`.
 
 Lint rule tests live in `lint/rules/testdata/<rule>/{pass,fail}`. A pass fixture must produce no finding. A fail fixture marks each line that must produce one with `// want`.
 

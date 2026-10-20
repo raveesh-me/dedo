@@ -14,8 +14,8 @@ import "dedo/v1/options.proto";
 
 | Option | On | Declares |
 | --- | --- | --- |
-| `dedo.v1.service` | service | audience and owner team |
-| `dedo.v1.method` | RPC | scopes, error reasons, cache policy, deprecation schedule, and the MCP tool: title, description and `ToolAnnotations` (MCP specification 2026-07-28) |
+| `dedo.v1.service` | service | audience, owner team, and for a multi-tenant service its tenant collection |
+| `dedo.v1.method` | RPC | scopes, error reasons, cache policy, deprecation schedule, whether it spans tenants, and the MCP tool: title, description and `ToolAnnotations` (MCP specification 2026-07-28) |
 | `dedo.v1.message` | message | a description for API readers and AI agents |
 | `dedo.v1.field` | field | sensitive data |
 

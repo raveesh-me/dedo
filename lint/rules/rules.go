@@ -3,6 +3,9 @@
 //   - ZALANDO_* enforce a specific Zalando RESTful API guideline.
 //   - DEDO_* enforce dedo's own conventions.
 //
+// DEDO_MULTI_TENANT_* rules are an opt-in category of DEDO rules, for
+// services that partition their data between tenants.
+//
 // Together with the AIP_* rules of package aip they make up buf-plugin-dedo-lint
 // (see Spec). HOUSE_* rules are each organisation's own, from its rules.yml
 // (package house), so they never collide with these.
@@ -24,6 +27,10 @@ import (
 const (
 	CategoryZalando = "ZALANDO"
 	CategoryDedo    = "DEDO"
+	// CategoryMultiTenant holds the opt-in DEDO_MULTI_TENANT_* rules, for
+	// services that partition their data between tenants. Its rules are not
+	// in DEDO, so they run only where lint.use lists the category.
+	CategoryMultiTenant = "DEDO_MULTI_TENANT"
 )
 
 // All lists dedo's ZALANDO_* and DEDO_* rules.
@@ -42,6 +49,10 @@ var All = []*check.RuleSpec{
 	toolRequired,
 	toolAnnotations,
 	messageDescriptionRequired,
+	multiTenantServiceTenancy,
+	multiTenantResourcePattern,
+	multiTenantRequestTenant,
+	multiTenantCachePrivate,
 }
 
 // NewSpec returns the plugin specification: the AIP_*, ZALANDO_* and DEDO_*
@@ -65,6 +76,7 @@ func NewSpec() (*check.Spec, error) {
 		Categories: append([]*check.CategorySpec{
 			{ID: CategoryZalando, Purpose: "Checks rules from Zalando's RESTful API guidelines that dedo adopts."},
 			{ID: CategoryDedo, Purpose: "Checks dedo's own conventions for public APIs, REST and MCP."},
+			{ID: CategoryMultiTenant, Purpose: "Checks that a multi-tenant API names the tenant in every resource and request, so the runtime can enforce it."},
 		}, categories...),
 		Before: before,
 	}, nil
@@ -92,8 +104,18 @@ func loadHouseRules() ([]*check.RuleSpec, error) {
 
 // category returns a rule's category from its ID prefix.
 func category(id string) string {
+	if strings.HasPrefix(id, CategoryMultiTenant+"_") {
+		return CategoryMultiTenant
+	}
 	prefix, _, _ := strings.Cut(id, "_")
 	return prefix
+}
+
+// optInRule is a rule that runs only where lint.use lists its category.
+func optInRule(id, purpose string, handler check.RuleHandler) *check.RuleSpec {
+	spec := lintRule(id, purpose, handler)
+	spec.Default = false
+	return spec
 }
 
 func lintRule(id, purpose string, handler check.RuleHandler) *check.RuleSpec {

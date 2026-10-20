@@ -122,6 +122,7 @@ What each option does:
 | `method.tool.annotations` | MCP | The MCP specification's `ToolAnnotations` hints (`read_only_hint`, `destructive_hint`, `idempotent_hint`, `open_world_hint`), for clients deciding, for example, whether to ask the user first |
 | `message.description` | MCP, docs | The schema description shown to agents and API readers |
 | `field.sensitive` | Docs | Marks personal or secret data (`x-sensitive`) |
+| `service.tenancy`, `method.cross_tenant` | Lint, runtime | A multi-tenant service: the runtime checks every request's tenant ([section 7](#multi-tenant-services)) |
 
 The MCP tool schemas also read the standard annotations, so a model can get a call right the first time:
 
@@ -227,9 +228,20 @@ The proto declares **which callers may invoke which RPC**. The interceptor enfor
 Two parts stay in code:
 
 - **Authentication.** Your token check, a `connect.ServerInterceptor` on the same `connect.Server`, verifies the token and puts the caller's scopes in the call's context; `interceptor.Config.Scopes` reads them from there. You write it once per platform. As an interceptor rather than HTTP middleware, it also covers MCP calls, which reach the server in-process.
-- **Resource-level checks.** A scope says a caller may read products. It does not say *which* products, for example only those of the caller's own location. Handlers still check ownership and tenancy.
+- **Resource-level checks.** A scope says a caller may read products. It does not say *which* products. Ownership of one resource (only the caller's own drafts) stays in handlers.
 
 Roll out with `EnforceScopes: false` first. The runtime logs every call that would have been denied. Switch to `true` once the logs are clean.
+
+### Multi-tenant services
+
+When the data is partitioned between tenants (customers, sub-accounts, business locations), declare it and the runtime enforces the boundary too:
+
+1. Put the tenant at the root of the resource hierarchy: `locations/{location}/products/{product}`, with paths such as `/commerce/pim/v1/{name=locations/*/products/*}`.
+2. Declare it on the service: `option (dedo.v1.service) = {... tenancy: {collection: "locations"}}`. Mark the few RPCs that span tenants, such as listing the caller's own locations, `cross_tenant: true`.
+3. Add `DEDO_MULTI_TENANT` to `lint.use` (`dedo init` does), so the lint checks that every resource and every request names its tenant.
+4. Pass `Tenants` to `interceptor.Config`: a function that says whether the caller may act in a tenant ID. Your auth interceptor puts what it needs in the context, as for scopes.
+
+The interceptor then reads the tenants of every request, on every transport, from the field the path binds and from every field with a `google.api.resource_reference`, and answers `PERMISSION_DENIED` for another tenant's data before your handler runs. The service will not start if an RPC names no tenant, or if `Tenants` is missing. [RULES.md](RULES.md#multi-tenant-rules) has the details, and [`examples/contacts`](../examples/contacts) a complete contract.
 
 ## 8. Change the API safely
 

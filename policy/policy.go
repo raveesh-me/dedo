@@ -17,6 +17,9 @@ type Method struct {
 	Procedure string // "/raveesh_me.library.v1.LibraryService/GetBook"
 	Audience  dedov1.Audience
 	Rules     *dedov1.MethodRules
+	// Tenant is set on the methods of a multi-tenant service, except
+	// cross-tenant ones.
+	Tenant *Tenant
 }
 
 // Table maps procedure names to their contracts.
@@ -74,11 +77,21 @@ func addService(table Table, svc protoreflect.ServiceDescriptor) error {
 			return fmt.Errorf("policy: method %s declares no scopes", m.FullName())
 		}
 		procedure := fmt.Sprintf("/%s/%s", svc.FullName(), m.Name())
-		table[procedure] = Method{
+		method := Method{
 			Procedure: procedure,
 			Audience:  svcRules.GetAudience(),
 			Rules:     rules,
 		}
+		// A tenant-scoped method whose tenant cannot be found would serve
+		// every tenant, so fail closed here too.
+		if collection := svcRules.GetTenancy().GetCollection(); collection != "" && !rules.GetCrossTenant() {
+			tenant, err := methodTenant(m, collection)
+			if err != nil {
+				return err
+			}
+			method.Tenant = tenant
+		}
+		table[procedure] = method
 	}
 	return nil
 }
