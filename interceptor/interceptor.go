@@ -23,9 +23,10 @@ type Config struct {
 	Table         policy.Table
 	Scopes        Scopes
 	EnforceScopes bool // false logs denials only, for rollout
-	// Tenants decides tenant access for multi-tenant services. It is
-	// required when the table has one, and always enforced: a tenant
-	// boundary has no audit mode.
+	// Tenants decides tenant access for multi-tenant services, and is
+	// required when the table has one. EnforceScopes does not apply to it:
+	// in an audit mode, a denied call would still return another tenant's
+	// data, and the log would record a leak rather than prevent it.
 	Tenants TenantAccess
 	Log     *slog.Logger
 }
@@ -81,8 +82,9 @@ func (i *guard) wrap(next connect.ServerFunc) connect.ServerFunc {
 			stream = tenants
 		}
 		if err := next(ctx, spec, stream); err != nil {
-			// A tenant denial is the guard's own answer, not the handler's,
-			// so it is not audited against the declared reasons.
+			// The guard's own tenant denial carries no declared reason;
+			// auditing it would log every denied probe as an undeclared
+			// error and bury the handler errors the audit is for.
 			if tenants == nil || tenants.denial == nil || !errors.Is(err, tenants.denial) {
 				i.auditError(ctx, m, err)
 			}

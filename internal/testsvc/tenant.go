@@ -100,6 +100,13 @@ func tenantFile() *descriptorpb.FileDescriptorProto {
 			message("ListTenantsRequest"),
 			message("ListTenantsResponse"),
 			message("Target", reference(field("location", 1, str, ""))),
+			// Mutually recursive: a Node's reference must be checked even
+			// inside a Wrapper inside a Node.
+			message("Node",
+				field("wrapper", 1, msg, ".raveesh_me.tenant.v1.Wrapper"),
+				reference(field("location", 2, str, "")),
+			),
+			message("Wrapper", field("node", 1, msg, ".raveesh_me.tenant.v1.Node")),
 			message("MoveThingRequest",
 				field("name", 1, str, ""),
 				reference(field("destination", 2, str, "")),
@@ -110,6 +117,7 @@ func tenantFile() *descriptorpb.FileDescriptorProto {
 				}(),
 				field("target", 4, msg, ".raveesh_me.tenant.v1.Target"),
 				field("note", 5, str, ""),
+				field("node", 6, msg, ".raveesh_me.tenant.v1.Node"),
 			),
 		},
 		Service: []*descriptorpb.ServiceDescriptorProto{{
