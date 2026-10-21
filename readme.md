@@ -1,4 +1,9 @@
-# dedo
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/brand/readme-banner-dark.svg">
+    <img alt="dedo: define once, deploy everywhere" src="assets/brand/readme-banner-light.svg" width="100%">
+  </picture>
+</p>
 
 **Define once, deploy everywhere.** Author one `.proto`, ship it everywhere. The same contract serves your API as RPC (Connect and gRPC), REST and MCP tools for AI agents, with the same auth, documentation and behaviour on every transport:
 
