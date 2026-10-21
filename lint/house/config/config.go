@@ -4,10 +4,13 @@
 // with it too.
 //
 //	imports:
-//	  - path: ../api-standards          # a folder (its rules.yml) or a file
+//	  - path: platform-rules            # a folder (its rules.yml) or a file
 //	  - git: https://github.com/acme/api-standards.git
 //	    ref: v3                         # a tag or a commit
 //	    path: rules.yml                 # in that repository; the default
+//
+// Every path is relative to the root of the repository whose file names it:
+// this repository's (the folder of rules.yml) or the git import's.
 //	disable: [HOUSE_PLURAL_COLLECTIONS] # imported rules this repository opts out of
 //	rules:
 //	  - id: HOUSE_RESOURCE_TYPE_DOMAIN
@@ -99,7 +102,7 @@ func Find(dir string) string {
 func Load(path string) ([]Rule, error) {
 	root := filepath.Dir(path)
 	l := &loader{root: root, seen: map[string]bool{}, ids: map[string]string{}}
-	rules, disabled, err := l.load(path, nil)
+	rules, disabled, err := l.load(path, "", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -123,9 +126,10 @@ type loader struct {
 	ids  map[string]string // rule ID → the file that defines it
 }
 
-// load reads one rules file; stack holds the files importing it, to report
+// load reads one rules file; repo is the git checkout it lies in, or "" for
+// the service's own files, and stack holds the files importing it, to report
 // import cycles.
-func (l *loader) load(path string, stack []string) (rules []Rule, disabled []string, err error) {
+func (l *loader) load(path, repo string, stack []string) (rules []Rule, disabled []string, err error) {
 	abs, err := filepath.Abs(path)
 	if err != nil {
 		return nil, nil, err
@@ -149,11 +153,16 @@ func (l *loader) load(path string, stack []string) (rules []Rule, disabled []str
 		return nil, nil, fmt.Errorf("%s: %w", path, err)
 	}
 	for _, imp := range f.Imports {
-		target, err := l.resolve(abs, imp)
+		target, targetRepo, err := resolve(l.root, abs, repo, imp)
 		if err != nil {
 			return nil, nil, err
 		}
-		r, d, err := l.load(target, append(stack, abs))
+		if imp.Git != "" {
+			if _, err := os.Stat(targetRepo); err != nil {
+				return nil, nil, fmt.Errorf("%s: the import of %s@%s is not fetched yet: run dedo tools", abs, imp.Git, imp.Ref)
+			}
+		}
+		r, d, err := l.load(target, targetRepo, append(stack, abs))
 		if err != nil {
 			return nil, nil, err
 		}
@@ -174,29 +183,76 @@ func (l *loader) load(path string, stack []string) (rules []Rule, disabled []str
 	return rules, append(disabled, f.Disable...), nil
 }
 
-// resolve returns the rules file an import names: a path relative to the
-// importing file (a folder means its rules.yml), or a file in a fetched git
-// import.
-func (l *loader) resolve(from string, imp Import) (string, error) {
+// resolve returns the rules file an import names, and the git checkout it
+// lies in ("" for the service's own files). A folder means its rules.yml.
+//
+// A path is relative to the root of the repository the importing file
+// belongs to, wherever in it that file sits, so every file of a repository
+// names the same file the same way. For the service's own files the root is
+// the folder of its rules.yml, next to buf.yaml; there a path may also lead
+// outside, such as ../platform-rules in a monorepo. For a git import the
+// root is that repository's: the import's own path and every path its files
+// import must stay inside it, symlinks followed, since a shared repository is
+// someone else's code and must not make the lint read the service's files or
+// the machine's.
+func resolve(root, from, repo string, imp Import) (target, targetRepo string, err error) {
 	switch {
 	case imp.Git != "":
 		if imp.Ref == "" {
-			return "", fmt.Errorf("%s: the import of %s needs a ref: a tag or a commit, so every machine reads the same rules", from, imp.Git)
+			return "", "", fmt.Errorf("%s: the import of %s needs a ref: a tag or a commit, so every machine reads the same rules", from, imp.Git)
 		}
-		dir := CacheDir(l.root, imp)
-		target := filepath.Join(dir, filepath.FromSlash(orDefault(imp.Path)))
-		if _, err := os.Stat(target); err != nil {
-			return "", fmt.Errorf("%s: the import of %s@%s is not fetched yet: run dedo tools", from, imp.Git, imp.Ref)
+		dir := CacheDir(root, imp)
+		target, err := inRepo(dir, orDefault(imp.Path))
+		if err != nil {
+			return "", "", fmt.Errorf("%s: the import of %s@%s: %w", from, imp.Git, imp.Ref, err)
 		}
-		return target, nil
+		return target, dir, nil
+	case imp.Path != "" && repo != "":
+		target, err := inRepo(repo, imp.Path)
+		if err != nil {
+			return "", "", fmt.Errorf("%s: %w", from, err)
+		}
+		return target, repo, nil
 	case imp.Path != "":
-		target := filepath.Join(filepath.Dir(from), filepath.FromSlash(imp.Path))
-		if info, err := os.Stat(target); err == nil && info.IsDir() {
-			target = filepath.Join(target, FileName)
-		}
-		return target, nil
+		return folderFile(filepath.Join(root, filepath.FromSlash(imp.Path))), "", nil
 	}
-	return "", fmt.Errorf("%s: an import needs a path or a git URL", from)
+	return "", "", fmt.Errorf("%s: an import needs a path or a git URL", from)
+}
+
+// inRepo resolves a path from the root of a git checkout, and refuses one
+// that leads outside it.
+func inRepo(repo, rel string) (string, error) {
+	outside := fmt.Errorf("path %q is outside the repository it is imported from; paths there are relative to its root", rel)
+	if filepath.IsAbs(rel) || strings.HasPrefix(rel, "/") {
+		return "", outside
+	}
+	target := folderFile(filepath.Join(repo, filepath.FromSlash(rel)))
+	if !within(repo, target) {
+		return "", outside
+	}
+	// A symlink in the checkout can point anywhere; judge where it leads.
+	// Before dedo tools has fetched the repository there is nothing to
+	// follow yet, and Load reports that instead.
+	if real, err := filepath.EvalSymlinks(target); err == nil {
+		realRepo, err := filepath.EvalSymlinks(repo)
+		if err != nil || !within(realRepo, real) {
+			return "", outside
+		}
+	}
+	return target, nil
+}
+
+func within(dir, path string) bool {
+	rel, err := filepath.Rel(dir, path)
+	return err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))
+}
+
+// folderFile turns a folder into the rules.yml inside it.
+func folderFile(path string) string {
+	if info, err := os.Stat(path); err == nil && info.IsDir() {
+		return filepath.Join(path, FileName)
+	}
+	return path
 }
 
 func orDefault(p string) string {
@@ -233,8 +289,8 @@ func Fetch(path string) ([]string, error) {
 	root := filepath.Dir(path)
 	var fetched []string
 	seen := map[string]bool{}
-	var walk func(p string) error
-	walk = func(p string) error {
+	var walk func(p, repo string) error
+	walk = func(p, repo string) error {
 		abs, err := filepath.Abs(p)
 		if err != nil || seen[abs] {
 			return err
@@ -249,35 +305,27 @@ func Fetch(path string) ([]string, error) {
 			return fmt.Errorf("%s: %w", p, err)
 		}
 		for _, imp := range f.Imports {
-			if imp.Git == "" {
-				if imp.Path != "" {
-					target := filepath.Join(filepath.Dir(abs), filepath.FromSlash(imp.Path))
-					if info, err := os.Stat(target); err == nil && info.IsDir() {
-						target = filepath.Join(target, FileName)
-					}
-					if err := walk(target); err != nil {
+			if imp.Git != "" && imp.Ref != "" {
+				dir := CacheDir(root, imp)
+				if _, err := os.Stat(dir); errors.Is(err, fs.ErrNotExist) {
+					if err := clone(imp, dir); err != nil {
 						return err
 					}
+					fetched = append(fetched, imp.Git+"@"+imp.Ref)
 				}
-				continue
 			}
-			if imp.Ref == "" {
-				return fmt.Errorf("%s: the import of %s needs a ref", p, imp.Git)
+			// Resolved after cloning, so symlinks in the checkout are judged.
+			target, targetRepo, err := resolve(root, abs, repo, imp)
+			if err != nil {
+				return err
 			}
-			dir := CacheDir(root, imp)
-			if _, err := os.Stat(dir); errors.Is(err, fs.ErrNotExist) {
-				if err := clone(imp, dir); err != nil {
-					return err
-				}
-				fetched = append(fetched, imp.Git+"@"+imp.Ref)
-			}
-			if err := walk(filepath.Join(dir, filepath.FromSlash(orDefault(imp.Path)))); err != nil {
+			if err := walk(target, targetRepo); err != nil {
 				return err
 			}
 		}
 		return nil
 	}
-	return fetched, walk(path)
+	return fetched, walk(path, "")
 }
 
 // clone checks out imp at its ref into dir, through a temporary directory,

@@ -86,15 +86,15 @@ dedo checks only the Zalando guidelines a proto can express. It does not follow 
 `HOUSE_*` rules are your organisation's own, for conventions dedo has no business knowing: your domain names, your REST roots, your field naming. You write them in `rules.yml` next to `buf.yaml`, as [CEL](https://cel.dev) checks, and `buf-plugin-dedo-lint` runs them with dedo's own rules. No plugin to write, build or release.
 
 ```yaml
-# rules.yml
+# rules.yml in a service repository
 imports:
-  - git: https://github.com/acme/api-standards.git   # your organisation's shared rules
+  - git: https://github.com/acme/api-standards.git   # the organisation's shared rules
     ref: v3                                           # a tag or a commit
-    path: rules.yml                                   # the default
-  - path: ../platform-rules                           # a folder (its rules.yml) or a file
-disable: [HOUSE_PLURAL_COLLECTIONS]                   # imported rules this repository opts out of
+    path: rules.yml                                   # from that repository's root; the default
+  - path: platform-rules/rules.yml                    # a folder (its rules.yml) or a file
+disable: [HOUSE_MESSAGE_SIZE]                         # imported rules this service opts out of
 rules:
-  - id: HOUSE_REST_ROOT
+  - id: HOUSE_REST_ROOT                               # this service's own
     on: method
     check: http_path == '' || http_path.startsWith('/commerce/')
     message: REST paths start with /commerce/, the commerce platform's root.
@@ -103,7 +103,9 @@ rules:
 
 Add `HOUSE` to `lint.use` in `buf.yaml` (`dedo init` does it when `rules.yml` exists). Each rule is a Buf rule of its own, so `except: [HOUSE_REST_ROOT]` and `// buf:lint:ignore HOUSE_REST_ROOT` work as for any other rule, and a finding shows the rule's `message` and `doc` link.
 
-**Shared rules.** An organisation keeps its rules in one repository and tags it; each service imports it with `git` and `ref`. Imports nest: a shared file can import others. `dedo tools` (and `make tools`, `dedo init`, `dedo upgrade`) fetches git imports into `.tools/rules/`; the lint itself never touches the network, so it stays fast in the editor. A missing import fails the lint with "run dedo tools". `disable` lets a service opt out of an imported rule, by ID.
+**Paths.** Every `path` is relative to the root of the repository whose file names it, wherever in that repository the file sits: `platform-rules/naming.yml` names the same file from `rules.yml` and from `platform-rules/rules.yml`. In your service the root is the folder of `rules.yml`, next to `buf.yaml`, and a path may lead outside it, such as `../platform-rules` in a monorepo.
+
+**Shared rules.** An organisation keeps its rules in one repository and tags it; each service imports it with `git` and `ref`. Imports nest: a shared file can import others, by paths from its own repository's root. Those paths must stay inside that repository, symlinks included: shared rules cannot make the lint read a service's files, or anything else on the machine. `dedo tools` (and `make tools`, `dedo init`, `dedo upgrade`) fetches git imports into `.tools/rules/`; the lint itself never touches the network, so it stays fast in the editor. A missing import fails the lint with "run dedo tools". `disable` lets a service opt out of an imported rule, by ID.
 
 **Checks.** `check` is a CEL expression that is true when the element passes. `on` picks the element, and these are the names a check can use:
 

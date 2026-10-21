@@ -155,3 +155,98 @@ func TestFetchGitImport(t *testing.T) {
 		t.Errorf("second Fetch = %v, %v; want nothing new", again, err)
 	}
 }
+
+// remoteRepo commits files, symlinks included, to a new git repository
+// tagged v1, and returns its directory.
+func remoteRepo(t *testing.T, files map[string]string, links map[string]string) string {
+	t.Helper()
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git is not installed")
+	}
+	remote := t.TempDir()
+	write(t, remote, files)
+	for name, target := range links {
+		if err := os.Symlink(target, filepath.Join(remote, name)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, args := range [][]string{{"init", "--quiet"}, {"add", "."}, {"commit", "--quiet", "-m", "v1"}, {"tag", "v1"}} {
+		cmd := exec.Command("git", append([]string{"-C", remote, "-c", "user.email=t@example.com", "-c", "user.name=t"}, args...)...)
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v\n%s", args, err, out)
+		}
+	}
+	return remote
+}
+
+// fetchAndLoad imports remote's file at v1 from a service's rules.yml.
+func fetchAndLoad(t *testing.T, remote, path string) ([]Rule, error) {
+	t.Helper()
+	dir := t.TempDir()
+	write(t, dir, map[string]string{FileName: "imports:\n  - git: " + remote + "\n    ref: v1\n    path: " + path + "\n"})
+	if _, err := Fetch(filepath.Join(dir, FileName)); err != nil {
+		return nil, err
+	}
+	return Load(filepath.Join(dir, FileName))
+}
+
+// In the service's own files too, a path import names a file from the root,
+// the folder of rules.yml, wherever the importing file sits.
+func TestLocalImportPathsFromRoot(t *testing.T) {
+	dir := t.TempDir()
+	write(t, dir, map[string]string{
+		FileName:                    "imports:\n  - path: platform-rules/rules.yml\n",
+		"platform-rules/rules.yml":  "imports:\n  - path: platform-rules/naming.yml\n" + domainRule,
+		"platform-rules/naming.yml": "rules:\n  - {id: HOUSE_NAMING, on: field, check: \"true\", message: Naming.}\n",
+	})
+	rules, err := Load(filepath.Join(dir, FileName))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := ids(rules); !slices.Equal(got, []string{"HOUSE_NAMING", "HOUSE_RESOURCE_TYPE_DOMAIN"}) {
+		t.Errorf("rules = %v", got)
+	}
+}
+
+// Inside a shared repository, a path import names a file from that
+// repository's root, wherever the importing file sits.
+func TestGitImportPathsFromRepoRoot(t *testing.T) {
+	remote := remoteRepo(t, map[string]string{
+		"api/rules.yml":     "imports:\n  - path: shared/naming.yml\n  - path: shared\n" + domainRule,
+		"shared/naming.yml": "rules:\n  - {id: HOUSE_NAMING, on: field, check: \"true\", message: Naming.}\n",
+		"shared/rules.yml":  "rules:\n  - {id: HOUSE_SHARED, on: field, check: \"true\", message: Shared.}\n",
+		"api/shared/x.yml":  "rules:\n  - {id: HOUSE_WRONG, on: field, check: \"true\", message: Wrong.}\n",
+	}, nil)
+	rules, err := fetchAndLoad(t, remote, "api/rules.yml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := ids(rules); !slices.Equal(got, []string{"HOUSE_NAMING", "HOUSE_SHARED", "HOUSE_RESOURCE_TYPE_DOMAIN"}) {
+		t.Errorf("rules = %v", got)
+	}
+}
+
+// A shared repository's rules cannot reach outside it, into the service or
+// anywhere else on the machine that runs the lint.
+func TestGitImportCannotLeaveRepo(t *testing.T) {
+	outside := filepath.Join(t.TempDir(), "secret.yml")
+	write(t, filepath.Dir(outside), map[string]string{"secret.yml": domainRule})
+	for name, tc := range map[string]struct {
+		files map[string]string
+		links map[string]string
+		path  string
+	}{
+		"dot-dot":       {files: map[string]string{"rules.yml": "imports:\n  - path: ../../../secret.yml\n"}, path: "rules.yml"},
+		"absolute":      {files: map[string]string{"rules.yml": "imports:\n  - path: " + outside + "\n"}, path: "rules.yml"},
+		"symlink":       {files: map[string]string{"rules.yml": "imports:\n  - path: evil.yml\n"}, links: map[string]string{"evil.yml": outside}, path: "rules.yml"},
+		"git path":      {files: map[string]string{"rules.yml": domainRule}, path: "../../../secret.yml"},
+		"git path link": {links: map[string]string{"rules.yml": outside}, path: "rules.yml"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			remote := remoteRepo(t, tc.files, tc.links)
+			if _, err := fetchAndLoad(t, remote, tc.path); err == nil || !strings.Contains(err.Error(), "outside") {
+				t.Fatalf("err = %v, want an import outside the repository refused", err)
+			}
+		})
+	}
+}
