@@ -46,8 +46,6 @@ func TenantField(path, collection string) (string, bool) {
 	return fields[0], true
 }
 
-// tenantFields returns every request field that an HTTP path binds to a
-// name under the tenant collection.
 func tenantFields(path, collection string) []string {
 	var fields []string
 	for _, m := range pathVariable.FindAllStringSubmatch(path, -1) {
@@ -87,10 +85,11 @@ func HTTPPaths(rule *annotations.HttpRule) []string {
 }
 
 // MethodTenant finds the tenant field of a method of a multi-tenant service
-// from its HTTP rule. Every binding must bind the same string field of the
-// request to a name under the tenant, since the runtime reads that one field
-// whatever the transport. buf-plugin-dedo-lint calls it too, so the lint and
-// the runtime agree on where each request names its tenant.
+// from its HTTP rule. The runtime reads that one field on every transport,
+// so every binding must bind the same one: a request through a binding that
+// set another field would be checked on a field it left empty.
+// buf-plugin-dedo-lint calls it too, so a contract that lints clean also
+// starts.
 func MethodTenant(m protoreflect.MethodDescriptor, rule *annotations.HttpRule, collection string) (*Tenant, error) {
 	paths := HTTPPaths(rule)
 	if len(paths) == 0 {
@@ -103,6 +102,9 @@ func MethodTenant(m protoreflect.MethodDescriptor, rule *annotations.HttpRule, c
 		case len(fields) == 0:
 			return nil, fmt.Errorf("HTTP path %q binds no field to %s/*", path, collection)
 		case len(fields) > 1:
+			// Only the tenant field must be set and well formed; a second
+			// tenant name in the path is checked only if it also carries a
+			// resource_reference, and would otherwise go unchecked.
 			return nil, fmt.Errorf("HTTP path %q binds more than one field to %s/*", path, collection)
 		case field != "" && fields[0] != field:
 			return nil, fmt.Errorf("HTTP bindings name the tenant in %q and %q", field, fields[0])
@@ -120,11 +122,10 @@ func MethodTenant(m protoreflect.MethodDescriptor, rule *annotations.HttpRule, c
 		refs:       map[protoreflect.FullName]bool{},
 		reach:      map[protoreflect.FullName]bool{},
 	}
-	t.findReferences(m.Input(), map[protoreflect.FullName]bool{})
+	t.findReferences(m.Input())
 	return t, nil
 }
 
-// methodTenant reads a method's HTTP rule and finds its tenant field.
 func methodTenant(m protoreflect.MethodDescriptor, collection string) (*Tenant, error) {
 	rule, _ := proto.GetExtension(m.Options(), annotations.E_Http).(*annotations.HttpRule)
 	tenant, err := MethodTenant(m, rule, collection)
@@ -134,31 +135,54 @@ func methodTenant(m protoreflect.MethodDescriptor, collection string) (*Tenant, 
 	return tenant, nil
 }
 
-// findReferences records the resource reference fields of a message and of
-// the messages it holds, and reports whether it holds any.
-func (t *Tenant) findReferences(md protoreflect.MessageDescriptor, seen map[protoreflect.FullName]bool) bool {
-	if seen[md.FullName()] {
-		return t.reach[md.FullName()]
-	}
-	seen[md.FullName()] = true
-	fields := md.Fields()
-	for i := 0; i < fields.Len(); i++ {
-		fd := fields.Get(i)
-		switch {
-		case fd.Kind() == protoreflect.StringKind && isReference(fd):
-			t.refs[fd.FullName()] = true
-			t.reach[md.FullName()] = true
-		case fd.IsMap() && fd.MapValue().Message() != nil:
-			if t.findReferences(fd.MapValue().Message(), seen) {
-				t.reach[md.FullName()] = true
+// findReferences records the resource reference fields of a request and of
+// every message it can hold, and which of those messages lead to one.
+//
+// Reach is settled over the whole type graph, not in one recursive pass: in
+// mutually recursive messages, such as a Node holding a Wrapper holding a
+// Node, a single pass reaches Wrapper before Node is known to hold a
+// reference, marks Wrapper as reaching none, and the runtime would then
+// never walk the Node inside it.
+func (t *Tenant) findReferences(request protoreflect.MessageDescriptor) {
+	children := map[protoreflect.FullName][]protoreflect.FullName{}
+	var visit func(protoreflect.MessageDescriptor)
+	visit = func(md protoreflect.MessageDescriptor) {
+		if _, seen := children[md.FullName()]; seen {
+			return
+		}
+		children[md.FullName()] = []protoreflect.FullName{}
+		fields := md.Fields()
+		for i := 0; i < fields.Len(); i++ {
+			fd := fields.Get(i)
+			child := fd.Message()
+			if fd.IsMap() {
+				child = fd.MapValue().Message()
 			}
-		case fd.Message() != nil && !fd.IsMap():
-			if t.findReferences(fd.Message(), seen) {
+			switch {
+			case fd.Kind() == protoreflect.StringKind && isReference(fd):
+				t.refs[fd.FullName()] = true
 				t.reach[md.FullName()] = true
+			case child != nil:
+				children[md.FullName()] = append(children[md.FullName()], child.FullName())
+				visit(child)
 			}
 		}
 	}
-	return t.reach[md.FullName()]
+	visit(request)
+	for changed := true; changed; {
+		changed = false
+		for parent, kids := range children {
+			if t.reach[parent] {
+				continue
+			}
+			for _, kid := range kids {
+				if t.reach[kid] {
+					t.reach[parent], changed = true, true
+					break
+				}
+			}
+		}
+	}
 }
 
 func isReference(fd protoreflect.FieldDescriptor) bool {

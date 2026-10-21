@@ -144,6 +144,12 @@ func TestTenantsOfReferences(t *testing.T) {
 			target := m.Mutable(m.Descriptor().Fields().ByName("target")).Message()
 			target.Set(target.Descriptor().Fields().ByName("location"), protoreflect.ValueOfString("locations/4"))
 		}, []string{"1", "4"}, false},
+		{"reference in a recursive message", func(m *dynamicpb.Message) {
+			node := m.Mutable(m.Descriptor().Fields().ByName("node")).Message()
+			wrapper := node.Mutable(node.Descriptor().Fields().ByName("wrapper")).Message()
+			inner := wrapper.Mutable(wrapper.Descriptor().Fields().ByName("node")).Message()
+			inner.Set(inner.Descriptor().Fields().ByName("location"), protoreflect.ValueOfString("locations/6"))
+		}, []string{"1", "6"}, false},
 		{"reference outside the tenants", func(m *dynamicpb.Message) { setString(m, "destination", "catalog/7") }, []string{"1"}, false},
 		{"field that is not a reference", func(m *dynamicpb.Message) { setString(m, "note", "locations/5") }, []string{"1"}, false},
 		{"malformed reference", func(m *dynamicpb.Message) { setString(m, "destination", "locations/1/../2") }, nil, true},

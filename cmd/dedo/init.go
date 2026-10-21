@@ -254,7 +254,9 @@ func (in *initer) linter() error {
 		return err
 	}
 	changed := false
-	// The categories that only some repositories have rules for.
+	// Categories a repository opts into. Buf rejects HOUSE without a
+	// rules.yml, since the category then has no rules, and
+	// DEDO_MULTI_TENANT would report every service that declares no tenancy.
 	var optional []string
 	if in.hasHouseRules() {
 		optional = append(optional, house)

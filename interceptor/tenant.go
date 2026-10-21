@@ -17,8 +17,12 @@ import (
 // every tenant.
 type TenantAccess func(ctx context.Context, tenant string) bool
 
-// tenantStream checks the tenants of every request message the handler
-// receives, before the handler or the validation interceptor sees it.
+// tenantStream checks the tenants of every request message as the handler
+// receives it. The guard runs before any message has arrived, so the check
+// sits in Receive; that also covers each message of a client or bidi
+// stream, which could otherwise switch tenants after the first. It runs
+// ahead of the validation interceptor, so a validation error reveals
+// nothing about another tenant's request.
 type tenantStream struct {
 	connect.ServerStream
 	ctx    context.Context
