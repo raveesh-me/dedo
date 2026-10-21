@@ -218,7 +218,7 @@ Append [claude.md](claude.md) to your `AGENTS.md` or `CLAUDE.md` (`dedo template
 
 | The repository | What `dedo init` does |
 | --- | --- |
-| A Go module with protos and `buf.gen.yaml` | Keeps your generators, including Buf's remote `protocolbuffers/go` and `connectrpc/go` plugins, and adds only dedo's two, writing to the same `out` with the same `paths=` option. Reads each file's `go_package`, or managed mode's `go_package_prefix`, for the Go names in `main.go`. Leaves managed mode as it is. |
+| A Go module with protos and `buf.gen.yaml` | Keeps your generators, including Buf's remote `protocolbuffers/go` and `connectrpc/go` plugins, and adds only dedo's two, writing to the same `out` with the same `paths=` option. Reads each file's `go_package`, or managed mode's `go_package_prefix`, for the Go names in `main.go`. Leaves managed mode as it is. Warns when `connectrpc/go` is pinned to a release that generates connect-go v1 code, which dedo's server cannot register. |
 | A Go module with protos, no `buf.gen.yaml` | Writes `buf.gen.yaml` with managed mode and four generators run through `go tool`. |
 | Protos and `buf.yaml`, but no Go module (a schema repository) | Adds the options module and the lint plugin from the BSR (`buf.build/r-a/dedo-lint:<release>`, about 5 s per lint, no Go needed), both pinned to the release. Nothing that needs Go. Run `go mod init` and `dedo init` again when you want generated code and a server. |
 | A Go module without protos | Writes a starter service that passes lint. |

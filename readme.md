@@ -26,7 +26,7 @@ Contract rules come from Google's AIPs. Operational rules (audience, ownership, 
 | Component | Path | Job |
 | --- | --- | --- |
 | Options module | `proto/dedo/v1/options.proto` | Declares audience, owner, tenancy, scopes, cache policy, deprecation, error reasons, sensitive fields, message descriptions, and how each RPC appears as an MCP tool (title, description and the MCP specification's `ToolAnnotations`). Published as `buf.build/r-a/dedo`. |
-| Lint plugin | `lint/` | `buf-plugin-dedo-lint`: Google's AIP rules (`AIP_*`, through api-linter), five Zalando rules (`ZALANDO_*`) and nine dedo rules (`DEDO_*`), each in the category of its prefix, four opt-in rules for multi-tenant services (`DEDO_MULTI_TENANT_*`), plus your organisation's own `HOUSE_*` rules, read as CEL checks from `rules.yml`. [RULES.md](guidance/RULES.md) documents every rule, the tiebreakers between sources and what dedo skips. Released as native binaries per platform (fast in editors) and as the Wasm check plugin `buf.build/r-a/dedo-lint`. |
+| Lint plugin | `lint/` | `buf-plugin-dedo-lint`: Google's AIP rules (`AIP_*`, through api-linter), five Zalando rules (`ZALANDO_*`) and nine dedo rules (`DEDO_*`), each in the category of its prefix. Four more, for multi-tenant services, are opt-in (`DEDO_MULTI_TENANT_*`), and your organisation's own `HOUSE_*` rules come from CEL checks in `rules.yml`. [RULES.md](guidance/RULES.md) documents every rule, the tiebreakers between sources and what dedo skips. Released as native binaries per platform (fast in editors) and as the Wasm check plugin `buf.build/r-a/dedo-lint`. |
 | `dedo` command | `cmd/dedo` | `dedo init` sets a Go repository up: the options module, the lint plugin and its categories, the generators, the server libraries, the REST docs page, a policy-table test and the agent guidance, editing existing `buf.yaml` and `buf.gen.yaml` in place. It writes a `main.go` and a `server.go` stub for the repository's service, and a starter service when there is none. `dedo tools` builds the pinned lint plugin and fetches shared house rules, `dedo update` installs the latest `dedo`, and `dedo upgrade` moves a repository to it. The templates are bundled into the binary; `dedo templates` prints them. |
 | Policy table | `policy/` | Reads the options from descriptors at startup. Fails on a missing declaration. |
 | Flow ID | `flowid/` | Reads or creates `X-Flow-ID` and propagates it on outbound calls. |
@@ -133,7 +133,7 @@ dedo init
 1. `dedo init` (or by hand: copy `buf.yaml`, `buf.gen.yaml`, `Makefile.api` from `templates/`, pin the generators and the lint plugin with `go get -tool`, run `dedo tools` and `buf dep update`).
 2. Fill in `CODEOWNERS` and the VS Code settings from `templates/` if you use them.
 3. Write the contract, then `make api-check` (lint, format, breaking) and `buf generate` (Go, Connect, MCP tools, REST docs).
-4. Wire the runtime on one connect-go v2 `connect.Server`: `policy.Build` for the policy table, `interceptor.New` for scopes and headers, `connecthttp.Mount` for Connect and gRPC, `vanguard.Mount` for REST, `mcpserver.AddTools` with the generated `<Service>MCPTools()` for MCP, and the docs handler. The `main.go` that `dedo init` writes enforces scopes from the start; an existing service can begin with `EnforceScopes: false` (audit mode), then enforce.
+4. Wire the runtime on one connect-go v2 `connect.Server`: `policy.Build` for the policy table, `interceptor.New` for scopes, tenants and headers, `connecthttp.Mount` for Connect and gRPC, `vanguard.Mount` for REST, `mcpserver.AddTools` with the generated `<Service>MCPTools()` for MCP, and the docs handler. The `main.go` that `dedo init` writes enforces scopes from the start; an existing service can begin with `EnforceScopes: false` (audit mode), then enforce.
 5. Keep the policy-table test `dedo init` writes, so a missing declaration fails `go test` before deploy.
 
 The options module sets its own `go_package`, so generated code links against the runtime's types with or without Buf's managed mode. With managed mode, `buf.gen.yaml` keeps a module-scoped override for it (`dedo init` adds it).
@@ -149,7 +149,7 @@ Every transport reaches one connect-go v2 `connect.Server`, so its interceptors 
 Two Go services, each laid out like a service repository built from `templates/`, with its own `buf.yaml`, `buf.gen.yaml`, `go.mod` and proto files. Both serve the same `TodoService` over Connect, gRPC and REST (through Vanguard), with the same server code and the full runtime: policy table, scope interceptor, flow IDs and error audit.
 
 - `examples/todo` follows the standard. `buf lint` is clean. Its tests check scopes, CRUD, pagination, cache and deprecation headers, REST unwrapping and the error audit end to end. It also serves the REST reference at `/docs` (Stoplight Elements, rendering the generated `/openapi.json`) and an MCP server at `/mcp`, from the generated `TodoServiceMCPTools()`. Its tests check that MCP tools carry the declared text and `ToolAnnotations` and enforce the same scopes, and that a change made through MCP reaches an open `WatchTodos` stream at once.
-- `examples/bad-todo` breaks all fourteen ZALANDO and DEDO rules, plus one Buf rule, one AIP rule and both example HOUSE rules. Open `proto/raveesh_me/todo/v1/todo.proto` in VS Code to see the findings. `expected-lint.txt` lists them, and `app/app_test.go` shows what each mistake does at runtime: a misnamed scope locks out writers, an unversioned path moves the endpoint, undeclared reasons show up in logs, and a custom `json_name` renames the field for every JSON client.
+- `examples/bad-todo` breaks all fourteen ZALANDO and DEDO rules (the opt-in multi-tenant ones are `examples/contacts`'s concern), plus one Buf rule, one AIP rule and both example HOUSE rules. Open `proto/raveesh_me/todo/v1/todo.proto` in VS Code to see the findings. `expected-lint.txt` lists them, and `app/app_test.go` shows what each mistake does at runtime: a misnamed scope locks out writers, an unversioned path moves the endpoint, undeclared reasons show up in logs, and a custom `json_name` renames the field for every JSON client.
 
 `examples/todo` also runs as a deployment, with everything built in containers (podman, kind and kubectl are the only host tools):
 
@@ -180,7 +180,7 @@ The plugin runs natively wherever it can. On `examples/todo`, one `buf lint` wit
 | Native binary (default) | 0.30 s |
 | WebAssembly | 5.0 s |
 
-The editor reruns the lint as you type, so this is the difference between findings that keep up and findings that lag. The WebAssembly module is 40 MB, most of it Google's api-linter. Buf caches the compiled module, so the cost is in running it, and a smaller build does not help. `buf.yaml` refers to the native binary by path, so an editor started outside a shell finds it too. The WebAssembly plugin on the BSR stays available for setups that cannot download binaries, such as Windows.
+The editor reruns the lint as you type, so this is the difference between findings that keep up and findings that lag. The WebAssembly module is 40 MB, most of it Google's api-linter. Buf caches the compiled module, so the cost is in running it, and a smaller build does not help. `buf.yaml` refers to the native binary by path, so an editor started outside a shell finds it too. The WebAssembly plugin on the BSR is for repositories without Go, such as schema-only ones; it cannot read `rules.yml`, so house rules do not run there.
 
 ## Developing
 
@@ -191,7 +191,7 @@ make wasm-plugins   # buf-plugin-dedo-lint as WebAssembly, for the BSR
 make breaking       # options module against main
 ```
 
-`make check` needs `buf`. Code generators are pinned in each `go.mod` as Go tools and run through `go tool`. The root `buf.yaml` lints the options module (Buf rules only, since it defines the extensions), `examples/library` (Buf, DEDO and ZALANDO rules) and `examples/contacts` (every rule a service gets, with DEDO_MULTI_TENANT), with the locally built plugin from `dist/`.
+`make check` needs `buf`, and podman for the todo UI's TypeScript generator, which runs in a Node container. Code generators are pinned in each `go.mod` as Go tools and run through `go tool`. The root `buf.yaml` lints the options module (Buf rules only, since it defines the extensions), `examples/library` (Buf, DEDO and ZALANDO rules) and `examples/contacts` (every rule a service gets, with DEDO_MULTI_TENANT), with the locally built plugin from `dist/`.
 
 Lint rule tests live in `lint/rules/testdata/<rule>/{pass,fail}`. A pass fixture must produce no finding. A fail fixture marks each line that must produce one with `// want`.
 

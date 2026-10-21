@@ -7,12 +7,12 @@ This guide explains how the pieces fit and why, in the order you meet them. To s
 You write one `.proto` file per API. From it you get:
 
 - **Three transports with one behaviour.** Connect, gRPC and REST serve the same handlers. REST paths come from `google.api.http` annotations.
-- **Authorization without code.** Each RPC declares its scopes. The runtime rejects callers without one, on every transport.
+- **Authorization without code.** Each RPC declares its scopes. The runtime rejects callers without one, on every transport. A multi-tenant service also declares its tenant, and the runtime keeps each caller to its own ([section 7](#multi-tenant-services)).
 - **REST docs.** `protoc-gen-dedo-openapi` writes an OpenAPI 3.1 document of the REST API only. Connect's own routes stay out of it.
 - **MCP tools.** Every unary RPC becomes an MCP tool for AI agents, named after the RPC in snake_case (`GetProduct` becomes `get_product`). `protoc-gen-dedo-mcp` generates the tools; tool calls pass through the same scope checks and validation as REST calls.
-- **A blocking review gate.** `buf lint` runs Buf's rules and buf-plugin-dedo-lint's rules (`AIP_*` from Google's AIPs, `ZALANDO_*` from Zalando's guidelines, `DEDO_*` of its own), plus any `HOUSE_*` rules your organisation adds, in your editor and in CI. [RULES.md](RULES.md) lists them, says which side wins when two sources disagree, and which rules dedo skips.
+- **A blocking review gate.** `buf lint` runs Buf's rules and buf-plugin-dedo-lint's rules (`AIP_*` from Google's AIPs, `ZALANDO_*` from Zalando's guidelines, `DEDO_*` of its own, and the opt-in `DEDO_MULTI_TENANT_*`), plus any `HOUSE_*` rules your organisation adds, in your editor and in CI. [RULES.md](RULES.md) lists them, says which side wins when two sources disagree, and which rules dedo skips.
 
-Your handlers contain business logic only. Scope checks, cache and deprecation headers, flow IDs and error auditing come from the runtime.
+Your handlers contain business logic only. Scope and tenant checks, cache and deprecation headers, flow IDs and error auditing come from the runtime.
 
 ## 1. Before you start
 
@@ -23,12 +23,13 @@ Install:
 - VS Code with the Buf extension (`bufbuild.vscode-buf`), or Zed. Remove other Protobuf extensions.
 - The `dedo` command: `go install github.com/raveesh-me/dedo/cmd/dedo@v0.11.1`
 
-Decide two names with your team:
+Decide these names with your team:
 
 | Decision | Example | Who decides |
 | --- | --- | --- |
 | Proto package | `acme.products.v1` | You. Use `<org>.<platform>.v<major>`. |
 | REST root | `/commerce/products` or `/commerce/pim` | You. The linter does not care what it is. |
+| Tenant collection, for a multi-tenant API | `locations` | You. It becomes the first segment of every resource name. |
 
 Every REST path is `<root>/v<major>/<resource path>`, for example `/commerce/pim/v1/products/{product}`. The version segment is mandatory and must match the package version. The root must be the same for every RPC of a service. Each root segment is one lowercase or lowerCamelCase word: `/commerce/timeCounter` works, and `/commerce/time-counter` fails AIP-127's path syntax check.
 
@@ -42,7 +43,8 @@ my-service/
   buf.yaml               # deps, lint categories and the lint plugin
   buf.gen.yaml           # the four generators, run through go tool
   Makefile               # include Makefile.api
-  Makefile.api           # api-check, api-generate
+  Makefile.api           # tools, api-check, api-generate
+  rules.yml              # optional: your organisation's HOUSE rules
   docs/                  # serves the REST reference
   server.go              # your handlers (dedo init writes a stub)
   policy_table_test.go   # fails on a missing declaration
@@ -194,7 +196,7 @@ table, err := policy.Build(productsv1connect.ProductServiceName) // fails on a m
 guard, err := interceptor.New(interceptor.Config{
 	Table:         table,
 	Scopes:        auth.ScopesFromContext, // your token interceptor
-	EnforceScopes: false,                  // start in audit mode, then enforce
+	EnforceScopes: true,                   // false only logs denials, to roll out to an existing service
 	Log:           log,
 })
 server := connect.NewServer(flowid.Interceptor(), auth.Interceptor(), guard, validate.NewServerInterceptor())
@@ -230,7 +232,7 @@ Two parts stay in code:
 - **Authentication.** Your token check, a `connect.ServerInterceptor` on the same `connect.Server`, verifies the token and puts the caller's scopes in the call's context; `interceptor.Config.Scopes` reads them from there. You write it once per platform. As an interceptor rather than HTTP middleware, it also covers MCP calls, which reach the server in-process.
 - **Resource-level checks.** A scope says a caller may read products. It does not say *which* products. Ownership of one resource (only the caller's own drafts) stays in handlers.
 
-Roll out with `EnforceScopes: false` first. The runtime logs every call that would have been denied. Switch to `true` once the logs are clean.
+A new service enforces scopes from the start, as the `main.go` `dedo init` writes does. To add dedo to a service that already has callers, roll out with `EnforceScopes: false` first: the runtime logs every call that would have been denied. Switch to `true` once the logs are clean.
 
 ### Multi-tenant services
 
@@ -255,6 +257,7 @@ The interceptor then reads the tenants of every request, on every transport, fro
 
 | Check | Fails when |
 | --- | --- |
+| `make tools` | The lint plugin pinned in `go.mod`, or a house-rules import, cannot be built or fetched |
 | `buf format --diff --exit-code` | A `.proto` file is not formatted |
 | `buf lint` | Any Buf, AIP, Zalando, dedo or house rule is broken |
 | `buf breaking --against '.git#branch=main'` | The change breaks clients |
@@ -282,7 +285,7 @@ Point an MCP client at `http://localhost:8080/mcp`, with the header `Authorizati
 
 **Why is the version in the path, when Zalando advises against URL versioning?** The contract follows the AIPs, and the proto package already carries the major version. A breaking change becomes a new package and a new path, with no media-type negotiation.
 
-**How does a client know a server stream is open?** Send a first message that says so: the todo example's `WatchTodos` starts with `CHANGE_WATCHING`. Headers alone are not enough: buffering proxies hold them back, and connect-go v2.0.1's HTTP transport sends none until the first message.
+**How does a client know a server stream is open?** Send a first message that says so: the todo example's `WatchTodos` starts with `CHANGE_WATCHING`. Headers alone are not enough: buffering proxies hold them back, and connect-go v2.0.1's HTTP transport sends none until the first message (fixed in connect-go's main branch by [#1035](https://github.com/connectrpc/connect-go/pull/1035), after v2.0.1).
 
 **Can a service skip REST for an RPC?** No. AIP-127 requires an HTTP binding on every RPC, so every RPC is reachable over every transport.
 
@@ -290,7 +293,7 @@ Point an MCP client at `http://localhost:8080/mcp`, with the header `Authorizati
 
 **Where do the options and the lint plugin come from?** A service depends on `buf.build/r-a/dedo` in `buf.yaml` and pins the lint plugin in `go.mod`; `dedo tools` builds it. The examples in this repository are the exception: they test the working tree, so they vendor `options.proto` under `third_party/` and load the plugin from `dist/`.
 
-**Why a native plugin binary instead of the BSR plugin?** Speed in the editor. One lint takes about 0.3 s with the native binary and about 5 s with the WebAssembly one, and the editor reruns it as you type. The BSR plugin (`buf.build/r-a/dedo-lint`) needs no download and works on Windows. Use it there.
+**Why a native plugin binary instead of the BSR plugin?** Speed in the editor. One lint takes about 0.3 s with the native binary and about 5 s with the WebAssembly one, and the editor reruns it as you type. The BSR plugin (`buf.build/r-a/dedo-lint`) needs no Go, so it suits repositories of protos alone, which `dedo init` sets up with it; it cannot read `rules.yml`, so house rules do not run there.
 
 **How do I run the generators, `protoc-gen-dedo-mcp` and `protoc-gen-dedo-openapi`?** They run on your machine, the same way in the editor, locally and in CI. Pick one:
 
