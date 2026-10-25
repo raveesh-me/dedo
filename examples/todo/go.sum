@@ -61,8 +61,8 @@ github.com/raveesh-me/dedo/mcp v0.10.0/go.mod h1:u7yuH8mAQoo7bVNqLYlovVpavH85MOO
 github.com/raveesh-me/dedo/openapi v0.6.0 h1:Jg4b/7nXZVY8gpA+6Z7OMuvYBzFGE67Ubkdb4s05njY=
 github.com/raveesh-me/dedo/openapi v0.6.0/go.mod h1:aIwOSzlnAQXOoH0jouZcd0n5pEI3X4/rmLqS1y3ME8w=
 github.com/raveesh-me/dedo/openapi v0.10.0/go.mod h1:3VvFuI+oKjzp27W7D1tjPvbSWpHAopoLaU1QKLCbKw8=
-github.com/raveesh-me/go-sdk v1.8.1-0.20261025211112-7786a0193861 h1:/YWUuAa13ShcWmFRH/dH0DLkwwVKK/Kl8QNg8sWkUeo=
-github.com/raveesh-me/go-sdk v1.8.1-0.20261025211112-7786a0193861/go.mod h1:dL7u98E/zjJTGzEq+j30jQ8K2k1mb6LeAH4inEcSGts=
+github.com/raveesh-me/go-sdk v1.8.0-dedo.1 h1:sY3dvR1Zbq/8wbiTX3/mdCFjcYPfr2PhpJUFM5Z8WVg=
+github.com/raveesh-me/go-sdk v1.8.0-dedo.1/go.mod h1:dL7u98E/zjJTGzEq+j30jQ8K2k1mb6LeAH4inEcSGts=
 github.com/segmentio/asm v1.2.1 h1:DTNbBqs57ioxAD4PrArqftgypG4/qNpXoJx8TVXxPR0=
 github.com/segmentio/asm v1.2.1/go.mod h1:BqMnlJP91P8d+4ibuonYZw9mfnzI9HfxselHZr5aAcs=
 github.com/segmentio/encoding v0.5.4 h1:OW1VRern8Nw6ITAtwSZ7Idrl3MXCFwXHPgqESYfvNt0=

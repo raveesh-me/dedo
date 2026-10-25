@@ -145,6 +145,12 @@ go get github.com/raveesh-me/dedo@v0.13.0 github.com/raveesh-me/dedo/mcp@v0.13.0
 go get connectrpc.com/connect/v2@v2.0.1 connectrpc.com/vanguard@v0.5.0 connectrpc.com/validate@v0.9.0
 ```
 
+Build against dedo's build of the MCP Go SDK. The SDK release decodes every message through a JSON decoder that allocates at least 32 KiB per call, several times per tool call; the fix is proposed upstream ([go-sdk#1454](https://github.com/modelcontextprotocol/go-sdk/pull/1454)), and until a release has it, dedo's build is that release plus the fix. The replace names the release, so a service that needs a later SDK gets the later upstream release instead. `dedo init` and `dedo upgrade` write and maintain the line, with a comment saying why, and a later dedo release removes it.
+
+```sh
+go mod edit -replace=github.com/modelcontextprotocol/go-sdk@v1.8.0=github.com/raveesh-me/go-sdk@v1.8.0-dedo.1
+```
+
 Add the REST reference page; it serves the generated `openapi.json` at `/openapi.json` and a reference page at `/docs`:
 
 ```sh
