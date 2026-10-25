@@ -4,7 +4,7 @@ go 1.26.0
 
 require (
 	connectrpc.com/vanguard v0.5.0
-	github.com/raveesh-me/dedo v0.11.1
+	github.com/raveesh-me/dedo v0.12.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20261012220534-4341edf3f941
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20261012220534-4341edf3f941
 	google.golang.org/protobuf v1.36.12

@@ -19,7 +19,7 @@ import (
 
 // version is the dedo release this command installs. The release job checks
 // that it names the release being tagged.
-const version = "v0.11.1"
+const version = "v0.12.0"
 
 func main() {
 	if err := run(os.Args[1:], os.Stdout); err != nil {
@@ -31,8 +31,10 @@ func main() {
 const usage = `usage:
   dedo init [-dir DIR] [-offline]   set up the repository in DIR (default .)
   dedo upgrade [-dir DIR]           move the repository to this dedo's release: pins, templates, buf.lock, generated code
+  dedo upgrade -lint [-dir DIR]     move only the lint plugin to this release, then do what dedo tools does
   dedo update [-version V]          install the latest dedo (or V); then run dedo upgrade
-  dedo tools [-dir DIR]             build the lint plugin pinned in go.mod into .tools/
+  dedo tools [-dir DIR]             build the lint plugin pinned in go.mod into .tools/, fetch the house
+                                    rules and list every rule override, failing on one the order forbids
   dedo templates [NAME]             list the bundled templates, or print one
   dedo version                      print the dedo release this command installs
 `
@@ -57,8 +59,12 @@ func run(args []string, out io.Writer) error {
 		flags.SetOutput(out)
 		dir := flags.String("dir", ".", "the repository to upgrade")
 		offline := flags.Bool("offline", false, "edit files only; print the go and buf commands instead of running them")
+		lint := flags.Bool("lint", false, "move only the lint plugin to this release, rebuild it and consolidate the house rules")
 		if err := flags.Parse(args[1:]); err != nil {
 			return err
+		}
+		if *lint {
+			return toolsLint(*dir, version, out)
 		}
 		return upgrade(*dir, *offline, out)
 	case "update":

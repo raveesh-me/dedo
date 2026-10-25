@@ -6,7 +6,7 @@ Append this file to your repository's `AGENTS.md` or `CLAUDE.md`; `dedo init` do
 
 - One `.proto` defines the API. dedo serves it as Connect/gRPC, REST (`google.api.http`, through Vanguard), an OpenAPI 3.1 reference and MCP tools. Change the proto, never the generated output.
 - Never edit anything under `gen/` or `docs/openapi.json`. Run `make api-generate` and commit the result; CI fails on stale output.
-- Set dedo up with `dedo init` and upgrade it with `dedo update && dedo upgrade`, never by hand-editing pins: the options module's label in `buf.yaml` and the lint plugin, generators and runtime in `go.mod` are one release and move together. After a fresh clone, run `dedo tools` to build the lint plugin into `.tools/`.
+- Set dedo up with `dedo init` and upgrade it with `dedo update && dedo upgrade`, never by hand-editing pins: the options module's label in `buf.yaml` and the lint plugin, generators and runtime in `go.mod` are one release and move together. After a fresh clone, run `dedo tools` to build the lint plugin into `.tools/`; it also fetches the house rules and checks their overrides. `dedo upgrade -lint` moves only the lint plugin to a new release.
 - Before you finish a change to `proto/`, run `make api-check` (format, lint, breaking). Fix findings in the proto. Suppress one only with `// buf:lint:ignore <RULE_ID>` and a written reason.
 - Scopes, cache policy, deprecation and error reasons are declared in the proto (`dedo.v1` options) and enforced by the runtime. Do not write scope checks, cache headers or deprecation headers in handlers.
 - Return errors with a declared reason in a `google.rpc.ErrorInfo` detail. Undeclared reasons are logged as audit findings. The service uses connect-go v2: handlers take and return plain messages, errors are `connect.NewError(code, message)`, and any other error reaches callers as `UNKNOWN` with no message.
@@ -26,7 +26,7 @@ Append this file to your repository's `AGENTS.md` or `CLAUDE.md`; `dedo init` do
 | `HOUSE_*` | Your organisation's own rules, as CEL checks in `rules.yml` (and the shared files it imports) |
 | `DEDO_MULTI_TENANT_*` | dedo's opt-in rules for multi-tenant services, in the `DEDO_MULTI_TENANT` category |
 
-When sources disagree, **DEDO > AIP > ZALANDO**, and HOUSE rules may add constraints but never contradict the others. So:
+Rules rank in layers: **the repository's own `rules.yml` > the house rules it imports > DEDO > AIP > ZALANDO**. Nothing resolves a conflict automatically: a rule that replaces others names them in its `overrides`, and only rules of a lower layer, never a final one (`ZALANDO_SERVICE_RULES_REQUIRED`, `DEDO_METHOD_RULES_REQUIRED`, `DEDO_MULTI_TENANT_REQUEST_TENANT`). `dedo tools` lists every override in force; read it before assuming a rule runs. Without a house override, dedo's conventions hold:
 
 - Every RPC returns its own `<Rpc>Response`; REST unwraps it with `response_body`. Do not "fix" this to AIP's bare-resource returns.
 - The major version is in the package and the path (`/<root>/v1/...`). Path segments are lowerCamelCase, never kebab-case.

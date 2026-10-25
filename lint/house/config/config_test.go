@@ -85,6 +85,49 @@ rules:
 	}
 }
 
+// A rule's importers are every file that imports its file, directly or
+// through others: the files whose rules outrank it.
+func TestLoadRanksImporters(t *testing.T) {
+	dir := t.TempDir()
+	rule := func(id string) string {
+		return "  - {id: " + id + ", on: field, check: \"true\", message: x}\n"
+	}
+	write(t, dir, map[string]string{
+		"base.yml":  "rules:\n" + rule("HOUSE_BASE"),
+		"mid.yml":   "imports:\n  - path: base.yml\nrules:\n" + rule("HOUSE_MID"),
+		"other.yml": "imports:\n  - path: base.yml\nrules:\n" + rule("HOUSE_OTHER"),
+		FileName: "imports:\n  - path: mid.yml\n  - path: other.yml\nrules:\n" +
+			"  - {id: HOUSE_TOP, on: field, check: \"true\", message: x, overrides: [HOUSE_MID, DEDO_HTTP_PATH_VERSION]}\n",
+	})
+	rules, err := Load(filepath.Join(dir, FileName))
+	if err != nil {
+		t.Fatal(err)
+	}
+	abs := func(names ...string) []string {
+		var out []string
+		for _, n := range names {
+			p, _ := filepath.Abs(filepath.Join(dir, n))
+			out = append(out, p)
+		}
+		slices.Sort(out)
+		return out
+	}
+	want := map[string][]string{
+		"HOUSE_BASE":  abs("mid.yml", "other.yml", FileName),
+		"HOUSE_MID":   abs(FileName),
+		"HOUSE_OTHER": abs(FileName),
+		"HOUSE_TOP":   nil,
+	}
+	for _, r := range rules {
+		if !slices.Equal(r.Importers, want[r.ID]) {
+			t.Errorf("%s: importers %v, want %v", r.ID, r.Importers, want[r.ID])
+		}
+		if r.ID == "HOUSE_TOP" && !slices.Equal(r.Overrides, []string{"HOUSE_MID", "DEDO_HTTP_PATH_VERSION"}) {
+			t.Errorf("overrides = %v", r.Overrides)
+		}
+	}
+}
+
 func TestLoadRejects(t *testing.T) {
 	for name, tc := range map[string]struct {
 		files map[string]string
@@ -97,6 +140,8 @@ func TestLoadRejects(t *testing.T) {
 		"no check":      {map[string]string{FileName: "rules:\n  - {id: HOUSE_X, on: field, message: x}\n"}, "no check"},
 		"unknown key":   {map[string]string{FileName: "rules:\n  - {id: HOUSE_X, on: field, check: \"true\", message: x, severity: high}\n"}, "severity"},
 		"disable":       {map[string]string{FileName: "disable: [HOUSE_GONE]\n"}, "HOUSE_GONE"},
+		"override id":   {map[string]string{FileName: "rules:\n  - {id: HOUSE_X, on: field, check: \"true\", message: x, overrides: [aip-131]}\n"}, "not a rule ID"},
+		"override self": {map[string]string{FileName: "rules:\n  - {id: HOUSE_X, on: field, check: \"true\", message: x, overrides: [HOUSE_X]}\n"}, "overrides itself"},
 		"git ref":       {map[string]string{FileName: "imports:\n  - git: https://example.com/r.git\n"}, "needs a ref"},
 		"git unfetched": {map[string]string{FileName: "imports:\n  - git: https://example.com/r.git\n    ref: v1\n"}, "run dedo tools"},
 	} {

@@ -684,6 +684,83 @@ func TestInitHouseCategory(t *testing.T) {
 	}
 }
 
+// Releases before v0.12.0 listed the AIP rules DEDO_HTTP_RESPONSE_BODY now
+// overrides in lint.except; init takes them out and keeps the other skips.
+func TestInitDropsOverriddenExceptions(t *testing.T) {
+	dir := repo(t, map[string]string{
+		"go.mod": "module example.com/shop\n",
+		"buf.yaml": "version: v2\nlint:\n  use: [STANDARD]\n  except:\n" +
+			"    # Every response is a unique <Rpc>Response.\n    - AIP_0131_RESPONSE_MESSAGE_NAME\n" +
+			"    - AIP_0134_REQUEST_REQUIRED_FIELDS\n    - AIP_0192_HAS_COMMENTS\n    - MY_OWN_SKIP\n",
+	})
+	out := initOffline(t, dir)
+	except := scalars(lookup(lookup(yamlAt(t, dir, "buf.yaml"), "lint"), "except"))
+	for _, id := range []string{"AIP_0131_RESPONSE_MESSAGE_NAME", "AIP_0134_REQUEST_REQUIRED_FIELDS"} {
+		if slices.Contains(except, id) {
+			t.Errorf("except still lists %s", id)
+		}
+	}
+	for _, id := range []string{"AIP_0192_HAS_COMMENTS", "AIP_0131_METHOD_SIGNATURE", "MY_OWN_SKIP"} {
+		if !slices.Contains(except, id) {
+			t.Errorf("except lacks %s", id)
+		}
+	}
+	if !strings.Contains(out, "lost 2 AIP rules that DEDO_HTTP_RESPONSE_BODY now overrides") {
+		t.Errorf("output: %s", out)
+	}
+	if strings.Contains(read(t, dir, "buf.yaml"), "unique <Rpc>Response") {
+		t.Error("the dropped rule's comment stayed")
+	}
+}
+
+// A comment that heads the except list stays when its first rule goes.
+func TestDropScalarsKeepsListHeader(t *testing.T) {
+	doc, err := parseYAML([]byte("except:\n  # Skipped on purpose; RULES.md says why.\n  # Every response is wrapped.\n  - AIP_0131_RESPONSE_MESSAGE_NAME\n  - AIP_0192_HAS_COMMENTS\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := dropScalars(lookup(root(doc), "except"), overriddenRules...); len(got) != 1 {
+		t.Fatalf("dropped %v", got)
+	}
+	b, err := encodeYAML(doc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if out := string(b); !strings.Contains(out, "# Skipped on purpose") || strings.Contains(out, "wrapped") {
+		t.Errorf("buf.yaml:\n%s", out)
+	}
+}
+
+// The plugin cannot read buf.yaml, so dedo tools warns when buf.yaml turns
+// off a rule that overrides others: then neither runs.
+func TestDefeatedOverrides(t *testing.T) {
+	report := "363 rules, 1 of them house rules; 8 overridden\n" +
+		"  DEDO_HTTP_RESPONSE_BODY overrides AIP_0131_RESPONSE_MESSAGE_NAME\n" +
+		"  HOUSE_X (rules.yml) overrides DEDO_HTTP_PATH_VERSION\n"
+	for name, tc := range map[string]struct {
+		bufYAML string
+		want    []string
+	}{
+		"fine":      {"version: v2\nlint:\n  use: [DEDO, HOUSE]\n", nil},
+		"excepted":  {"version: v2\nlint:\n  use: [DEDO, HOUSE]\n  except: [DEDO_HTTP_RESPONSE_BODY]\n", []string{"excepts DEDO_HTTP_RESPONSE_BODY, but it still overrides AIP_0131_RESPONSE_MESSAGE_NAME"}},
+		"no HOUSE":  {"version: v2\nlint:\n  use: [DEDO]\n", []string{"lint.use lacks HOUSE"}},
+		"in module": {"version: v2\nmodules:\n  - path: proto\n    lint:\n      use: [DEDO, HOUSE]\n      except: [HOUSE_X]\n", []string{"excepts HOUSE_X"}},
+	} {
+		t.Run(name, func(t *testing.T) {
+			dir := repo(t, map[string]string{"buf.yaml": tc.bufYAML})
+			got := defeatedOverrides(dir, report)
+			if len(got) != len(tc.want) {
+				t.Fatalf("warnings %q, want %d", got, len(tc.want))
+			}
+			for i, w := range tc.want {
+				if !strings.Contains(got[i], w) {
+					t.Errorf("warning %q, want it to mention %q", got[i], w)
+				}
+			}
+		})
+	}
+}
+
 // A service that declares tenancy gets the DEDO_MULTI_TENANT rules and a
 // main.go that checks tenants; any other keeps both as they were.
 func TestInitMultiTenant(t *testing.T) {
@@ -781,8 +858,9 @@ func TestFetchRules(t *testing.T) {
 		"rules.yml": "imports:\n  - git: " + remote + "\n    ref: v1\n",
 	})
 	var out bytes.Buffer
-	if err := fetchRules(dir, &out); err != nil {
-		t.Fatal(err)
+	// No plugin is built here, so consolidating fails after the fetch.
+	if err := houseRules(dir, &out); err == nil || !strings.Contains(err.Error(), "run dedo tools") {
+		t.Fatalf("err = %v", err)
 	}
 	if !strings.Contains(out.String(), "fetched house rules "+remote+"@v1") {
 		t.Errorf("output: %s", out.String())

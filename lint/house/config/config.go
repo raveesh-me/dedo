@@ -11,6 +11,7 @@
 //
 // Every path is relative to the root of the repository whose file names it:
 // this repository's (the folder of rules.yml) or the git import's.
+//
 //	disable: [HOUSE_PLURAL_COLLECTIONS] # imported rules this repository opts out of
 //	rules:
 //	  - id: HOUSE_RESOURCE_TYPE_DOMAIN
@@ -18,6 +19,10 @@
 //	    check: type.endsWith('.acme.com')
 //	    message: Resource types live under acme.com.
 //	    doc: https://wiki.acme.com/api/resources
+//	    overrides: [HOUSE_RESOURCE_TYPE]    # rules this one replaces
+//
+// A rule may override DEDO, AIP and ZALANDO rules, and the rules of the
+// files its own file imports; package rules checks that and applies them.
 package config
 
 import (
@@ -49,7 +54,11 @@ var cacheDir = filepath.Join(".tools", "rules")
 // Kinds are the elements a rule can check.
 var Kinds = []string{"file", "service", "method", "message", "field", "enum", "resource"}
 
-var validID = regexp.MustCompile(`^HOUSE_[A-Z][A-Z0-9_]*$`)
+var (
+	validID = regexp.MustCompile(`^HOUSE_[A-Z][A-Z0-9_]*$`)
+	// anyID is the ID of a rule of any source, which an override names.
+	anyID = regexp.MustCompile(`^[A-Z][A-Z0-9_]*$`)
+)
 
 // Rule is one house rule.
 type Rule struct {
@@ -58,8 +67,15 @@ type Rule struct {
 	Check   string `yaml:"check"`
 	Message string `yaml:"message"`
 	Doc     string `yaml:"doc"`
-	// Source is the rules file that defines the rule.
+	// Overrides are the rules this one replaces: they no longer run.
+	Overrides []string `yaml:"overrides"`
+	// Source is the rules file that defines the rule, as it was named.
 	Source string `yaml:"-"`
+	// File is Source as an absolute path.
+	File string `yaml:"-"`
+	// Importers are the files that import File, directly or through
+	// others, as absolute paths. Their rules outrank this one.
+	Importers []string `yaml:"-"`
 }
 
 // Import is a rules file another one includes.
@@ -98,32 +114,68 @@ func Find(dir string) string {
 
 // Load reads a rules file and everything it imports. Git imports are read
 // from the cache that Fetch fills, under the directory of the top file.
-// Rules are returned in the order they appear, imports first.
+// Rules are returned in the order they appear, imports first, without the
+// disabled ones.
 func Load(path string) ([]Rule, error) {
+	rules, _, err := LoadAll(path)
+	return rules, err
+}
+
+// LoadAll is Load, and also returns the IDs of the rules disable removed,
+// so an override of one can be told from an override of a rule that does
+// not exist.
+func LoadAll(path string) (rules []Rule, disabled []string, err error) {
 	root := filepath.Dir(path)
-	l := &loader{root: root, seen: map[string]bool{}, ids: map[string]string{}}
-	rules, disabled, err := l.load(path, "", nil)
+	l := &loader{root: root, seen: map[string]bool{}, ids: map[string]string{}, imports: map[string][]string{}}
+	all, disabled, err := l.load(path, "", nil)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
+	importers := l.importers()
 	for _, id := range disabled {
 		if _, ok := l.ids[id]; !ok {
-			return nil, fmt.Errorf("%s: disable names %s, which no rules file defines", path, id)
+			return nil, nil, fmt.Errorf("%s: disable names %s, which no rules file defines", path, id)
 		}
 	}
-	out := rules[:0]
-	for _, r := range rules {
+	for _, r := range all {
 		if !slices.Contains(disabled, r.ID) {
-			out = append(out, r)
+			r.Importers = importers[r.File]
+			rules = append(rules, r)
 		}
 	}
-	return out, nil
+	return rules, disabled, nil
 }
 
 type loader struct {
-	root string
-	seen map[string]bool
-	ids  map[string]string // rule ID → the file that defines it
+	root    string
+	seen    map[string]bool
+	ids     map[string]string   // rule ID → the file that defines it
+	imports map[string][]string // file → the files it imports
+}
+
+// importers maps each file to every file that imports it, directly or
+// through others, sorted.
+func (l *loader) importers() map[string][]string {
+	out := map[string][]string{}
+	var visit func(from, file string)
+	visit = func(from, file string) {
+		if slices.Contains(out[file], from) {
+			return
+		}
+		out[file] = append(out[file], from)
+		for _, next := range l.imports[file] {
+			visit(from, next)
+		}
+	}
+	for from, files := range l.imports {
+		for _, f := range files {
+			visit(from, f)
+		}
+	}
+	for _, files := range out {
+		slices.Sort(files)
+	}
+	return out
 }
 
 // load reads one rules file; repo is the git checkout it lies in, or "" for
@@ -162,6 +214,13 @@ func (l *loader) load(path, repo string, stack []string) (rules []Rule, disabled
 				return nil, nil, fmt.Errorf("%s: the import of %s@%s is not fetched yet: run dedo tools", abs, imp.Git, imp.Ref)
 			}
 		}
+		targetAbs, err := filepath.Abs(target)
+		if err != nil {
+			return nil, nil, err
+		}
+		// Recorded before load, which skips a file it has read already, so
+		// a file imported along two paths ranks below both importers.
+		l.imports[abs] = append(l.imports[abs], targetAbs)
 		r, d, err := l.load(target, targetRepo, append(stack, abs))
 		if err != nil {
 			return nil, nil, err
@@ -171,6 +230,7 @@ func (l *loader) load(path, repo string, stack []string) (rules []Rule, disabled
 	}
 	for _, r := range f.Rules {
 		r.Source = path
+		r.File = abs
 		if err := validate(r); err != nil {
 			return nil, nil, fmt.Errorf("%s: %w", path, err)
 		}
@@ -272,6 +332,14 @@ func validate(r Rule) error {
 		return fmt.Errorf("%s: no check", r.ID)
 	case strings.TrimSpace(r.Message) == "":
 		return fmt.Errorf("%s: no message", r.ID)
+	}
+	for _, id := range r.Overrides {
+		switch {
+		case !anyID.MatchString(id):
+			return fmt.Errorf("%s: overrides %q, which is not a rule ID such as DEDO_HTTP_PATH_VERSION", r.ID, id)
+		case id == r.ID:
+			return fmt.Errorf("%s: overrides itself", r.ID)
+		}
 	}
 	return nil
 }

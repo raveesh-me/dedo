@@ -12,7 +12,7 @@
 package rules
 
 import (
-	"fmt"
+	"context"
 	"os"
 	"strings"
 
@@ -55,24 +55,20 @@ var All = []*check.RuleSpec{
 	multiTenantCachePrivate,
 }
 
-// NewSpec returns the plugin specification: the AIP_*, ZALANDO_* and DEDO_*
-// rules, run in one pass.
+// NewSpec returns the plugin specification: the AIP_*, ZALANDO_*, DEDO_*
+// and HOUSE_* rules, consolidated (see Consolidate), run in one pass.
 func NewSpec() (*check.Spec, error) {
-	aipRules, aipCategories, before, err := aip.Rules()
-	if err != nil {
-		return nil, err
-	}
-	houseRules, err := loadHouseRules()
+	c, aipCategories, before, err := load()
 	if err != nil {
 		return nil, err
 	}
 	categories := aipCategories
-	if len(houseRules) > 0 {
+	if c.House > 0 {
 		// A category needs rules, so HOUSE exists only with a rules.yml.
 		categories = append(categories, house.CategorySpec)
 	}
 	return &check.Spec{
-		Rules: append(append(append([]*check.RuleSpec{}, All...), aipRules...), houseRules...),
+		Rules: c.Rules,
 		Categories: append([]*check.CategorySpec{
 			{ID: CategoryZalando, Purpose: "Checks rules from Zalando's RESTful API guidelines that dedo adopts."},
 			{ID: CategoryDedo, Purpose: "Checks dedo's own conventions for public APIs, REST and MCP."},
@@ -82,24 +78,33 @@ func NewSpec() (*check.Spec, error) {
 	}, nil
 }
 
-// loadHouseRules reads the HOUSE_* rules of the repository buf runs in:
-// rules.yml next to buf.yaml and what it imports. Buf starts the plugin in
-// the directory it runs in, and asks for the rules before any lint request,
-// so they come from there rather than from a plugin option.
-func loadHouseRules() ([]*check.RuleSpec, error) {
+// Load returns the consolidated rules of the repository the plugin runs
+// in, for dedo tools to report.
+func Load() (*Consolidated, error) {
+	c, _, _, err := load()
+	return c, err
+}
+
+// load reads dedo's own rules and the HOUSE_* rules of the repository buf
+// runs in, rules.yml next to buf.yaml and what it imports, and consolidates
+// them. Buf starts the plugin in the directory it runs in, and asks for the
+// rules before any lint request, so they come from there rather than from
+// a plugin option.
+func load() (*Consolidated, []*check.CategorySpec, func(context.Context, check.Request) (context.Context, check.Request, error), error) {
+	aipRules, aipCategories, before, err := aip.Rules()
+	if err != nil {
+		return nil, nil, nil, err
+	}
 	wd, err := os.Getwd()
 	if err != nil {
-		return nil, err
+		return nil, nil, nil, err
 	}
-	path := config.Find(wd)
-	if path == "" {
-		return nil, nil
-	}
-	rules, err := config.Load(path)
+	builtin := append(append([]*check.RuleSpec{}, All...), aipRules...)
+	c, err := consolidateHouse(config.Find(wd), builtin)
 	if err != nil {
-		return nil, fmt.Errorf("house rules: %w", err)
+		return nil, nil, nil, err
 	}
-	return house.Specs(rules)
+	return c, aipCategories, before, nil
 }
 
 // category returns a rule's category from its ID prefix.
