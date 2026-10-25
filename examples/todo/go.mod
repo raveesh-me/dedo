@@ -50,3 +50,5 @@ tool (
 	github.com/raveesh-me/dedo/openapi/cmd/protoc-gen-dedo-openapi
 	google.golang.org/protobuf/cmd/protoc-gen-go
 )
+
+replace github.com/modelcontextprotocol/go-sdk => github.com/raveesh-me/go-sdk v1.8.1-0.20261025211112-7786a0193861
