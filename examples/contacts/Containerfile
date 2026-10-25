@@ -1,0 +1,17 @@
+# The contacts service. Build from the repository root, since the example builds
+# against this repository's modules:
+#   podman build -f examples/contacts/Containerfile -t contacts-example .
+# CMD=./cmd/contacts-mcp builds the MCP-only server that forwards to a contacts
+# server over Connect instead.
+FROM docker.io/library/golang:1.26.6-alpine AS build
+WORKDIR /src
+COPY . .
+WORKDIR /src/examples/contacts
+ARG CMD=.
+RUN --mount=type=cache,target=/root/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
+    CGO_ENABLED=0 go build -trimpath -o /out/contacts $CMD
+
+FROM gcr.io/distroless/static-debian12:nonroot
+COPY --from=build /out/contacts /contacts
+EXPOSE 8080
+ENTRYPOINT ["/contacts", "-addr", ":8080"]

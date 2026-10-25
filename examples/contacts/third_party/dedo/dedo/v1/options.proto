@@ -1,0 +1,173 @@
+syntax = "proto3";
+
+package dedo.v1;
+
+import "google/protobuf/descriptor.proto";
+import "google/protobuf/duration.proto";
+import "google/protobuf/timestamp.proto";
+import "google/rpc/code.proto";
+
+// The generated Go code ships in github.com/raveesh-me/dedo, so services
+// generate against it with or without Buf's managed mode.
+option go_package = "github.com/raveesh-me/dedo/gen/go/dedo/v1;dedov1";
+
+// Audience is who may call an API. Mirrors Zalando rule 219.
+enum Audience {
+  // The audience is unset. Lint rejects it.
+  AUDIENCE_UNSPECIFIED = 0;
+  // Callers inside the owning service only.
+  AUDIENCE_COMPONENT_INTERNAL = 1;
+  // Callers inside the owning business unit.
+  AUDIENCE_BUSINESS_UNIT_INTERNAL = 2;
+  // Any caller inside the company.
+  AUDIENCE_COMPANY_INTERNAL = 3;
+  // Named external partners.
+  AUDIENCE_EXTERNAL_PARTNER = 4;
+  // Anyone on the internet.
+  AUDIENCE_EXTERNAL_PUBLIC = 5;
+}
+
+// ServiceRules is the ownership and audience of a service.
+message ServiceRules {
+  // Who may call the service.
+  Audience audience = 1;
+  // The team that owns the service, as named in the team registry.
+  string owner_team = 2;
+  // Present on a multi-tenant service. The runtime then checks the tenant of
+  // every request against the caller's.
+  Tenancy tenancy = 3;
+}
+
+// Tenancy declares that a service partitions its data between tenants. The
+// tenant is the root of the resource hierarchy: every resource name of the
+// service starts with the tenant's, such as locations/1/todos/2, and every
+// request names its tenant in the field its HTTP path binds, such as
+// {parent=locations/*}.
+message Tenancy {
+  // The collection ID of the tenant resource, such as "locations".
+  string collection = 1;
+}
+
+// CachePolicy is the HTTP cache behaviour of a read-only method.
+message CachePolicy {
+  // Visibility is who may store a cached response.
+  enum Visibility {
+    // Unset. Lint rejects it when a cache policy is present.
+    VISIBILITY_UNSPECIFIED = 0;
+    // Only the caller's own cache may store the response.
+    VISIBILITY_PRIVATE = 1;
+    // Shared caches may store the response.
+    VISIBILITY_PUBLIC = 2;
+  }
+  // Who may store the response.
+  Visibility visibility = 1;
+  // How long a stored response stays fresh.
+  google.protobuf.Duration max_age = 2;
+}
+
+// Deprecation is the retirement schedule of a method.
+message Deprecation {
+  // When the method became deprecated.
+  google.protobuf.Timestamp deprecation_time = 1;
+  // When the method stops working.
+  google.protobuf.Timestamp sunset_time = 2;
+  // The fully qualified name of the replacement method.
+  string successor = 3;
+}
+
+// ErrorReason is one error a method may return.
+message ErrorReason {
+  // The ErrorInfo reason, in UPPER_SNAKE_CASE.
+  string reason = 1;
+  // The status code returned with this reason.
+  google.rpc.Code code = 2;
+}
+
+// Tool is how an RPC is presented as an MCP tool, and as an operation in
+// the REST docs. It mirrors the Tool type of the MCP specification
+// (2026-07-28). The text is written for people and models choosing between
+// operations, not for the implementers.
+message Tool {
+  // A short human-readable name, such as "Get a to-do". MCP Tool.title and
+  // ToolAnnotations.title.
+  string title = 1;
+  // What the operation does and when to use it. MCP Tool.description, the
+  // one field every client passes to the model: put anything the model must
+  // know to act safely here, such as "cannot be undone".
+  string description = 2;
+  // Behaviour hints for MCP clients.
+  ToolAnnotations annotations = 3;
+}
+
+// ToolAnnotations mirrors ToolAnnotations in the MCP specification
+// (2026-07-28). Every field is a hint for the client, such as whether to ask
+// the user before a call; clients treat hints from untrusted servers as
+// untrusted. Leaving a field unset means the specification's default, which
+// for destructive_hint and open_world_hint is true.
+message ToolAnnotations {
+  // If true, the tool does not modify its environment. Spec default: false.
+  optional bool read_only_hint = 1;
+  // If true, the tool may perform destructive updates to its environment;
+  // if false, it performs only additive updates. Meaningful only when
+  // read_only_hint is false. Spec default: true.
+  optional bool destructive_hint = 2;
+  // If true, calling the tool repeatedly with the same arguments has no
+  // additional effect on its environment. Meaningful only when
+  // read_only_hint is false. Spec default: false.
+  optional bool idempotent_hint = 3;
+  // If true, the tool may interact with an open world of external entities,
+  // such as sending email or calling third parties; if false, its domain of
+  // interaction is closed. Spec default: true.
+  optional bool open_world_hint = 4;
+}
+
+// MethodRules is the operational contract of one RPC.
+message MethodRules {
+  // Token scopes that grant access. A caller needs at least one.
+  repeated string scopes = 1;
+  // HTTP caching. Only valid on NO_SIDE_EFFECTS methods.
+  CachePolicy cache = 2;
+  // Retirement schedule. Present only on deprecated methods.
+  Deprecation deprecation = 3;
+  // Every error reason the method returns.
+  repeated ErrorReason errors = 4;
+  // How the RPC is presented as an MCP tool and in the REST docs.
+  Tool tool = 5;
+  // In a multi-tenant service, the RPC is not scoped to one tenant, such as
+  // listing the tenants themselves. The runtime does no tenant check, so its
+  // scopes alone guard it.
+  bool cross_tenant = 6;
+}
+
+// MessageRules documents a message for API consumers and models.
+message MessageRules {
+  // What the message represents. MCP tool input schemas and the REST docs
+  // show it.
+  string description = 1;
+}
+
+// FieldRules classifies the data in a field.
+message FieldRules {
+  // The field holds personal or secret data.
+  bool sensitive = 1;
+}
+
+extend google.protobuf.ServiceOptions {
+  // The ownership and audience of the service.
+  ServiceRules service = 50100;
+}
+
+extend google.protobuf.MethodOptions {
+  // The operational contract of the RPC.
+  MethodRules method = 50101;
+}
+
+extend google.protobuf.MessageOptions {
+  // The consumer-facing documentation of the message.
+  MessageRules message = 50104;
+}
+
+extend google.protobuf.FieldOptions {
+  // The data classification of the field.
+  FieldRules field = 50103;
+}

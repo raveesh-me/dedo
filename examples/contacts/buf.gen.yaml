@@ -1,0 +1,38 @@
+# Mirrors templates/buf.gen.yaml, with generators pinned in go.mod (go tool) so
+# every machine produces identical code without BSR access.
+version: v2
+managed:
+  enabled: true
+  override:
+    - file_option: go_package_prefix
+      value: github.com/raveesh-me/dedo/examples/contacts/gen/go
+    # The vendored options module has no BSR name yet, so match it by path.
+    # Its Go code ships in the dedo Go module.
+    - file_option: go_package_prefix
+      path: dedo
+      value: github.com/raveesh-me/dedo/gen/go
+  disable:
+    - module: buf.build/googleapis/googleapis
+plugins:
+  - local: ["go", "tool", "protoc-gen-go"]
+    out: gen/go
+    opt: paths=source_relative
+  - local: ["go", "tool", "protoc-gen-connect-go"]
+    out: gen/go
+    opt: paths=source_relative
+  # MCP tool input and output schemas, with field descriptions and
+  # field_behavior, and ContactServiceMCPTools() and
+  # LocationServiceMCPTools() for mcpserver.AddTools.
+  - local: ["go", "tool", "protoc-gen-dedo-mcp"]
+    out: gen/go
+    opt: paths=source_relative
+  # REST docs: one OpenAPI document for every service, served at /docs.
+  - local: ["go", "tool", "protoc-gen-dedo-openapi"]
+    out: docs
+    strategy: all
+    opt:
+      - title=Contacts API
+      # Relative, so the docs console calls whichever origin served the docs.
+      - server=/
+inputs:
+  - directory: proto

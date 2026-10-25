@@ -4,7 +4,7 @@ DIST              := dist
 # their tag, so each plugin version links to its own rule docs.
 DOCS_REF          ?= main
 
-.PHONY: all check starter generate format lint breaking test plugin plugins wasm-plugins release-binaries examples example-todo example-bad-todo vendored-options clean
+.PHONY: all check starter generate format lint breaking test plugin plugins wasm-plugins release-binaries examples example-todo example-bad-todo example-contacts vendored-options clean
 
 all: check
 
@@ -86,13 +86,13 @@ starter: plugins
 	sed -i.bak -e '/^    - HOUSE$$/d' -e 's#\.\./\.\./dist/buf-plugin-dedo-lint#$(CURDIR)/$(DIST)/buf-plugin-dedo-lint#' $(STARTER)/lint/buf.yaml
 	cd $(STARTER)/lint && buf lint proto
 
-## examples: run both example services as consumer repositories
-examples: vendored-options example-todo example-bad-todo
+## examples: run the example services as consumer repositories
+examples: vendored-options example-todo example-bad-todo example-contacts
 
 # Each example owns a copy of the options module until it is on the BSR.
 vendored-options:
-	for ex in todo bad-todo; do diff -r proto/dedo examples/$$ex/third_party/dedo/dedo || exit 1; done
-	diff templates/docs/docs.go.tmpl examples/todo/docs/docs.go
+	for ex in todo bad-todo contacts; do diff -r proto/dedo examples/$$ex/third_party/dedo/dedo || exit 1; done
+	for ex in todo contacts; do diff templates/docs/docs.go.tmpl examples/$$ex/docs/docs.go || exit 1; done
 
 ## example-todo: the compliant service lints clean and passes its tests
 example-todo: plugins
@@ -100,6 +100,12 @@ example-todo: plugins
 	cd examples/todo && buf generate && git diff --exit-code gen/ docs/
 	$(MAKE) -C examples/todo web-gen && git diff --exit-code examples/todo/web/src/gen
 	cd examples/todo && go vet ./... && go test -race ./...
+
+## example-contacts: the multi-tenant service lints clean and passes its tests
+example-contacts: plugins
+	cd examples/contacts && buf format --diff --exit-code && buf lint proto
+	cd examples/contacts && buf generate && git diff --exit-code gen/ docs/
+	cd examples/contacts && go vet ./... && go test -race ./...
 
 ## example-bad-todo: the rule-breaking service reports exactly the expected findings
 example-bad-todo: plugins

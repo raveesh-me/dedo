@@ -1,0 +1,38 @@
+# Mirrors templates/buf.yaml for a multi-tenant service, but tests this
+# working tree rather than a release: the options module is a vendored copy
+# under third_party/ (`make examples` at the repository root fails if it
+# drifts from proto/), and the lint plugin comes from dist/, built natively by
+# `make plugins`. The root buf.yaml lints proto/ with the same rules.
+version: v2
+modules:
+  - path: proto
+  - path: third_party/dedo
+deps:
+  - buf.build/googleapis/googleapis
+lint:
+  use:
+    - STANDARD
+    - COMMENTS
+    - AIP_NOLANG
+    - DEDO
+    - ZALANDO
+    - DEDO_MULTI_TENANT
+  except:
+    # method_signature drives Google's client generator; connect-go ignores it.
+    - AIP_0131_METHOD_SIGNATURE
+    - AIP_0132_METHOD_SIGNATURE
+    - AIP_0133_METHOD_SIGNATURE
+    - AIP_0134_METHOD_SIGNATURE
+    - AIP_0135_METHOD_SIGNATURE
+    # Buf COMMENTS already reports missing comments.
+    - AIP_0192_HAS_COMMENTS
+  enum_zero_value_suffix: _UNSPECIFIED
+  service_suffix: Service
+  rpc_allow_google_protobuf_empty_requests: false
+  rpc_allow_google_protobuf_empty_responses: false
+breaking:
+  use:
+    - FILE
+  ignore_unstable_packages: true
+plugins:
+  - plugin: ../../dist/buf-plugin-dedo-lint

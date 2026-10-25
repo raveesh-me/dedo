@@ -10,6 +10,7 @@ import (
 
 	"connectrpc.com/connect/v2"
 	"connectrpc.com/connect/v2/connecthttp"
+	"connectrpc.com/connect/v2/connectinprocess"
 	"connectrpc.com/validate"
 	"connectrpc.com/vanguard"
 
@@ -42,7 +43,8 @@ func NewHandler(cfg Config) (http.Handler, error) {
 	if err != nil {
 		return nil, err
 	}
-	tools, err := newMCP(server)
+	// MCP tool calls go straight to the server, in-process.
+	tools, err := NewMCP(connect.NewClient(connectinprocess.New(server)))
 	if err != nil {
 		return nil, err
 	}

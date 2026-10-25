@@ -72,7 +72,7 @@ service ContactService {
 
   // CreateContact adds a contact to a location.
   //
-  // Errors: EMAIL_TAKEN.
+  // Errors: CONTACT_ALREADY_EXISTS, EMAIL_TAKEN.
   rpc CreateContact(CreateContactRequest) returns (CreateContactResponse) {
     option (google.api.http) = {
       post: "/commerce/contacts/v1/{parent=locations/*}/contacts"
@@ -91,6 +91,10 @@ service ContactService {
         }
       }
       scopes: "contacts.contact.write"
+      errors: {
+        reason: "CONTACT_ALREADY_EXISTS"
+        code: ALREADY_EXISTS
+      }
       errors: {
         reason: "EMAIL_TAKEN"
         code: ALREADY_EXISTS
@@ -224,6 +228,11 @@ message Contact {
   string email = 3 [
     (google.api.field_behavior) = OPTIONAL,
     (dedo.v1.field) = {sensitive: true}
+  ];
+  // The location this contact mostly deals with, such as locations/1.
+  string home_location = 4 [
+    (google.api.field_behavior) = OPTIONAL,
+    (google.api.resource_reference) = {type: "contacts.raveesh.me/Location"}
   ];
 }
 
