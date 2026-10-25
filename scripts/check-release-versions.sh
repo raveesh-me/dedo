@@ -33,4 +33,19 @@ check go.work 'dedo[a-z/]* v[0-9.]+ =>'
 for mod in lint/go.mod openapi/go.mod mcp/go.mod cmd/dedo/go.mod examples/todo/go.mod examples/bad-todo/go.mod; do
   check "$mod" 'github.com/raveesh-me/dedo[a-z/]* v[0-9.]+'
 done
+# Services replace the MCP Go SDK with dedo's build of it: the tag must be
+# published, and the examples must build against the same one.
+fork=$(sed -n 's/^[[:space:]]*sdkForkRelease = "\(.*\)"$/\1/p' cmd/dedo/sdkfork.go)
+if [ -n "$fork" ]; then
+  if ! git ls-remote --exit-code --tags https://github.com/raveesh-me/go-sdk "refs/tags/$fork" >/dev/null; then
+    echo "raveesh-me/go-sdk has no tag $fork, which cmd/dedo/sdkfork.go replaces the MCP Go SDK with" >&2
+    status=1
+  fi
+  for mod in examples/todo/go.mod examples/contacts/go.mod; do
+    if ! grep -q "=> github.com/raveesh-me/go-sdk $fork\$" "$mod"; then
+      echo "$mod does not replace the MCP Go SDK with github.com/raveesh-me/go-sdk $fork" >&2
+      status=1
+    fi
+  done
+fi
 exit $status

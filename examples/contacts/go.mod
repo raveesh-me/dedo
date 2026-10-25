@@ -50,3 +50,6 @@ tool (
 	github.com/raveesh-me/dedo/openapi/cmd/protoc-gen-dedo-openapi
 	google.golang.org/protobuf/cmd/protoc-gen-go
 )
+
+// dedo: the MCP Go SDK with in-place JSON decoding, until a release has it (https://github.com/modelcontextprotocol/go-sdk/pull/1454). dedo upgrade maintains this line.
+replace github.com/modelcontextprotocol/go-sdk v1.8.0 => github.com/raveesh-me/go-sdk v1.8.0-dedo.1
