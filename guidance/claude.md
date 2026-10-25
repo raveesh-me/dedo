@@ -26,7 +26,7 @@ Append this file to your repository's `AGENTS.md` or `CLAUDE.md`; `dedo init` do
 | `HOUSE_*` | Your organisation's own rules, as CEL checks in `rules.yml` (and the shared files it imports) |
 | `DEDO_MULTI_TENANT_*` | dedo's opt-in rules for multi-tenant services, in the `DEDO_MULTI_TENANT` category |
 
-Rules rank in layers: **the repository's own `rules.yml` > the house rules it imports > DEDO > AIP > ZALANDO**. Nothing resolves a conflict automatically: a rule that replaces others names them in its `overrides`, and only rules of a lower layer, never a final one (`ZALANDO_SERVICE_RULES_REQUIRED`, `DEDO_METHOD_RULES_REQUIRED`, `DEDO_MULTI_TENANT_REQUEST_TENANT`). `dedo tools` lists every override in force; read it before assuming a rule runs. Without a house override, dedo's conventions hold:
+Rules rank in layers: **the repository's own `rules.yml` > the house rules it imports > DEDO > AIP > ZALANDO**. Nothing resolves a conflict automatically: a rule that replaces others names them in its `overrides`, and only rules of a lower layer, never a final one: dedo's `ZALANDO_SERVICE_RULES_REQUIRED`, `DEDO_METHOD_RULES_REQUIRED` and `DEDO_MULTI_TENANT_REQUEST_TENANT`, and any house rule marked `final: true`, which cannot be disabled either. `dedo tools` lists every override in force; read it before assuming a rule runs. Without a house override, dedo's conventions hold:
 
 - Every RPC returns its own `<Rpc>Response`; REST unwraps it with `response_body`. Do not "fix" this to AIP's bare-resource returns.
 - The major version is in the package and the path (`/<root>/v1/...`). Path segments are lowerCamelCase, never kebab-case.

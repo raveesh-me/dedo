@@ -736,7 +736,9 @@ func TestDropScalarsKeepsListHeader(t *testing.T) {
 func TestDefeatedOverrides(t *testing.T) {
 	report := "363 rules, 1 of them house rules; 8 overridden\n" +
 		"  DEDO_HTTP_RESPONSE_BODY overrides AIP_0131_RESPONSE_MESSAGE_NAME\n" +
-		"  HOUSE_X (rules.yml) overrides DEDO_HTTP_PATH_VERSION\n"
+		"  HOUSE_X (rules.yml) overrides DEDO_HTTP_PATH_VERSION\n" +
+		"  DEDO_METHOD_RULES_REQUIRED is final\n" +
+		"  HOUSE_LOCKED (shared.yml) is final\n"
 	for name, tc := range map[string]struct {
 		bufYAML string
 		want    []string
@@ -744,6 +746,7 @@ func TestDefeatedOverrides(t *testing.T) {
 		"fine":      {"version: v2\nlint:\n  use: [DEDO, HOUSE]\n", nil},
 		"excepted":  {"version: v2\nlint:\n  use: [DEDO, HOUSE]\n  except: [DEDO_HTTP_RESPONSE_BODY]\n", []string{"excepts DEDO_HTTP_RESPONSE_BODY, but it still overrides AIP_0131_RESPONSE_MESSAGE_NAME"}},
 		"no HOUSE":  {"version: v2\nlint:\n  use: [DEDO]\n", []string{"lint.use lacks HOUSE"}},
+		"final":     {"version: v2\nlint:\n  use: [DEDO, HOUSE]\n  except: [DEDO_METHOD_RULES_REQUIRED, HOUSE_LOCKED]\n", []string{"DEDO_METHOD_RULES_REQUIRED, which dedo marks final", "HOUSE_LOCKED, which shared.yml marks final"}},
 		"in module": {"version: v2\nmodules:\n  - path: proto\n    lint:\n      use: [DEDO, HOUSE]\n      except: [HOUSE_X]\n", []string{"excepts HOUSE_X"}},
 	} {
 		t.Run(name, func(t *testing.T) {

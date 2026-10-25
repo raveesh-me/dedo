@@ -141,6 +141,7 @@ func TestLoadRejects(t *testing.T) {
 		"unknown key":   {map[string]string{FileName: "rules:\n  - {id: HOUSE_X, on: field, check: \"true\", message: x, severity: high}\n"}, "severity"},
 		"disable":       {map[string]string{FileName: "disable: [HOUSE_GONE]\n"}, "HOUSE_GONE"},
 		"override id":   {map[string]string{FileName: "rules:\n  - {id: HOUSE_X, on: field, check: \"true\", message: x, overrides: [aip-131]}\n"}, "not a rule ID"},
+		"disable final": {map[string]string{FileName: "imports:\n  - path: b.yml\ndisable: [HOUSE_LOCKED]\n", "b.yml": "rules:\n  - {id: HOUSE_LOCKED, on: field, check: \"true\", message: x, final: true}\n"}, "b.yml marks final"},
 		"override self": {map[string]string{FileName: "rules:\n  - {id: HOUSE_X, on: field, check: \"true\", message: x, overrides: [HOUSE_X]}\n"}, "overrides itself"},
 		"git ref":       {map[string]string{FileName: "imports:\n  - git: https://example.com/r.git\n"}, "needs a ref"},
 		"git unfetched": {map[string]string{FileName: "imports:\n  - git: https://example.com/r.git\n    ref: v1\n"}, "run dedo tools"},

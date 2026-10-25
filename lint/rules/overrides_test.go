@@ -128,6 +128,17 @@ func TestOverridesRejected(t *testing.T) {
 			[]config.Rule{houseRule("HOUSE_X", "rules.yml", []string{"AIP_9999_NOPE"})},
 			[]string{"HOUSE_X overrides AIP_9999_NOPE, which no rule defines"},
 		},
+		"house final": {
+			[]config.Rule{
+				func() config.Rule {
+					r := houseRule("HOUSE_LOCKED", "shared.yml", nil, "rules.yml")
+					r.Final = true
+					return r
+				}(),
+				houseRule("HOUSE_OWN", "rules.yml", []string{"HOUSE_LOCKED"}),
+			},
+			[]string{"rules.yml: HOUSE_OWN overrides HOUSE_LOCKED, which shared.yml marks final"},
+		},
 		"importer": {
 			[]config.Rule{
 				houseRule("HOUSE_SHARED", "shared.yml", []string{"HOUSE_OWN"}, "rules.yml"),
@@ -192,6 +203,22 @@ func TestSeveralHouseSources(t *testing.T) {
 	for id, by := range want {
 		if got[id] != by {
 			t.Errorf("%s overridden by %q, want %q", id, got[id], by)
+		}
+	}
+}
+
+// The report lists every final rule, dedo's and the house's.
+func TestReportListsFinalRules(t *testing.T) {
+	r := houseRule("HOUSE_LOCKED", "shared.yml", []string{"DEDO_NO_JSON_NAME"}, "rules.yml")
+	r.Final = true
+	c, err := consolidate(t, r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	report := c.Report()
+	for _, line := range []string{"  DEDO_METHOD_RULES_REQUIRED is final\n", "  HOUSE_LOCKED (shared.yml) is final\n", "  HOUSE_LOCKED (shared.yml) overrides DEDO_NO_JSON_NAME\n"} {
+		if !strings.Contains(report, line) {
+			t.Errorf("report lacks %q:\n%s", line, report)
 		}
 	}
 }
