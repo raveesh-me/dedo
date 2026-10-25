@@ -39,6 +39,9 @@ Rules rank in layers: **the repository's own `rules.yml` > the house rules it im
 
 Every unary, non-deprecated RPC becomes an MCP tool named after it in snake_case (`GetTodo` becomes `get_todo`). `protoc-gen-dedo-mcp` generates them as `<Service>MCPTools()`, and `main.go` serves them with `mcpserver.AddTools(tools, connect.NewClient(connectinprocess.New(server)), <pkg>.<Service>MCPTools()...)`: calls go in-process to the service's `connect.Server`. Never write tool definitions by hand: change the proto and regenerate. Calls go through the same auth, scopes and validation as REST and Connect.
 
+- Who may reach `/mcp` is configuration, not code: `MCP_ACCESS=public` (the default; anyone may list the tools, every call is still scope-checked) or `authenticated` (requests without a token the service accepts get 401, tool discovery included). Keep `mcpserver.Guard` wired with the service's real token check.
+- A Connect client to another service over HTTP needs its own `http.Client` with `Transport: &http.Transport{MaxIdleConnsPerHost: <your concurrency>}`, reused for every call. Never `http.DefaultClient`: it keeps two idle connections per host, and under load the service runs out of local ports (`cannot assign requested address`).
+
 ### What the model sees
 
 - **Only `name`, `description` and `inputSchema` reach the model.** Hosts such as Claude Desktop and claude.ai turn MCP tools into model tool definitions with just those three fields. `title`, `annotations` (`readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint`) and `outputSchema` reach the client application but not the model. That is by design: the MCP specification makes annotations hints for clients, untrusted when the server is.

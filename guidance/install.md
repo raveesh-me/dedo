@@ -195,15 +195,26 @@ func newHandler(log *slog.Logger) (http.Handler, error) {
 		return nil, err
 	}
 
+	// MCP_ACCESS=authenticated answers only callers whose token you accept,
+	// tool discovery included; public, the default, lets anyone list the
+	// tools. Tool calls are checked by the interceptors above either way.
+	endpoint, err := mcpserver.Guard(mcp.NewStreamableHTTPHandler(
+		func(*http.Request) *mcp.Server { return tools },
+		&mcp.StreamableHTTPOptions{Stateless: true, JSONResponse: true}),
+		mcpserver.Access(os.Getenv("MCP_ACCESS")), authenticated)
+	if err != nil {
+		return nil, err
+	}
+
 	mux.Handle("GET /openapi.json", docs.Spec())
 	mux.Handle("GET /docs", docs.Page())
 	// The MCP transport requires an Origin check.
-	mux.Handle("/mcp", flowid.Middleware(http.NewCrossOriginProtection().Handler(mcp.NewStreamableHTTPHandler(
-		func(*http.Request) *mcp.Server { return tools },
-		&mcp.StreamableHTTPOptions{Stateless: true, JSONResponse: true}))))
+	mux.Handle("/mcp", flowid.Middleware(http.NewCrossOriginProtection().Handler(endpoint)))
 	return mux, nil
 }
 ```
+
+`MCP_ACCESS` says who may reach `/mcp`: `public` (the default) lets anyone list the tools, and every call is still scope-checked; `authenticated` answers 401, before any MCP handling, to requests without a token your `authenticated` function accepts (the template's checks `devTokens`, like `auth`). An unknown value stops the service at startup. [guideline.md](guideline.md#6-wire-the-service) says more.
 
 In a multi-tenant service, `interceptor.Config` also takes `Tenants`, a function that says whether the caller may act in a tenant ID; the server will not start without it. `dedo init` writes a development one, next to `devTokens`, when a service declares `tenancy`.
 
