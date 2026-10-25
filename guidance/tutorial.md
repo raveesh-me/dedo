@@ -534,7 +534,7 @@ The same RPCs also answer over Connect and gRPC at `/acme.time_counter.v1.Counte
 
 - **A new dedo release:** `dedo update`, then `dedo upgrade`. The options module, the lint plugin, the generators and the runtime move together, and the code is regenerated. [install.md](install.md#upgrading) lists what changes.
 - **A new RPC:** add it to the `.proto`, then run `buf lint`, `buf generate` and `go mod tidy`, and implement the method in `server.go`. The REST route, the docs and the MCP tool follow from the `.proto`.
-- **Your organisation's own rules:** write them as CEL checks in `rules.yml` next to `buf.yaml`, or import your organisation's shared file from git, then run `dedo init` again. It adds `HOUSE` to `buf.yaml` and fetches the imports; `buf lint` then reports them like any other rule. A house rule outranks dedo's: to replace one, name it in the rule's `overrides`, and `dedo tools` lists every override in force. [RULES.md](RULES.md#house-rules) has the format.
+- **Your organisation's own rules:** write them as CEL checks in `rules.yml` next to `buf.yaml`, or import your organisation's shared file from git, then run `dedo init` again. It adds `HOUSE` to `buf.yaml` and fetches the imports; `buf lint` then reports them like any other rule. After later edits to `rules.yml` or its imports, run `dedo tools`, which fetches and checks them. A house rule outranks dedo's: to replace one, name it in the rule's `overrides`, and `dedo tools` lists every override in force. [RULES.md](RULES.md#house-rules) has the format.
 
 ## Troubleshooting
 

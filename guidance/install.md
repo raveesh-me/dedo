@@ -49,7 +49,7 @@ dedo tools          # builds .tools/buf-plugin-dedo-lint from the pin, and lists
 printf '.tools/\n' >> .gitignore
 ```
 
-Without the `dedo` command, `go build -o .tools/buf-plugin-dedo-lint github.com/raveesh-me/dedo/lint/cmd/buf-plugin-dedo-lint` does the same. It runs natively because Buf starts the plugin about a dozen times per lint; through `go tool` each lint would take 2 s instead of 0.3 s. Run `dedo tools` again after a fresh clone or a version change.
+Without the `dedo` command, `go build -o .tools/buf-plugin-dedo-lint github.com/raveesh-me/dedo/lint/cmd/buf-plugin-dedo-lint` does the same. It runs natively because Buf starts the plugin about a dozen times per lint; through `go tool` each lint would take 2 s instead of 0.3 s. Run `dedo tools` again after a fresh clone, a version change, or any change to `rules.yml` or its imports.
 
 List the plugin and its categories in `buf.yaml`, with the AIP rules dedo skips on purpose (the full list is in [templates/buf.yaml](../templates/buf.yaml); [RULES.md](RULES.md#skipped-rules) says why):
 
