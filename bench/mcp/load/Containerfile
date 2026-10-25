@@ -1,0 +1,11 @@
+# The load driver. Build from the repository root:
+#   podman build -f bench/mcp/load/Containerfile -t mcp-load .
+FROM docker.io/library/golang:1.26.6-alpine AS build
+WORKDIR /src
+COPY . .
+RUN --mount=type=cache,target=/root/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
+    CGO_ENABLED=0 go build -trimpath -o /out/load ./bench/mcp/load
+
+FROM gcr.io/distroless/static-debian12:nonroot
+COPY --from=build /out/load /load
+ENTRYPOINT ["/load"]

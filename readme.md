@@ -39,7 +39,7 @@ Contract rules come from Google's AIPs. Operational rules (audience, ownership, 
 | REST doc generator | `openapi/` | `protoc-gen-dedo-openapi`: an OpenAPI 3.1 document from the `google.api.http` bindings, with scopes, error reasons, deprecation and the declared descriptions. Connect routes are left out. |
 | MCP tools | `mcp/` | `protoc-gen-dedo-mcp` generates `<Service>MCPTools()` for every service: each unary, non-deprecated RPC as a tool under a snake_case name (`get_todo`), with its declared title, description, `ToolAnnotations` and error reasons, input and output schemas (field descriptions from comments, constraints from `field_behavior`, resource patterns and `buf.validate`, partial-update and create semantics from AIP), and a typed call. `mcpserver.AddTools` serves them on the official MCP Go SDK, with no reflection while serving. Each call goes in-process to the service's `connect.Server` (`connectinprocess`), so tool calls run through the same interceptors (auth, validation and policy) as REST. |
 | Templates | `templates/` | `buf.yaml`, `buf.gen.yaml`, `Makefile.api`, VS Code settings, a Jenkins stage and a policy-table test for service repositories. The `dedo` command (`cmd/dedo`) bundles them, with `guidance/claude.md`. |
-| Examples | `examples/` | `library`: a contract-only module. `contacts`: a contract-only multi-tenant module, linted with every rule including `DEDO_MULTI_TENANT`. `todo` and `bad-todo`: two runnable services with the same interface, one compliant and one breaking every rule. `house-rules`: an organisation's shared `HOUSE_*` rules, which both import. |
+| Examples | `examples/` | `library`: a contract-only module. `contacts`: a runnable multi-tenant service, linted with every rule including `DEDO_MULTI_TENANT`, whose tokens grant locations; its tests check that no caller reaches another location's data, through a nested reference included, on Connect, REST and MCP. `todo` and `bad-todo`: two runnable services with the same interface, one compliant and one breaking every rule. `house-rules`: an organisation's shared `HOUSE_*` rules, which both import. |
 
 The root Go module (`github.com/raveesh-me/dedo`) holds the runtime and the generated options code. `lint/`, `openapi/`, `mcp/` and `cmd/dedo/` are separate modules, so services pull in only what they use. A `go.work` workspace builds them against each other locally, so no `go.mod` carries a `replace` and `go install <module>@<version>` works.
 
@@ -199,6 +199,16 @@ make breaking       # options module against main
 ```
 
 `make check` needs `buf`, and podman for the todo UI's TypeScript generator, which runs in a Node container. Code generators are pinned in each `go.mod` as Go tools and run through `go tool`. The root `buf.yaml` lints the options module (Buf rules only, since it defines the extensions), `examples/library` (Buf, DEDO and ZALANDO rules) and `examples/contacts` (every rule a service gets, with DEDO_MULTI_TENANT), with the locally built plugin from `dist/`.
+
+### Benchmarks
+
+`BenchmarkMCPHop` in `examples/todo/app` and `examples/contacts/app` times one tool call through the real `/mcp` handler, scopes enforced and a valid token, with the tools reaching the server in-process or over loopback Connect:
+
+```sh
+cd examples/todo && go test -run='^$' -bench=BenchmarkMCPHop -benchmem -count=10 ./app
+```
+
+`bench/mcp/run.sh` runs the same calls between containers with equal CPU and memory limits, against three servers: dedo's MCP in-process, dedo's MCP forwarding to the service over Connect, and a NestJS MCP server built the way HighLevel's MCP guidelines describe (`bench/mcp/nest-todo`), forwarding over REST. Every call passes the same scope and tenant checks, and the load driver stops on any failed call. It needs podman, and writes its results outside the repository.
 
 Lint rule tests live in `lint/rules/testdata/<rule>/{pass,fail}`. A pass fixture must produce no finding. A fail fixture marks each line that must produce one with `// want`.
 
