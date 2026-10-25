@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"net/http"
 	"slices"
 	"strings"
 
@@ -62,6 +63,14 @@ func Auth() connect.ServerInterceptor {
 			return next(context.WithValue(ctx, grantKey{}, tokenGrants[token]), spec, stream)
 		}
 	}
+}
+
+// Authenticated reports whether a request carries a known token, for
+// Config.MCPAccess authenticated.
+func Authenticated(r *http.Request) bool {
+	token, _ := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
+	_, ok := tokenGrants[token]
+	return ok
 }
 
 // ScopesFromContext returns the scopes stored by Auth.

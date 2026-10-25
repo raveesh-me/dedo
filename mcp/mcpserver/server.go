@@ -13,9 +13,10 @@
 // from the proto options; its input and output schemas are the ones
 // protoc-gen-dedo-mcp generated. A tool call is forwarded as a Connect call
 // to the service, with the caller's Authorization and X-Flow-ID headers.
-// Give Config.Client the service's whole HTTP stack (see InProcessClient),
-// so MCP calls run through the same auth, scope checks, flow IDs and error
-// audit as REST and RPC calls.
+// Give them a client of the service's own connect.Server, such as
+// connect.NewClient(connectinprocess.New(server)), so MCP calls run through
+// the same auth, scope checks, flow IDs and error audit as REST and RPC
+// calls. Guard decides who may reach the tools at all.
 package mcpserver
 
 import (

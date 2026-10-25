@@ -18,6 +18,7 @@ import (
 	"github.com/raveesh-me/dedo/examples/todo/gen/go/raveesh_me/todo/v1/todov1connect"
 	"github.com/raveesh-me/dedo/flowid"
 	"github.com/raveesh-me/dedo/interceptor"
+	"github.com/raveesh-me/dedo/mcp/mcpserver"
 	"github.com/raveesh-me/dedo/policy"
 )
 
@@ -25,6 +26,9 @@ import (
 type Config struct {
 	Log           *slog.Logger
 	EnforceScopes bool
+	// MCPAccess says who may reach /mcp: anyone (public, the default), or
+	// only callers with a known token (authenticated).
+	MCPAccess mcpserver.Access
 }
 
 // NewHandler returns the HTTP handler for the service. It fails when the
@@ -56,7 +60,11 @@ func NewHandler(cfg Config) (http.Handler, error) {
 	}
 	mux.Handle("GET /openapi.json", docs.Spec())
 	mux.Handle("GET /docs", docs.Page())
-	mux.Handle("/mcp", flowid.Middleware(tools))
+	endpoint, err := mcpserver.Guard(tools, cfg.MCPAccess, Authenticated)
+	if err != nil {
+		return nil, err
+	}
+	mux.Handle("/mcp", flowid.Middleware(endpoint))
 	return mux, nil
 }
 

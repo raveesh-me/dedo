@@ -430,12 +430,21 @@ func newHandler(log *slog.Logger) (http.Handler, error) {
 		return nil, err
 	}
 
+	// MCP_ACCESS=authenticated answers only callers whose token you accept,
+	// tool discovery included; public, the default, lets anyone list the
+	// tools. Tool calls are checked by the interceptors above either way.
+	endpoint, err := mcpserver.Guard(mcp.NewStreamableHTTPHandler(
+		func(*http.Request) *mcp.Server { return tools },
+		&mcp.StreamableHTTPOptions{Stateless: true, JSONResponse: true}),
+		mcpserver.Access(os.Getenv("MCP_ACCESS")), authenticated)
+	if err != nil {
+		return nil, err
+	}
+
 	mux.Handle("GET /openapi.json", docs.Spec())
 	mux.Handle("GET /docs", docs.Page())
 	// Cross-origin protection: the MCP transport requires an Origin check.
-	mux.Handle("/mcp", flowid.Middleware(http.NewCrossOriginProtection().Handler(mcp.NewStreamableHTTPHandler(
-		func(*http.Request) *mcp.Server { return tools },
-		&mcp.StreamableHTTPOptions{Stateless: true, JSONResponse: true}))))
+	mux.Handle("/mcp", flowid.Middleware(http.NewCrossOriginProtection().Handler(endpoint)))
 	return mux, nil
 }
 
@@ -448,13 +457,26 @@ var devTokens = map[string][]string{
 
 type scopesKey struct{}
 
+// bearer returns the token of an Authorization header value.
+func bearer(authorization string) string {
+	token, _ := strings.CutPrefix(authorization, "Bearer ")
+	return token
+}
+
+// authenticated reports whether a request carries a token you accept, for
+// MCP_ACCESS=authenticated. Replace it with your token check, like auth.
+func authenticated(r *http.Request) bool {
+	_, ok := devTokens[bearer(r.Header.Get("Authorization"))]
+	return ok
+}
+
 // auth puts the scopes of the caller's bearer token in the call's context.
 // As a server interceptor it covers Connect, gRPC, REST and MCP alike.
 func auth(next connect.ServerFunc) connect.ServerFunc {
 	return func(ctx context.Context, spec connect.Spec, stream connect.ServerStream) error {
 		var token string
 		if info, ok := connect.CallInfoForServerContext(ctx); ok {
-			token, _ = strings.CutPrefix(info.RequestHeader().Get("Authorization"), "Bearer ")
+			token = bearer(info.RequestHeader().Get("Authorization"))
 		}
 		return next(context.WithValue(ctx, scopesKey{}, devTokens[token]), spec, stream)
 	}
