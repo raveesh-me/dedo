@@ -12,7 +12,7 @@ Every step below was run as written. [install.md](install.md) lists the same set
 - The `dedo` command:
 
   ```sh
-  go install github.com/raveesh-me/dedo/cmd/dedo@v0.11.1
+  go install github.com/raveesh-me/dedo/cmd/dedo@v0.12.0
   ```
 
 ## 1. Decide the names
@@ -512,7 +512,7 @@ The same RPCs also answer over Connect and gRPC at `/acme.time_counter.v1.Counte
 
 - **A new dedo release:** `dedo update`, then `dedo upgrade`. The options module, the lint plugin, the generators and the runtime move together, and the code is regenerated. [install.md](install.md#upgrading) lists what changes.
 - **A new RPC:** add it to the `.proto`, then run `buf lint`, `buf generate` and `go mod tidy`, and implement the method in `server.go`. The REST route, the docs and the MCP tool follow from the `.proto`.
-- **Your organisation's own rules:** write them as CEL checks in `rules.yml` next to `buf.yaml`, or import your organisation's shared file from git, then run `dedo init` again. It adds `HOUSE` to `buf.yaml` and fetches the imports; `buf lint` then reports them like any other rule. [RULES.md](RULES.md#house-rules) has the format.
+- **Your organisation's own rules:** write them as CEL checks in `rules.yml` next to `buf.yaml`, or import your organisation's shared file from git, then run `dedo init` again. It adds `HOUSE` to `buf.yaml` and fetches the imports; `buf lint` then reports them like any other rule. A house rule outranks dedo's: to replace one, name it in the rule's `overrides`, and `dedo tools` lists every override in force. [RULES.md](RULES.md#house-rules) has the format.
 
 ## Troubleshooting
 
@@ -525,5 +525,5 @@ The same RPCs also answer over Connect and gRPC at `/acme.time_counter.v1.Counte
 | `buf breaking: skipped; branch main has no .proto files yet` | Nothing to compare with yet: commit the contract to `main`. If your default branch has another name, run `make api-check API_BASE=<branch>`. |
 | `bind: address already in use` | Something else holds port 8080. Run with `ADDR=:9090`. |
 | No findings in the editor | The lint plugin is missing from `.tools/`, as after a fresh clone. Run `dedo tools` (or `make tools`), then reload the editor. |
-| `reading github.com/raveesh-me/dedo/go.mod at revision v0.0.0: unknown revision` | `go get` picked an old commit instead of a release. Add `@v0.11.1` (or the latest release) to the module path. |
+| `reading github.com/raveesh-me/dedo/go.mod at revision v0.0.0: unknown revision` | `go get` picked an old commit instead of a release. Add `@v0.12.0` (or the latest release) to the module path. |
 | `Module buf.build/bufbuild/protovalidate is declared ... but is unused` | A warning only. Remove the dependency from `buf.yaml` if you don't use protovalidate. |

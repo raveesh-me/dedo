@@ -10,7 +10,7 @@ You write one `.proto` file per API. From it you get:
 - **Authorization without code.** Each RPC declares its scopes. The runtime rejects callers without one, on every transport. A multi-tenant service also declares its tenant, and the runtime keeps each caller to its own ([section 7](#multi-tenant-services)).
 - **REST docs.** `protoc-gen-dedo-openapi` writes an OpenAPI 3.1 document of the REST API only. Connect's own routes stay out of it.
 - **MCP tools.** Every unary RPC becomes an MCP tool for AI agents, named after the RPC in snake_case (`GetProduct` becomes `get_product`). `protoc-gen-dedo-mcp` generates the tools; tool calls pass through the same scope checks and validation as REST calls.
-- **A blocking review gate.** `buf lint` runs Buf's rules and buf-plugin-dedo-lint's rules (`AIP_*` from Google's AIPs, `ZALANDO_*` from Zalando's guidelines, `DEDO_*` of its own, and the opt-in `DEDO_MULTI_TENANT_*`), plus any `HOUSE_*` rules your organisation adds, in your editor and in CI. [RULES.md](RULES.md) lists them, says which side wins when two sources disagree, and which rules dedo skips.
+- **A blocking review gate.** `buf lint` runs Buf's rules and buf-plugin-dedo-lint's rules (`AIP_*` from Google's AIPs, `ZALANDO_*` from Zalando's guidelines, `DEDO_*` of its own, and the opt-in `DEDO_MULTI_TENANT_*`), plus any `HOUSE_*` rules your organisation adds, in your editor and in CI. [RULES.md](RULES.md) lists them, the order in which they may override each other (your house rules above dedo's, dedo's above the AIPs, the AIPs above Zalando), and which rules dedo skips.
 
 Your handlers contain business logic only. Scope and tenant checks, cache and deprecation headers, flow IDs and error auditing come from the runtime.
 
@@ -21,7 +21,7 @@ Install:
 - Go 1.25 or later
 - The [Buf CLI](https://buf.build/docs/installation)
 - VS Code with the Buf extension (`bufbuild.vscode-buf`), or Zed. Remove other Protobuf extensions.
-- The `dedo` command: `go install github.com/raveesh-me/dedo/cmd/dedo@v0.11.1`
+- The `dedo` command: `go install github.com/raveesh-me/dedo/cmd/dedo@v0.12.0`
 
 Decide these names with your team:
 
@@ -257,7 +257,7 @@ The interceptor then reads the tenants of every request, on every transport, fro
 
 | Check | Fails when |
 | --- | --- |
-| `make tools` | The lint plugin pinned in `go.mod`, or a house-rules import, cannot be built or fetched |
+| `make tools` | The lint plugin pinned in `go.mod`, or a house-rules import, cannot be built or fetched, or a rule overrides one it may not |
 | `buf format --diff --exit-code` | A `.proto` file is not formatted |
 | `buf lint` | Any Buf, AIP, Zalando, dedo or house rule is broken |
 | `buf breaking --against '.git#branch=main'` | The change breaks clients |

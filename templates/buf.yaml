@@ -7,7 +7,7 @@ deps:
   - buf.build/bufbuild/protovalidate
   # The options module, at the same release as the lint plugin, generators
   # and runtime pinned in go.mod. dedo upgrade moves them together.
-  - buf.build/r-a/dedo:v0.11.1
+  - buf.build/r-a/dedo:v0.12.0
 lint:
   use:
     - STANDARD
@@ -18,15 +18,6 @@ lint:
     # Opt-in: add HOUSE with a rules.yml, and DEDO_MULTI_TENANT when the
     # services declare tenancy. dedo init adds each when it applies.
   except:
-    # Every response is a unique <Rpc>Response; REST unwraps it with response_body.
-    - AIP_0131_RESPONSE_MESSAGE_NAME
-    - AIP_0132_RESPONSE_MESSAGE_NAME
-    - AIP_0133_RESPONSE_MESSAGE_NAME
-    - AIP_0134_RESPONSE_MESSAGE_NAME
-    - AIP_0135_RESPONSE_MESSAGE_NAME
-    # The same wrapping hides the resource from AIP's standard-method detection.
-    - AIP_0121_RESOURCE_MUST_SUPPORT_GET
-    - AIP_0134_REQUEST_REQUIRED_FIELDS
     # method_signature drives Google's client generator; connect-go ignores it.
     - AIP_0131_METHOD_SIGNATURE
     - AIP_0132_METHOD_SIGNATURE

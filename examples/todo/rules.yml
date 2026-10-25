@@ -1,4 +1,5 @@
-# House rules: the organisation's shared ones, and this service's own.
+# House rules: the organisation's shared ones, and this service's own. A
+# rule here outranks the rules it imports, so it may override them.
 imports:
   - path: ../house-rules
 rules:
@@ -6,3 +7,8 @@ rules:
     on: method
     check: http_path == '' || http_path.startsWith('/commerce/')
     message: REST paths start with /commerce/, the commerce platform's root.
+  - id: HOUSE_TODO_RESOURCE_TYPE
+    on: resource
+    check: type.startsWith('todo.raveesh.me/')
+    message: This service's resource types live under todo.raveesh.me, such as todo.raveesh.me/Todo.
+    overrides: [HOUSE_RESOURCE_TYPE_DOMAIN] # the shared rule, narrowed to this service

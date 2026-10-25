@@ -8,7 +8,7 @@
 | `ZALANDO_*` | [Zalando's RESTful API guidelines](https://opensource.zalando.com/restful-api-guidelines/) | API ownership, audience, OAuth scope names, caching, deprecation, money |
 | `DEDO_*` | dedo itself | What dedo needs to serve one proto as RPC, REST, docs and MCP tools |
 
-A fourth prefix, `HOUSE_*`, is reserved for your organisation's own rules, written as CEL checks in `rules.yml` (see [House rules](#house-rules)). dedo never ships a `HOUSE_*` rule, so yours never clash with an upgrade.
+A fourth prefix, `HOUSE_*`, is reserved for your organisation's own rules, written as CEL checks in `rules.yml` (see [House rules](#house-rules)). dedo never ships a `HOUSE_*` rule, so yours never clash with an upgrade. House rules rank above dedo's, and may override them (see [Precedence](#precedence)).
 
 `DEDO_MULTI_TENANT_*` rules are dedo's own too, but opt-in: they are in the `DEDO_MULTI_TENANT` category rather than `DEDO`, for services that partition their data between tenants (see [Multi-tenant rules](#multi-tenant-rules)).
 
@@ -30,19 +30,21 @@ To suppress one finding, put `// buf:lint:ignore <RULE_ID>` above the element, f
 
 ## Precedence
 
-When two sources disagree, the higher one wins:
+Rules come in layers, and each layer outranks the ones below it:
 
-1. **DEDO**
-2. **AIP**
-3. **ZALANDO**
+1. **Your repository's own house rules**, in its `rules.yml`
+2. **Imported house rules**: a rules file outranks the files it imports
+3. **DEDO**
+4. **AIP**
+5. **ZALANDO**
 
-dedo comes first because its rules are what make one proto serve every transport. The AIPs come next because the contract is a protobuf API, which they were written for. Zalando's guidelines were written for hand-designed JSON-over-HTTP APIs; dedo adopts the ones that still apply.
+The AIPs outrank Zalando because the contract is a protobuf API, which they were written for; Zalando's guidelines were written for hand-designed JSON-over-HTTP APIs, and dedo adopts the ones that still apply. DEDO outranks both because its rules are what make one proto serve every transport. House rules outrank DEDO because they are your organisation's decisions about its own APIs, and your repository outranks the rules it imports because it knows its own service best.
 
-The known conflicts, and how they resolve:
+The known conflicts between the guidelines themselves, and how they resolve:
 
 | Topic | Losing side | Winning side |
 | --- | --- | --- |
-| Response messages | AIP: Get, Create and Update return the resource itself; Delete returns `Empty` | DEDO: every RPC returns its own `<Rpc>Response`, so fields can be added later. REST unwraps it with `response_body` ([`DEDO_HTTP_RESPONSE_BODY`](#dedo_http_response_body)). The AIP rules that disagree are skipped (below). |
+| Response messages | AIP: Get, Create and Update return the resource itself; Delete returns `Empty` | DEDO: every RPC returns its own `<Rpc>Response`, so fields can be added later. REST unwraps it with `response_body` ([`DEDO_HTTP_RESPONSE_BODY`](#dedo_http_response_body), which overrides the AIP rules that disagree). |
 | `method_signature` | AIP: every standard method declares one | DEDO: Connect ignores it, so it is optional and its rules are skipped |
 | API version | ZALANDO: no version in the URL; use media-type versioning | AIP and DEDO: the major version is in the package and the path ([`DEDO_HTTP_PATH_VERSION`](#dedo_http_path_version)) |
 | JSON field names | ZALANDO: `snake_case` | AIP and DEDO: proto3 JSON's `lowerCamelCase`, never renamed ([`DEDO_NO_JSON_NAME`](#dedo_no_json_name)) |
@@ -50,18 +52,56 @@ The known conflicts, and how they resolve:
 | Error format | ZALANDO: Problem JSON (RFC 9457) | AIP: `google.rpc.Status` with `ErrorInfo` (AIP-193); DEDO checks the declared reasons ([`DEDO_ERROR_REASON_FORMAT`](#dedo_error_reason_format)) |
 | Pagination | ZALANDO: cursors in a `next`/`prev` links object | AIP: `page_token` and `next_page_token` (AIP-158) |
 
-When you write a new rule, check this table first. A rule of a lower source that contradicts a higher one is a bug.
+When you write a new rule that contradicts one of a lower layer, name that rule in its overrides; a contradiction left undeclared is a bug, since both rules then report.
+
+## Overrides
+
+Nothing detects a conflict between two rules for you. A rule that replaces others says so, by naming them: its `overrides`. An overridden rule reports nothing. It stays a rule, so `lint.use` and `except` can still name it, and `buf config ls-lint-rules` shows it as `Overridden by <rule>`.
+
+A rule may override only rules of a lower layer. Among house rules, that means the rules of the files its own rules file imports, directly or through others; two files imported side by side cannot override each other, and neither can two rules of one file. A repository can import as many house sources as it likes, and its own rules may override any of them. When an overridden rule overrides others itself, its overrides lapse with it, and those rules run again: a house rule that overrides `DEDO_HTTP_RESPONSE_BODY` brings back the AIP rules it overrode.
+
+The plugin consolidates the rules every time it starts: it gathers every rule and every override, checks each override against this order, and runs what is left. Loading and checking the house rules takes well under a millisecond of a lint's 0.3 s, so `rules.yml` is never compiled into the plugin, and an edit takes effect on the next lint. `dedo tools` runs the same step and lists every override, so a mistake shows there, with the rule and file that made it, rather than as a failing lint in the editor:
+
+```text
+lint rules: 363 rules, 3 of them house rules; 8 overridden
+  DEDO_HTTP_RESPONSE_BODY overrides AIP_0131_RESPONSE_MESSAGE_NAME
+  ...
+  HOUSE_TODO_RESOURCE_TYPE (rules.yml) overrides HOUSE_RESOURCE_TYPE_DOMAIN
+```
+
+The consolidation fails, naming every mistake at once, when an override names a rule that does not exist, one that does not rank below it, or a final rule. An override of a rule that `disable` already removed changes nothing.
+
+The plugin cannot read `buf.yaml`, so an override holds even when `buf.yaml` turns off the rule that makes it: an overrider in `except`, or house rules without `HOUSE` in `lint.use`, leaves both rules silent. `dedo tools` warns about both; list the overridden rules in `except` too if that is what you mean.
+
+## Final rules
+
+Three rules check what dedo's runtime itself requires, so no rule may override them. Without them a contract would lint clean and then fail when the service starts:
+
+| Rule | Why it is final |
+| --- | --- |
+| [`ZALANDO_SERVICE_RULES_REQUIRED`](#zalando_service_rules_required) | `policy.Build` refuses a service without the `dedo.v1.service` option |
+| [`DEDO_METHOD_RULES_REQUIRED`](#dedo_method_rules_required) | `policy.Build` refuses a method without scopes |
+| [`DEDO_MULTI_TENANT_REQUEST_TENANT`](#dedo_multi_tenant_request_tenant) | `policy.Build` refuses a multi-tenant method whose tenant field it cannot find |
+
+Add a rule beside a final one instead: a house rule can demand more than it does, never less.
+
+## dedo's overrides
+
+| Rule | Overrides | Why |
+| --- | --- | --- |
+| [`DEDO_HTTP_RESPONSE_BODY`](#dedo_http_response_body) | `AIP_0131_RESPONSE_MESSAGE_NAME` … `AIP_0135_RESPONSE_MESSAGE_NAME` | Every RPC returns its own `<Rpc>Response`, so fields can be added later; REST unwraps it with `response_body` |
+| | `AIP_0121_RESOURCE_MUST_SUPPORT_GET`, `AIP_0134_REQUEST_REQUIRED_FIELDS` | The same wrapping hides the resource from api-linter's standard-method detection, so these report false positives |
+
+Releases before v0.12.0 listed these rules in `lint.except` instead; `dedo upgrade` takes them out.
 
 ## Skipped rules
 
-dedo turns these off on purpose. `templates/buf.yaml` carries the AIP exclusions, so a service inherits them.
+dedo turns these off on purpose. They are not conflicts, so no rule overrides them: they check things dedo has no use for. `templates/buf.yaml` carries the AIP exclusions, so a service inherits them.
 
 **AIP**
 
 | Rules | Why |
 | --- | --- |
-| `AIP_0131_RESPONSE_MESSAGE_NAME` … `AIP_0135_RESPONSE_MESSAGE_NAME` | Every RPC returns its own `<Rpc>Response` (see Precedence) |
-| `AIP_0121_RESOURCE_MUST_SUPPORT_GET`, `AIP_0134_REQUEST_REQUIRED_FIELDS` | The same wrapping hides the resource from api-linter's standard-method detection, so these report false positives |
 | `AIP_0131_METHOD_SIGNATURE` … `AIP_0135_METHOD_SIGNATURE` | `method_signature` drives Google's client generators; Connect ignores it |
 | `AIP_0192_HAS_COMMENTS` | Buf's `COMMENTS` category reports the same thing |
 | Language-specific rules (`AIP_CLIENT_LIBRARIES`) | `AIP_NOLANG` leaves them out; dedo's clients come from Buf's generators |
@@ -99,6 +139,11 @@ rules:
     check: http_path == '' || http_path.startsWith('/commerce/')
     message: REST paths start with /commerce/, the commerce platform's root.
     doc: https://wiki.acme.com/api/rest-roots
+  - id: HOUSE_CART_RESOURCE_TYPE
+    on: resource
+    check: type.startsWith('cart.acme.com/')
+    message: Cart resource types live under cart.acme.com.
+    overrides: [HOUSE_RESOURCE_TYPE_DOMAIN]           # rules this one replaces
 ```
 
 Add `HOUSE` to `lint.use` in `buf.yaml` (`dedo init` does it when `rules.yml` exists). Each rule is a Buf rule of its own, so `except: [HOUSE_REST_ROOT]` and `// buf:lint:ignore HOUSE_REST_ROOT` work as for any other rule, and a finding shows the rule's `message` and `doc` link.
@@ -106,6 +151,8 @@ Add `HOUSE` to `lint.use` in `buf.yaml` (`dedo init` does it when `rules.yml` ex
 **Paths.** Every `path` is relative to the root of the repository whose file names it, wherever in that repository the file sits: `platform-rules/naming.yml` names the same file from `rules.yml` and from `platform-rules/rules.yml`. In your service the root is the folder of `rules.yml`, next to `buf.yaml`, and a path may lead outside it, such as `../platform-rules` in a monorepo.
 
 **Shared rules.** An organisation keeps its rules in one repository and tags it; each service imports it with `git` and `ref`. Imports nest: a shared file can import others, by paths from its own repository's root. Those paths must stay inside that repository, symlinks included: shared rules cannot make the lint read a service's files, or anything else on the machine. `dedo tools` (and `make tools`, `dedo init`, `dedo upgrade`) fetches git imports into `.tools/rules/`; the lint itself never touches the network, so it stays fast in the editor. A missing import fails the lint with "run dedo tools". `disable` lets a service opt out of an imported rule, by ID.
+
+**Overrides.** `overrides` lists the rules a rule replaces, which then report nothing. A house rule may override any DEDO, AIP or ZALANDO rule except the [final ones](#final-rules), and the rules of the files its rules file imports; your repository's `rules.yml` imports every other rules file, so its rules may override any imported house rule. Use `overrides` when your rule says something else; use `disable` when you simply do not want an imported rule. [Precedence](#precedence) has the order, and `dedo tools` lists every override in force.
 
 **Checks.** `check` is a CEL expression that is true when the element passes. `on` picks the element, and these are the names a check can use:
 
@@ -121,9 +168,9 @@ Add `HOUSE` to `lint.use` in `buf.yaml` (`dedo init` does it when `rules.yml` ex
 
 Lists are lists of strings (`'shop.cart.read' in scopes`, `fields.size() < 30`); booleans are booleans. CEL's string extensions are on (`split`, `lowerAscii`, `replace`, `trim`). A check that does not compile, or is not a bool, stops the lint and names the rule and its file.
 
-House rules run in the native plugin, which reads `rules.yml`; the WebAssembly plugin on the BSR cannot read files, so a repository without Go does not run them. [`examples/house-rules`](../examples/house-rules) holds shared rules that both todo examples import, each adding one of its own: `examples/todo` follows them and `examples/bad-todo` breaks them.
+House rules run in the native plugin, which reads `rules.yml`; the WebAssembly plugin on the BSR cannot read files, so a repository without Go does not run them. [`examples/house-rules`](../examples/house-rules) holds shared rules that both todo examples import, each adding one of its own: `examples/todo` follows them and `examples/bad-todo` breaks them. `examples/todo` also overrides the shared `HOUSE_RESOURCE_TYPE_DOMAIN` with a narrower rule of its own, `HOUSE_TODO_RESOURCE_TYPE`.
 
-House rules rank below everything above: they may add constraints, but not contradict a DEDO, AIP or ZALANDO rule. A contract that lints clean under all of them is the proof they agree; keep one (your service, or dedo's starter) in CI.
+A house rule that contradicts a DEDO, AIP or ZALANDO rule without overriding it leaves a contract that no edit can make lint clean, since one of the two always reports. Keep a contract that lints clean in CI (your service, or dedo's starter) to catch that.
 
 ## dedo's rules
 
@@ -167,6 +214,8 @@ service ProductService {
 
 **Fix.** Add the option. Use the team's name in the team registry.
 
+**Final:** no rule may override it (see [Final rules](#final-rules)).
+
 ### DEDO_METHOD_RULES_REQUIRED
 
 **Checks** that every RPC sets `dedo.v1.method` with at least one scope and at least one error reason.
@@ -187,6 +236,8 @@ rpc GetProduct(GetProductRequest) returns (GetProductResponse) {
 ```
 
 **Fix.** Declare every scope that grants access (a caller needs one) and every error reason the handler returns.
+
+**Final:** no rule may override it (see [Final rules](#final-rules)).
 
 ### ZALANDO_SCOPE_NAME_FORMAT
 
@@ -294,6 +345,8 @@ option (google.api.http) = {
 ```
 
 **Fix.** Set `response_body` to the field holding the resource.
+
+**Overrides** `AIP_0131_RESPONSE_MESSAGE_NAME` … `AIP_0135_RESPONSE_MESSAGE_NAME`, `AIP_0121_RESOURCE_MUST_SUPPORT_GET` and `AIP_0134_REQUEST_REQUIRED_FIELDS` (see [dedo's overrides](#dedos-overrides)).
 
 ### DEDO_HTTP_PATH_VERSION
 
@@ -491,6 +544,8 @@ rpc GetContact(GetContactRequest) returns (GetContactResponse) {
 ```
 
 **Fix.** Bind the resource name, or the parent, with the tenant in its template. For an RPC that truly spans tenants, set `cross_tenant: true` and give it a scope of its own.
+
+**Final:** no rule may override it (see [Final rules](#final-rules)).
 
 ### DEDO_MULTI_TENANT_CACHE_PRIVATE
 

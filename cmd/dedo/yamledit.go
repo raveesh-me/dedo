@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"os"
 	"slices"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -116,6 +117,44 @@ func addScalars(seq *yaml.Node, values ...string) []string {
 		}
 	}
 	return added
+}
+
+// dropScalars removes the given values from a sequence and returns the
+// ones it removed. A comment above a removed value goes with it, unless it
+// is the first one, under the key: that one may describe the whole list, so
+// it moves to the next value kept.
+func dropScalars(seq *yaml.Node, values ...string) []string {
+	if seq == nil {
+		return nil
+	}
+	var dropped []string
+	var kept []*yaml.Node
+	header := ""
+	for i, n := range seq.Content {
+		if n.Kind == yaml.ScalarNode && slices.Contains(values, n.Value) {
+			dropped = append(dropped, n.Value)
+			if i == 0 {
+				header = firstLine(n.HeadComment)
+			}
+			continue
+		}
+		if header != "" {
+			n.HeadComment = strings.TrimSpace(header + "\n" + n.HeadComment)
+			header = ""
+		}
+		kept = append(kept, n)
+	}
+	seq.Content = kept
+	return dropped
+}
+
+// firstLine returns the first line of a comment block: a header above a list
+// is a comment line of its own, followed by one about the first item.
+func firstLine(comment string) string {
+	if first, rest, ok := strings.Cut(comment, "\n"); ok && rest != "" {
+		return first
+	}
+	return ""
 }
 
 // findItem returns the first mapping in a sequence that match accepts.

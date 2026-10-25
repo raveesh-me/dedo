@@ -3,7 +3,7 @@
 Each numbered section below adds one part of dedo to a repository. `dedo init` does all of them, editing what is already there:
 
 ```sh
-go install github.com/raveesh-me/dedo/cmd/dedo@v0.11.1
+go install github.com/raveesh-me/dedo/cmd/dedo@v0.12.0
 dedo init
 ```
 
@@ -22,7 +22,7 @@ version: v2
 deps:
   - buf.build/googleapis/googleapis
   - buf.build/bufbuild/protovalidate
-  - buf.build/r-a/dedo:v0.11.1   # the same release as the lint plugin and runtime
+  - buf.build/r-a/dedo:v0.12.0   # the same release as the lint plugin and runtime
 ```
 
 ```sh
@@ -44,8 +44,8 @@ import "dedo/v1/options.proto";
 Pin the plugin in `go.mod` like the generators, and build it into `.tools/`:
 
 ```sh
-go get -tool github.com/raveesh-me/dedo/lint/cmd/buf-plugin-dedo-lint@v0.11.1
-dedo tools          # builds .tools/buf-plugin-dedo-lint from the pin
+go get -tool github.com/raveesh-me/dedo/lint/cmd/buf-plugin-dedo-lint@v0.12.0
+dedo tools          # builds .tools/buf-plugin-dedo-lint from the pin, and lists the rule overrides
 printf '.tools/\n' >> .gitignore
 ```
 
@@ -62,7 +62,7 @@ lint:
     - DEDO
     - ZALANDO
   except:
-    - AIP_0131_RESPONSE_MESSAGE_NAME
+    - AIP_0131_METHOD_SIGNATURE
     # ...the rest of the list in templates/buf.yaml
 plugins:
   - plugin: .tools/buf-plugin-dedo-lint
@@ -75,7 +75,7 @@ make api-check      # buf format, buf lint, buf breaking against main
 
 The breaking check compares with the `main` branch, and is skipped while `main` has no `.proto` files. Compare with another branch with `make api-check API_BASE=develop`.
 
-Your organisation's own rules go in `rules.yml` next to `buf.yaml`, as CEL checks that can import shared rules from a git repository; add `HOUSE` to `lint.use`. [RULES.md](RULES.md#house-rules) has the format.
+Your organisation's own rules go in `rules.yml` next to `buf.yaml`, as CEL checks that can import shared rules from a git repository; add `HOUSE` to `lint.use`. A house rule can override a DEDO, AIP or ZALANDO rule by naming it in `overrides`, and `dedo tools` lists every override in force. [RULES.md](RULES.md#house-rules) has the format, and [Precedence](RULES.md#precedence) the order.
 
 If your services partition their data between tenants, declare `tenancy` on each and add `DEDO_MULTI_TENANT` to `lint.use` (`dedo init` does when a service declares it); then pass `Tenants` to the interceptor in section 4. [RULES.md](RULES.md#multi-tenant-rules) explains the model.
 
@@ -88,8 +88,8 @@ Pin the generators as Go tools:
 ```sh
 go get -tool google.golang.org/protobuf/cmd/protoc-gen-go
 go get -tool connectrpc.com/connect/v2/cmd/protoc-gen-connect-go@v2.0.1
-go get -tool github.com/raveesh-me/dedo/mcp/cmd/protoc-gen-dedo-mcp@v0.11.1
-go get -tool github.com/raveesh-me/dedo/openapi/cmd/protoc-gen-dedo-openapi@v0.11.1
+go get -tool github.com/raveesh-me/dedo/mcp/cmd/protoc-gen-dedo-mcp@v0.12.0
+go get -tool github.com/raveesh-me/dedo/openapi/cmd/protoc-gen-dedo-openapi@v0.12.0
 ```
 
 Add them to `buf.gen.yaml` ([templates/buf.gen.yaml](../templates/buf.gen.yaml) is a complete one):
@@ -141,7 +141,7 @@ make api-generate   # buf generate
 Add the runtime libraries. dedo is built on connect-go v2, where one `connect.Server` holds the interceptors and every transport mounts on it:
 
 ```sh
-go get github.com/raveesh-me/dedo@v0.11.1 github.com/raveesh-me/dedo/mcp@v0.11.1
+go get github.com/raveesh-me/dedo@v0.12.0 github.com/raveesh-me/dedo/mcp@v0.12.0
 go get connectrpc.com/connect/v2@v2.0.1 connectrpc.com/vanguard@v0.5.0 connectrpc.com/validate@v0.9.0
 ```
 

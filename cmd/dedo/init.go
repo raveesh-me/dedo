@@ -79,7 +79,7 @@ func initRepo(dir, release string, offline bool, out io.Writer) error {
 	}
 	failed := in.runCommands(offline)
 	if !offline && in.hasHouseRules() {
-		if err := fetchRules(in.p.dir, in.out); err != nil {
+		if err := houseRules(in.p.dir, in.out); err != nil {
 			failed = append(failed, "dedo tools (house rules): "+err.Error())
 		}
 	}
@@ -91,6 +91,23 @@ func initRepo(dir, release string, offline bool, out io.Writer) error {
 	}
 	return nil
 }
+
+// overriddenRules are the AIP rules that releases before v0.12.0 listed in
+// lint.except, and that DEDO_HTTP_RESPONSE_BODY now overrides in the plugin
+// (lint/rules/overrides.go). Out of except, they run again when a house
+// rule overrides DEDO_HTTP_RESPONSE_BODY.
+var overriddenRules = []string{
+	"AIP_0131_RESPONSE_MESSAGE_NAME",
+	"AIP_0132_RESPONSE_MESSAGE_NAME",
+	"AIP_0133_RESPONSE_MESSAGE_NAME",
+	"AIP_0134_RESPONSE_MESSAGE_NAME",
+	"AIP_0135_RESPONSE_MESSAGE_NAME",
+	"AIP_0121_RESOURCE_MUST_SUPPORT_GET",
+	"AIP_0134_REQUEST_REQUIRED_FIELDS",
+}
+
+// overridesRelease is the first release whose plugin overrides them.
+const overridesRelease = "v0.12.0"
 
 // house is the lint category of a repository's own rules.
 const house = "HOUSE"
@@ -277,8 +294,16 @@ func (in *initer) linter() error {
 			in.say("buf.yaml: lint.use gained %s", strings.Join(added, ", "))
 			changed = true
 		}
+		except := child(lint, "except", yaml.SequenceNode)
+		// Only a plugin from v0.12.0 on overrides them itself.
+		if !newer(overridesRelease, in.release) {
+			if dropped := dropScalars(except, overriddenRules...); len(dropped) > 0 {
+				in.say("buf.yaml: lint.except lost %d AIP rules that DEDO_HTTP_RESPONSE_BODY now overrides in the plugin", len(dropped))
+				changed = true
+			}
+		}
 		skips := scalars(lookup(lookup(root(tmpl), "lint"), "except"))
-		if added := addScalars(child(lint, "except", yaml.SequenceNode), skips...); len(added) > 0 {
+		if added := addScalars(except, skips...); len(added) > 0 {
 			in.say("buf.yaml: lint.except gained the %d AIP rules dedo skips (see RULES.md)", len(added))
 			changed = true
 		}

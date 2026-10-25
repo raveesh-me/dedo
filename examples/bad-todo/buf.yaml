@@ -17,15 +17,6 @@ lint:
     - ZALANDO
     - HOUSE
   except:
-    # Every response is a unique <Rpc>Response; REST unwraps it with response_body.
-    - AIP_0131_RESPONSE_MESSAGE_NAME
-    - AIP_0132_RESPONSE_MESSAGE_NAME
-    - AIP_0133_RESPONSE_MESSAGE_NAME
-    - AIP_0134_RESPONSE_MESSAGE_NAME
-    - AIP_0135_RESPONSE_MESSAGE_NAME
-    # The same wrapping hides the resource from AIP's standard-method detection.
-    - AIP_0121_RESOURCE_MUST_SUPPORT_GET
-    - AIP_0134_REQUEST_REQUIRED_FIELDS
     # method_signature drives Google's client generator; connect-go ignores it.
     - AIP_0131_METHOD_SIGNATURE
     - AIP_0132_METHOD_SIGNATURE
