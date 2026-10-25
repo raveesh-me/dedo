@@ -22,7 +22,7 @@
 
 New here? Everything is in [`guidance/`](guidance): [install.md](guidance/install.md) adds dedo to a Go service, one part at a time or all at once with `dedo init`, [tutorial.md](guidance/tutorial.md) builds a new product from scratch, [guideline.md](guidance/guideline.md) explains the reasoning, [RULES.md](guidance/RULES.md) documents every lint rule, and [claude.md](guidance/claude.md) is guidance for coding agents to append to your `AGENTS.md` or `CLAUDE.md`.
 
-**Latest release: [v0.12.0](https://github.com/raveesh-me/dedo/releases/tag/v0.12.0).** The options module is [`buf.build/r-a/dedo`](https://buf.build/r-a/dedo). The lint plugin is pinned in `go.mod` and built natively by `dedo tools`; it also comes as native binaries on the GitHub release and as a Wasm plugin on the BSR. The Go modules are `github.com/raveesh-me/dedo/...@v0.12.0`.
+**Latest release: [v0.13.0](https://github.com/raveesh-me/dedo/releases/tag/v0.13.0).** The options module is [`buf.build/r-a/dedo`](https://buf.build/r-a/dedo). The lint plugin is pinned in `go.mod` and built natively by `dedo tools`; it also comes as native binaries on the GitHub release and as a Wasm plugin on the BSR. The Go modules are `github.com/raveesh-me/dedo/...@v0.13.0`.
 
 Contract rules come from Google's AIPs. Operational rules (audience, ownership, scopes, caching, deprecation, error reasons) come from Zalando's guidelines. Both live in the schema.
 
@@ -103,7 +103,7 @@ See `examples/library/proto` for a complete module.
 
 `buf-plugin-dedo-lint` runs three classes of rules: `AIP_*` (Google's AIPs, through api-linter), `ZALANDO_*` (the Zalando guidelines dedo adopts) and `DEDO_*` (dedo's own). A fourth, `HOUSE_*`, is your organisation's own: CEL checks in `rules.yml`, importable from a shared git repository; [`examples/house-rules`](examples/house-rules) shows them.
 
-The classes rank in layers: your repository's own `rules.yml`, then the house rules it imports, then DEDO, AIP and ZALANDO. Nothing guesses at conflicts: a rule names the rules it replaces in `overrides`, the plugin checks that each ranks below it, and the overridden rules report nothing. Three rules the runtime depends on are final, so a contract that lints clean also starts. `dedo tools` lists every override in force. [RULES.md](guidance/RULES.md#precedence) has the order, dedo's own overrides and every rule dedo skips, by source.
+The classes rank in layers: your repository's own `rules.yml`, then the house rules it imports, then DEDO, AIP and ZALANDO. Nothing guesses at conflicts: a rule names the rules it replaces in `overrides`, the plugin checks that each ranks below it, and the overridden rules report nothing. Final rules cannot be overridden: three of dedo's, which the runtime depends on, so a contract that lints clean also starts, and any house rule marked `final: true`, which an organisation's shared rules use to lock a convention for every service. `dedo tools` lists every override in force. [RULES.md](guidance/RULES.md#precedence) has the order, dedo's own overrides and every rule dedo skips, by source.
 
 | Rule ID | Checks |
 | --- | --- |
@@ -131,7 +131,7 @@ Suppress one finding with `// buf:lint:ignore ZALANDO_MONEY_FIELD_TYPE` above th
 ## Using it in a service repository
 
 ```sh
-go install github.com/raveesh-me/dedo/cmd/dedo@v0.12.0
+go install github.com/raveesh-me/dedo/cmd/dedo@v0.13.0
 dedo init
 ```
 

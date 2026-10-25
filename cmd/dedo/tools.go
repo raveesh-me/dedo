@@ -137,12 +137,17 @@ func consolidate(dir string, out io.Writer) error {
 	return fmt.Errorf("the lint rules do not consolidate:\n%s", strings.TrimSpace(string(report)))
 }
 
-// overrideLine is one override in the plugin's report.
-var overrideLine = regexp.MustCompile(`(?m)^  ([A-Z0-9_]+)(?: \([^)]*\))? overrides ([A-Z0-9_]+)$`)
+// overrideLine is one override in the plugin's report, and finalLine one
+// final rule.
+var (
+	overrideLine = regexp.MustCompile(`(?m)^  ([A-Z0-9_]+)(?: \([^)]*\))? overrides ([A-Z0-9_]+)$`)
+	finalLine    = regexp.MustCompile(`(?m)^  ([A-Z0-9_]+)(?: \(([^)]*)\))? is final$`)
+)
 
-// defeatedOverrides finds the overrides buf.yaml defeats. The plugin cannot
-// read buf.yaml, so an overridden rule reports nothing even when buf.yaml
-// turns off the rule that overrides it: neither runs.
+// defeatedOverrides finds the overrides and final rules buf.yaml defeats.
+// The plugin cannot read buf.yaml, so an overridden rule reports nothing
+// even when buf.yaml turns off the rule that overrides it, and a final rule
+// in except does not run.
 func defeatedOverrides(dir, report string) []string {
 	doc, ok, err := loadYAML(filepath.Join(dir, "buf.yaml"))
 	if err != nil || !ok {
@@ -169,6 +174,15 @@ func defeatedOverrides(dir, report string) []string {
 		case strings.HasPrefix(by, house+"_") && !slices.Contains(use, house) && !houseWarned:
 			houseWarned = true
 			warnings = append(warnings, "rules.yml overrides rules, but lint.use lacks HOUSE, so the house rules do not run while the rules they override stay silent; add HOUSE to lint.use")
+		}
+	}
+	for _, m := range finalLine.FindAllStringSubmatch(report, -1) {
+		if id, source := m[1], m[2]; slices.Contains(except, id) {
+			by := "dedo"
+			if source != "" {
+				by = source
+			}
+			warnings = append(warnings, fmt.Sprintf("buf.yaml excepts %s, which %s marks final, so it does not run; take it out of except", id, by))
 		}
 	}
 	return warnings

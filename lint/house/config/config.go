@@ -20,9 +20,11 @@
 //	    message: Resource types live under acme.com.
 //	    doc: https://wiki.acme.com/api/resources
 //	    overrides: [HOUSE_RESOURCE_TYPE]    # rules this one replaces
+//	    final: true                         # no rule may override or disable it
 //
 // A rule may override DEDO, AIP and ZALANDO rules, and the rules of the
-// files its own file imports; package rules checks that and applies them.
+// files its own file imports, unless they are final; package rules checks
+// that and applies them.
 package config
 
 import (
@@ -69,6 +71,8 @@ type Rule struct {
 	Doc     string `yaml:"doc"`
 	// Overrides are the rules this one replaces: they no longer run.
 	Overrides []string `yaml:"overrides"`
+	// Final rules cannot be overridden or disabled, by any file.
+	Final bool `yaml:"final"`
 	// Source is the rules file that defines the rule, as it was named.
 	Source string `yaml:"-"`
 	// File is Source as an absolute path.
@@ -135,6 +139,11 @@ func LoadAll(path string) (rules []Rule, disabled []string, err error) {
 	for _, id := range disabled {
 		if _, ok := l.ids[id]; !ok {
 			return nil, nil, fmt.Errorf("%s: disable names %s, which no rules file defines", path, id)
+		}
+	}
+	for _, r := range all {
+		if r.Final && slices.Contains(disabled, r.ID) {
+			return nil, nil, fmt.Errorf("%s: disable names %s, which %s marks final; keep it, or ask its owners to drop final", path, r.ID, r.Source)
 		}
 	}
 	for _, r := range all {

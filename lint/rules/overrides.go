@@ -62,8 +62,10 @@ var builtinOverrides = map[string][]string{
 	},
 }
 
-// Final rules check what the runtime itself requires. Overriding one would
-// only move the failure from lint to the service's startup, so no rule may.
+// Final are dedo's own final rules, by why they are final: they check what
+// the runtime itself requires, and overriding one would only move the
+// failure from lint to the service's startup, so no rule may. A house rule
+// is final when it says final: true.
 var Final = map[string]string{
 	serviceRulesRequired.ID:     "policy.Build refuses a service without the dedo.v1.service option",
 	methodRulesRequired.ID:      "policy.Build refuses a method without scopes",
@@ -89,6 +91,8 @@ type Consolidated struct {
 	House int
 	// Overridden is the number of rules that report nothing.
 	Overridden int
+	// Final lists the final rules, with the rules file of a house one.
+	Final []Override
 }
 
 // candidate is a rule as Consolidate ranks it.
@@ -180,6 +184,11 @@ func Consolidate(builtin []*check.RuleSpec, houseRules []config.Rule, houseSpecs
 		}
 	}
 	sort.SliceStable(out.Overrides, func(i, j int) bool { return out.Overrides[i].By < out.Overrides[j].By })
+	for _, c := range all {
+		if Final[c.spec.ID] != "" || c.house != nil && c.house.Final {
+			out.Final = append(out.Final, Override{Rule: c.spec.ID, Source: c.source()})
+		}
+	}
 	return out, nil
 }
 
@@ -199,6 +208,8 @@ func checkOverrides(all []candidate, byID map[string]candidate, disabled []strin
 				errs = append(errs, fmt.Errorf("%s overrides %s, which no rule defines", at, id))
 			case Final[id] != "":
 				errs = append(errs, fmt.Errorf("%s overrides %s, which is final: %s, so a contract without it would fail at startup instead of in lint. Keep %s and add your rule beside it", at, id, Final[id], id))
+			case target.house != nil && target.house.Final:
+				errs = append(errs, fmt.Errorf("%s overrides %s, which %s marks final. Keep %s and add your rule beside it, or ask its owners to drop final", at, id, target.house.Source, id))
 			case !outranks(c, target):
 				errs = append(errs, fmt.Errorf("%s cannot override %s%s: %s", at, id, from(target), rankRule(c)))
 			}
@@ -250,6 +261,13 @@ func (c *Consolidated) Report() string {
 			lapsed = ", lapsed: " + o.By + " is overridden itself"
 		}
 		fmt.Fprintf(&b, "  %s overrides %s%s\n", by, o.Rule, lapsed)
+	}
+	for _, f := range c.Final {
+		rule := f.Rule
+		if f.Source != "" {
+			rule += " (" + f.Source + ")"
+		}
+		fmt.Fprintf(&b, "  %s is final\n", rule)
 	}
 	return b.String()
 }

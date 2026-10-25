@@ -75,7 +75,9 @@ The plugin cannot read `buf.yaml`, so an override holds even when `buf.yaml` tur
 
 ## Final rules
 
-Three rules check what dedo's runtime itself requires, so no rule may override them. Without them a contract would lint clean and then fail when the service starts:
+A final rule cannot be overridden, by any rule, and a house rule that is final cannot be disabled either.
+
+Three of dedo's rules are final because they check what dedo's runtime itself requires. Without them a contract would lint clean and then fail when the service starts:
 
 | Rule | Why it is final |
 | --- | --- |
@@ -83,7 +85,20 @@ Three rules check what dedo's runtime itself requires, so no rule may override t
 | [`DEDO_METHOD_RULES_REQUIRED`](#dedo_method_rules_required) | `policy.Build` refuses a method without scopes |
 | [`DEDO_MULTI_TENANT_REQUEST_TENANT`](#dedo_multi_tenant_request_tenant) | `policy.Build` refuses a multi-tenant method whose tenant field it cannot find |
 
-Add a rule beside a final one instead: a house rule can demand more than it does, never less.
+A house rule is final when it says so:
+
+```yaml
+rules:
+  - id: HOUSE_RESOURCE_TYPE_DOMAIN
+    on: resource
+    check: type.split('/')[0].endsWith('.acme.com')
+    message: Resource types live under acme.com.
+    final: true    # no rule may override it, and no rules.yml may disable it
+```
+
+Use it for the conventions your organisation does not negotiate: the shared file that defines the rule locks it for every service that imports it, however many files sit in between. A final rule may still override rules below it.
+
+Add a rule beside a final one instead: a rule can demand more than a final rule does, never less. `dedo tools` lists every final rule, and warns when `buf.yaml` excepts one, since the plugin cannot see `buf.yaml`.
 
 ## dedo's overrides
 
@@ -144,6 +159,7 @@ rules:
     check: type.startsWith('cart.acme.com/')
     message: Cart resource types live under cart.acme.com.
     overrides: [HOUSE_RESOURCE_TYPE_DOMAIN]           # rules this one replaces
+    final: true                                       # optional: no rule may override or disable it
 ```
 
 Add `HOUSE` to `lint.use` in `buf.yaml` (`dedo init` does it when `rules.yml` exists). Each rule is a Buf rule of its own, so `except: [HOUSE_REST_ROOT]` and `// buf:lint:ignore HOUSE_REST_ROOT` work as for any other rule, and a finding shows the rule's `message` and `doc` link.
@@ -152,7 +168,7 @@ Add `HOUSE` to `lint.use` in `buf.yaml` (`dedo init` does it when `rules.yml` ex
 
 **Shared rules.** An organisation keeps its rules in one repository and tags it; each service imports it with `git` and `ref`. Imports nest: a shared file can import others, by paths from its own repository's root. Those paths must stay inside that repository, symlinks included: shared rules cannot make the lint read a service's files, or anything else on the machine. `dedo tools` (and `make tools`, `dedo init`, `dedo upgrade`) fetches git imports into `.tools/rules/`; the lint itself never touches the network, so it stays fast in the editor. A missing import fails the lint with "run dedo tools". `disable` lets a service opt out of an imported rule, by ID.
 
-**Overrides.** `overrides` lists the rules a rule replaces, which then report nothing. A house rule may override any DEDO, AIP or ZALANDO rule except the [final ones](#final-rules), and the rules of the files its rules file imports; your repository's `rules.yml` imports every other rules file, so its rules may override any imported house rule. Use `overrides` when your rule says something else; use `disable` when you simply do not want an imported rule. [Precedence](#precedence) has the order, and `dedo tools` lists every override in force.
+**Overrides.** `overrides` lists the rules a rule replaces, which then report nothing. A house rule may override any DEDO, AIP or ZALANDO rule except the [final ones](#final-rules), and the rules of the files its rules file imports; your repository's `rules.yml` imports every other rules file, so its rules may override any imported house rule. Use `overrides` when your rule says something else; use `disable` when you simply do not want an imported rule. Neither works on a [final](#final-rules) rule. [Precedence](#precedence) has the order, and `dedo tools` lists every override in force.
 
 **Checks.** `check` is a CEL expression that is true when the element passes. `on` picks the element, and these are the names a check can use:
 
