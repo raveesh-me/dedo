@@ -3,7 +3,7 @@
 Each numbered section below adds one part of dedo to a repository. `dedo init` does all of them, editing what is already there:
 
 ```sh
-go install github.com/raveesh-me/dedo/cmd/dedo@v0.13.0
+go install github.com/raveesh-me/dedo/cmd/dedo@v0.14.0
 dedo init
 ```
 
@@ -22,7 +22,7 @@ version: v2
 deps:
   - buf.build/googleapis/googleapis
   - buf.build/bufbuild/protovalidate
-  - buf.build/r-a/dedo:v0.13.0   # the same release as the lint plugin and runtime
+  - buf.build/r-a/dedo:v0.14.0   # the same release as the lint plugin and runtime
 ```
 
 ```sh
@@ -44,7 +44,7 @@ import "dedo/v1/options.proto";
 Pin the plugin in `go.mod` like the generators, and build it into `.tools/`:
 
 ```sh
-go get -tool github.com/raveesh-me/dedo/lint/cmd/buf-plugin-dedo-lint@v0.13.0
+go get -tool github.com/raveesh-me/dedo/lint/cmd/buf-plugin-dedo-lint@v0.14.0
 dedo tools          # builds .tools/buf-plugin-dedo-lint from the pin, and lists the rule overrides
 printf '.tools/\n' >> .gitignore
 ```
@@ -88,8 +88,8 @@ Pin the generators as Go tools:
 ```sh
 go get -tool google.golang.org/protobuf/cmd/protoc-gen-go
 go get -tool connectrpc.com/connect/v2/cmd/protoc-gen-connect-go@v2.0.1
-go get -tool github.com/raveesh-me/dedo/mcp/cmd/protoc-gen-dedo-mcp@v0.13.0
-go get -tool github.com/raveesh-me/dedo/openapi/cmd/protoc-gen-dedo-openapi@v0.13.0
+go get -tool github.com/raveesh-me/dedo/mcp/cmd/protoc-gen-dedo-mcp@v0.14.0
+go get -tool github.com/raveesh-me/dedo/openapi/cmd/protoc-gen-dedo-openapi@v0.14.0
 ```
 
 Add them to `buf.gen.yaml` ([templates/buf.gen.yaml](../templates/buf.gen.yaml) is a complete one):
@@ -141,7 +141,7 @@ make api-generate   # buf generate
 Add the runtime libraries. dedo is built on connect-go v2, where one `connect.Server` holds the interceptors and every transport mounts on it:
 
 ```sh
-go get github.com/raveesh-me/dedo@v0.13.0 github.com/raveesh-me/dedo/mcp@v0.13.0
+go get github.com/raveesh-me/dedo@v0.14.0 github.com/raveesh-me/dedo/mcp@v0.14.0
 go get connectrpc.com/connect/v2@v2.0.1 connectrpc.com/vanguard@v0.5.0 connectrpc.com/validate@v0.9.0
 ```
 
@@ -195,15 +195,26 @@ func newHandler(log *slog.Logger) (http.Handler, error) {
 		return nil, err
 	}
 
+	// MCP_ACCESS=authenticated answers only callers whose token you accept,
+	// tool discovery included; public, the default, lets anyone list the
+	// tools. Tool calls are checked by the interceptors above either way.
+	endpoint, err := mcpserver.Guard(mcp.NewStreamableHTTPHandler(
+		func(*http.Request) *mcp.Server { return tools },
+		&mcp.StreamableHTTPOptions{Stateless: true, JSONResponse: true}),
+		mcpserver.Access(os.Getenv("MCP_ACCESS")), authenticated)
+	if err != nil {
+		return nil, err
+	}
+
 	mux.Handle("GET /openapi.json", docs.Spec())
 	mux.Handle("GET /docs", docs.Page())
 	// The MCP transport requires an Origin check.
-	mux.Handle("/mcp", flowid.Middleware(http.NewCrossOriginProtection().Handler(mcp.NewStreamableHTTPHandler(
-		func(*http.Request) *mcp.Server { return tools },
-		&mcp.StreamableHTTPOptions{Stateless: true, JSONResponse: true}))))
+	mux.Handle("/mcp", flowid.Middleware(http.NewCrossOriginProtection().Handler(endpoint)))
 	return mux, nil
 }
 ```
+
+`MCP_ACCESS` says who may reach `/mcp`: `public` (the default) lets anyone list the tools, and every call is still scope-checked; `authenticated` answers 401, before any MCP handling, to requests without a token your `authenticated` function accepts (the template's checks `devTokens`, like `auth`). An unknown value stops the service at startup. [guideline.md](guideline.md#6-wire-the-service) says more.
 
 In a multi-tenant service, `interceptor.Config` also takes `Tenants`, a function that says whether the caller may act in a tenant ID; the server will not start without it. `dedo init` writes a development one, next to `devTokens`, when a service declares `tenancy`.
 

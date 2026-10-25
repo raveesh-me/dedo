@@ -3,7 +3,10 @@ package app_test
 import (
 	"context"
 	"encoding/json"
+	"io"
+	"log/slog"
 	"net/http"
+	"net/http/httptest"
 	"slices"
 	"strings"
 	"testing"
@@ -12,6 +15,7 @@ import (
 
 	"github.com/raveesh-me/dedo/examples/contacts/app"
 	contactsv1 "github.com/raveesh-me/dedo/examples/contacts/gen/go/raveesh_me/contacts/v1"
+	"github.com/raveesh-me/dedo/mcp/mcpserver"
 )
 
 // bearer adds a token to every request of the MCP client.
@@ -221,5 +225,41 @@ func TestMCPListLocations(t *testing.T) {
 		if !slices.Equal(got, want) {
 			t.Errorf("%s: locations %v, want %v", token, got, want)
 		}
+	}
+}
+
+// With MCPAccess authenticated, a request without a known token gets 401
+// before any MCP handling; a known one lists both services' tools.
+func TestMCPAccessAuthenticated(t *testing.T) {
+	handler, err := app.NewHandler(app.Config{
+		Log: slog.New(slog.NewTextHandler(io.Discard, nil)), EnforceScopes: true, MCPAccess: mcpserver.AccessAuthenticated,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	srv := httptest.NewServer(handler)
+	t.Cleanup(srv.Close)
+	for _, token := range []string{"", "nobody"} {
+		req, err := http.NewRequest(http.MethodPost, srv.URL+"/mcp", strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"tools/list"}`))
+		if err != nil {
+			t.Fatal(err)
+		}
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Accept", "application/json, text/event-stream")
+		if token != "" {
+			req.Header.Set("Authorization", "Bearer "+token)
+		}
+		res, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		res.Body.Close()
+		if res.StatusCode != http.StatusUnauthorized {
+			t.Errorf("token %q: status %d, want 401", token, res.StatusCode)
+		}
+	}
+	tools, err := mcpSession(t, env{url: srv.URL}, app.Loc1Reader).ListTools(context.Background(), nil)
+	if err != nil || len(tools.Tools) != 6 {
+		t.Fatalf("Loc1Reader: tools/list: %v, %+v", err, tools)
 	}
 }

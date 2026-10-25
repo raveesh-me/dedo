@@ -2,6 +2,7 @@ package app_test
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
 	"log/slog"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/raveesh-me/dedo/examples/todo/app"
 	"github.com/raveesh-me/dedo/flowid"
+	"github.com/raveesh-me/dedo/mcp/mcpserver"
 )
 
 // These tests pin what the MCP path must keep doing, through the real
@@ -144,5 +146,30 @@ func TestMCPFlowIDAndAudit(t *testing.T) {
 	mcpCall(t, audit.URL, app.ReaderToken, flow, createTool, `{"todo":{"title":"x"}}`)
 	if !strings.Contains(log.String(), `msg="scope check failed in audit mode"`) || !strings.Contains(log.String(), "flow_id="+flow) {
 		t.Errorf("audit-mode log: %s", log.String())
+	}
+}
+
+// With MCPAccess authenticated, only callers with a known token reach /mcp
+// at all, tool discovery included; the default keeps tools/list public, as
+// TestMCPRejectsCrossOrigin shows.
+func TestMCPAccessAuthenticated(t *testing.T) {
+	var log bytes.Buffer
+	handler, err := app.NewHandler(app.Config{
+		Log: slog.New(slog.NewTextHandler(&log, nil)), EnforceScopes: true, MCPAccess: mcpserver.AccessAuthenticated,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	srv := httptest.NewServer(handler)
+	t.Cleanup(srv.Close)
+	for _, token := range []string{"", "nobody"} {
+		res, _ := mcpCall(t, srv.URL, token, "", getTool, `{"name":"todos/x"}`)
+		if res.StatusCode != http.StatusUnauthorized || res.Header.Get(flowid.Header) == "" {
+			t.Errorf("token %q: status %d, flow ID %q; want 401 with a flow ID", token, res.StatusCode, res.Header.Get(flowid.Header))
+		}
+	}
+	tools, err := mcpSession(t, env{url: srv.URL}, app.ReaderToken).ListTools(context.Background(), nil)
+	if err != nil || len(tools.Tools) != 5 {
+		t.Fatalf("reader: tools/list: %v, %+v", err, tools)
 	}
 }

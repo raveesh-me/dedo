@@ -21,7 +21,7 @@ Install:
 - Go 1.25 or later
 - The [Buf CLI](https://buf.build/docs/installation)
 - VS Code with the Buf extension (`bufbuild.vscode-buf`), or Zed. Remove other Protobuf extensions.
-- The `dedo` command: `go install github.com/raveesh-me/dedo/cmd/dedo@v0.13.0`
+- The `dedo` command: `go install github.com/raveesh-me/dedo/cmd/dedo@v0.14.0`
 
 Decide these names with your team:
 
@@ -211,13 +211,26 @@ client := connect.NewClient(connectinprocess.New(server)) // MCP calls, in-proce
 tools := mcp.NewServer(&mcp.Implementation{Name: "products", Version: "v1"}, nil)
 err = mcpserver.AddTools(tools, client, productsv1.ProductServiceMCPTools()...) // fails if two RPCs share a tool name
 
+// Who may reach /mcp: public (anyone may list the tools) or authenticated.
+endpoint, err := mcpserver.Guard(mcp.NewStreamableHTTPHandler(
+	func(*http.Request) *mcp.Server { return tools },
+	&mcp.StreamableHTTPOptions{Stateless: true, JSONResponse: true}),
+	mcpserver.Access(os.Getenv("MCP_ACCESS")), auth.Authenticated)
+
 mux.Handle("GET /openapi.json", docs.Spec()) // embeds docs/openapi.json
 mux.Handle("GET /docs", docs.Page())
 // Cross-origin protection: the MCP transport requires an Origin check.
-mux.Handle("/mcp", flowid.Middleware(http.NewCrossOriginProtection().Handler(mcp.NewStreamableHTTPHandler(
-	func(*http.Request) *mcp.Server { return tools },
-	&mcp.StreamableHTTPOptions{Stateless: true, JSONResponse: true}))))
+mux.Handle("/mcp", flowid.Middleware(http.NewCrossOriginProtection().Handler(endpoint)))
 ```
+
+**Who may reach `/mcp`** is a setting, `MCP_ACCESS` in the `main.go` `dedo init` writes:
+
+- `public`, the default: anyone may list the tools and their schemas, which carry nothing secret. Every tool call still goes through your token check and the scope checks, so a caller without the scope is denied.
+- `authenticated`: a request without credentials your token check accepts gets HTTP 401 before any MCP handling, tool discovery included, as the MCP authorization specification describes. Choose it when even the list of what your API can do is not for everyone.
+
+An unknown value stops the service at startup rather than serving it publicly.
+
+**Calling another service over HTTP.** MCP tool calls stay in-process, but a handler that calls another service through a Connect client over HTTP (`connecthttp.NewTransport`) needs a connection pool sized for its traffic. `http.DefaultClient` keeps only two idle connections per host: under concurrent calls it keeps opening and closing connections, and the closed ones hold local ports until they time out, so a busy service runs out of ports and every call fails with `cannot assign requested address`. In dedo's benchmark that happened at 32 concurrent calls. Create one `http.Client` per backend, with an `http.Transport` whose `MaxIdleConnsPerHost` covers your concurrency (`examples/todo/cmd/todo-mcp` uses 256), and reuse it for every call.
 
 Return errors with a declared reason in a `google.rpc.ErrorInfo` detail. `examples/todo/app/errors.go` has a helper.
 
@@ -229,7 +242,7 @@ The proto declares **which callers may invoke which RPC**. The interceptor enfor
 
 Two parts stay in code:
 
-- **Authentication.** Your token check, a `connect.ServerInterceptor` on the same `connect.Server`, verifies the token and puts the caller's scopes in the call's context; `interceptor.Config.Scopes` reads them from there. You write it once per platform. As an interceptor rather than HTTP middleware, it also covers MCP calls, which reach the server in-process.
+- **Authentication.** Your token check, a `connect.ServerInterceptor` on the same `connect.Server`, verifies the token and puts the caller's scopes in the call's context; `interceptor.Config.Scopes` reads them from there. You write it once per platform. As an interceptor rather than HTTP middleware, it also covers MCP calls, which reach the server in-process. With `MCP_ACCESS=authenticated`, the same token check also answers `mcpserver.Guard`'s question of whether a request is authenticated at all.
 - **Resource-level checks.** A scope says a caller may read products. It does not say *which* products. Ownership of one resource (only the caller's own drafts) stays in handlers.
 
 A new service enforces scopes from the start, as the `main.go` `dedo init` writes does. To add dedo to a service that already has callers, roll out with `EnforceScopes: false` first: the runtime logs every call that would have been denied. Switch to `true` once the logs are clean.
