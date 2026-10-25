@@ -1,0 +1,660 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Contacts API",
+    "version": "v1"
+  },
+  "servers": [
+    {
+      "url": "/"
+    }
+  ],
+  "tags": [
+    {
+      "name": "ContactService",
+      "description": "ContactService keeps each location's contacts. Every location is a tenant:\na caller reaches only the locations it belongs to.",
+      "x-audience": "AUDIENCE_EXTERNAL_PUBLIC",
+      "x-owner-team": "contacts-team"
+    },
+    {
+      "name": "LocationService",
+      "description": "LocationService describes the locations, the tenants of ContactService.",
+      "x-audience": "AUDIENCE_EXTERNAL_PUBLIC",
+      "x-owner-team": "contacts-team"
+    }
+  ],
+  "paths": {
+    "/commerce/contacts/v1/locations": {
+      "get": {
+        "operationId": "LocationService_ListLocations",
+        "summary": "List my locations",
+        "description": "Lists the locations the caller belongs to, a page at a time.\n\nRequires one of the token scopes: `contacts.location.read`.",
+        "tags": [
+          "LocationService"
+        ],
+        "parameters": [
+          {
+            "name": "pageSize",
+            "in": "query",
+            "description": "The most locations to return. The server picks a size when it is 0.",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "pageToken",
+            "in": "query",
+            "description": "The next_page_token of the previous page, empty for the first.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "X-Flow-ID": {
+                "description": "Correlates the call across services. Send one to set it.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListLocationsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request. Reasons: `INVALID_PAGE_TOKEN`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Status"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden. The token lacks every required scope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Status"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": [
+              "contacts.location.read"
+            ]
+          }
+        ],
+        "x-rpc-procedure": "/raveesh_me.contacts.v1.LocationService/ListLocations",
+        "x-error-reasons": [
+          "INVALID_PAGE_TOKEN"
+        ]
+      }
+    },
+    "/commerce/contacts/v1/locations/{locationsId}/contacts": {
+      "get": {
+        "operationId": "ContactService_ListContacts",
+        "summary": "List contacts",
+        "description": "Lists the contacts of one location, such as locations/1, a page at a time. Use locations/- to list across every location the caller may see.\n\nRequires one of the token scopes: `contacts.contact.read`.",
+        "tags": [
+          "ContactService"
+        ],
+        "parameters": [
+          {
+            "name": "locationsId",
+            "in": "path",
+            "description": "Part of `parent`, which has the form `locations/{locationsId}`.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "description": "The most contacts to return. The server picks a size when it is 0.",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "pageToken",
+            "in": "query",
+            "description": "The next_page_token of the previous page, empty for the first.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "X-Flow-ID": {
+                "description": "Correlates the call across services. Send one to set it.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListContactsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request. Reasons: `INVALID_PAGE_TOKEN`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Status"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden. The token lacks every required scope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Status"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": [
+              "contacts.contact.read"
+            ]
+          }
+        ],
+        "x-rpc-procedure": "/raveesh_me.contacts.v1.ContactService/ListContacts",
+        "x-error-reasons": [
+          "INVALID_PAGE_TOKEN"
+        ]
+      },
+      "post": {
+        "operationId": "ContactService_CreateContact",
+        "summary": "Create a contact",
+        "description": "Adds a contact to one location, such as locations/1.\n\nRequires one of the token scopes: `contacts.contact.write`.",
+        "tags": [
+          "ContactService"
+        ],
+        "parameters": [
+          {
+            "name": "locationsId",
+            "in": "path",
+            "description": "Part of `parent`, which has the form `locations/{locationsId}`.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "contactId",
+            "in": "query",
+            "description": "The ID to give the contact. The server picks one when it is empty.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Contact"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "X-Flow-ID": {
+                "description": "Correlates the call across services. Send one to set it.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Contact"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden. The token lacks every required scope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Status"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict. Reasons: `CONTACT_ALREADY_EXISTS`, `EMAIL_TAKEN`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Status"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": [
+              "contacts.contact.write"
+            ]
+          }
+        ],
+        "x-rpc-procedure": "/raveesh_me.contacts.v1.ContactService/CreateContact",
+        "x-error-reasons": [
+          "CONTACT_ALREADY_EXISTS",
+          "EMAIL_TAKEN"
+        ]
+      }
+    },
+    "/commerce/contacts/v1/locations/{location}": {
+      "get": {
+        "operationId": "LocationService_GetLocation",
+        "summary": "Get a location",
+        "description": "Returns one location by its resource name, such as locations/1.\n\nRequires one of the token scopes: `contacts.location.read`.",
+        "tags": [
+          "LocationService"
+        ],
+        "parameters": [
+          {
+            "name": "location",
+            "in": "path",
+            "description": "Part of `name`, which has the form `locations/{location}`.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "X-Flow-ID": {
+                "description": "Correlates the call across services. Send one to set it.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/raveesh_me.contacts.v1.Location"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden. The token lacks every required scope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Status"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found. Reasons: `LOCATION_NOT_FOUND`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Status"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": [
+              "contacts.location.read"
+            ]
+          }
+        ],
+        "x-rpc-procedure": "/raveesh_me.contacts.v1.LocationService/GetLocation",
+        "x-error-reasons": [
+          "LOCATION_NOT_FOUND"
+        ]
+      }
+    },
+    "/commerce/contacts/v1/locations/{location}/contacts/{contact}": {
+      "get": {
+        "operationId": "ContactService_GetContact",
+        "summary": "Get a contact",
+        "description": "Returns one contact by its resource name, such as locations/1/contacts/2.\n\nRequires one of the token scopes: `contacts.contact.read`.",
+        "tags": [
+          "ContactService"
+        ],
+        "parameters": [
+          {
+            "name": "location",
+            "in": "path",
+            "description": "Part of `name`, which has the form `locations/{location}/contacts/{contact}`.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "contact",
+            "in": "path",
+            "description": "Part of `name`, which has the form `locations/{location}/contacts/{contact}`.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "Cache-Control": {
+                "description": "How long the response may be cached.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Flow-ID": {
+                "description": "Correlates the call across services. Send one to set it.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Contact"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden. The token lacks every required scope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Status"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found. Reasons: `CONTACT_NOT_FOUND`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Status"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": [
+              "contacts.contact.read"
+            ]
+          }
+        ],
+        "x-rpc-procedure": "/raveesh_me.contacts.v1.ContactService/GetContact",
+        "x-error-reasons": [
+          "CONTACT_NOT_FOUND"
+        ]
+      },
+      "patch": {
+        "operationId": "ContactService_UpdateContact",
+        "summary": "Update a contact",
+        "description": "Changes the fields of a contact named in update_mask, and leaves the others as they are.\n\nRequires one of the token scopes: `contacts.contact.write`.",
+        "tags": [
+          "ContactService"
+        ],
+        "parameters": [
+          {
+            "name": "location",
+            "in": "path",
+            "description": "Part of `contact.name`, which has the form `locations/{location}/contacts/{contact}`.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "contact",
+            "in": "path",
+            "description": "Part of `contact.name`, which has the form `locations/{location}/contacts/{contact}`.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "updateMask",
+            "in": "query",
+            "description": "The fields to change, such as display_name.",
+            "schema": {
+              "type": "string",
+              "description": "Comma-separated lowerCamelCase field paths."
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Contact"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "X-Flow-ID": {
+                "description": "Correlates the call across services. Send one to set it.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Contact"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden. The token lacks every required scope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Status"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found. Reasons: `CONTACT_NOT_FOUND`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Status"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": [
+              "contacts.contact.write"
+            ]
+          }
+        ],
+        "x-destructive": true,
+        "x-rpc-procedure": "/raveesh_me.contacts.v1.ContactService/UpdateContact",
+        "x-error-reasons": [
+          "CONTACT_NOT_FOUND"
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Contact": {
+        "type": "object",
+        "description": "A person a location keeps in touch with.",
+        "properties": {
+          "displayName": {
+            "type": "string",
+            "description": "The name shown to people."
+          },
+          "email": {
+            "type": "string",
+            "description": "The contact's email address.",
+            "x-sensitive": true
+          },
+          "homeLocation": {
+            "type": "string",
+            "description": "The location this contact mostly deals with, such as locations/1."
+          },
+          "name": {
+            "type": "string",
+            "description": "The resource name, such as locations/1/contacts/2."
+          }
+        },
+        "required": [
+          "displayName"
+        ]
+      },
+      "ListContactsResponse": {
+        "type": "object",
+        "description": "One page of contacts.",
+        "properties": {
+          "contacts": {
+            "type": "array",
+            "description": "The contacts on this page.",
+            "items": {
+              "$ref": "#/components/schemas/Contact"
+            }
+          },
+          "nextPageToken": {
+            "type": "string",
+            "description": "The token of the next page, empty on the last."
+          }
+        }
+      },
+      "ListLocationsResponse": {
+        "type": "object",
+        "description": "One page of the caller's locations.",
+        "properties": {
+          "locations": {
+            "type": "array",
+            "description": "The locations on this page.",
+            "items": {
+              "$ref": "#/components/schemas/raveesh_me.contacts.v1.Location"
+            }
+          },
+          "nextPageToken": {
+            "type": "string",
+            "description": "The token of the next page, empty on the last."
+          }
+        }
+      },
+      "Status": {
+        "type": "object",
+        "description": "An error. details holds a google.rpc.ErrorInfo whose reason is one of the operation's declared reasons.",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "format": "int32",
+            "description": "The google.rpc.Code."
+          },
+          "details": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "@type": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": {}
+            }
+          },
+          "message": {
+            "type": "string",
+            "description": "A developer-facing explanation."
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ]
+      },
+      "raveesh_me.contacts.v1.Location": {
+        "type": "object",
+        "description": "A business location. Contacts belong to one location.",
+        "properties": {
+          "displayName": {
+            "type": "string",
+            "description": "The name shown to people."
+          },
+          "name": {
+            "type": "string",
+            "description": "The resource name, such as locations/1."
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "bearer": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "An access token carrying the operation's scopes."
+      }
+    }
+  }
+}
