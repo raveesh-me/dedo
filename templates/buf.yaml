@@ -7,7 +7,7 @@ deps:
   - buf.build/bufbuild/protovalidate
   # The options module, at the same release as the lint plugin, generators
   # and runtime pinned in go.mod. dedo upgrade moves them together.
-  - buf.build/r-a/dedo:v0.14.0
+  - buf.build/r-a/dedo:v0.15.0
 lint:
   use:
     - STANDARD
