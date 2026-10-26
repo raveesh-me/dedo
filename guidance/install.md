@@ -3,7 +3,7 @@
 Each numbered section below adds one part of dedo to a repository. `dedo init` does all of them, editing what is already there:
 
 ```sh
-go install github.com/raveesh-me/dedo/cmd/dedo@v0.14.0
+go install github.com/raveesh-me/dedo/cmd/dedo@v0.15.0
 dedo init
 ```
 
@@ -22,7 +22,7 @@ version: v2
 deps:
   - buf.build/googleapis/googleapis
   - buf.build/bufbuild/protovalidate
-  - buf.build/r-a/dedo:v0.14.0   # the same release as the lint plugin and runtime
+  - buf.build/r-a/dedo:v0.15.0   # the same release as the lint plugin and runtime
 ```
 
 ```sh
@@ -44,7 +44,7 @@ import "dedo/v1/options.proto";
 Pin the plugin in `go.mod` like the generators, and build it into `.tools/`:
 
 ```sh
-go get -tool github.com/raveesh-me/dedo/lint/cmd/buf-plugin-dedo-lint@v0.14.0
+go get -tool github.com/raveesh-me/dedo/lint/cmd/buf-plugin-dedo-lint@v0.15.0
 dedo tools          # builds .tools/buf-plugin-dedo-lint from the pin, and lists the rule overrides
 printf '.tools/\n' >> .gitignore
 ```
@@ -93,8 +93,8 @@ Pin the generators as Go tools:
 ```sh
 go get -tool google.golang.org/protobuf/cmd/protoc-gen-go
 go get -tool connectrpc.com/connect/v2/cmd/protoc-gen-connect-go@v2.0.1
-go get -tool github.com/raveesh-me/dedo/mcp/cmd/protoc-gen-dedo-mcp@v0.14.0
-go get -tool github.com/raveesh-me/dedo/openapi/cmd/protoc-gen-dedo-openapi@v0.14.0
+go get -tool github.com/raveesh-me/dedo/mcp/cmd/protoc-gen-dedo-mcp@v0.15.0
+go get -tool github.com/raveesh-me/dedo/openapi/cmd/protoc-gen-dedo-openapi@v0.15.0
 ```
 
 Add them to `buf.gen.yaml` ([templates/buf.gen.yaml](../templates/buf.gen.yaml) is a complete one):
@@ -146,7 +146,7 @@ make generate       # buf generate, then go mod tidy
 Add the runtime libraries. dedo is built on connect-go v2, where one `connect.Server` holds the interceptors and every transport mounts on it:
 
 ```sh
-go get github.com/raveesh-me/dedo@v0.14.0 github.com/raveesh-me/dedo/mcp@v0.14.0
+go get github.com/raveesh-me/dedo@v0.15.0 github.com/raveesh-me/dedo/mcp@v0.15.0
 go get connectrpc.com/connect/v2@v2.0.1 connectrpc.com/vanguard@v0.5.0 connectrpc.com/validate@v0.9.0
 ```
 
