@@ -3,15 +3,19 @@
 # in its own container with the same CPU and memory limits, on one podman
 # network:
 #
-#   nest       NestJS MCP (stateful sessions) -> HTTP REST -> app server
-#   loopback   dedo's Go MCP (<app>-mcp)      -> Connect   -> app server
-#   inprocess  dedo's Go MCP inside the app server, no second hop
+#   nest       Node: NestJS MCP, stateless   -> HTTP REST -> app server
+#   loopback   Go MCP server (<app>-mcp)     -> Connect   -> app server
+#   inprocess  dedo: MCP inside the app server, no second hop
 #
 # for two apps: todo, and contacts, whose every call is also checked
 # against the caller's location. Every call passes the same security
 # checks: the app server enforces scopes, tenants, flow IDs and the error
-# audit for each variant, and the load driver stops on any failed call. Results go to OUT (default: a temporary
-# directory), never into the repository.
+# audit for each variant, and the load driver stops on any failed call.
+# The NestJS server follows HighLevel's MCP architecture (see
+# nest-todo/README.md) but runs stateless, as dedo does, so each pays for a
+# server per call; its rate limit is off, since one load client would trip
+# it. Results go to OUT (default: a temporary directory), never into the
+# repository.
 #
 #   bench/mcp/run.sh                 # all variants
 #   APPS=contacts VARIANTS="inprocess loopback" CLIENTS="1 32" DURATION=30s bench/mcp/run.sh
@@ -109,8 +113,8 @@ start_servers() {
       [ "$app" = contacts ] && tokens=loc1-reader,loc1-writer,loc2-writer,all-reader
       serve mcpb-mcp -e TODO_API_URL=http://mcpb-app:8080 -e CONTACTS_API_URL=http://mcpb-app:8080 \
         -e MCP_TOOLSETS="$app" -e MCP_SERVER_NAME="$app" -e MCP_AUTH_TOKENS="$tokens" \
-        -e API_PORT=3100 -e RATE_LIMIT_ENABLED=false localhost/mcpbench-nest
-      url=http://mcpb-mcp:3100/mcp; session=(-session); containers="mcpb-mcp mcpb-app" ;;
+        -e API_PORT=3100 -e RATE_LIMIT_ENABLED=false -e MCP_STATELESS=true localhost/mcpbench-nest
+      url=http://mcpb-mcp:3100/mcp; containers="mcpb-mcp mcpb-app" ;;
     loopback)
       serve mcpb-mcp "localhost/mcpbench-$app-mcp" -backend http://mcpb-app:8080
       url=http://mcpb-mcp:8080/mcp; containers="mcpb-mcp mcpb-app" ;;

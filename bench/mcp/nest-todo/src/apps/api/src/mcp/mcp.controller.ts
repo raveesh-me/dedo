@@ -13,6 +13,10 @@ export class McpController {
 
   @Post()
   async post(@Req() req: Request, @Res() res: Response, @Body() body: unknown): Promise<void> {
+    if (this.sessions.stateless) {
+      await this.sessions.handleStateless(req, res, body);
+      return;
+    }
     const id = req.headers['mcp-session-id'];
     const transport = await this.sessions.forPost(typeof id === 'string' ? id : undefined, body);
     await transport.handleRequest(req, res, body);
@@ -30,6 +34,10 @@ export class McpController {
 
   /** GET and DELETE need a live session: 400 without an ID, 410 Gone for an expired one. */
   private async existing(req: Request, res: Response): Promise<void> {
+    if (this.sessions.stateless) {
+      res.status(HttpStatus.METHOD_NOT_ALLOWED).json(rpcError(-32000, 'Method not allowed: this server is stateless'));
+      return;
+    }
     const id = req.headers['mcp-session-id'];
     if (typeof id !== 'string' || id === '') {
       res.status(HttpStatus.BAD_REQUEST).json(rpcError(-32000, 'Bad Request: Mcp-Session-Id header is required'));
