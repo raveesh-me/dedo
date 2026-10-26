@@ -137,8 +137,8 @@ start_servers() {
 
 # run_variant measures every call of an app on one variant. Each call and
 # client count gets fresh containers, so no measurement inherits another's
-# memory: the NestJS server keeps MCP sessions in memory, and five runs in
-# one container exhaust Node's default heap.
+# memory: run stateful, the NestJS server keeps MCP sessions in memory, and
+# five runs in one container exhaust Node's default heap.
 run_variant() {
   local app=$1 variant=$2 url session=() containers token calls
   case $app in
