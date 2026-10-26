@@ -70,10 +70,10 @@ plugins:
 
 ```sh
 dedo templates Makefile.api > Makefile.api && printf 'include Makefile.api\n' >> Makefile
-make api-check      # buf format, buf lint, buf breaking against main
+make check          # buf format, buf lint, buf breaking against main
 ```
 
-The breaking check compares with the `main` branch, and is skipped while `main` has no `.proto` files. Compare with another branch with `make api-check API_BASE=develop`.
+The breaking check compares with the `main` branch, and is skipped while `main` has no `.proto` files. Compare with another branch with `make check API_BASE=develop`. The targets of `Makefile.api` are `run`, `generate`, `check`, `test` and `tools`; where your `Makefile` already has one of those names, `dedo init` names dedo's `api-<name>` instead, and `api-check`, `api-generate` and `api-test` always exist, for CI.
 
 Your organisation's own rules go in `rules.yml` next to `buf.yaml`, as CEL checks that can import shared rules from a git repository; add `HOUSE` to `lint.use`. A house rule can override a DEDO, AIP or ZALANDO rule by naming it in `overrides`, or lock itself with `final: true`; `dedo tools` lists every override and final rule in force. [RULES.md](RULES.md#house-rules) has the format, and [Precedence](RULES.md#precedence) the order.
 
@@ -133,7 +133,7 @@ managed:
 ```
 
 ```sh
-make api-generate   # buf generate
+make generate       # buf generate, then go mod tidy
 ```
 
 ## 4. The server
@@ -221,8 +221,8 @@ In a multi-tenant service, `interceptor.Config` also takes `Tenants`, a function
 Auth is a server interceptor (`auth` in the template), not HTTP middleware, so it covers MCP calls, which reach the server in-process, as well as Connect, gRPC and REST. The complete file, with `main`, imports and a development `auth`, is [templates/main.go.tmpl](../templates/main.go.tmpl) (`dedo init` fills it in). Add a policy-table test ([templates/policy_table_test.go.tmpl](../templates/policy_table_test.go.tmpl)) so a missing declaration fails `go test` before deploy.
 
 ```sh
-go mod tidy
-go run .
+make generate
+make run
 ```
 
 ## 5. Guidance for coding agents

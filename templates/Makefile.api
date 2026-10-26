@@ -5,24 +5,28 @@
 # (go get -tool github.com/raveesh-me/dedo/lint/cmd/buf-plugin-dedo-lint@vX.Y.Z),
 # and built into .tools/, where buf.yaml finds it, by dedo, which is pinned
 # as a Go tool too.
+#
+# dedo init names a target api-<name> instead when the service's Makefile
+# already has one of these names.
 
-.PHONY: tools api-update api-check api-generate
+.PHONY: run generate check test tools api-update
 
-## tools: build the lint plugin pinned in go.mod into .tools/, and fetch the
-## house rules rules.yml imports from git
-tools:
-	go tool dedo tools
+## run: serve the API on Connect, gRPC, REST, /docs and /mcp
+run:
+	go run .
 
-## api-update: move deps to their latest versions
-api-update:
-	buf dep update
+## generate: generate Go, Connect, MCP tools and the REST docs from the
+## protos, then tidy go.mod; run it after every change to a .proto
+generate:
+	buf generate
+	go mod tidy
 
-## api-check: format, lint, and breaking changes against API_BASE
+## check: format, lint, and breaking changes against API_BASE; CI runs it
 # The branch breaking changes are checked against. A new repository, or a
 # base without protos yet, has nothing to break, so that check is skipped.
 API_BASE ?= main
 
-api-check: tools
+check: tools
 	buf format --diff --exit-code
 	buf lint
 	@if git rev-parse --verify --quiet 'refs/heads/$(API_BASE)' >/dev/null && \
@@ -33,5 +37,23 @@ api-check: tools
 		echo "buf breaking: skipped; branch $(API_BASE) has no .proto files yet (set API_BASE to compare with another branch)"; \
 	fi
 
-api-generate:
-	buf generate
+## test: run the service's tests, the policy-table test among them
+test:
+	go test ./...
+
+## tools: build the lint plugin pinned in go.mod into .tools/, fetch the house
+## rules rules.yml imports from git, and check their overrides; run it after a
+## clone, an upgrade, or a change to rules.yml
+tools:
+	go tool dedo tools
+
+## api-update: move deps to their latest versions
+api-update:
+	buf dep update
+
+# Names that always exist, whatever the service's Makefile defines: CI can
+# call these. Releases before v0.15.0 had only api-check and api-generate.
+.PHONY: api-check api-generate api-test
+api-check: check
+api-generate: generate
+api-test: test

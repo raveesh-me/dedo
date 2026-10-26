@@ -43,6 +43,16 @@ type initer struct {
 	out        io.Writer
 	cmds       [][]string // network steps, run at the end or printed
 	createdBuf bool       // buf.yaml was written from the template this run
+	// make names each of makeTargets as Makefile.api does in this repository.
+	make map[string]string
+}
+
+// target is a Makefile.api target as this repository names it.
+func (in *initer) target(name string) string {
+	if n, ok := in.make[name]; ok {
+		return n
+	}
+	return name
 }
 
 func initRepo(dir, release string, offline bool, out io.Writer) error {
@@ -83,9 +93,17 @@ func initRepo(dir, release string, offline bool, out io.Writer) error {
 			failed = append(failed, "dedo tools (house rules): "+err.Error())
 		}
 	}
-	if err := in.printMain(); err != nil {
+	src, wrote, err := in.writeMain()
+	if err != nil {
 		return err
 	}
+	generated := false
+	if len(failed) == 0 {
+		// The generated code and main.go import every module dedo pinned,
+		// so go mod tidy keeps them.
+		generated, failed = in.generate(offline)
+	}
+	in.printNext(src, wrote, generated)
 	if len(failed) > 0 {
 		return fmt.Errorf("%d commands failed: %s; fix the cause and run dedo init again", len(failed), strings.Join(failed, "; "))
 	}
@@ -345,7 +363,18 @@ func (in *initer) linter() error {
 		in.cmds = append(in.cmds, []string{"buf", "plugin", "update"})
 		return nil
 	}
-	if err := in.writeFile("Makefile.api", asset("templates/Makefile.api"), true); err != nil {
+	mk, err := os.ReadFile(in.path("Makefile"))
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return err
+	}
+	api, names := makefileAPI(asset("templates/Makefile.api"), mk)
+	in.make = names
+	for _, t := range makeTargets {
+		if names[t] != t {
+			in.say("Makefile: already has %s, so Makefile.api names dedo's %s", t, names[t])
+		}
+	}
+	if err := in.writeFile("Makefile.api", api, true); err != nil {
 		return err
 	}
 	if err := in.ensureLine("Makefile", "include Makefile.api"); err != nil {
@@ -743,9 +772,16 @@ func (in *initer) runCommands(offline bool) []string {
 	} else {
 		fmt.Fprintln(in.out, "\nfetching (a first run downloads Go modules and can take a couple of minutes)...")
 	}
+	return in.run(in.cmds, offline)
+}
+
+// run runs commands in the repository, carrying on after a failure, and
+// returns the failed ones. Offline, or without the tool, it lists them for
+// the user instead.
+func (in *initer) run(cmds [][]string, offline bool) []string {
 	var todo [][]string
 	var failed []string
-	for _, c := range in.cmds {
+	for _, c := range cmds {
 		if offline {
 			todo = append(todo, c)
 			continue
@@ -775,24 +811,76 @@ func (in *initer) runCommands(offline bool) []string {
 	return failed
 }
 
-// printMain prints a main.go that serves the first service on every
-// transport, for the user to adapt.
-func (in *initer) printMain() error {
+// writeMain writes main.go, which serves the first service on every
+// transport, where it can be built: a service to serve, a package main root,
+// and no main.go of the user's. It returns the source, and whether it wrote
+// it. Its imports also keep the pinned Vanguard in go.mod, which go mod
+// tidy would otherwise drop.
+func (in *initer) writeMain() ([]byte, bool, error) {
 	src, err := in.render("templates/main.go.tmpl")
 	if err != nil {
-		return err
+		return nil, false, err
 	}
-	// main.go is written only where it can be built: a service to serve, a
-	// package main root, and no main.go of the user's. Its imports also keep
-	// the pinned Vanguard in go.mod, which go mod tidy would otherwise drop.
 	_, statErr := os.Stat(in.path("main.go"))
 	write := in.p.service != nil && (in.p.rootPkg == "" || in.p.rootPkg == "main") && errors.Is(statErr, fs.ErrNotExist)
 	if write {
 		if err := os.WriteFile(in.path("main.go"), src, 0o644); err != nil {
-			return err
+			return nil, false, err
 		}
 		fmt.Fprintf(in.out, "\nmain.go: created; it serves %s on Connect, gRPC, REST, /docs and /mcp\n", in.p.service.Name)
 	}
+	return src, write, nil
+}
+
+// generate does what make generate does, generating code from the protos
+// and tidying go.mod, then reports what buf lint finds without failing on
+// it. It reports whether the code was generated, and the failed commands.
+func (in *initer) generate(offline bool) (bool, []string) {
+	if _, err := os.Stat(in.path("buf.gen.yaml")); err != nil {
+		return false, nil
+	}
+	fmt.Fprintln(in.out, "\ngenerating...")
+	cmds := [][]string{{"buf", "generate"}, {"go", "mod", "tidy"}}
+	if offline {
+		return false, in.run(cmds, offline)
+	}
+	// Tidy only after the code is generated: without it, go mod tidy
+	// would drop the modules only the generated code imports.
+	for _, c := range cmds {
+		if failed := in.run([][]string{c}, offline); len(failed) > 0 {
+			return false, failed
+		}
+	}
+	in.lintSummary()
+	return true, nil
+}
+
+// lintSummary says how many findings buf lint reports. Findings are the
+// contract's to fix, not a failed setup.
+func (in *initer) lintSummary() {
+	if _, err := exec.LookPath("buf"); err != nil {
+		return
+	}
+	cmd := exec.Command("buf", "lint")
+	cmd.Dir = in.p.dir
+	out, err := cmd.CombinedOutput()
+	if err == nil {
+		in.say("buf lint: clean")
+		return
+	}
+	n := 0
+	for _, line := range strings.Split(string(out), "\n") {
+		if strings.TrimSpace(line) != "" {
+			n++
+		}
+	}
+	in.say("buf lint: %d findings; make %s lists them", n, in.target("check"))
+}
+
+// printNext says what to do next, and prints dedo's main.go when the user
+// has one of their own to compare it with, or main.go was not written.
+func (in *initer) printNext(src []byte, wrote, generated bool) {
+	_, statErr := os.Stat(in.path("main.go"))
 	fmt.Fprintln(in.out, "\nnext:")
 	if len(in.p.undeclared) > 0 {
 		in.say("0. %s declare nothing for dedo yet: buf lint lists what each needs, and until it is declared the policy test and the server's startup fail on purpose", strings.Join(in.p.undeclared, ", "))
@@ -800,24 +888,31 @@ func (in *initer) printMain() error {
 	if in.p.service == nil {
 		in.say("1. write your service in %s/ (see guidance/tutorial.md)", in.p.protoRoot)
 		in.say("2. run dedo init again: it writes server.go and main.go for it")
-	} else {
-		in.say("1. make api-check api-generate")
-		in.say("2. go mod tidy && go run .")
-		in.say("3. implement the RPCs in server.go; until then they answer Unimplemented")
-		in.say("4. before shipping, replace auth and devTokens in main.go with your token verification")
-		if in.p.others > 0 {
-			in.say("   main.go serves %s; %d more services need the same three lines each", in.p.service.Name, in.p.others)
-		}
+		return
 	}
-	if write {
-		return nil
+	var steps []string
+	if !generated {
+		steps = append(steps, "make "+in.target("generate"))
+	}
+	steps = append(steps,
+		"make "+in.target("run"),
+		"implement the RPCs in server.go; until then they answer Unimplemented",
+		"before shipping, replace auth and devTokens in main.go with your token verification")
+	for i, step := range steps {
+		in.say("%d. %s", i+1, step)
+	}
+	in.say("after changing a .proto: make %s; before committing: make %s", in.target("generate"), in.target("check"))
+	if in.p.others > 0 {
+		in.say("main.go serves %s; %d more services need the same three lines each", in.p.service.Name, in.p.others)
+	}
+	if wrote {
+		return
 	}
 	if statErr == nil {
 		fmt.Fprintf(in.out, "\n// ---- main.go: dedo's template, to compare with yours ----\n%s", src)
-		return nil
+		return
 	}
 	fmt.Fprintf(in.out, "\n// ---- main.go ----\n%s", src)
-	return nil
 }
 
 // render fills a Go template with this repository's names, or with
