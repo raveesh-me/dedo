@@ -79,7 +79,7 @@ Your organisation's own rules go in `rules.yml` next to `buf.yaml`, as CEL check
 
 If your services partition their data between tenants, declare `tenancy` on each and add `DEDO_MULTI_TENANT` to `lint.use` (`dedo init` does when a service declares it); then pass `Tenants` to the interceptor in section 4. [RULES.md](RULES.md#multi-tenant-rules) explains the model.
 
-Without Go on a machine, list the Wasm plugin from the BSR instead: `- plugin: buf.build/r-a/dedo-lint` (about 5 s per lint; it cannot read `rules.yml`, so house rules do not run).
+Without Go on a machine, list the Wasm plugin from the BSR instead: `- plugin: buf.build/r-a/dedo-lint` (about 6 s per lint). It cannot read `rules.yml`, so to run house rules there, have your platform team build a plugin with them built in, `dedo tools -wasm house-lint.wasm`, push it to the BSR (`buf plugin push buf.build/<org>/house-lint --binary=house-lint.wasm`), and list that plugin instead.
 
 ## 3. Code generators
 

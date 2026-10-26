@@ -306,7 +306,7 @@ Point an MCP client at `http://localhost:8080/mcp`, with the header `Authorizati
 
 **Where do the options and the lint plugin come from?** A service depends on `buf.build/r-a/dedo` in `buf.yaml` and pins the lint plugin in `go.mod`; `dedo tools` builds it. The examples in this repository are the exception: they test the working tree, so they vendor `options.proto` under `third_party/` and load the plugin from `dist/`.
 
-**Why a native plugin binary instead of the BSR plugin?** Speed in the editor. One lint takes about 0.3 s with the native binary and about 5 s with the WebAssembly one, and the editor reruns it as you type. The BSR plugin (`buf.build/r-a/dedo-lint`) needs no Go, so it suits repositories of protos alone, which `dedo init` sets up with it; it cannot read `rules.yml`, so house rules do not run there.
+**Why a native plugin binary instead of the BSR plugin?** Speed in the editor. One lint takes about 0.3 s with the native binary and about 5 s with the WebAssembly one, and the editor reruns it as you type. The BSR plugin (`buf.build/r-a/dedo-lint`) needs no Go, so it suits repositories of protos alone, which `dedo init` sets up with it; it cannot read `rules.yml`, so for house rules there, a platform team builds one with them built in (`dedo tools -wasm`) and pushes it to the BSR.
 
 **How do I run the generators, `protoc-gen-dedo-mcp` and `protoc-gen-dedo-openapi`?** They run on your machine, the same way in the editor, locally and in CI. Pick one:
 

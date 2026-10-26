@@ -13,6 +13,7 @@ package rules
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"strings"
 
@@ -99,12 +100,39 @@ func load() (*Consolidated, []*check.CategorySpec, func(context.Context, check.R
 	if err != nil {
 		return nil, nil, nil, err
 	}
+	houseRules, disabled, err := loadHouse(wd)
+	if err != nil {
+		return nil, nil, nil, err
+	}
 	builtin := append(append([]*check.RuleSpec{}, All...), aipRules...)
-	c, err := consolidateHouse(config.Find(wd), builtin)
+	c, err := consolidateHouse(houseRules, disabled, builtin)
 	if err != nil {
 		return nil, nil, nil, err
 	}
 	return c, aipCategories, before, nil
+}
+
+// embedded holds house rules built into the plugin, as config.Encode wrote
+// them, set by dedo tools -wasm with
+// -ldflags "-X github.com/raveesh-me/dedo/lint/rules.embedded=<rules>":
+// the WebAssembly plugin cannot read rules.yml.
+var embedded string
+
+// loadHouse returns the house rules the plugin built in, or else those of
+// the rules.yml for a lint run in dir, and the IDs disable removed.
+func loadHouse(dir string) ([]config.Rule, []string, error) {
+	if embedded != "" {
+		return config.Decode(embedded)
+	}
+	path := config.Find(dir)
+	if path == "" {
+		return nil, nil, nil
+	}
+	rules, disabled, err := config.LoadAll(path)
+	if err != nil {
+		return nil, nil, fmt.Errorf("house rules: %w", err)
+	}
+	return rules, disabled, nil
 }
 
 // category returns a rule's category from its ID prefix.
