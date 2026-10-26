@@ -1,0 +1,15 @@
+# Toxiproxy, which adds latency to the hop between an MCP server and the app
+# server when bench/mcp/run.sh runs with HOP_LATENCY. Built from source, from
+# the same base images as the other benchmark containers:
+#   podman build -t mcpbench-toxiproxy bench/mcp/toxiproxy
+FROM docker.io/library/golang:1.26.6-alpine AS build
+RUN --mount=type=cache,target=/root/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
+    CGO_ENABLED=0 GOBIN=/out go install -trimpath \
+    github.com/Shopify/toxiproxy/v2/cmd/server@v2.12.0 \
+    github.com/Shopify/toxiproxy/v2/cmd/cli@v2.12.0
+
+FROM gcr.io/distroless/static-debian12:nonroot
+COPY --from=build /out/server /toxiproxy
+COPY --from=build /out/cli /toxiproxy-cli
+EXPOSE 8474 8080
+ENTRYPOINT ["/toxiproxy", "-host", "0.0.0.0"]

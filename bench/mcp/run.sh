@@ -17,7 +17,12 @@
 # it. Results go to OUT (default: a temporary directory), never into the
 # repository.
 #
+# HOP_LATENCY=3-5 puts Toxiproxy on the hop from each MCP server to the app
+# server, delaying every response on it by 3 to 5 ms, as a call between
+# pods in a cluster might be. dedo's variant has no hop, so it is untouched.
+#
 #   bench/mcp/run.sh                 # all variants
+#   HOP_LATENCY=3-5 bench/mcp/run.sh # with a slower hop
 #   APPS=contacts VARIANTS="inprocess loopback" CLIENTS="1 32" DURATION=30s bench/mcp/run.sh
 set -euo pipefail
 
@@ -32,6 +37,7 @@ DURATION=${DURATION:-20s}
 CPUS=${CPUS:-1}
 MEMORY=${MEMORY:-1g}
 LOAD_CPUS=${LOAD_CPUS:-2}
+HOP_LATENCY=${HOP_LATENCY:-}
 NET=mcpbench
 NO_AUTH=$OUT/no-auth.json
 
@@ -57,6 +63,21 @@ build() {
   done
   podman build -q --authfile "$NO_AUTH" -f bench/mcp/load/Containerfile -t localhost/mcpbench-load "$ROOT" >/dev/null
   if [[ " $VARIANTS " == *" nest "* ]]; then podman build -q --authfile "$NO_AUTH" -t localhost/mcpbench-nest "$ROOT/bench/mcp/nest-todo" >/dev/null; fi
+  if [ -n "$HOP_LATENCY" ]; then podman build -q --authfile "$NO_AUTH" -t localhost/mcpbench-toxiproxy "$ROOT/bench/mcp/toxiproxy" >/dev/null; fi
+}
+
+# hop starts Toxiproxy in front of the app server, with HOP_LATENCY (LO-HI,
+# in ms) on every response, and prints the URL to reach the app through it.
+# It has its own CPUs, like the load driver, so it costs the servers none.
+hop() {
+  local lo=${HOP_LATENCY%-*} hi=${HOP_LATENCY#*-}
+  podman run -d --name mcpb-proxy --network "$NET" --cpus "$LOAD_CPUS" localhost/mcpbench-toxiproxy >/dev/null
+  for _ in $(seq 30); do
+    podman exec mcpb-proxy /toxiproxy-cli create -l 0.0.0.0:8080 -u mcpb-app:8080 app >/dev/null 2>&1 && break
+    sleep 0.5
+  done
+  podman exec mcpb-proxy /toxiproxy-cli toxic add -t latency -a latency=$(((lo + hi) / 2)) -a jitter=$(((hi - lo) / 2)) app >/dev/null
+  echo http://mcpb-proxy:8080
 }
 
 # serve starts one server container with the benchmark's limits.
@@ -90,7 +111,7 @@ wait_ready() {
   log "not ready: $url"; exit 1
 }
 
-stop_all() { podman rm -f mcpb-app mcpb-mcp >/dev/null 2>&1 || true; }
+stop_all() { podman rm -f mcpb-app mcpb-mcp mcpb-proxy >/dev/null 2>&1 || true; }
 
 # diagnose says why a run failed: each server's state and its last logs.
 diagnose() {
@@ -107,16 +128,18 @@ start_servers() {
   stop_all
   session=()
   serve mcpb-app "localhost/mcpbench-$app"
+  local backend=http://mcpb-app:8080
+  if [ -n "$HOP_LATENCY" ] && [ "$variant" != inprocess ]; then backend=$(hop); fi
   case $variant in
     nest)
       local tokens=reader,writer
       [ "$app" = contacts ] && tokens=loc1-reader,loc1-writer,loc2-writer,all-reader
-      serve mcpb-mcp -e TODO_API_URL=http://mcpb-app:8080 -e CONTACTS_API_URL=http://mcpb-app:8080 \
+      serve mcpb-mcp -e TODO_API_URL="$backend" -e CONTACTS_API_URL="$backend" \
         -e MCP_TOOLSETS="$app" -e MCP_SERVER_NAME="$app" -e MCP_AUTH_TOKENS="$tokens" \
         -e API_PORT=3100 -e RATE_LIMIT_ENABLED=false -e MCP_STATELESS=true localhost/mcpbench-nest
       url=http://mcpb-mcp:3100/mcp; containers="mcpb-mcp mcpb-app" ;;
     loopback)
-      serve mcpb-mcp "localhost/mcpbench-$app-mcp" -backend http://mcpb-app:8080
+      serve mcpb-mcp "localhost/mcpbench-$app-mcp" -backend "$backend"
       url=http://mcpb-mcp:8080/mcp; containers="mcpb-mcp mcpb-app" ;;
     inprocess)
       url=http://mcpb-app:8080/mcp; containers="mcpb-app" ;;
@@ -166,7 +189,8 @@ r = json.loads(sys.argv[1]); cpu = float(sys.argv[2])
 total = r["calls"] * (1 + float(sys.argv[4]) / float(sys.argv[5]))
 r["cpu_ms_per_call"] = round(cpu * 1000 / total, 4)
 r["memory"] = sys.argv[3].strip()
-print(json.dumps(r))' "$line" "$cpu_s" "$mems" "${WARMUP%s}" "${DURATION%s}" | tee -a "$OUT/results.jsonl"
+if sys.argv[6]: r["hop_latency_ms"] = sys.argv[6]
+print(json.dumps(r))' "$line" "$cpu_s" "$mems" "${WARMUP%s}" "${DURATION%s}" "$HOP_LATENCY" | tee -a "$OUT/results.jsonl"
       stop_all
     done
   done
@@ -175,7 +199,7 @@ print(json.dumps(r))' "$line" "$cpu_s" "$mems" "${WARMUP%s}" "${DURATION%s}" | t
 cd "$ROOT"
 podman network exists "$NET" || podman network create "$NET" >/dev/null
 [ -n "${SKIP_BUILD:-}" ] || build
-log "results: $OUT/results.jsonl (cpus=$CPUS memory=$MEMORY load_cpus=$LOAD_CPUS)"
+log "results: $OUT/results.jsonl (cpus=$CPUS memory=$MEMORY load_cpus=$LOAD_CPUS hop_latency=${HOP_LATENCY:-none})"
 for app in $APPS; do
   for v in $VARIANTS; do log "$app: $v"; run_variant "$app" "$v"; done
 done
