@@ -73,3 +73,18 @@ func TestInitKeepsOwnSDKReplace(t *testing.T) {
 		t.Errorf("output: %s", out)
 	}
 }
+
+// -wasm refuses a pinned lint plugin that cannot read built-in house rules,
+// since go build -X would leave them out silently.
+func TestWasmNeedsEmbedSupport(t *testing.T) {
+	for version, ok := range map[string]bool{"v0.14.0": false, "v0.15.0": true, "v0.16.1": true} {
+		dir := repo(t, map[string]string{"go.mod": "module example.com/shop\n\ngo 1.26.1\n\nrequire " + lintModule + " " + version + "\n"})
+		err := checkEmbedSupport(dir)
+		if (err == nil) != ok {
+			t.Errorf("%s: err = %v", version, err)
+		}
+	}
+	if err := checkEmbedSupport(repo(t, map[string]string{"go.mod": "module example.com/shop\n"})); err == nil || !strings.Contains(err.Error(), "run dedo init") {
+		t.Errorf("without the pin: %v", err)
+	}
+}

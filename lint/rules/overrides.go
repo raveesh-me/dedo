@@ -272,17 +272,9 @@ func (c *Consolidated) Report() string {
 	return b.String()
 }
 
-// consolidateHouse loads the house rules of the rules file at path, or
-// none for "", and consolidates them with dedo's own.
-func consolidateHouse(path string, builtin []*check.RuleSpec) (*Consolidated, error) {
-	var houseRules []config.Rule
-	var disabled []string
-	if path != "" {
-		var err error
-		if houseRules, disabled, err = config.LoadAll(path); err != nil {
-			return nil, fmt.Errorf("house rules: %w", err)
-		}
-	}
+// consolidateHouse compiles house rules and consolidates them with dedo's
+// own.
+func consolidateHouse(houseRules []config.Rule, disabled []string, builtin []*check.RuleSpec) (*Consolidated, error) {
 	specs, err := house.Specs(houseRules)
 	if err != nil {
 		return nil, fmt.Errorf("house rules: %w", err)

@@ -357,7 +357,7 @@ func (in *initer) linter() error {
 	}
 	if in.p.schemaOnly {
 		if in.hasHouseRules() {
-			in.say("rules.yml: WARNING the BSR plugin cannot read files, so house rules do not run without Go; add a go.mod and run dedo init again to use the native plugin")
+			in.say("rules.yml: WARNING the BSR plugin cannot read files, so house rules do not run without Go; add a go.mod and run dedo init again to use the native plugin, or list a plugin built with them (dedo tools -wasm in a Go repository)")
 		}
 		// No Go: the plugin is the BSR's, which buf.lock pins.
 		in.cmds = append(in.cmds, []string{"buf", "plugin", "update"})

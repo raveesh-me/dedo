@@ -184,10 +184,10 @@ The plugin runs natively wherever it can. On `examples/todo`, one `buf lint` wit
 
 | Plugin form | Time |
 | --- | --- |
-| Native binary (default) | 0.30 s |
-| WebAssembly | 5.0 s |
+| Native binary (default) | 0.34 s |
+| WebAssembly | 5.9 s |
 
-The editor reruns the lint as you type, so this is the difference between findings that keep up and findings that lag. The WebAssembly module is 40 MB, most of it Google's api-linter. Buf caches the compiled module, so the cost is in running it, and a smaller build does not help. `buf.yaml` refers to the native binary by path, so an editor started outside a shell finds it too. The WebAssembly plugin on the BSR is for repositories without Go, such as schema-only ones; it cannot read `rules.yml`, so house rules do not run there.
+The editor reruns the lint as you type, so this is the difference between findings that keep up and findings that lag. The WebAssembly module is 49 MB, most of it Google's api-linter. Buf caches the compiled module, so the cost is in running it, and a smaller build does not help. `buf.yaml` refers to the native binary by path, so an editor started outside a shell finds it too. The WebAssembly plugin on the BSR is for repositories without Go, such as schema-only ones. It cannot read `rules.yml`; `dedo tools -wasm` builds one with the house rules built in, for an organisation to push to the BSR.
 
 ## Developing
 

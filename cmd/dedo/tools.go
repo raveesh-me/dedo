@@ -14,6 +14,8 @@ import (
 
 	"gopkg.in/yaml.v3"
 
+	"golang.org/x/mod/modfile"
+
 	"github.com/raveesh-me/dedo/lint/house/config"
 )
 
@@ -57,6 +59,75 @@ func tools(dir string, out io.Writer) error {
 	}
 	return houseRules(dir, out)
 }
+
+// rulesVar is the lint plugin's variable that holds built-in house rules.
+const rulesVar = "github.com/raveesh-me/dedo/lint/rules.embedded"
+
+// wasmPlugin builds the lint plugin pinned in go.mod as WebAssembly into
+// out, with the repository's house rules built in, since the WebAssembly
+// plugin cannot read rules.yml. An organisation pushes it to the BSR for
+// repositories without Go. tools has already checked the rules.
+func wasmPlugin(dir, out string, w io.Writer) error {
+	if err := checkEmbedSupport(dir); err != nil {
+		return err
+	}
+	out, err := filepath.Abs(out)
+	if err != nil {
+		return err
+	}
+	ldflags := "-s -w"
+	if path := config.Find(dir); path != "" {
+		rules, disabled, err := config.LoadAll(path)
+		if err != nil {
+			return fmt.Errorf("house rules: %w", err)
+		}
+		embedded, err := config.Encode(rules, disabled)
+		if err != nil {
+			return err
+		}
+		ldflags += " -X " + rulesVar + "=" + embedded
+		fmt.Fprintf(w, "building %d house rules into the WebAssembly plugin\n", len(rules))
+	}
+	cmd := exec.Command("go", "build", "-trimpath", "-ldflags", ldflags, "-o", out, lintPluginPkg)
+	cmd.Dir = dir
+	cmd.Env = append(os.Environ(), "GOOS=wasip1", "GOARCH=wasm")
+	cmd.Stdout, cmd.Stderr = w, w
+	fmt.Fprintf(w, "$ GOOS=wasip1 GOARCH=wasm go build -o %s %s\n", out, lintPluginPkg)
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("building the WebAssembly lint plugin: %w", err)
+	}
+	fmt.Fprintf(w, "built %s; push it with: buf plugin push <your BSR plugin> --binary=%s\n", out, out)
+	return nil
+}
+
+// embedRelease is the first lint plugin release that reads built-in house
+// rules; go build -X sets nothing in an earlier one, silently.
+const embedRelease = "v0.15.0"
+
+// checkEmbedSupport fails unless go.mod pins a lint plugin that reads
+// built-in house rules.
+func checkEmbedSupport(dir string) error {
+	b, err := os.ReadFile(filepath.Join(dir, "go.mod"))
+	if err != nil {
+		return err
+	}
+	f, err := modfile.Parse("go.mod", b, nil)
+	if err != nil {
+		return err
+	}
+	for _, r := range f.Require {
+		if r.Mod.Path == lintModule {
+			if newer(embedRelease, r.Mod.Version) {
+				return fmt.Errorf("-wasm needs the lint plugin at %s or later, and go.mod pins %s: run dedo upgrade", embedRelease, r.Mod.Version)
+			}
+			return nil
+		}
+	}
+	return fmt.Errorf("go.mod does not pin %s: run dedo init", lintModule)
+}
+
+// lintModule is the module of the lint plugin.
+const lintModule = "github.com/raveesh-me/dedo/lint"
 
 // toolsLint moves only the lint plugin to release, then builds it and
 // consolidates the house rules: dedo upgrade -lint.
