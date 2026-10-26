@@ -675,7 +675,7 @@ func TestInitRuleSet(t *testing.T) {
 	if got := scalars(lookup(lookup(yamlAt(t, dir, "buf.yaml"), "lint"), "use")); !slices.Equal(got, []string{"STANDARD", "DEDO"}) {
 		t.Errorf("lint.use = %v", got)
 	}
-	if got := scalars(lookup(yamlAt(t, dir, "rules.yml"), "use")); !slices.Equal(got, []string{"AIP_NOLANG", "ZALANDO", "DEDO"}) {
+	if got := scalars(lookup(yamlAt(t, dir, "rules.yml"), "use")); !slices.Equal(got, []string{"AIP_NOLANG", "ZALANDO", "DEDO", "HOUSE"}) {
 		t.Errorf("rules.yml use = %v", got)
 	}
 	if out := initOffline(t, dir); strings.Contains(out, "rules.yml:") || strings.Contains(out, "lint.use") {
@@ -704,7 +704,7 @@ func TestInitMovesSelection(t *testing.T) {
 		t.Errorf("lint.except = %v", got)
 	}
 	rules := yamlAt(t, dir, "rules.yml")
-	if got := scalars(lookup(rules, "use")); !slices.Equal(got, []string{"AIP_CORE", "ZALANDO", "DEDO"}) {
+	if got := scalars(lookup(rules, "use")); !slices.Equal(got, []string{"AIP_CORE", "ZALANDO", "HOUSE", "DEDO"}) {
 		t.Errorf("rules.yml use = %v", got)
 	}
 	if got := scalars(lookup(rules, "disable")); !slices.Equal(got, []string{"DEDO_NO_JSON_NAME"}) {

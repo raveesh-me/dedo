@@ -27,15 +27,21 @@ lint:
 `rules.yml`, next to `buf.yaml`, chooses among them, so the whole order of the rules, from the sets that run to the last override, is in one file the plugin reads:
 
 ```yaml
-use:                   # dedo's rule sets this repository runs
+use:                   # the rule sets this repository runs
   - AIP_NOLANG         # every AIP rule except the language-specific ones
   - ZALANDO
   - DEDO
+  - HOUSE              # the house rules: this file's and the imported ones
   - DEDO_MULTI_TENANT  # when its services are multi-tenant
 disable: [DEDO_NO_JSON_NAME]   # rules this repository opts out of, by ID
+imports: [...]         # shared house rules, which build on the sets above
+rules: [...]           # this repository's own, which outrank everything
 ```
 
-- **`use`** names rule sets, or single rules by ID. Without `use`, or without a `rules.yml`, `AIP_NOLANG`, `ZALANDO` and `DEDO` run. `AIP_NOLANG` can be narrowed to `AIP_CORE` or widened to `AIP`, and single AIPs are sets too (`AIP_0131`). House rules always run: they are in `rules.yml` because you want them.
+[templates/rules.example.yml](../templates/rules.example.yml) (`dedo templates rules.example.yml`) uses every key: all five sets, three imports, `disable`, and its own rules overriding an imported rule and one of dedo's.
+
+- **`use`** names rule sets, or single rules by ID. Without `use`, or without a `rules.yml`, `AIP_NOLANG`, `ZALANDO`, `DEDO` and `HOUSE` run; `DEDO_MULTI_TENANT` is opt-in, since it reports every service that declares no tenancy. `AIP_NOLANG` can be narrowed to `AIP_CORE` or widened to `AIP`, and single AIPs are sets too (`AIP_0131`).
+- **`imports` and `rules`** are the house rules, which `HOUSE` runs. They build on the sets in `use` and override their rules where they say so (see [Precedence](#precedence)).
 - **`disable`** turns off rules by ID: dedo's, or an imported house rule. A rule that does not run overrides nothing, so the rules it overrode run again.
 - **Final rules** always run, whatever `use` and `disable` say (see [Final rules](#final-rules)).
 - **Skipped rules** run only when `use` names them by ID (see [Skipped rules](#skipped-rules)).
@@ -84,7 +90,7 @@ The plugin consolidates the rules every time it starts: it reads `rules.yml`, ga
 
 ```text
 lint rules: 363 rules, 3 of them house rules; 338 run, 8 overridden, 17 not used, skipped or disabled
-  use: AIP_NOLANG, ZALANDO, DEDO
+  use: AIP_NOLANG, ZALANDO, DEDO, HOUSE
   DEDO_HTTP_RESPONSE_BODY overrides AIP_0131_RESPONSE_MESSAGE_NAME
   ...
   HOUSE_TODO_RESOURCE_TYPE (rules.yml) overrides HOUSE_RESOURCE_TYPE_DOMAIN
@@ -181,7 +187,7 @@ rules:
     final: true                                       # optional: no rule may override or disable it
 ```
 
-House rules run as soon as `rules.yml` defines them; `buf.yaml` already lists `DEDO`, which holds every rule of the plugin. Each rule is a Buf rule of its own, so `// buf:lint:ignore HOUSE_REST_ROOT` suppresses one finding, `disable: [HOUSE_REST_ROOT]` in a service's `rules.yml` turns an imported rule off, and a finding shows the rule's `message` and `doc` link.
+House rules run while `rules.yml`'s `use` lists `HOUSE`, as it does by default; `buf.yaml` already lists `DEDO`, which holds every rule of the plugin. Each rule is a Buf rule of its own, so `// buf:lint:ignore HOUSE_REST_ROOT` suppresses one finding, `disable: [HOUSE_REST_ROOT]` in a service's `rules.yml` turns an imported rule off, and a finding shows the rule's `message` and `doc` link.
 
 **Paths.** Every `path` is relative to the root of the repository whose file names it, wherever in that repository the file sits: `platform-rules/naming.yml` names the same file from `rules.yml` and from `platform-rules/rules.yml`. In your service the root is the folder of `rules.yml`, next to `buf.yaml`, and a path may lead outside it, such as `../platform-rules` in a monorepo.
 
@@ -512,6 +518,7 @@ use:
   - AIP_NOLANG
   - ZALANDO
   - DEDO
+  - HOUSE
   - DEDO_MULTI_TENANT   # this repository's services are multi-tenant
 ```
 

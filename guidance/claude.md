@@ -26,7 +26,7 @@ Append this file to your repository's `AGENTS.md` or `CLAUDE.md`; `dedo init` do
 | `HOUSE_*` | Your organisation's own rules, as CEL checks in `rules.yml` (and the shared files it imports) |
 | `DEDO_MULTI_TENANT_*` | dedo's opt-in rules for multi-tenant services, the `DEDO_MULTI_TENANT` set |
 
-`rules.yml` chooses which rules run: `use` names dedo's rule sets, `disable` turns rules off by ID, and its house rules always run. `buf.yaml` lists only `DEDO`, which holds every rule of the plugin; never name another of its rules there, in `use` or `except`.
+`rules.yml` chooses which rules run: `use` names the rule sets (`AIP_NOLANG`, `ZALANDO`, `DEDO`, `HOUSE`, and `DEDO_MULTI_TENANT` for multi-tenant services), `disable` turns rules off by ID, and its `imports` and `rules`, the house rules, build on those sets and override them where they say so. `buf.yaml` lists only `DEDO`, which holds every rule of the plugin; never name another of its rules there, in `use` or `except`.
 
 Rules rank in layers: **the repository's own `rules.yml` > the house rules it imports > DEDO > AIP > ZALANDO**. Nothing resolves a conflict automatically: a rule that replaces others names them in its `overrides`, and only rules of a lower layer, never a final one: dedo's `ZALANDO_SERVICE_RULES_REQUIRED`, `DEDO_METHOD_RULES_REQUIRED` and `DEDO_MULTI_TENANT_REQUEST_TENANT`, and any house rule marked `final: true`, which cannot be disabled either. Run `dedo tools` after every change to `rules.yml` or to an import: it fetches changed imports, checks `use`, `disable`, every override and final rule, and lists what runs and the overrides in force. Read that list before assuming a rule runs. Without a house override, dedo's conventions hold:
 

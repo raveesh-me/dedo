@@ -314,8 +314,7 @@ func TestUseRejected(t *testing.T) {
 		want          string
 	}{
 		"unknown set":   {[]string{"AIP_NOPE"}, nil, "use names AIP_NOPE, which is neither"},
-		"house in use":  {[]string{"HOUSE"}, nil, "neither a rule set"},
-		"house rule":    {[]string{"HOUSE_X"}, nil, "house rules always run"},
+		"unknown house": {[]string{"HOUSE_X"}, nil, "use names HOUSE_X, which is neither"},
 		"unknown rule":  {nil, []string{"DEDO_NOPE"}, "disable names DEDO_NOPE, which no rule defines"},
 		"final disable": {nil, []string{"DEDO_METHOD_RULES_REQUIRED"}, "which is final: policy.Build refuses a method without scopes"},
 	} {
@@ -333,9 +332,39 @@ func TestReportUse(t *testing.T) {
 		t.Fatal(err)
 	}
 	report := c.Report()
-	for _, line := range []string{"  use: AIP_NOLANG, ZALANDO, DEDO (the default; rules.yml does not say use)\n", "  DEDO_NO_JSON_NAME is disabled\n"} {
+	for _, line := range []string{"  use: AIP_NOLANG, ZALANDO, DEDO, HOUSE (the default; rules.yml does not say use)\n", "  DEDO_NO_JSON_NAME is disabled\n"} {
 		if !strings.Contains(report, line) {
 			t.Errorf("report lacks %q:\n%s", line, report)
+		}
+	}
+}
+
+// House rules run where use lists HOUSE, final ones always; one that does
+// not run overrides nothing.
+func TestUseHouse(t *testing.T) {
+	locked := houseRule("HOUSE_LOCKED", "shared.yml", nil, "rules.yml")
+	locked.Final = true
+	houseRules := []config.Rule{houseRule("HOUSE_OWN", "rules.yml", []string{"DEDO_NO_JSON_NAME"}), locked}
+	specs, err := house.Specs(houseRules)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct {
+		use  []string
+		want map[string]string
+	}{
+		{nil, map[string]string{"HOUSE_OWN": "", "HOUSE_LOCKED": "", "DEDO_NO_JSON_NAME": "Overridden by"}},
+		{[]string{"DEDO"}, map[string]string{"HOUSE_OWN": "Not in rules.yml's use.", "HOUSE_LOCKED": "", "DEDO_NO_JSON_NAME": ""}},
+	} {
+		c, err := rules.Consolidate(builtin(t), houseRules, specs, tc.use, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		got := silencedBy(c)
+		for id, why := range tc.want {
+			if got[id] != why {
+				t.Errorf("use %v: %s %q, want %q", tc.use, id, got[id], why)
+			}
 		}
 	}
 }

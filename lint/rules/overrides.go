@@ -136,8 +136,8 @@ func outranks(a, b candidate) bool {
 // Consolidate checks rules.yml's use and disable and every override
 // against the order of layers, the final rules and the rules that exist,
 // and returns the rules to run. It reports every mistake at once. A rule
-// of dedo's runs when use names it or a set it is in, unless disable names
-// it; a final rule always runs. disabled may also name house rules, which
+// runs when use names it or a set it is in (HOUSE for house rules), unless
+// disable names it; a final rule always runs. disabled may also name house rules, which
 // houseRules no longer holds: an override of one has nothing left to
 // override.
 func Consolidate(builtin []*check.RuleSpec, houseRules []config.Rule, houseSpecs []*check.RuleSpec, use, disabled []string) (*Consolidated, error) {
@@ -157,7 +157,7 @@ func Consolidate(builtin []*check.RuleSpec, houseRules []config.Rule, houseSpecs
 	if use == nil {
 		out.Use, out.DefaultUse = DefaultUse, true
 	}
-	off, err := selection(builtin, byID, out.Use, disabled)
+	off, err := selection(all, byID, out.Use, disabled)
 	if err != nil {
 		return nil, err
 	}
@@ -225,23 +225,19 @@ func Consolidate(builtin []*check.RuleSpec, houseRules []config.Rule, houseSpecs
 	return out, nil
 }
 
-// selection checks rules.yml's use and disable against dedo's rules, and
-// returns why each rule of dedo's that does not run is off.
-func selection(builtin []*check.RuleSpec, byID map[string]candidate, use, disabled []string) (map[string]string, error) {
-	sets := map[string]bool{}
-	for _, s := range builtin {
-		for _, c := range s.CategoryIDs {
-			sets[c] = true
+// selection checks rules.yml's use and disable against the rules, and
+// returns why each rule that does not run is off.
+func selection(all []candidate, byID map[string]candidate, use, disabled []string) (map[string]string, error) {
+	sets := map[string]bool{house.Category: true}
+	for _, c := range all {
+		for _, set := range c.spec.CategoryIDs {
+			sets[set] = true
 		}
 	}
 	var errs []error
 	for _, u := range use {
-		c, ok := byID[u]
-		switch {
-		case config.IsHouse(u):
-			errs = append(errs, fmt.Errorf("rules.yml: use names %s, but house rules always run; use chooses dedo's rules", u))
-		case !sets[u] && (!ok || c.house != nil):
-			errs = append(errs, fmt.Errorf("rules.yml: use names %s, which is neither a rule set such as AIP_NOLANG, ZALANDO, DEDO or DEDO_MULTI_TENANT nor a rule of dedo's", u))
+		if _, ok := byID[u]; !ok && !sets[u] {
+			errs = append(errs, fmt.Errorf("rules.yml: use names %s, which is neither a rule set such as AIP_NOLANG, ZALANDO, DEDO, HOUSE or DEDO_MULTI_TENANT nor a rule", u))
 		}
 	}
 	for _, id := range disabled {
@@ -258,18 +254,19 @@ func selection(builtin []*check.RuleSpec, byID map[string]candidate, use, disabl
 		return nil, err
 	}
 	off := map[string]string{}
-	for _, s := range builtin {
+	for _, c := range all {
+		id := c.spec.ID
 		switch {
-		case Final[s.ID] != "":
+		case Final[id] != "" || c.house != nil && c.house.Final:
 			// Always runs.
-		case slices.Contains(disabled, s.ID):
-			off[s.ID] = "Disabled in rules.yml."
-		case slices.Contains(use, s.ID):
+		case slices.Contains(disabled, id):
+			off[id] = "Disabled in rules.yml."
+		case slices.Contains(use, id):
 			// Named by ID, skipped or not.
-		case Skipped[s.ID] != "":
-			off[s.ID] = "Skipped by dedo: " + Skipped[s.ID]
-		case !slices.ContainsFunc(s.CategoryIDs, func(c string) bool { return slices.Contains(use, c) }):
-			off[s.ID] = "Not in rules.yml's use."
+		case Skipped[id] != "":
+			off[id] = "Skipped by dedo: " + Skipped[id]
+		case !slices.ContainsFunc(c.spec.CategoryIDs, func(set string) bool { return slices.Contains(use, set) }):
+			off[id] = "Not in rules.yml's use."
 		}
 	}
 	return off, nil

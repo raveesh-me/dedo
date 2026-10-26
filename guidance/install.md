@@ -70,6 +70,7 @@ use:
   - AIP_NOLANG
   - ZALANDO
   - DEDO
+  - HOUSE
 ```
 
 ```sh
@@ -79,7 +80,7 @@ make check          # buf format, buf lint, buf breaking against main
 
 The breaking check compares with the `main` branch, and is skipped while `main` has no `.proto` files. Compare with another branch with `make check API_BASE=develop`. The targets of `Makefile.api` are `run`, `generate`, `check`, `test` and `tools`; where your `Makefile` already has one of those names, `dedo init` names dedo's `api-<name>` instead, and `api-check`, `api-generate` and `api-test` always exist, for CI.
 
-Your organisation's own rules go in `rules.yml` next to `buf.yaml`, as CEL checks that can import shared rules from a git repository; they run as soon as it defines them. A house rule can override a DEDO, AIP or ZALANDO rule by naming it in `overrides`, or lock itself with `final: true`; `dedo tools` lists every override and final rule in force. [RULES.md](RULES.md#house-rules) has the format, and [Precedence](RULES.md#precedence) the order.
+Your organisation's own rules go in `rules.yml` next to `buf.yaml`, as CEL checks that can import shared rules from git repositories; `HOUSE` in `use` runs them. [templates/rules.example.yml](../templates/rules.example.yml) shows every key. A house rule can override a DEDO, AIP or ZALANDO rule by naming it in `overrides`, or lock itself with `final: true`; `dedo tools` lists every override and final rule in force. [RULES.md](RULES.md#house-rules) has the format, and [Precedence](RULES.md#precedence) the order.
 
 If your services partition their data between tenants, declare `tenancy` on each and add `DEDO_MULTI_TENANT` to `rules.yml`'s `use` (`dedo init` does when a service declares it); then pass `Tenants` to the interceptor in section 4. [RULES.md](RULES.md#multi-tenant-rules) explains the model.
 

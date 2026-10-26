@@ -3,6 +3,7 @@ use:
   - AIP_NOLANG
   - ZALANDO
   - DEDO
+  - HOUSE
 
 # House rules: the organisation's shared ones, and this service's own. A
 # rule here outranks the rules it imports, so it may override them.

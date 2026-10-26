@@ -20,6 +20,7 @@ import (
 	"buf.build/go/bufplugin/check"
 
 	"github.com/raveesh-me/dedo/lint/aip"
+	"github.com/raveesh-me/dedo/lint/house"
 	"github.com/raveesh-me/dedo/lint/house/config"
 )
 
@@ -34,7 +35,7 @@ const (
 )
 
 // DefaultUse are the rule sets that run when rules.yml does not say use.
-var DefaultUse = []string{aip.CategoryNoLang, CategoryZalando, CategoryDedo}
+var DefaultUse = []string{aip.CategoryNoLang, CategoryZalando, CategoryDedo, house.Category}
 
 // Skipped are the rules dedo turns off on purpose, by why: they check
 // things dedo has no use for. They run only where rules.yml's use names

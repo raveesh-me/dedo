@@ -21,6 +21,10 @@ var skippedRules = []string{
 	"AIP_0192_HAS_COMMENTS",
 }
 
+// defaultUse are the rule sets the lint plugin runs when rules.yml does not
+// say use (lint/rules.DefaultUse), which a new rules.yml lists.
+var defaultUse = []string{"AIP_NOLANG", "ZALANDO", "DEDO", house}
+
 // pluginRule reports whether a lint.use or lint.except entry names
 // buf-plugin-dedo-lint's rules rather than Buf's own.
 func pluginRule(id string) bool {
@@ -48,9 +52,7 @@ func (in *initer) moveSelection(lint *yaml.Node) (selection, bool) {
 			if pluginRule(id) && id != "DEDO" {
 				dropScalars(use, id)
 				changed = true
-				if id != house {
-					sel.use = append(sel.use, id)
-				}
+				sel.use = append(sel.use, id)
 			}
 		}
 	}
@@ -58,8 +60,12 @@ func (in *initer) moveSelection(lint *yaml.Node) (selection, bool) {
 		changed = true
 	}
 	if len(sel.use) > 0 {
-		// DEDO stayed in buf.yaml, where it now means every rule.
+		// DEDO stayed in buf.yaml, where it now means every rule; HOUSE
+		// joins, so house rules added later run.
 		sel.use = append(sel.use, "DEDO")
+		if !slices.Contains(sel.use, house) {
+			sel.use = append(sel.use, house)
+		}
 	}
 	if except := lookup(lint, "except"); except != nil {
 		for _, id := range scalars(except) {
@@ -102,7 +108,7 @@ func (in *initer) ruleSet(sel selection) error {
 	use := lookup(root(doc), "use")
 	if use == nil {
 		use = &yaml.Node{Kind: yaml.SequenceNode, Tag: "!!seq"}
-		for _, id := range []string{"AIP_NOLANG", "ZALANDO", "DEDO"} {
+		for _, id := range defaultUse {
 			use.Content = append(use.Content, scalar(id))
 		}
 		// First, so the file opens with what runs.
@@ -136,7 +142,7 @@ func (in *initer) ruleSet(sel selection) error {
 // init wrote, and reports whether it did: a use someone edited stays.
 func changedUse(use *yaml.Node, want []string) bool {
 	have := scalars(use)
-	if slices.Equal(have, want) || !slices.Equal(have, []string{"AIP_NOLANG", "ZALANDO", "DEDO"}) {
+	if slices.Equal(have, want) || !slices.Equal(have, defaultUse) {
 		return false
 	}
 	use.Content = nil
