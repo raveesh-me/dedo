@@ -230,22 +230,22 @@ dedo init
 - `server.go`, a stub where every RPC answers Unimplemented, and `policy_table_test.go`, which fails `go test` when a declaration is missing
 - `AGENTS.md` with [the guidance for coding agents](claude.md)
 
-It also writes `main.go`, which serves `CounterService` on every transport; step 5 explains it. Fill in `.github/CODEOWNERS` (from [templates/CODEOWNERS](../templates/CODEOWNERS)) so every change under `proto/` needs an API review, and copy [templates/vscode](../templates/vscode) to `.vscode/` if you use VS Code.
+Then it generates the code from the contract (step 4) and tidies `go.mod`, and reports what `buf lint` finds. It also writes `main.go`, which serves `CounterService` on every transport; step 5 explains it. Fill in `.github/CODEOWNERS` (from [templates/CODEOWNERS](../templates/CODEOWNERS)) so every change under `proto/` needs an API review, and copy [templates/vscode](../templates/vscode) to `.vscode/` if you use VS Code.
 
-Now format and lint:
+Now check the contract:
 
 ```sh
-buf format -w
-buf lint
+make check
 ```
 
-`buf lint` prints nothing when the contract is clean. Your editor shows the same findings as you type, each linking to its explanation.
+It checks formatting, lints, and, once `main` has a contract, checks for breaking changes. It prints no findings when the contract is clean. Your editor shows the same findings as you type, each linking to its explanation.
 
 ## 4. Generate
 
+`dedo init` already generated the code. After every later change to the contract, generate it again, which also tidies `go.mod`:
+
 ```sh
-buf generate
-go mod tidy
+make generate
 ```
 
 This writes:
@@ -488,17 +488,16 @@ func scopesFromContext(ctx context.Context) []string {
 }
 ```
 
-Then tidy the module and run the tests, including the policy-table test:
+Then run the tests, including the policy-table test:
 
 ```sh
-go mod tidy
-go test ./...
+make test
 ```
 
 ## 6. Run it and try every transport
 
 ```sh
-go run .                 # or ADDR=:9090 go run . if port 8080 is taken
+make run                 # or ADDR=:9090 make run if port 8080 is taken
 ```
 
 ```sh
@@ -526,14 +525,14 @@ The same RPCs also answer over Connect and gRPC at `/acme.time_counter.v1.Counte
 ## 7. Before you ship
 
 - Replace `auth` and `devTokens` in `main.go` with your identity platform's token verification, as a server interceptor. It must put the caller's scopes in the call's context.
-- Commit to `main`, then run `make api-check`. It also runs `buf breaking` against `main`.
+- Commit to `main`, then run `make check`. It also runs `buf breaking` against `main`.
 - Add the CI stage from [templates/Jenkinsfile.api-stage](../templates/Jenkinsfile.api-stage), or the same commands in your CI.
 - Check that the teams in `.github/CODEOWNERS` exist. Every change under `proto/` then needs an API review.
 
 ## Updating later
 
 - **A new dedo release:** `dedo update`, then `dedo upgrade`. The options module, the lint plugin, the generators and the runtime move together, and the code is regenerated. [install.md](install.md#upgrading) lists what changes.
-- **A new RPC:** add it to the `.proto`, then run `buf lint`, `buf generate` and `go mod tidy`, and implement the method in `server.go`. The REST route, the docs and the MCP tool follow from the `.proto`.
+- **A new RPC:** add it to the `.proto`, then run `make generate` and `make check`, and implement the method in `server.go`. The REST route, the docs and the MCP tool follow from the `.proto`.
 - **Your organisation's own rules:** write them as CEL checks in `rules.yml` next to `buf.yaml`, or import your organisation's shared file from git, then run `dedo init` again. It adds `HOUSE` to `buf.yaml` and fetches the imports; `buf lint` then reports them like any other rule. After later edits to `rules.yml` or its imports, run `dedo tools`, which fetches and checks them. A house rule outranks dedo's: to replace one, name it in the rule's `overrides`, and `dedo tools` lists every override in force. [RULES.md](RULES.md#house-rules) has the format.
 
 ## Troubleshooting
@@ -543,8 +542,8 @@ The same RPCs also answer over Connect and gRPC at `/acme.time_counter.v1.Counte
 | `does not follow proper HTTP path template syntax` | A hyphen in the REST root, such as `/commerce/time-counter`. Use `/commerce/timeCounter`. |
 | `Fields representing timestamps should use google.protobuf.Timestamp` on a field like `seconds` | AIP reads `seconds` as time. Use `google.protobuf.Duration` for spans of time and `Timestamp` for points in time. |
 | `undefined: ...connect.New...ServiceHandler`, or `connect.Request` in errors | Code written for connect-go v1. `dedo upgrade` runs connect-go's migration tool; then wire `main.go` as dedo's template does. |
-| `go: updates to go.mod needed` while generating | Run `go mod tidy`, then generate again. |
-| `buf breaking: skipped; branch main has no .proto files yet` | Nothing to compare with yet: commit the contract to `main`. If your default branch has another name, run `make api-check API_BASE=<branch>`. |
+| `go: updates to go.mod needed` while generating | Run `make generate` again: it ends with `go mod tidy`. |
+| `buf breaking: skipped; branch main has no .proto files yet` | Nothing to compare with yet: commit the contract to `main`. If your default branch has another name, run `make check API_BASE=<branch>`. |
 | `bind: address already in use` | Something else holds port 8080. Run with `ADDR=:9090`. |
 | No findings in the editor | The lint plugin is missing from `.tools/`, as after a fresh clone. Run `dedo tools` (or `make tools`), then reload the editor. |
 | `reading github.com/raveesh-me/dedo/go.mod at revision v0.0.0: unknown revision` | `go get` picked an old commit instead of a release. Add `@v0.14.0` (or the latest release) to the module path. |

@@ -43,7 +43,7 @@ my-service/
   buf.yaml               # deps, lint categories and the lint plugin
   buf.gen.yaml           # the four generators, run through go tool
   Makefile               # include Makefile.api
-  Makefile.api           # tools, api-check, api-generate
+  Makefile.api           # run, generate, check, test, tools
   rules.yml              # optional: your organisation's HOUSE rules
   docs/                  # serves the REST reference
   server.go              # your handlers (dedo init writes a stub)
@@ -145,7 +145,7 @@ Every RPC returns a unique `<Rpc>Response` message. Set `response_body` on Get, 
 ## 4. Lint
 
 ```sh
-make api-check     # format, lint, breaking-change check
+make check         # format, lint, breaking-change check
 ```
 
 The same findings appear in VS Code as you type. To suppress one, put `// buf:lint:ignore <RULE_ID>` above the element, followed by the reason. Reviewers treat every suppression as a decision to justify.
@@ -174,7 +174,7 @@ dedo's own rules (each finding links to its section in [RULES.md](RULES.md), whi
 ## 5. Generate
 
 ```sh
-make api-generate
+make generate
 ```
 
 This writes, for each service:

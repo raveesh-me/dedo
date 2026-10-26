@@ -135,11 +135,11 @@ go install github.com/raveesh-me/dedo/cmd/dedo@v0.14.0
 dedo init
 ```
 
-`dedo init` adds the options module, the lint plugin, the code generators, the server libraries and the agent guidance where they are missing, then writes a `main.go` for your service (or, when you have one, prints dedo's to compare). In an empty module it writes a starter service that passes lint, so `make api-generate` and `go run .` work straight away. The templates are bundled into the binary (`dedo templates` lists them), so nothing is cloned. [install.md](guidance/install.md) shows each step by hand, and [tutorial.md](guidance/tutorial.md) builds a service from scratch. In short:
+`dedo init` adds the options module, the lint plugin, the code generators, the server libraries and the agent guidance where they are missing, then writes a `main.go` for your service (or, when you have one, prints dedo's to compare). It then generates the code and tidies `go.mod`, so `make run` serves the service straight away; in an empty module it first writes a starter service that passes lint. Two commands, `dedo init` and `make run`, take an empty Go module to a running API with MCP tools. The templates are bundled into the binary (`dedo templates` lists them), so nothing is cloned. [install.md](guidance/install.md) shows each step by hand, and [tutorial.md](guidance/tutorial.md) builds a service from scratch. In short:
 
 1. `dedo init` (or by hand: copy `buf.yaml`, `buf.gen.yaml`, `Makefile.api` from `templates/`, pin the generators and the lint plugin with `go get -tool`, run `dedo tools` and `buf dep update`).
 2. Fill in `CODEOWNERS` and the VS Code settings from `templates/` if you use them.
-3. Write the contract, then `make api-check` (lint, format, breaking) and `buf generate` (Go, Connect, MCP tools, REST docs).
+3. Write the contract, then `make check` (lint, format, breaking) and `make generate` (Go, Connect, MCP tools, REST docs, then `go mod tidy`); `make run` serves it and `make test` tests it.
 4. Wire the runtime on one connect-go v2 `connect.Server`: `policy.Build` for the policy table, `interceptor.New` for scopes, tenants and headers, `connecthttp.Mount` for Connect and gRPC, `vanguard.Mount` for REST, `mcpserver.AddTools` with the generated `<Service>MCPTools()` for MCP, and the docs handler. `MCP_ACCESS` decides who may reach `/mcp`: anyone (`public`, the default; every call is still scope-checked) or only callers with a token the service accepts (`authenticated`). The `main.go` that `dedo init` writes enforces scopes from the start; an existing service can begin with `EnforceScopes: false` (audit mode), then enforce.
 5. Keep the policy-table test `dedo init` writes, so a missing declaration fails `go test` before deploy.
 
