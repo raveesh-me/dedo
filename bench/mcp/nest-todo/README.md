@@ -55,6 +55,7 @@ comma-separated list of snake_case field names; it is sent as the
 | `MCP_TOOLSETS` | `todo` | Comma-separated toolsets to serve: `todo`, `contacts`. |
 | `MCP_AUTH_TOKENS` | `reader,writer` | Accepted bearer tokens. |
 | `MCP_SESSION_TTL_MS` | `1800000` | Session idle timeout. |
+| `MCP_STATELESS` | `false` | `true`: no sessions; each POST gets a new MCP server and transport, as the MCP TypeScript SDK's stateless example does. GET and DELETE answer 405. The benchmark runs it this way, so it pays per call what a stateless dedo service pays. |
 | `MCP_JSON_RESPONSE` | `true` | `false` answers POSTs as SSE streams (SDK default) instead of JSON, which is what dedo sends. |
 | `RATE_LIMIT_ENABLED` | `true` | `false` turns off the 300 req / 60 s per-IP limit. **Set it to `false` for the benchmark**, which drives the server from one IP. |
 | `CORS_ORIGINS` | none | Comma-separated allowed origins. |

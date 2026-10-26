@@ -1,5 +1,6 @@
 import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
+import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
@@ -33,6 +34,29 @@ export class McpSessionService implements OnModuleDestroy {
 
   get size(): number {
     return this.sessions.size;
+  }
+
+  /**
+   * MCP_STATELESS=true: no sessions. Every POST gets a new MCP Server and a
+   * transport without a session ID, closed when the response ends, as the
+   * MCP TypeScript SDK's stateless example does. Each call then pays for its
+   * own server, as a stateless dedo service does.
+   */
+  readonly stateless = process.env.MCP_STATELESS === 'true';
+
+  /** Serves one POST in stateless mode. */
+  async handleStateless(req: IncomingMessage, res: ServerResponse, body: unknown): Promise<void> {
+    const server = this.mcpServer.createServer();
+    const transport = new StreamableHTTPServerTransport({
+      sessionIdGenerator: undefined,
+      enableJsonResponse: process.env.MCP_JSON_RESPONSE !== 'false',
+    });
+    res.on('close', () => {
+      void transport.close();
+      void server.close();
+    });
+    await server.connect(transport);
+    await transport.handleRequest(req, res, body);
   }
 
   /** The live session with this ID, or undefined if it is unknown or expired. */

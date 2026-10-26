@@ -3,15 +3,19 @@
 # in its own container with the same CPU and memory limits, on one podman
 # network:
 #
-#   nest       NestJS MCP (stateful sessions) -> HTTP REST -> app server
-#   loopback   dedo's Go MCP (<app>-mcp)      -> Connect   -> app server
-#   inprocess  dedo's Go MCP inside the app server, no second hop
+#   nest       Node: NestJS MCP, stateless   -> HTTP REST -> app server
+#   loopback   Go MCP server (<app>-mcp)     -> Connect   -> app server
+#   inprocess  dedo: MCP inside the app server, no second hop
 #
 # for two apps: todo, and contacts, whose every call is also checked
 # against the caller's location. Every call passes the same security
 # checks: the app server enforces scopes, tenants, flow IDs and the error
-# audit for each variant, and the load driver stops on any failed call. Results go to OUT (default: a temporary
-# directory), never into the repository.
+# audit for each variant, and the load driver stops on any failed call.
+# The NestJS server follows HighLevel's MCP architecture (see
+# nest-todo/README.md) but runs stateless, as dedo does, so each pays for a
+# server per call; its rate limit is off, since one load client would trip
+# it. Results go to OUT (default: a temporary directory), never into the
+# repository.
 #
 #   bench/mcp/run.sh                 # all variants
 #   APPS=contacts VARIANTS="inprocess loopback" CLIENTS="1 32" DURATION=30s bench/mcp/run.sh
@@ -58,7 +62,7 @@ build() {
 # serve starts one server container with the benchmark's limits.
 serve() {
   local name=$1; shift
-  podman run -d --rm --name "$name" --network "$NET" --cpus "$CPUS" --memory "$MEMORY" "$@" >/dev/null
+  podman run -d --name "$name" --network "$NET" --cpus "$CPUS" --memory "$MEMORY" "$@" >/dev/null
 }
 
 # load runs the load driver in its own container, with its own CPUs.
@@ -88,9 +92,20 @@ wait_ready() {
 
 stop_all() { podman rm -f mcpb-app mcpb-mcp >/dev/null 2>&1 || true; }
 
-run_variant() {
-  local app=$1 variant=$2 url session=() containers token calls
+# diagnose says why a run failed: each server's state and its last logs.
+diagnose() {
+  for ct in "$@"; do
+    log "$ct: $(podman inspect "$ct" --format 'state={{.State.Status}} exit={{.State.ExitCode}} oom_killed={{.State.OOMKilled}}' 2>&1)"
+    podman logs --tail 15 "$ct" 2>&1 | sed 's/^/    /' >&2
+  done
+}
+
+# start_servers starts one variant's containers from scratch and seeds the
+# app server; it sets url, session and containers.
+start_servers() {
+  local app=$1 variant=$2
   stop_all
+  session=()
   serve mcpb-app "localhost/mcpbench-$app"
   case $variant in
     nest)
@@ -98,8 +113,8 @@ run_variant() {
       [ "$app" = contacts ] && tokens=loc1-reader,loc1-writer,loc2-writer,all-reader
       serve mcpb-mcp -e TODO_API_URL=http://mcpb-app:8080 -e CONTACTS_API_URL=http://mcpb-app:8080 \
         -e MCP_TOOLSETS="$app" -e MCP_SERVER_NAME="$app" -e MCP_AUTH_TOKENS="$tokens" \
-        -e API_PORT=3100 -e RATE_LIMIT_ENABLED=false localhost/mcpbench-nest
-      url=http://mcpb-mcp:3100/mcp; session=(-session); containers="mcpb-mcp mcpb-app" ;;
+        -e API_PORT=3100 -e RATE_LIMIT_ENABLED=false -e MCP_STATELESS=true localhost/mcpbench-nest
+      url=http://mcpb-mcp:3100/mcp; containers="mcpb-mcp mcpb-app" ;;
     loopback)
       serve mcpb-mcp "localhost/mcpbench-$app-mcp" -backend http://mcpb-app:8080
       url=http://mcpb-mcp:8080/mcp; containers="mcpb-mcp mcpb-app" ;;
@@ -118,6 +133,14 @@ run_variant() {
         -args "{\"parent\":\"locations/1\",\"contact_id\":\"bench${i:+-$i}\",\"contact\":{\"display_name\":\"seed\"}}" ;;
     esac
   done
+}
+
+# run_variant measures every call of an app on one variant. Each call and
+# client count gets fresh containers, so no measurement inherits another's
+# memory: run stateful, the NestJS server keeps MCP sessions in memory, and
+# five runs in one container exhaust Node's default heap.
+run_variant() {
+  local app=$1 variant=$2 url session=() containers token calls
   case $app in
     todo) token=writer; calls=("${TODO_CALLS[@]}") ;;
     contacts) token=loc1-writer; calls=("${CONTACTS_CALLS[@]}") ;;
@@ -125,11 +148,12 @@ run_variant() {
   for spec in "${calls[@]}"; do
     IFS='|' read -r name tool args <<<"$spec"
     for c in $CLIENTS; do
+      start_servers "$app" "$variant"
       local before=() after=() i=0
       for ct in $containers; do before+=("$(cpu "$ct")"); done
       local line
       line=$(load -url "$url" -token "$token" ${session[@]+"${session[@]}"} -tool "$tool" -args "$args" \
-        -c "$c" -warmup "$WARMUP" -d "$DURATION" -label "$app/$variant/$name")
+        -c "$c" -warmup "$WARMUP" -d "$DURATION" -label "$app/$variant/$name") || { diagnose $containers; stop_all; exit 1; }
       for ct in $containers; do after+=("$(cpu "$ct")"); done
       local cpu_s=0 mems=""
       for ct in $containers; do
@@ -143,9 +167,9 @@ total = r["calls"] * (1 + float(sys.argv[4]) / float(sys.argv[5]))
 r["cpu_ms_per_call"] = round(cpu * 1000 / total, 4)
 r["memory"] = sys.argv[3].strip()
 print(json.dumps(r))' "$line" "$cpu_s" "$mems" "${WARMUP%s}" "${DURATION%s}" | tee -a "$OUT/results.jsonl"
+      stop_all
     done
   done
-  stop_all
 }
 
 cd "$ROOT"
