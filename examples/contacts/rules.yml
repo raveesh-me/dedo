@@ -1,0 +1,8 @@
+# The rule sets this service runs, the tenancy rules among them; see
+# guidance/RULES.md.
+use:
+  - AIP_NOLANG
+  - ZALANDO
+  - DEDO
+  - HOUSE
+  - DEDO_MULTI_TENANT

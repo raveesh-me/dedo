@@ -1,5 +1,6 @@
 # Workspace: the options module, which is published to the BSR, and an
 # example API module that consumes it the way a service repository would.
+# The other examples are workspaces of their own (make examples).
 version: v2
 modules:
   - path: proto
@@ -11,38 +12,14 @@ modules:
         - STANDARD
         - COMMENTS
   - path: examples/library/proto
-  # A multi-tenant contract under every rule a service gets, the opt-in
-  # DEDO_MULTI_TENANT ones included: it lints clean only while those rules
-  # agree with the AIP, DEDO and ZALANDO ones.
-  - path: examples/contacts/proto
-    lint:
-      use:
-        - STANDARD
-        - COMMENTS
-        - AIP_NOLANG
-        - DEDO
-        - ZALANDO
-        - DEDO_MULTI_TENANT
-      except:
-        # As in templates/buf.yaml; RULES.md says why.
-        - AIP_0131_METHOD_SIGNATURE
-        - AIP_0132_METHOD_SIGNATURE
-        - AIP_0133_METHOD_SIGNATURE
-        - AIP_0134_METHOD_SIGNATURE
-        - AIP_0135_METHOD_SIGNATURE
-        - AIP_0192_HAS_COMMENTS
-      enum_zero_value_suffix: _UNSPECIFIED
-      service_suffix: Service
-      rpc_allow_google_protobuf_empty_requests: false
-      rpc_allow_google_protobuf_empty_responses: false
 deps:
   - buf.build/googleapis/googleapis
 lint:
   use:
     - STANDARD
     - COMMENTS
+    # Every rule of buf-plugin-dedo-lint; rules.yml chooses which run.
     - DEDO
-    - ZALANDO
   enum_zero_value_suffix: _UNSPECIFIED
   service_suffix: Service
   rpc_allow_google_protobuf_empty_requests: false

@@ -112,8 +112,9 @@ func initRepo(dir, release string, offline bool, out io.Writer) error {
 
 // overriddenRules are the AIP rules that releases before v0.12.0 listed in
 // lint.except, and that DEDO_HTTP_RESPONSE_BODY now overrides in the plugin
-// (lint/rules/overrides.go). Out of except, they run again when a house
-// rule overrides DEDO_HTTP_RESPONSE_BODY.
+// (lint/rules/overrides.go). Moved out of buf.yaml, they are dropped rather
+// than disabled, so they run again when a house rule overrides
+// DEDO_HTTP_RESPONSE_BODY.
 var overriddenRules = []string{
 	"AIP_0131_RESPONSE_MESSAGE_NAME",
 	"AIP_0132_RESPONSE_MESSAGE_NAME",
@@ -124,14 +125,12 @@ var overriddenRules = []string{
 	"AIP_0134_REQUEST_REQUIRED_FIELDS",
 }
 
-// overridesRelease is the first release whose plugin overrides them.
-const overridesRelease = "v0.12.0"
-
-// house is the lint category of a repository's own rules.
+// house is the prefix of a repository's own rules, and the lint category
+// releases before v0.15.0 listed them in.
 const house = "HOUSE"
 
-// multiTenant is the opt-in category of the DEDO_MULTI_TENANT_* rules, which
-// joins lint.use when a service declares dedo.v1.service.tenancy.
+// multiTenant is the opt-in rule set of the DEDO_MULTI_TENANT_* rules, which
+// joins rules.yml's use when a service declares dedo.v1.service.tenancy.
 const multiTenant = "DEDO_MULTI_TENANT"
 
 // hasHouseRules reports whether the repository has a rules.yml.
@@ -289,42 +288,16 @@ func (in *initer) linter() error {
 		return err
 	}
 	changed := false
-	// Categories a repository opts into. Buf rejects HOUSE without a
-	// rules.yml, since the category then has no rules, and
-	// DEDO_MULTI_TENANT would report every service that declares no tenancy.
-	var optional []string
-	if in.hasHouseRules() {
-		optional = append(optional, house)
-	}
-	if in.p.tenancy != "" {
-		optional = append(optional, multiTenant)
-	}
+	var sel selection
 	lint := lookup(root(doc), "lint")
 	if lint == nil {
-		lint = lookup(root(tmpl), "lint")
-		addScalars(child(lint, "use", yaml.SequenceNode), optional...)
-		set(root(doc), "lint", lint)
+		set(root(doc), "lint", lookup(root(tmpl), "lint"))
 		in.say("buf.yaml: added the lint section")
 		changed = true
 	} else {
-		use := append([]string{"AIP_NOLANG", "DEDO", "ZALANDO"}, optional...)
-		if added := addScalars(child(lint, "use", yaml.SequenceNode), use...); len(added) > 0 {
-			in.say("buf.yaml: lint.use gained %s", strings.Join(added, ", "))
-			changed = true
-		}
-		except := child(lint, "except", yaml.SequenceNode)
-		// Only a plugin from v0.12.0 on overrides them itself.
-		if !newer(overridesRelease, in.release) {
-			if dropped := dropScalars(except, overriddenRules...); len(dropped) > 0 {
-				in.say("buf.yaml: lint.except lost %d AIP rules that DEDO_HTTP_RESPONSE_BODY now overrides in the plugin", len(dropped))
-				changed = true
-			}
-		}
-		skips := scalars(lookup(lookup(root(tmpl), "lint"), "except"))
-		if added := addScalars(except, skips...); len(added) > 0 {
-			in.say("buf.yaml: lint.except gained the %d AIP rules dedo skips (see RULES.md)", len(added))
-			changed = true
-		}
+		var moved bool
+		sel, moved = in.moveSelection(lint)
+		changed = changed || moved
 	}
 	plugins := child(root(doc), "plugins", yaml.SequenceNode)
 	kept := plugins.Content[:0]
@@ -355,10 +328,11 @@ func (in *initer) linter() error {
 	} else {
 		in.say("buf.yaml: lint plugin and categories already in place")
 	}
+	if err := in.ruleSet(sel); err != nil {
+		return fmt.Errorf("rules.yml: %w", err)
+	}
 	if in.p.schemaOnly {
-		if in.hasHouseRules() {
-			in.say("rules.yml: WARNING the BSR plugin cannot read files, so house rules do not run without Go; add a go.mod and run dedo init again to use the native plugin, or list a plugin built with them (dedo tools -wasm in a Go repository)")
-		}
+		in.say("rules.yml: WARNING the BSR plugin cannot read files, so without Go it runs dedo's default rule sets and no house rules; add a go.mod and run dedo init again to use the native plugin, or list a plugin built with rules.yml (dedo tools -wasm in a Go repository)")
 		// No Go: the plugin is the BSR's, which buf.lock pins.
 		in.cmds = append(in.cmds, []string{"buf", "plugin", "update"})
 		return nil

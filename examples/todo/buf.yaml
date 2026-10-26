@@ -13,19 +13,8 @@ lint:
   use:
     - STANDARD
     - COMMENTS
-    - AIP_NOLANG
+    # Every rule of buf-plugin-dedo-lint; rules.yml chooses which run.
     - DEDO
-    - ZALANDO
-    - HOUSE
-  except:
-    # method_signature drives Google's client generator; connect-go ignores it.
-    - AIP_0131_METHOD_SIGNATURE
-    - AIP_0132_METHOD_SIGNATURE
-    - AIP_0133_METHOD_SIGNATURE
-    - AIP_0134_METHOD_SIGNATURE
-    - AIP_0135_METHOD_SIGNATURE
-    # Buf COMMENTS already reports missing comments.
-    - AIP_0192_HAS_COMMENTS
   enum_zero_value_suffix: _UNSPECIFIED
   service_suffix: Service
   rpc_allow_google_protobuf_empty_requests: false

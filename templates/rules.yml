@@ -1,0 +1,27 @@
+# Which lint rules run. buf.yaml lists only DEDO of buf-plugin-dedo-lint's
+# rules; this file chooses among them. Run dedo tools (make tools) after
+# every change: it checks this file and lists the rules in force. See
+# guidance/RULES.md in the dedo repository, and rules.example.yml (dedo
+# templates rules.example.yml) for a file that uses everything.
+#
+# The rule sets this repository runs: AIP_NOLANG, ZALANDO, DEDO, HOUSE (the
+# house rules below and the ones imported), and DEDO_MULTI_TENANT for
+# services that declare tenancy. Rule IDs work too. The imports and rules
+# below build on these, and override them where they say so.
+use:
+  - AIP_NOLANG
+  - ZALANDO
+  - DEDO
+  - HOUSE
+# Rules this repository opts out of, by ID; never a final rule.
+# disable: [DEDO_NO_JSON_NAME]
+#
+# Your organisation's shared rules, and this repository's own HOUSE_* rules.
+# imports:
+#   - git: https://github.com/acme/api-standards.git
+#     ref: v3
+# rules:
+#   - id: HOUSE_RESOURCE_TYPE_DOMAIN
+#     on: resource
+#     check: type.endsWith('.acme.com')
+#     message: Resource types live under acme.com.

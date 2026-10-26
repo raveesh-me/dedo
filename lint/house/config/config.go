@@ -1,7 +1,9 @@
-// Package config reads a repository's house rules: rules.yml next to
-// buf.yaml, and the rules files it imports from folders and git
-// repositories. It has no CEL in it, so the dedo command can fetch imports
-// with it too.
+// Package config reads a repository's rules.yml, next to buf.yaml: which of
+// dedo's rules run, and the house rules, its own and those of the rules
+// files it imports from folders and git repositories. It has no CEL in it,
+// so the dedo command can fetch imports with it too.
+//
+//	use: [AIP_NOLANG, ZALANDO, DEDO, DEDO_MULTI_TENANT] # dedo's rule sets, or rule IDs
 //
 //	imports:
 //	  - path: platform-rules            # a folder (its rules.yml) or a file
@@ -12,7 +14,7 @@
 // Every path is relative to the root of the repository whose file names it:
 // this repository's (the folder of rules.yml) or the git import's.
 //
-//	disable: [HOUSE_PLURAL_COLLECTIONS] # imported rules this repository opts out of
+//	disable: [HOUSE_PLURAL_COLLECTIONS] # rules this repository opts out of
 //	rules:
 //	  - id: HOUSE_RESOURCE_TYPE_DOMAIN
 //	    on: resource
@@ -22,9 +24,10 @@
 //	    overrides: [HOUSE_RESOURCE_TYPE]    # rules this one replaces
 //	    final: true                         # no rule may override or disable it
 //
-// A rule may override DEDO, AIP and ZALANDO rules, and the rules of the
-// files its own file imports, unless they are final; package rules checks
-// that and applies them.
+// Only the repository's own rules.yml says use. disable names house rules
+// or dedo's own. A rule may override DEDO, AIP and ZALANDO rules, and the
+// rules of the files its own file imports, unless they are final; package
+// rules checks that, and the names in use and disable, and applies them.
 package config
 
 import (
@@ -90,6 +93,7 @@ type Import struct {
 }
 
 type file struct {
+	Use     []string `yaml:"use"`
 	Imports []Import `yaml:"imports"`
 	Disable []string `yaml:"disable"`
 	Rules   []Rule   `yaml:"rules"`
@@ -116,46 +120,56 @@ func Find(dir string) string {
 	}
 }
 
-// Load reads a rules file and everything it imports. Git imports are read
-// from the cache that Fetch fills, under the directory of the top file.
-// Rules are returned in the order they appear, imports first, without the
-// disabled ones.
-func Load(path string) ([]Rule, error) {
-	rules, _, err := LoadAll(path)
-	return rules, err
+// Config is what a repository's rules.yml says, imports included.
+type Config struct {
+	// Use lists the rule sets and rules of dedo's that run; nil means
+	// rules.yml does not say, so dedo's default runs.
+	Use []string `json:"use,omitempty"`
+	// Rules are the house rules, in the order they appear, imports first,
+	// without the disabled ones.
+	Rules []Rule `json:"rules"`
+	// Disabled are the IDs disable names: house rules, removed from Rules,
+	// and dedo's own, which package rules turns off.
+	Disabled []string `json:"disabled"`
 }
 
-// LoadAll is Load, and also returns the IDs of the rules disable removed,
-// so an override of one can be told from an override of a rule that does
-// not exist.
-func LoadAll(path string) (rules []Rule, disabled []string, err error) {
+// Load reads a rules file and everything it imports. Git imports are read
+// from the cache that Fetch fills, under the directory of the top file.
+func Load(path string) (Config, error) {
 	root := filepath.Dir(path)
 	l := &loader{root: root, seen: map[string]bool{}, ids: map[string]string{}, imports: map[string][]string{}}
 	all, disabled, err := l.load(path, "", nil)
 	if err != nil {
-		return nil, nil, err
+		return Config{}, err
 	}
 	importers := l.importers()
 	for _, id := range disabled {
-		if _, ok := l.ids[id]; !ok {
-			return nil, nil, fmt.Errorf("%s: disable names %s, which no rules file defines", path, id)
+		if _, ok := l.ids[id]; IsHouse(id) && !ok {
+			return Config{}, fmt.Errorf("%s: disable names %s, which no rules file defines", path, id)
 		}
 	}
 	for _, r := range all {
 		if r.Final && slices.Contains(disabled, r.ID) {
-			return nil, nil, fmt.Errorf("%s: disable names %s, which %s marks final; keep it, or ask its owners to drop final", path, r.ID, r.Source)
+			return Config{}, fmt.Errorf("%s: disable names %s, which %s marks final; keep it, or ask its owners to drop final", path, r.ID, r.Source)
 		}
 	}
+	c := Config{Use: l.use, Disabled: disabled}
 	for _, r := range all {
 		if !slices.Contains(disabled, r.ID) {
 			r.Importers = importers[r.File]
-			rules = append(rules, r)
+			c.Rules = append(c.Rules, r)
 		}
 	}
-	return rules, disabled, nil
+	return c, nil
+}
+
+// IsHouse reports whether id names a house rule rather than one of dedo's.
+func IsHouse(id string) bool {
+	return validID.MatchString(id)
 }
 
 type loader struct {
+	use     []string // the use of the top file
 	root    string
 	seen    map[string]bool
 	ids     map[string]string   // rule ID → the file that defines it
@@ -212,6 +226,17 @@ func (l *loader) load(path, repo string, stack []string) (rules []Rule, disabled
 	// An empty rules file decodes to io.EOF: it simply has no rules.
 	if err := dec.Decode(&f); err != nil && !errors.Is(err, io.EOF) {
 		return nil, nil, fmt.Errorf("%s: %w", path, err)
+	}
+	if f.Use != nil {
+		if len(stack) > 0 {
+			return nil, nil, fmt.Errorf("%s: use belongs in the repository's own rules.yml, which chooses the rules it runs; imported files add rules", path)
+		}
+		l.use = f.Use
+	}
+	for _, id := range f.Disable {
+		if !anyID.MatchString(id) {
+			return nil, nil, fmt.Errorf("%s: disable names %q, which is not a rule ID such as HOUSE_PLURAL_COLLECTIONS", path, id)
+		}
 	}
 	for _, imp := range f.Imports {
 		target, targetRepo, err := resolve(l.root, abs, repo, imp)

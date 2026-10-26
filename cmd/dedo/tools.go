@@ -7,12 +7,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
 	"runtime"
-	"slices"
 	"strings"
-
-	"gopkg.in/yaml.v3"
 
 	"golang.org/x/mod/modfile"
 
@@ -77,16 +73,16 @@ func wasmPlugin(dir, out string, w io.Writer) error {
 	}
 	ldflags := "-s -w"
 	if path := config.Find(dir); path != "" {
-		rules, disabled, err := config.LoadAll(path)
+		c, err := config.Load(path)
 		if err != nil {
-			return fmt.Errorf("house rules: %w", err)
+			return fmt.Errorf("rules.yml: %w", err)
 		}
-		embedded, err := config.Encode(rules, disabled)
+		embedded, err := config.Encode(c)
 		if err != nil {
 			return err
 		}
 		ldflags += " -X " + rulesVar + "=" + embedded
-		fmt.Fprintf(w, "building %d house rules into the WebAssembly plugin\n", len(rules))
+		fmt.Fprintf(w, "building rules.yml, with %d house rules, into the WebAssembly plugin\n", len(c.Rules))
 	}
 	cmd := exec.Command("go", "build", "-trimpath", "-ldflags", ldflags, "-o", out, lintPluginPkg)
 	cmd.Dir = dir
@@ -177,8 +173,8 @@ func houseRules(dir string, out io.Writer) error {
 	return consolidate(dir, out)
 }
 
-// consolidate runs the built plugin's -dedo-rules report in dir, then
-// warns about overrides buf.yaml defeats.
+// consolidate runs the built plugin's -dedo-rules report in dir: rules.yml
+// checked, and the rules in force.
 func consolidate(dir string, out io.Writer) error {
 	plugin, err := filepath.Abs(filepath.Join(dir, pluginPath()))
 	if err != nil {
@@ -194,9 +190,6 @@ func consolidate(dir string, out io.Writer) error {
 	switch {
 	case err == nil:
 		fmt.Fprintf(out, "lint rules: %s", report)
-		for _, w := range defeatedOverrides(dir, string(report)) {
-			fmt.Fprintf(out, "warning: %s\n", w)
-		}
 		return nil
 	case strings.Contains(string(report), "unknown shorthand flag"):
 		// A plugin from before overrides cannot report them.
@@ -206,55 +199,4 @@ func consolidate(dir string, out io.Writer) error {
 		return fmt.Errorf("running %s: %w", pluginPath(), err)
 	}
 	return fmt.Errorf("the lint rules do not consolidate:\n%s", strings.TrimSpace(string(report)))
-}
-
-// overrideLine is one override in the plugin's report, and finalLine one
-// final rule.
-var (
-	overrideLine = regexp.MustCompile(`(?m)^  ([A-Z0-9_]+)(?: \([^)]*\))? overrides ([A-Z0-9_]+)$`)
-	finalLine    = regexp.MustCompile(`(?m)^  ([A-Z0-9_]+)(?: \(([^)]*)\))? is final$`)
-)
-
-// defeatedOverrides finds the overrides and final rules buf.yaml defeats.
-// The plugin cannot read buf.yaml, so an overridden rule reports nothing
-// even when buf.yaml turns off the rule that overrides it, and a final rule
-// in except does not run.
-func defeatedOverrides(dir, report string) []string {
-	doc, ok, err := loadYAML(filepath.Join(dir, "buf.yaml"))
-	if err != nil || !ok {
-		return nil
-	}
-	var use, except []string
-	lints := []*yaml.Node{lookup(root(doc), "lint")}
-	if modules := lookup(root(doc), "modules"); modules != nil {
-		for _, m := range modules.Content {
-			lints = append(lints, lookup(m, "lint"))
-		}
-	}
-	for _, l := range lints {
-		use = append(use, scalars(lookup(l, "use"))...)
-		except = append(except, scalars(lookup(l, "except"))...)
-	}
-	var warnings []string
-	houseWarned := false
-	for _, m := range overrideLine.FindAllStringSubmatch(report, -1) {
-		by, rule := m[1], m[2]
-		switch {
-		case slices.Contains(except, by):
-			warnings = append(warnings, fmt.Sprintf("buf.yaml excepts %s, but it still overrides %s, so neither runs; list %s in except too, or stop excepting %s", by, rule, rule, by))
-		case strings.HasPrefix(by, house+"_") && !slices.Contains(use, house) && !houseWarned:
-			houseWarned = true
-			warnings = append(warnings, "rules.yml overrides rules, but lint.use lacks HOUSE, so the house rules do not run while the rules they override stay silent; add HOUSE to lint.use")
-		}
-	}
-	for _, m := range finalLine.FindAllStringSubmatch(report, -1) {
-		if id, source := m[1], m[2]; slices.Contains(except, id) {
-			by := "dedo"
-			if source != "" {
-				by = source
-			}
-			warnings = append(warnings, fmt.Sprintf("buf.yaml excepts %s, which %s marks final, so it does not run; take it out of except", id, by))
-		}
-	}
-	return warnings
 }

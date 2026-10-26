@@ -11,6 +11,7 @@ import (
 	"buf.build/go/bufplugin/check"
 	"buf.build/go/bufplugin/check/checktest"
 
+	"github.com/raveesh-me/dedo/lint/house/config"
 	"github.com/raveesh-me/dedo/lint/rules"
 )
 
@@ -29,6 +30,7 @@ func TestSpec(t *testing.T) {
 // testdata/<rule>/fail. Pass fixtures must produce no annotation. Fail
 // fixtures must produce one annotation on each line marked "// want".
 func TestRules(t *testing.T) {
+	t.Setenv(config.EnvFile, filepath.Join("testdata", config.FileName))
 	for _, rule := range rules.All {
 		_, name, _ := strings.Cut(rule.ID, "_")
 		dir := filepath.Join("testdata", strings.ToLower(name))

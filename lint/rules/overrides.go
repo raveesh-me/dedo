@@ -82,15 +82,24 @@ type Override struct {
 	Lapsed bool
 }
 
-// Consolidated is the rule set a lint runs: every rule, with each
-// overridden one reporting nothing.
+// Consolidated is the rule set a lint runs: every rule, in the category
+// DEDO, with each rule that does not run reporting nothing.
 type Consolidated struct {
 	Rules     []*check.RuleSpec
 	Overrides []Override
+	// Use are the rule sets and rules of dedo's that rules.yml uses.
+	Use []string
+	// DefaultUse is set when rules.yml does not say use.
+	DefaultUse bool
+	// Disabled are the rules of dedo's that rules.yml disables.
+	Disabled []string
 	// House is the number of house rules.
 	House int
-	// Overridden is the number of rules that report nothing.
+	// Overridden is the number of rules a running rule overrides.
 	Overridden int
+	// Off is the number of rules of dedo's that do not run: not in use,
+	// skipped, or disabled.
+	Off int
 	// Final lists the final rules, with the rules file of a house one.
 	Final []Override
 }
@@ -124,11 +133,14 @@ func outranks(a, b candidate) bool {
 	return slices.Contains(b.house.Importers, a.house.File)
 }
 
-// Consolidate checks every override against the order of layers, the
-// final rules and the rules that exist, and returns the rules to run. It
-// reports every mistake at once. disabled are the house rules rules.yml
-// disables: an override of one has nothing left to override.
-func Consolidate(builtin []*check.RuleSpec, houseRules []config.Rule, houseSpecs []*check.RuleSpec, disabled []string) (*Consolidated, error) {
+// Consolidate checks rules.yml's use and disable and every override
+// against the order of layers, the final rules and the rules that exist,
+// and returns the rules to run. It reports every mistake at once. A rule
+// runs when use names it or a set it is in (HOUSE for house rules), unless
+// disable names it; a final rule always runs. disabled may also name house rules, which
+// houseRules no longer holds: an override of one has nothing left to
+// override.
+func Consolidate(builtin []*check.RuleSpec, houseRules []config.Rule, houseSpecs []*check.RuleSpec, use, disabled []string) (*Consolidated, error) {
 	var all []candidate
 	byID := map[string]candidate{}
 	for _, s := range builtin {
@@ -141,11 +153,24 @@ func Consolidate(builtin []*check.RuleSpec, houseRules []config.Rule, houseSpecs
 		all = append(all, c)
 		byID[s.ID] = c
 	}
+	out := &Consolidated{House: len(houseSpecs), Use: use}
+	if use == nil {
+		out.Use, out.DefaultUse = DefaultUse, true
+	}
+	off, err := selection(all, byID, out.Use, disabled)
+	if err != nil {
+		return nil, err
+	}
+	for _, id := range disabled {
+		if !config.IsHouse(id) {
+			out.Disabled = append(out.Disabled, id)
+		}
+	}
 	if err := checkOverrides(all, byID, disabled); err != nil {
 		return nil, err
 	}
-	// A rule runs unless a rule that runs overrides it. Overriders rank
-	// strictly higher, so this ends.
+	// A rule runs unless it is off or a rule that runs overrides it.
+	// Overriders rank strictly higher, so this ends.
 	overriders := map[string][]candidate{}
 	for _, c := range all {
 		for _, id := range c.overrides {
@@ -158,14 +183,13 @@ func Consolidate(builtin []*check.RuleSpec, houseRules []config.Rule, houseSpecs
 		if r, ok := runs[id]; ok {
 			return r
 		}
-		r := true
+		r := off[id] == ""
 		for _, o := range overriders[id] {
 			r = r && !running(o.spec.ID)
 		}
 		runs[id] = r
 		return r
 	}
-	out := &Consolidated{House: len(houseSpecs)}
 	for _, c := range all {
 		spec := c.spec
 		var by []string
@@ -174,10 +198,19 @@ func Consolidate(builtin []*check.RuleSpec, houseRules []config.Rule, houseSpecs
 				by = append(by, o.spec.ID)
 			}
 		}
-		if len(by) > 0 {
-			spec = overridden(spec, by)
+		switch {
+		case off[spec.ID] != "":
+			spec = silenced(spec, off[spec.ID])
+			out.Off++
+		case len(by) > 0:
+			spec = silenced(spec, fmt.Sprintf("Overridden by %s.", strings.Join(by, ", ")))
 			out.Overridden++
+		default:
+			copied := *spec
+			spec = &copied
 		}
+		spec.CategoryIDs = []string{CategoryDedo}
+		spec.Default = true
 		out.Rules = append(out.Rules, spec)
 		for _, id := range c.overrides {
 			out.Overrides = append(out.Overrides, Override{By: c.spec.ID, Rule: id, Source: c.source(), Lapsed: !running(c.spec.ID)})
@@ -190,6 +223,53 @@ func Consolidate(builtin []*check.RuleSpec, houseRules []config.Rule, houseSpecs
 		}
 	}
 	return out, nil
+}
+
+// selection checks rules.yml's use and disable against the rules, and
+// returns why each rule that does not run is off.
+func selection(all []candidate, byID map[string]candidate, use, disabled []string) (map[string]string, error) {
+	sets := map[string]bool{house.Category: true}
+	for _, c := range all {
+		for _, set := range c.spec.CategoryIDs {
+			sets[set] = true
+		}
+	}
+	var errs []error
+	for _, u := range use {
+		if _, ok := byID[u]; !ok && !sets[u] {
+			errs = append(errs, fmt.Errorf("rules.yml: use names %s, which is neither a rule set such as AIP_NOLANG, ZALANDO, DEDO, HOUSE or DEDO_MULTI_TENANT nor a rule", u))
+		}
+	}
+	for _, id := range disabled {
+		switch {
+		case config.IsHouse(id):
+			// Checked against the rules files already.
+		case byID[id].spec == nil:
+			errs = append(errs, fmt.Errorf("rules.yml: disable names %s, which no rule defines", id))
+		case Final[id] != "":
+			errs = append(errs, fmt.Errorf("rules.yml: disable names %s, which is final: %s. Keep it", id, Final[id]))
+		}
+	}
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+	off := map[string]string{}
+	for _, c := range all {
+		id := c.spec.ID
+		switch {
+		case Final[id] != "" || c.house != nil && c.house.Final:
+			// Always runs.
+		case slices.Contains(disabled, id):
+			off[id] = "Disabled in rules.yml."
+		case slices.Contains(use, id):
+			// Named by ID, skipped or not.
+		case Skipped[id] != "":
+			off[id] = "Skipped by dedo: " + Skipped[id]
+		case !slices.ContainsFunc(c.spec.CategoryIDs, func(set string) bool { return slices.Contains(use, set) }):
+			off[id] = "Not in rules.yml's use."
+		}
+	}
+	return off, nil
 }
 
 func checkOverrides(all []candidate, byID map[string]candidate, disabled []string) error {
@@ -237,11 +317,11 @@ func rankRule(c candidate) string {
 	return fmt.Sprintf("%s rules override only %s rules", layerNames[l], strings.Join(layerNames[:l], " and "))
 }
 
-// overridden returns a copy of spec that reports nothing. It stays a rule,
-// so buf.yaml can still name it in use and except.
-func overridden(spec *check.RuleSpec, by []string) *check.RuleSpec {
+// silenced returns a copy of spec that reports nothing, its purpose
+// prefixed with why. It stays a rule, so buf config ls-lint-rules lists it.
+func silenced(spec *check.RuleSpec, why string) *check.RuleSpec {
 	out := *spec
-	out.Purpose = fmt.Sprintf("Overridden by %s. %s", strings.Join(by, ", "), spec.Purpose)
+	out.Purpose = why + " " + spec.Purpose
 	out.Handler = check.RuleHandlerFunc(func(context.Context, check.ResponseWriter, check.Request) error { return nil })
 	return &out
 }
@@ -250,7 +330,15 @@ func overridden(spec *check.RuleSpec, by []string) *check.RuleSpec {
 // rules, every override and the rules that run.
 func (c *Consolidated) Report() string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "%d rules, %d of them house rules; %d overridden\n", len(c.Rules), c.House, c.Overridden)
+	fmt.Fprintf(&b, "%d rules, %d of them house rules; %d run, %d overridden, %d not used, skipped or disabled\n", len(c.Rules), c.House, len(c.Rules)-c.Overridden-c.Off, c.Overridden, c.Off)
+	use := strings.Join(c.Use, ", ")
+	if c.DefaultUse {
+		use += " (the default; rules.yml does not say use)"
+	}
+	fmt.Fprintf(&b, "  use: %s\n", use)
+	for _, id := range c.Disabled {
+		fmt.Fprintf(&b, "  %s is disabled\n", id)
+	}
 	for _, o := range c.Overrides {
 		by := o.By
 		if o.Source != "" {
@@ -272,16 +360,16 @@ func (c *Consolidated) Report() string {
 	return b.String()
 }
 
-// consolidateHouse compiles house rules and consolidates them with dedo's
-// own.
-func consolidateHouse(houseRules []config.Rule, disabled []string, builtin []*check.RuleSpec) (*Consolidated, error) {
-	specs, err := house.Specs(houseRules)
+// consolidateHouse compiles a rules.yml's house rules and consolidates
+// them with dedo's own.
+func consolidateHouse(cfg config.Config, builtin []*check.RuleSpec) (*Consolidated, error) {
+	specs, err := house.Specs(cfg.Rules)
 	if err != nil {
 		return nil, fmt.Errorf("house rules: %w", err)
 	}
-	c, err := Consolidate(builtin, houseRules, specs, disabled)
+	c, err := Consolidate(builtin, cfg.Rules, specs, cfg.Use, cfg.Disabled)
 	if err != nil {
-		return nil, fmt.Errorf("rule overrides:\n%w", err)
+		return nil, fmt.Errorf("lint rules:\n%w", err)
 	}
 	return c, nil
 }
