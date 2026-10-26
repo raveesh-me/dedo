@@ -1,3 +1,9 @@
+# The rule sets this service runs; see guidance/RULES.md.
+use:
+  - AIP_NOLANG
+  - ZALANDO
+  - DEDO
+
 # House rules: the organisation's shared ones, and this service's own. A
 # rule here outranks the rules it imports, so it may override them.
 imports:

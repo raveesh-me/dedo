@@ -230,7 +230,7 @@ plugins:
 	if got := scalars(lookup(buf, "deps")); !slices.Equal(got, []string{"buf.build/acme/common", googleapis, protovalidate, optionsModule + ":" + version}) {
 		t.Errorf("deps = %v", got)
 	}
-	if got := scalars(lookup(lookup(buf, "lint"), "use")); !slices.Equal(got, []string{"DEFAULT", "AIP_NOLANG", "DEDO", "ZALANDO"}) {
+	if got := scalars(lookup(lookup(buf, "lint"), "use")); !slices.Equal(got, []string{"DEFAULT", "DEDO"}) {
 		t.Errorf("lint.use = %v", got)
 	}
 	var plugins []string
@@ -664,52 +664,57 @@ func TestInitWarnsOnConnectV1Remote(t *testing.T) {
 	}
 }
 
-// HOUSE joins lint.use only when the repository has house rules; Buf
-// rejects a category without rules.
-func TestInitHouseCategory(t *testing.T) {
-	base := map[string]string{
+// buf.yaml lists DEDO of the plugin's rules, and nothing else of them;
+// rules.yml chooses which run. A new repository gets dedo's default sets.
+func TestInitRuleSet(t *testing.T) {
+	dir := repo(t, map[string]string{
 		"go.mod":   "module example.com/shop\n",
 		"buf.yaml": "version: v2\nlint:\n  use: [STANDARD]\n",
-	}
-	dir := repo(t, base)
+	})
 	initOffline(t, dir)
-	if slices.Contains(scalars(lookup(lookup(yamlAt(t, dir, "buf.yaml"), "lint"), "use")), "HOUSE") {
-		t.Error("HOUSE added without rules.yml")
+	if got := scalars(lookup(lookup(yamlAt(t, dir, "buf.yaml"), "lint"), "use")); !slices.Equal(got, []string{"STANDARD", "DEDO"}) {
+		t.Errorf("lint.use = %v", got)
 	}
-	base["rules.yml"] = "rules:\n  - {id: HOUSE_X, on: field, check: \"true\", message: X.}\n"
-	dir = repo(t, base)
-	initOffline(t, dir)
-	if !slices.Contains(scalars(lookup(lookup(yamlAt(t, dir, "buf.yaml"), "lint"), "use")), "HOUSE") {
-		t.Error("HOUSE missing with rules.yml")
+	if got := scalars(lookup(yamlAt(t, dir, "rules.yml"), "use")); !slices.Equal(got, []string{"AIP_NOLANG", "ZALANDO", "DEDO"}) {
+		t.Errorf("rules.yml use = %v", got)
+	}
+	if out := initOffline(t, dir); strings.Contains(out, "rules.yml:") || strings.Contains(out, "lint.use") {
+		t.Errorf("a second run changed the rule selection:\n%s", out)
 	}
 }
 
-// Releases before v0.12.0 listed the AIP rules DEDO_HTTP_RESPONSE_BODY now
-// overrides in lint.except; init takes them out and keeps the other skips.
-func TestInitDropsOverriddenExceptions(t *testing.T) {
+// Releases before v0.15.0 chose the plugin's rules in buf.yaml. init moves
+// that choice to rules.yml: the sets lint.use named become use, the rules
+// lint.except named become disable, except those dedo now skips or
+// overrides itself, and Buf's own entries stay.
+func TestInitMovesSelection(t *testing.T) {
 	dir := repo(t, map[string]string{
 		"go.mod": "module example.com/shop\n",
-		"buf.yaml": "version: v2\nlint:\n  use: [STANDARD]\n  except:\n" +
+		"buf.yaml": "version: v2\nlint:\n  use: [STANDARD, AIP_CORE, DEDO, ZALANDO, HOUSE]\n  except:\n" +
 			"    # Every response is a unique <Rpc>Response.\n    - AIP_0131_RESPONSE_MESSAGE_NAME\n" +
-			"    - AIP_0134_REQUEST_REQUIRED_FIELDS\n    - AIP_0192_HAS_COMMENTS\n    - MY_OWN_SKIP\n",
+			"    - AIP_0192_HAS_COMMENTS\n    - DEDO_NO_JSON_NAME\n    - ENUM_VALUE_PREFIX\n",
+		"rules.yml": "rules:\n  - {id: HOUSE_X, on: field, check: \"true\", message: X.}\n",
 	})
 	out := initOffline(t, dir)
-	except := scalars(lookup(lookup(yamlAt(t, dir, "buf.yaml"), "lint"), "except"))
-	for _, id := range []string{"AIP_0131_RESPONSE_MESSAGE_NAME", "AIP_0134_REQUEST_REQUIRED_FIELDS"} {
-		if slices.Contains(except, id) {
-			t.Errorf("except still lists %s", id)
-		}
+	lint := lookup(yamlAt(t, dir, "buf.yaml"), "lint")
+	if got := scalars(lookup(lint, "use")); !slices.Equal(got, []string{"STANDARD", "DEDO"}) {
+		t.Errorf("lint.use = %v", got)
 	}
-	for _, id := range []string{"AIP_0192_HAS_COMMENTS", "AIP_0131_METHOD_SIGNATURE", "MY_OWN_SKIP"} {
-		if !slices.Contains(except, id) {
-			t.Errorf("except lacks %s", id)
-		}
+	if got := scalars(lookup(lint, "except")); !slices.Equal(got, []string{"ENUM_VALUE_PREFIX"}) {
+		t.Errorf("lint.except = %v", got)
 	}
-	if !strings.Contains(out, "lost 2 AIP rules that DEDO_HTTP_RESPONSE_BODY now overrides") {
+	rules := yamlAt(t, dir, "rules.yml")
+	if got := scalars(lookup(rules, "use")); !slices.Equal(got, []string{"AIP_CORE", "ZALANDO", "DEDO"}) {
+		t.Errorf("rules.yml use = %v", got)
+	}
+	if got := scalars(lookup(rules, "disable")); !slices.Equal(got, []string{"DEDO_NO_JSON_NAME"}) {
+		t.Errorf("rules.yml disable = %v", got)
+	}
+	if lookup(rules, "rules") == nil {
+		t.Error("the house rules are gone")
+	}
+	if !strings.Contains(out, "rules.yml: disable gained DEDO_NO_JSON_NAME") {
 		t.Errorf("output: %s", out)
-	}
-	if strings.Contains(read(t, dir, "buf.yaml"), "unique <Rpc>Response") {
-		t.Error("the dropped rule's comment stayed")
 	}
 }
 
@@ -728,39 +733,6 @@ func TestDropScalarsKeepsListHeader(t *testing.T) {
 	}
 	if out := string(b); !strings.Contains(out, "# Skipped on purpose") || strings.Contains(out, "wrapped") {
 		t.Errorf("buf.yaml:\n%s", out)
-	}
-}
-
-// The plugin cannot read buf.yaml, so dedo tools warns when buf.yaml turns
-// off a rule that overrides others: then neither runs.
-func TestDefeatedOverrides(t *testing.T) {
-	report := "363 rules, 1 of them house rules; 8 overridden\n" +
-		"  DEDO_HTTP_RESPONSE_BODY overrides AIP_0131_RESPONSE_MESSAGE_NAME\n" +
-		"  HOUSE_X (rules.yml) overrides DEDO_HTTP_PATH_VERSION\n" +
-		"  DEDO_METHOD_RULES_REQUIRED is final\n" +
-		"  HOUSE_LOCKED (shared.yml) is final\n"
-	for name, tc := range map[string]struct {
-		bufYAML string
-		want    []string
-	}{
-		"fine":      {"version: v2\nlint:\n  use: [DEDO, HOUSE]\n", nil},
-		"excepted":  {"version: v2\nlint:\n  use: [DEDO, HOUSE]\n  except: [DEDO_HTTP_RESPONSE_BODY]\n", []string{"excepts DEDO_HTTP_RESPONSE_BODY, but it still overrides AIP_0131_RESPONSE_MESSAGE_NAME"}},
-		"no HOUSE":  {"version: v2\nlint:\n  use: [DEDO]\n", []string{"lint.use lacks HOUSE"}},
-		"final":     {"version: v2\nlint:\n  use: [DEDO, HOUSE]\n  except: [DEDO_METHOD_RULES_REQUIRED, HOUSE_LOCKED]\n", []string{"DEDO_METHOD_RULES_REQUIRED, which dedo marks final", "HOUSE_LOCKED, which shared.yml marks final"}},
-		"in module": {"version: v2\nmodules:\n  - path: proto\n    lint:\n      use: [DEDO, HOUSE]\n      except: [HOUSE_X]\n", []string{"excepts HOUSE_X"}},
-	} {
-		t.Run(name, func(t *testing.T) {
-			dir := repo(t, map[string]string{"buf.yaml": tc.bufYAML})
-			got := defeatedOverrides(dir, report)
-			if len(got) != len(tc.want) {
-				t.Fatalf("warnings %q, want %d", got, len(tc.want))
-			}
-			for i, w := range tc.want {
-				if !strings.Contains(got[i], w) {
-					t.Errorf("warning %q, want it to mention %q", got[i], w)
-				}
-			}
-		})
 	}
 }
 
@@ -799,8 +771,8 @@ service ContactService {
 			}
 			dir := repo(t, files)
 			out := initOffline(t, dir)
-			if !slices.Contains(scalars(lookup(lookup(yamlAt(t, dir, "buf.yaml"), "lint"), "use")), "DEDO_MULTI_TENANT") {
-				t.Errorf("DEDO_MULTI_TENANT missing from lint.use:\n%s", read(t, dir, "buf.yaml"))
+			if !slices.Contains(scalars(lookup(yamlAt(t, dir, "rules.yml"), "use")), "DEDO_MULTI_TENANT") {
+				t.Errorf("DEDO_MULTI_TENANT missing from rules.yml's use:\n%s", read(t, dir, "rules.yml"))
 			}
 			main := mainGo(t, dir, out)
 			if formatted, err := format.Source([]byte(main)); err != nil || string(formatted) != main {
@@ -819,7 +791,7 @@ service ContactService {
 		"proto/acme/contacts/v1/contacts.proto": strings.Replace(tenantProto, `    tenancy: {collection: "locations"}`+"\n", "", 1),
 	})
 	out := initOffline(t, dir)
-	if slices.Contains(scalars(lookup(lookup(yamlAt(t, dir, "buf.yaml"), "lint"), "use")), "DEDO_MULTI_TENANT") {
+	if slices.Contains(scalars(lookup(yamlAt(t, dir, "rules.yml"), "use")), "DEDO_MULTI_TENANT") {
 		t.Error("DEDO_MULTI_TENANT added without tenancy")
 	}
 	if main := mainGo(t, dir, out); strings.Contains(main, "tenant") || strings.Contains(main, `"slices"`) {
@@ -833,7 +805,7 @@ func TestInitWarnsSchemaRepoHouseRules(t *testing.T) {
 		"rules.yml":                     "rules: []\n",
 		"proto/shop/cart/v1/cart.proto": "syntax = \"proto3\";\npackage shop.cart.v1;\n",
 	})
-	if out := initOffline(t, dir); !strings.Contains(out, "house rules do not run without Go") {
+	if out := initOffline(t, dir); !strings.Contains(out, "runs dedo's default rule sets and no house rules") {
 		t.Errorf("no warning:\n%s", out)
 	}
 }

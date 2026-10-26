@@ -82,8 +82,8 @@ starter: plugins
 	rm -rf $(STARTER) && mkdir -p $(STARTER)/svc $(STARTER)/lint
 	printf 'module example.com/starter\n' > $(STARTER)/svc/go.mod
 	cd cmd/dedo && go run . init -offline -dir $(CURDIR)/$(STARTER)/svc > /dev/null
-	cp -R examples/todo/buf.yaml examples/todo/buf.lock examples/todo/third_party $(STARTER)/svc/proto $(STARTER)/lint/
-	sed -i.bak -e '/^    - HOUSE$$/d' -e 's#\.\./\.\./dist/buf-plugin-dedo-lint#$(CURDIR)/$(DIST)/buf-plugin-dedo-lint#' $(STARTER)/lint/buf.yaml
+	cp -R examples/todo/buf.yaml examples/todo/buf.lock examples/todo/third_party $(STARTER)/svc/proto $(STARTER)/svc/rules.yml $(STARTER)/lint/
+	sed -i.bak -e 's#\.\./\.\./dist/buf-plugin-dedo-lint#$(CURDIR)/$(DIST)/buf-plugin-dedo-lint#' $(STARTER)/lint/buf.yaml
 	cd $(STARTER)/lint && buf lint proto
 
 ## examples: run the example services as consumer repositories

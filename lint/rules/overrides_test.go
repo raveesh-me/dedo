@@ -1,6 +1,7 @@
 package rules_test
 
 import (
+	"slices"
 	"strings"
 	"testing"
 
@@ -44,7 +45,7 @@ func consolidate(t *testing.T, houseRules ...config.Rule) (*rules.Consolidated, 
 	if err != nil {
 		t.Fatal(err)
 	}
-	return rules.Consolidate(builtin(t), houseRules, specs, []string{"HOUSE_DISABLED"})
+	return rules.Consolidate(builtin(t), houseRules, specs, nil, []string{"HOUSE_DISABLED"})
 }
 
 // overriddenBy returns the rules each overridden rule is overridden by, as
@@ -232,6 +233,109 @@ func TestFinalRulesExist(t *testing.T) {
 	for id := range rules.Final {
 		if !ids[id] {
 			t.Errorf("final rule %s does not exist", id)
+		}
+	}
+}
+
+func consolidateUse(t *testing.T, use, disabled []string) (*rules.Consolidated, error) {
+	t.Helper()
+	return rules.Consolidate(builtin(t), nil, nil, use, disabled)
+}
+
+// silencedBy returns why each rule that does not run is off, as its
+// purpose begins.
+func silencedBy(c *rules.Consolidated) map[string]string {
+	out := map[string]string{}
+	for _, r := range c.Rules {
+		for _, why := range []string{"Not in rules.yml's use.", "Skipped by dedo:", "Disabled in rules.yml.", "Overridden by"} {
+			if strings.HasPrefix(r.Purpose, why) {
+				out[r.ID] = why
+			}
+		}
+	}
+	return out
+}
+
+// rules.yml chooses which of dedo's rules run: use names sets and rules,
+// disable removes them, skipped rules run only when named, and final
+// rules always run.
+func TestUse(t *testing.T) {
+	for name, tc := range map[string]struct {
+		use, disabled []string
+		want          map[string]string // rule → why it is off, "" when it runs
+	}{
+		"default": {nil, nil, map[string]string{
+			"AIP_0131_HTTP_METHOD":              "",
+			"AIP_0191_JAVA_PACKAGE":             "Not in rules.yml's use.",
+			"AIP_0131_METHOD_SIGNATURE":         "Skipped by dedo:",
+			"DEDO_NO_JSON_NAME":                 "",
+			"ZALANDO_SERVICE_RULES_REQUIRED":    "",
+			"DEDO_MULTI_TENANT_SERVICE_TENANCY": "Not in rules.yml's use.",
+			"DEDO_MULTI_TENANT_REQUEST_TENANT":  "", // final
+		}},
+		"sets and IDs": {[]string{"DEDO", "DEDO_MULTI_TENANT", "AIP_0131_METHOD_SIGNATURE"}, []string{"DEDO_NO_JSON_NAME"}, map[string]string{
+			"AIP_0131_HTTP_METHOD":              "Not in rules.yml's use.",
+			"AIP_0131_METHOD_SIGNATURE":         "",
+			"AIP_0132_METHOD_SIGNATURE":         "Skipped by dedo:",
+			"DEDO_NO_JSON_NAME":                 "Disabled in rules.yml.",
+			"DEDO_MULTI_TENANT_SERVICE_TENANCY": "",
+			"ZALANDO_SERVICE_RULES_REQUIRED":    "", // final, though ZALANDO is not used
+		}},
+		// A rule that does not run overrides nothing, so the AIP rules
+		// DEDO_HTTP_RESPONSE_BODY overrides run again.
+		"overrider off": {nil, []string{"DEDO_HTTP_RESPONSE_BODY"}, map[string]string{
+			"DEDO_HTTP_RESPONSE_BODY":        "Disabled in rules.yml.",
+			"AIP_0131_RESPONSE_MESSAGE_NAME": "",
+		}},
+	} {
+		t.Run(name, func(t *testing.T) {
+			c, err := consolidateUse(t, tc.use, tc.disabled)
+			if err != nil {
+				t.Fatal(err)
+			}
+			got := silencedBy(c)
+			for id, why := range tc.want {
+				if got[id] != why {
+					t.Errorf("%s: %q, want %q", id, got[id], why)
+				}
+			}
+			for _, r := range c.Rules {
+				if !slices.Equal(r.CategoryIDs, []string{"DEDO"}) {
+					t.Fatalf("%s is in %v, want only DEDO", r.ID, r.CategoryIDs)
+				}
+			}
+		})
+	}
+}
+
+func TestUseRejected(t *testing.T) {
+	for name, tc := range map[string]struct {
+		use, disabled []string
+		want          string
+	}{
+		"unknown set":   {[]string{"AIP_NOPE"}, nil, "use names AIP_NOPE, which is neither"},
+		"house in use":  {[]string{"HOUSE"}, nil, "neither a rule set"},
+		"house rule":    {[]string{"HOUSE_X"}, nil, "house rules always run"},
+		"unknown rule":  {nil, []string{"DEDO_NOPE"}, "disable names DEDO_NOPE, which no rule defines"},
+		"final disable": {nil, []string{"DEDO_METHOD_RULES_REQUIRED"}, "which is final: policy.Build refuses a method without scopes"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			if _, err := consolidateUse(t, tc.use, tc.disabled); err == nil || !strings.Contains(err.Error(), tc.want) {
+				t.Errorf("err = %v, want it to mention %q", err, tc.want)
+			}
+		})
+	}
+}
+
+func TestReportUse(t *testing.T) {
+	c, err := consolidateUse(t, nil, []string{"DEDO_NO_JSON_NAME"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	report := c.Report()
+	for _, line := range []string{"  use: AIP_NOLANG, ZALANDO, DEDO (the default; rules.yml does not say use)\n", "  DEDO_NO_JSON_NAME is disabled\n"} {
+		if !strings.Contains(report, line) {
+			t.Errorf("report lacks %q:\n%s", line, report)
 		}
 	}
 }

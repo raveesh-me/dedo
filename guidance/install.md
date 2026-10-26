@@ -51,21 +51,25 @@ printf '.tools/\n' >> .gitignore
 
 Without the `dedo` command, `go build -o .tools/buf-plugin-dedo-lint github.com/raveesh-me/dedo/lint/cmd/buf-plugin-dedo-lint` does the same. It runs natively because Buf starts the plugin about a dozen times per lint; through `go tool` each lint would take 2 s instead of 0.3 s. Run `dedo tools` again after a fresh clone, a version change, or any change to `rules.yml` or its imports.
 
-List the plugin and its categories in `buf.yaml`, with the AIP rules dedo skips on purpose (the full list is in [templates/buf.yaml](../templates/buf.yaml); [RULES.md](RULES.md#skipped-rules) says why):
+List the plugin and its one category, `DEDO`, in `buf.yaml`, and choose its rules in `rules.yml` next to it ([templates/rules.yml](../templates/rules.yml); `dedo templates rules.yml` prints it). `buf.yaml` names no other rule of the plugin, in `use` or `except`: dedo reads only `rules.yml` ([RULES.md](RULES.md#choosing-the-rules) says how it chooses):
 
 ```yaml
+# buf.yaml
 lint:
   use:
     - STANDARD
     - COMMENTS
-    - AIP_NOLANG
     - DEDO
-    - ZALANDO
-  except:
-    - AIP_0131_METHOD_SIGNATURE
-    # ...the rest of the list in templates/buf.yaml
 plugins:
   - plugin: .tools/buf-plugin-dedo-lint
+```
+
+```yaml
+# rules.yml
+use:
+  - AIP_NOLANG
+  - ZALANDO
+  - DEDO
 ```
 
 ```sh
@@ -75,11 +79,11 @@ make check          # buf format, buf lint, buf breaking against main
 
 The breaking check compares with the `main` branch, and is skipped while `main` has no `.proto` files. Compare with another branch with `make check API_BASE=develop`. The targets of `Makefile.api` are `run`, `generate`, `check`, `test` and `tools`; where your `Makefile` already has one of those names, `dedo init` names dedo's `api-<name>` instead, and `api-check`, `api-generate` and `api-test` always exist, for CI.
 
-Your organisation's own rules go in `rules.yml` next to `buf.yaml`, as CEL checks that can import shared rules from a git repository; add `HOUSE` to `lint.use`. A house rule can override a DEDO, AIP or ZALANDO rule by naming it in `overrides`, or lock itself with `final: true`; `dedo tools` lists every override and final rule in force. [RULES.md](RULES.md#house-rules) has the format, and [Precedence](RULES.md#precedence) the order.
+Your organisation's own rules go in `rules.yml` next to `buf.yaml`, as CEL checks that can import shared rules from a git repository; they run as soon as it defines them. A house rule can override a DEDO, AIP or ZALANDO rule by naming it in `overrides`, or lock itself with `final: true`; `dedo tools` lists every override and final rule in force. [RULES.md](RULES.md#house-rules) has the format, and [Precedence](RULES.md#precedence) the order.
 
-If your services partition their data between tenants, declare `tenancy` on each and add `DEDO_MULTI_TENANT` to `lint.use` (`dedo init` does when a service declares it); then pass `Tenants` to the interceptor in section 4. [RULES.md](RULES.md#multi-tenant-rules) explains the model.
+If your services partition their data between tenants, declare `tenancy` on each and add `DEDO_MULTI_TENANT` to `rules.yml`'s `use` (`dedo init` does when a service declares it); then pass `Tenants` to the interceptor in section 4. [RULES.md](RULES.md#multi-tenant-rules) explains the model.
 
-Without Go on a machine, list the Wasm plugin from the BSR instead: `- plugin: buf.build/r-a/dedo-lint` (about 6 s per lint). It cannot read `rules.yml`, so to run house rules there, have your platform team build a plugin with them built in, `dedo tools -wasm house-lint.wasm`, push it to the BSR (`buf plugin push buf.build/<org>/house-lint --binary=house-lint.wasm`), and list that plugin instead.
+Without Go on a machine, list the Wasm plugin from the BSR instead: `- plugin: buf.build/r-a/dedo-lint` (about 6 s per lint). It cannot read `rules.yml`, so it runs dedo's default rule sets and no house rules. To choose rules or run house rules there, have your platform team build a plugin with `rules.yml` built in, `dedo tools -wasm house-lint.wasm`, push it to the BSR (`buf plugin push buf.build/<org>/house-lint --binary=house-lint.wasm`), and list that plugin instead.
 
 ## 3. Code generators
 
@@ -240,7 +244,7 @@ Append [claude.md](claude.md) to your `AGENTS.md` or `CLAUDE.md` (`dedo template
 | Protos and `buf.yaml`, but no Go module (a schema repository) | Adds the options module and the lint plugin from the BSR (`buf.build/r-a/dedo-lint:<release>`, about 5 s per lint, no Go needed), both pinned to the release. Nothing that needs Go. Run `go mod init` and `dedo init` again when you want generated code and a server. |
 | A Go module without protos | Writes a starter service that passes lint. |
 
-In `buf.yaml` it adds the deps, the lint categories, the AIP rules dedo skips, and the plugin. It keeps your own deps, categories, exceptions and plugins, and its comments. It needs `buf.yaml` version v2: run `buf config migrate` first if yours is v1.
+In `buf.yaml` it adds the deps, the `DEDO` category and the plugin, and in `rules.yml` the rule sets that run. A `buf.yaml` from a release before v0.15.0 chose the plugin's rules itself: `dedo init` and `dedo upgrade` move that choice to `rules.yml`, its sets to `use` and its exceptions to `disable`, and drop the ones dedo now skips by itself. It keeps your own deps, Buf's categories and exceptions, plugins, and comments, in both files. It needs `buf.yaml` version v2: run `buf config migrate` first if yours is v1.
 
 Your existing services declare nothing for dedo yet, and `dedo init` names them. Until they do, `buf lint` lists what each RPC needs, and the policy-table test and the server's startup fail on purpose, naming the first missing declaration. Declare one service at a time; [guideline.md](guideline.md#3-write-the-contract) shows a complete one.
 

@@ -73,7 +73,7 @@ rules:
     message: No id fields.
 `,
 	})
-	rules, err := Load(filepath.Join(dir, "svc", FileName))
+	rules, err := loadRules(filepath.Join(dir, "svc", FileName))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -99,7 +99,7 @@ func TestLoadRanksImporters(t *testing.T) {
 		FileName: "imports:\n  - path: mid.yml\n  - path: other.yml\nrules:\n" +
 			"  - {id: HOUSE_TOP, on: field, check: \"true\", message: x, overrides: [HOUSE_MID, DEDO_HTTP_PATH_VERSION]}\n",
 	})
-	rules, err := Load(filepath.Join(dir, FileName))
+	rules, err := loadRules(filepath.Join(dir, FileName))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -140,6 +140,8 @@ func TestLoadRejects(t *testing.T) {
 		"no check":      {map[string]string{FileName: "rules:\n  - {id: HOUSE_X, on: field, message: x}\n"}, "no check"},
 		"unknown key":   {map[string]string{FileName: "rules:\n  - {id: HOUSE_X, on: field, check: \"true\", message: x, severity: high}\n"}, "severity"},
 		"disable":       {map[string]string{FileName: "disable: [HOUSE_GONE]\n"}, "HOUSE_GONE"},
+		"disable id":    {map[string]string{FileName: "disable: [aip-131]\n"}, "not a rule ID"},
+		"imported use":  {map[string]string{FileName: "imports:\n  - path: b.yml\n", "b.yml": "use: [DEDO]\n"}, "use belongs in the repository's own rules.yml"},
 		"override id":   {map[string]string{FileName: "rules:\n  - {id: HOUSE_X, on: field, check: \"true\", message: x, overrides: [aip-131]}\n"}, "not a rule ID"},
 		"disable final": {map[string]string{FileName: "imports:\n  - path: b.yml\ndisable: [HOUSE_LOCKED]\n", "b.yml": "rules:\n  - {id: HOUSE_LOCKED, on: field, check: \"true\", message: x, final: true}\n"}, "b.yml marks final"},
 		"override self": {map[string]string{FileName: "rules:\n  - {id: HOUSE_X, on: field, check: \"true\", message: x, overrides: [HOUSE_X]}\n"}, "overrides itself"},
@@ -149,7 +151,7 @@ func TestLoadRejects(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			dir := t.TempDir()
 			write(t, dir, tc.files)
-			if _, err := Load(filepath.Join(dir, FileName)); err == nil || !strings.Contains(err.Error(), tc.want) {
+			if _, err := loadRules(filepath.Join(dir, FileName)); err == nil || !strings.Contains(err.Error(), tc.want) {
 				t.Errorf("err = %v, want it to mention %q", err, tc.want)
 			}
 		})
@@ -159,7 +161,7 @@ func TestLoadRejects(t *testing.T) {
 func TestEmptyRulesFile(t *testing.T) {
 	dir := t.TempDir()
 	write(t, dir, map[string]string{FileName: ""})
-	if rules, err := Load(filepath.Join(dir, FileName)); err != nil || len(rules) != 0 {
+	if rules, err := loadRules(filepath.Join(dir, FileName)); err != nil || len(rules) != 0 {
 		t.Errorf("rules %v, err %v", rules, err)
 	}
 }
@@ -186,14 +188,14 @@ func TestFetchGitImport(t *testing.T) {
 
 	dir := t.TempDir()
 	write(t, dir, map[string]string{FileName: "imports:\n  - git: " + remote + "\n    ref: v1\n    path: api/rules.yml\n"})
-	if _, err := Load(filepath.Join(dir, FileName)); err == nil || !strings.Contains(err.Error(), "run dedo tools") {
+	if _, err := loadRules(filepath.Join(dir, FileName)); err == nil || !strings.Contains(err.Error(), "run dedo tools") {
 		t.Fatalf("before fetching: %v", err)
 	}
 	fetched, err := Fetch(filepath.Join(dir, FileName))
 	if err != nil || len(fetched) != 1 {
 		t.Fatalf("Fetch = %v, %v", fetched, err)
 	}
-	rules, err := Load(filepath.Join(dir, FileName))
+	rules, err := loadRules(filepath.Join(dir, FileName))
 	if err != nil || !slices.Equal(ids(rules), []string{"HOUSE_RESOURCE_TYPE_DOMAIN"}) {
 		t.Fatalf("after fetching: %v, %v", ids(rules), err)
 	}
@@ -233,7 +235,7 @@ func fetchAndLoad(t *testing.T, remote, path string) ([]Rule, error) {
 	if _, err := Fetch(filepath.Join(dir, FileName)); err != nil {
 		return nil, err
 	}
-	return Load(filepath.Join(dir, FileName))
+	return loadRules(filepath.Join(dir, FileName))
 }
 
 // In the service's own files too, a path import names a file from the root,
@@ -245,7 +247,7 @@ func TestLocalImportPathsFromRoot(t *testing.T) {
 		"platform-rules/rules.yml":  "imports:\n  - path: platform-rules/naming.yml\n" + domainRule,
 		"platform-rules/naming.yml": "rules:\n  - {id: HOUSE_NAMING, on: field, check: \"true\", message: Naming.}\n",
 	})
-	rules, err := Load(filepath.Join(dir, FileName))
+	rules, err := loadRules(filepath.Join(dir, FileName))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -294,5 +296,24 @@ func TestGitImportCannotLeaveRepo(t *testing.T) {
 				t.Fatalf("err = %v, want an import outside the repository refused", err)
 			}
 		})
+	}
+}
+
+func loadRules(path string) ([]Rule, error) {
+	c, err := Load(path)
+	return c.Rules, err
+}
+
+// use and the disables of dedo's own rules pass through, for package rules
+// to check against the rules it has.
+func TestLoadUse(t *testing.T) {
+	dir := t.TempDir()
+	write(t, dir, map[string]string{FileName: "use: [AIP_CORE, DEDO]\ndisable: [DEDO_NO_JSON_NAME]\n"})
+	c, err := Load(filepath.Join(dir, FileName))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(c.Use, []string{"AIP_CORE", "DEDO"}) || !slices.Equal(c.Disabled, []string{"DEDO_NO_JSON_NAME"}) {
+		t.Errorf("use %v, disabled %v", c.Use, c.Disabled)
 	}
 }
