@@ -36,6 +36,11 @@ message ServiceRules {
   // Present on a multi-tenant service. The runtime then checks the tenant of
   // every request against the caller's.
   Tenancy tenancy = 3;
+  // A short human-readable name for the service, such as "Catalog entries".
+  // The REST reference groups the service's operations under it. Without
+  // it, the reference uses the service name without its Service suffix,
+  // split into words: CatalogEntryService reads "Catalog Entry".
+  string title = 4;
 }
 
 // Tenancy declares that a service partitions its data between tenants. The
