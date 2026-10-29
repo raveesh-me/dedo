@@ -10,28 +10,24 @@ import (
 	proto "google.golang.org/protobuf/proto"
 )
 
-// MCPInputSchemas maps each unary RPC's full name to the JSON Schema of its
+// ContactServiceMCPInputSchemas maps each of the service's unary RPCs, by full name, to the JSON Schema of its
 // MCP tool input, built from the request message, its field comments and
 // google.api.field_behavior.
-var MCPInputSchemas = map[string]string{
-	"raveesh_me.contacts.v1.ContactService.CreateContact":  "{\"description\":\"The contact to add, and the location to add it to.\",\"properties\":{\"contact\":{\"description\":\"The contact to add. A person a location keeps in touch with.\",\"properties\":{\"display_name\":{\"description\":\"The name shown to people.\",\"type\":\"string\"},\"email\":{\"description\":\"The contact's email address.\",\"type\":\"string\"},\"home_location\":{\"description\":\"The location this contact mostly deals with, such as locations/1.\",\"pattern\":\"^locations/[^/]+$\",\"type\":\"string\"}},\"required\":[\"display_name\"],\"type\":\"object\"},\"contact_id\":{\"description\":\"The ID to give the contact. The server picks one when it is empty.\",\"type\":\"string\"},\"parent\":{\"description\":\"The location to add the contact to, such as locations/1.\",\"type\":\"string\"}},\"required\":[\"parent\",\"contact\"],\"type\":\"object\"}",
-	"raveesh_me.contacts.v1.ContactService.GetContact":     "{\"description\":\"Which contact to get.\",\"properties\":{\"name\":{\"description\":\"The resource name of the contact.\",\"pattern\":\"^locations/[^/]+/contacts/[^/]+$\",\"type\":\"string\"}},\"required\":[\"name\"],\"type\":\"object\"}",
-	"raveesh_me.contacts.v1.ContactService.ListContacts":   "{\"description\":\"Whose contacts to list, and which page.\",\"properties\":{\"page_size\":{\"description\":\"The most contacts to return. The server picks a size when it is 0.\",\"type\":\"integer\"},\"page_token\":{\"description\":\"The next_page_token of the previous page, empty for the first.\",\"type\":\"string\"},\"parent\":{\"description\":\"The location whose contacts to list, such as locations/1.\",\"type\":\"string\"}},\"required\":[\"parent\"],\"type\":\"object\"}",
-	"raveesh_me.contacts.v1.ContactService.UpdateContact":  "{\"description\":\"The contact's new fields, and which of them to change.\",\"properties\":{\"contact\":{\"description\":\"The contact, with its name and the fields to change. A person a location keeps in touch with.\",\"properties\":{\"display_name\":{\"description\":\"The name shown to people.\",\"type\":\"string\"},\"email\":{\"description\":\"The contact's email address.\",\"type\":\"string\"},\"home_location\":{\"description\":\"The location this contact mostly deals with, such as locations/1.\",\"pattern\":\"^locations/[^/]+$\",\"type\":\"string\"},\"name\":{\"description\":\"The resource name, such as locations/1/contacts/2.\",\"pattern\":\"^locations/[^/]+/contacts/[^/]+$\",\"type\":\"string\"}},\"required\":[\"name\"],\"type\":\"object\"},\"update_mask\":{\"description\":\"The fields to change, such as display_name. Comma-separated names of the fields to change. Valid names: display_name, email, home_location.\",\"type\":\"string\"}},\"required\":[\"contact\"],\"type\":\"object\"}",
-	"raveesh_me.contacts.v1.LocationService.GetLocation":   "{\"description\":\"Which location to get.\",\"properties\":{\"name\":{\"description\":\"The resource name of the location.\",\"pattern\":\"^locations/[^/]+$\",\"type\":\"string\"}},\"required\":[\"name\"],\"type\":\"object\"}",
-	"raveesh_me.contacts.v1.LocationService.ListLocations": "{\"description\":\"Which page of locations to list.\",\"properties\":{\"page_size\":{\"description\":\"The most locations to return. The server picks a size when it is 0.\",\"type\":\"integer\"},\"page_token\":{\"description\":\"The next_page_token of the previous page, empty for the first.\",\"type\":\"string\"}},\"type\":\"object\"}",
+var ContactServiceMCPInputSchemas = map[string]string{
+	"raveesh_me.contacts.v1.ContactService.CreateContact": "{\"description\":\"The contact to add, and the location to add it to.\",\"properties\":{\"contact\":{\"description\":\"The contact to add. A person a location keeps in touch with.\",\"properties\":{\"display_name\":{\"description\":\"The name shown to people.\",\"type\":\"string\"},\"email\":{\"description\":\"The contact's email address.\",\"type\":\"string\"},\"home_location\":{\"description\":\"The location this contact mostly deals with, such as locations/1.\",\"pattern\":\"^locations/[^/]+$\",\"type\":\"string\"}},\"required\":[\"display_name\"],\"type\":\"object\"},\"contact_id\":{\"description\":\"The ID to give the contact. The server picks one when it is empty.\",\"type\":\"string\"},\"parent\":{\"description\":\"The location to add the contact to, such as locations/1.\",\"type\":\"string\"}},\"required\":[\"parent\",\"contact\"],\"type\":\"object\"}",
+	"raveesh_me.contacts.v1.ContactService.GetContact":    "{\"description\":\"Which contact to get.\",\"properties\":{\"name\":{\"description\":\"The resource name of the contact.\",\"pattern\":\"^locations/[^/]+/contacts/[^/]+$\",\"type\":\"string\"}},\"required\":[\"name\"],\"type\":\"object\"}",
+	"raveesh_me.contacts.v1.ContactService.ListContacts":  "{\"description\":\"Whose contacts to list, and which page.\",\"properties\":{\"page_size\":{\"description\":\"The most contacts to return. The server picks a size when it is 0.\",\"type\":\"integer\"},\"page_token\":{\"description\":\"The next_page_token of the previous page, empty for the first.\",\"type\":\"string\"},\"parent\":{\"description\":\"The location whose contacts to list, such as locations/1.\",\"type\":\"string\"}},\"required\":[\"parent\"],\"type\":\"object\"}",
+	"raveesh_me.contacts.v1.ContactService.UpdateContact": "{\"description\":\"The contact's new fields, and which of them to change.\",\"properties\":{\"contact\":{\"description\":\"The contact, with its name and the fields to change. A person a location keeps in touch with.\",\"properties\":{\"display_name\":{\"description\":\"The name shown to people.\",\"type\":\"string\"},\"email\":{\"description\":\"The contact's email address.\",\"type\":\"string\"},\"home_location\":{\"description\":\"The location this contact mostly deals with, such as locations/1.\",\"pattern\":\"^locations/[^/]+$\",\"type\":\"string\"},\"name\":{\"description\":\"The resource name, such as locations/1/contacts/2.\",\"pattern\":\"^locations/[^/]+/contacts/[^/]+$\",\"type\":\"string\"}},\"required\":[\"name\"],\"type\":\"object\"},\"update_mask\":{\"description\":\"The fields to change, such as display_name. Comma-separated names of the fields to change. Valid names: display_name, email, home_location.\",\"type\":\"string\"}},\"required\":[\"contact\"],\"type\":\"object\"}",
 }
 
-// MCPOutputSchemas maps each unary RPC's full name to the JSON Schema of its
+// ContactServiceMCPOutputSchemas maps each of the service's unary RPCs, by full name, to the JSON Schema of its
 // MCP tool output: the response message as mcpserver encodes it in
 // structuredContent.
-var MCPOutputSchemas = map[string]string{
-	"raveesh_me.contacts.v1.ContactService.CreateContact":  "{\"description\":\"The added contact.\",\"properties\":{\"contact\":{\"description\":\"The contact. A person a location keeps in touch with.\",\"properties\":{\"display_name\":{\"description\":\"The name shown to people.\",\"type\":\"string\"},\"email\":{\"description\":\"The contact's email address.\",\"type\":\"string\"},\"home_location\":{\"description\":\"The location this contact mostly deals with, such as locations/1.\",\"type\":\"string\"},\"name\":{\"description\":\"The resource name, such as locations/1/contacts/2.\",\"type\":\"string\"}},\"type\":\"object\"}},\"type\":\"object\"}",
-	"raveesh_me.contacts.v1.ContactService.GetContact":     "{\"description\":\"The requested contact.\",\"properties\":{\"contact\":{\"description\":\"The contact. A person a location keeps in touch with.\",\"properties\":{\"display_name\":{\"description\":\"The name shown to people.\",\"type\":\"string\"},\"email\":{\"description\":\"The contact's email address.\",\"type\":\"string\"},\"home_location\":{\"description\":\"The location this contact mostly deals with, such as locations/1.\",\"type\":\"string\"},\"name\":{\"description\":\"The resource name, such as locations/1/contacts/2.\",\"type\":\"string\"}},\"type\":\"object\"}},\"type\":\"object\"}",
-	"raveesh_me.contacts.v1.ContactService.ListContacts":   "{\"description\":\"One page of contacts.\",\"properties\":{\"contacts\":{\"description\":\"The contacts on this page.\",\"items\":{\"description\":\"A person a location keeps in touch with.\",\"properties\":{\"display_name\":{\"description\":\"The name shown to people.\",\"type\":\"string\"},\"email\":{\"description\":\"The contact's email address.\",\"type\":\"string\"},\"home_location\":{\"description\":\"The location this contact mostly deals with, such as locations/1.\",\"type\":\"string\"},\"name\":{\"description\":\"The resource name, such as locations/1/contacts/2.\",\"type\":\"string\"}},\"type\":\"object\"},\"type\":\"array\"},\"next_page_token\":{\"description\":\"The token of the next page, empty on the last.\",\"type\":\"string\"}},\"type\":\"object\"}",
-	"raveesh_me.contacts.v1.ContactService.UpdateContact":  "{\"description\":\"The updated contact.\",\"properties\":{\"contact\":{\"description\":\"The contact. A person a location keeps in touch with.\",\"properties\":{\"display_name\":{\"description\":\"The name shown to people.\",\"type\":\"string\"},\"email\":{\"description\":\"The contact's email address.\",\"type\":\"string\"},\"home_location\":{\"description\":\"The location this contact mostly deals with, such as locations/1.\",\"type\":\"string\"},\"name\":{\"description\":\"The resource name, such as locations/1/contacts/2.\",\"type\":\"string\"}},\"type\":\"object\"}},\"type\":\"object\"}",
-	"raveesh_me.contacts.v1.LocationService.GetLocation":   "{\"description\":\"The requested location.\",\"properties\":{\"location\":{\"description\":\"The location. A business location. Contacts belong to one location.\",\"properties\":{\"display_name\":{\"description\":\"The name shown to people.\",\"type\":\"string\"},\"name\":{\"description\":\"The resource name, such as locations/1.\",\"type\":\"string\"}},\"type\":\"object\"}},\"type\":\"object\"}",
-	"raveesh_me.contacts.v1.LocationService.ListLocations": "{\"description\":\"One page of the caller's locations.\",\"properties\":{\"locations\":{\"description\":\"The locations on this page.\",\"items\":{\"description\":\"A business location. Contacts belong to one location.\",\"properties\":{\"display_name\":{\"description\":\"The name shown to people.\",\"type\":\"string\"},\"name\":{\"description\":\"The resource name, such as locations/1.\",\"type\":\"string\"}},\"type\":\"object\"},\"type\":\"array\"},\"next_page_token\":{\"description\":\"The token of the next page, empty on the last.\",\"type\":\"string\"}},\"type\":\"object\"}",
+var ContactServiceMCPOutputSchemas = map[string]string{
+	"raveesh_me.contacts.v1.ContactService.CreateContact": "{\"description\":\"The added contact.\",\"properties\":{\"contact\":{\"description\":\"The contact. A person a location keeps in touch with.\",\"properties\":{\"display_name\":{\"description\":\"The name shown to people.\",\"type\":\"string\"},\"email\":{\"description\":\"The contact's email address.\",\"type\":\"string\"},\"home_location\":{\"description\":\"The location this contact mostly deals with, such as locations/1.\",\"type\":\"string\"},\"name\":{\"description\":\"The resource name, such as locations/1/contacts/2.\",\"type\":\"string\"}},\"type\":\"object\"}},\"type\":\"object\"}",
+	"raveesh_me.contacts.v1.ContactService.GetContact":    "{\"description\":\"The requested contact.\",\"properties\":{\"contact\":{\"description\":\"The contact. A person a location keeps in touch with.\",\"properties\":{\"display_name\":{\"description\":\"The name shown to people.\",\"type\":\"string\"},\"email\":{\"description\":\"The contact's email address.\",\"type\":\"string\"},\"home_location\":{\"description\":\"The location this contact mostly deals with, such as locations/1.\",\"type\":\"string\"},\"name\":{\"description\":\"The resource name, such as locations/1/contacts/2.\",\"type\":\"string\"}},\"type\":\"object\"}},\"type\":\"object\"}",
+	"raveesh_me.contacts.v1.ContactService.ListContacts":  "{\"description\":\"One page of contacts.\",\"properties\":{\"contacts\":{\"description\":\"The contacts on this page.\",\"items\":{\"description\":\"A person a location keeps in touch with.\",\"properties\":{\"display_name\":{\"description\":\"The name shown to people.\",\"type\":\"string\"},\"email\":{\"description\":\"The contact's email address.\",\"type\":\"string\"},\"home_location\":{\"description\":\"The location this contact mostly deals with, such as locations/1.\",\"type\":\"string\"},\"name\":{\"description\":\"The resource name, such as locations/1/contacts/2.\",\"type\":\"string\"}},\"type\":\"object\"},\"type\":\"array\"},\"next_page_token\":{\"description\":\"The token of the next page, empty on the last.\",\"type\":\"string\"}},\"type\":\"object\"}",
+	"raveesh_me.contacts.v1.ContactService.UpdateContact": "{\"description\":\"The updated contact.\",\"properties\":{\"contact\":{\"description\":\"The contact. A person a location keeps in touch with.\",\"properties\":{\"display_name\":{\"description\":\"The name shown to people.\",\"type\":\"string\"},\"email\":{\"description\":\"The contact's email address.\",\"type\":\"string\"},\"home_location\":{\"description\":\"The location this contact mostly deals with, such as locations/1.\",\"type\":\"string\"},\"name\":{\"description\":\"The resource name, such as locations/1/contacts/2.\",\"type\":\"string\"}},\"type\":\"object\"}},\"type\":\"object\"}",
 }
 
 // ContactServiceMCPTools returns ContactService's unary, non-deprecated RPCs as MCP tools.
@@ -49,8 +45,8 @@ func ContactServiceMCPTools() []mcpserver.Tool {
 					IdempotentHint: false,
 					OpenWorldHint:  mcpserver.Bool(false),
 				},
-				InputSchema:  json.RawMessage(MCPInputSchemas["raveesh_me.contacts.v1.ContactService.GetContact"]),
-				OutputSchema: json.RawMessage(MCPOutputSchemas["raveesh_me.contacts.v1.ContactService.GetContact"]),
+				InputSchema:  json.RawMessage(ContactServiceMCPInputSchemas["raveesh_me.contacts.v1.ContactService.GetContact"]),
+				OutputSchema: json.RawMessage(ContactServiceMCPOutputSchemas["raveesh_me.contacts.v1.ContactService.GetContact"]),
 			},
 			Call: mcpserver.Unary("/raveesh_me.contacts.v1.ContactService/GetContact",
 				func() proto.Message { return new(GetContactRequest) },
@@ -68,8 +64,8 @@ func ContactServiceMCPTools() []mcpserver.Tool {
 					IdempotentHint: false,
 					OpenWorldHint:  mcpserver.Bool(false),
 				},
-				InputSchema:  json.RawMessage(MCPInputSchemas["raveesh_me.contacts.v1.ContactService.ListContacts"]),
-				OutputSchema: json.RawMessage(MCPOutputSchemas["raveesh_me.contacts.v1.ContactService.ListContacts"]),
+				InputSchema:  json.RawMessage(ContactServiceMCPInputSchemas["raveesh_me.contacts.v1.ContactService.ListContacts"]),
+				OutputSchema: json.RawMessage(ContactServiceMCPOutputSchemas["raveesh_me.contacts.v1.ContactService.ListContacts"]),
 			},
 			Call: mcpserver.Unary("/raveesh_me.contacts.v1.ContactService/ListContacts",
 				func() proto.Message { return new(ListContactsRequest) },
@@ -88,8 +84,8 @@ func ContactServiceMCPTools() []mcpserver.Tool {
 					DestructiveHint: mcpserver.Bool(false),
 					OpenWorldHint:   mcpserver.Bool(false),
 				},
-				InputSchema:  json.RawMessage(MCPInputSchemas["raveesh_me.contacts.v1.ContactService.CreateContact"]),
-				OutputSchema: json.RawMessage(MCPOutputSchemas["raveesh_me.contacts.v1.ContactService.CreateContact"]),
+				InputSchema:  json.RawMessage(ContactServiceMCPInputSchemas["raveesh_me.contacts.v1.ContactService.CreateContact"]),
+				OutputSchema: json.RawMessage(ContactServiceMCPOutputSchemas["raveesh_me.contacts.v1.ContactService.CreateContact"]),
 			},
 			Call: mcpserver.Unary("/raveesh_me.contacts.v1.ContactService/CreateContact",
 				func() proto.Message { return new(CreateContactRequest) },
@@ -108,8 +104,8 @@ func ContactServiceMCPTools() []mcpserver.Tool {
 					DestructiveHint: mcpserver.Bool(true),
 					OpenWorldHint:   mcpserver.Bool(false),
 				},
-				InputSchema:  json.RawMessage(MCPInputSchemas["raveesh_me.contacts.v1.ContactService.UpdateContact"]),
-				OutputSchema: json.RawMessage(MCPOutputSchemas["raveesh_me.contacts.v1.ContactService.UpdateContact"]),
+				InputSchema:  json.RawMessage(ContactServiceMCPInputSchemas["raveesh_me.contacts.v1.ContactService.UpdateContact"]),
+				OutputSchema: json.RawMessage(ContactServiceMCPOutputSchemas["raveesh_me.contacts.v1.ContactService.UpdateContact"]),
 			},
 			Call: mcpserver.Unary("/raveesh_me.contacts.v1.ContactService/UpdateContact",
 				func() proto.Message { return new(UpdateContactRequest) },
@@ -117,6 +113,22 @@ func ContactServiceMCPTools() []mcpserver.Tool {
 			),
 		},
 	}
+}
+
+// LocationServiceMCPInputSchemas maps each of the service's unary RPCs, by full name, to the JSON Schema of its
+// MCP tool input, built from the request message, its field comments and
+// google.api.field_behavior.
+var LocationServiceMCPInputSchemas = map[string]string{
+	"raveesh_me.contacts.v1.LocationService.GetLocation":   "{\"description\":\"Which location to get.\",\"properties\":{\"name\":{\"description\":\"The resource name of the location.\",\"pattern\":\"^locations/[^/]+$\",\"type\":\"string\"}},\"required\":[\"name\"],\"type\":\"object\"}",
+	"raveesh_me.contacts.v1.LocationService.ListLocations": "{\"description\":\"Which page of locations to list.\",\"properties\":{\"page_size\":{\"description\":\"The most locations to return. The server picks a size when it is 0.\",\"type\":\"integer\"},\"page_token\":{\"description\":\"The next_page_token of the previous page, empty for the first.\",\"type\":\"string\"}},\"type\":\"object\"}",
+}
+
+// LocationServiceMCPOutputSchemas maps each of the service's unary RPCs, by full name, to the JSON Schema of its
+// MCP tool output: the response message as mcpserver encodes it in
+// structuredContent.
+var LocationServiceMCPOutputSchemas = map[string]string{
+	"raveesh_me.contacts.v1.LocationService.GetLocation":   "{\"description\":\"The requested location.\",\"properties\":{\"location\":{\"description\":\"The location. A business location. Contacts belong to one location.\",\"properties\":{\"display_name\":{\"description\":\"The name shown to people.\",\"type\":\"string\"},\"name\":{\"description\":\"The resource name, such as locations/1.\",\"type\":\"string\"}},\"type\":\"object\"}},\"type\":\"object\"}",
+	"raveesh_me.contacts.v1.LocationService.ListLocations": "{\"description\":\"One page of the caller's locations.\",\"properties\":{\"locations\":{\"description\":\"The locations on this page.\",\"items\":{\"description\":\"A business location. Contacts belong to one location.\",\"properties\":{\"display_name\":{\"description\":\"The name shown to people.\",\"type\":\"string\"},\"name\":{\"description\":\"The resource name, such as locations/1.\",\"type\":\"string\"}},\"type\":\"object\"},\"type\":\"array\"},\"next_page_token\":{\"description\":\"The token of the next page, empty on the last.\",\"type\":\"string\"}},\"type\":\"object\"}",
 }
 
 // LocationServiceMCPTools returns LocationService's unary, non-deprecated RPCs as MCP tools.
@@ -134,8 +146,8 @@ func LocationServiceMCPTools() []mcpserver.Tool {
 					IdempotentHint: false,
 					OpenWorldHint:  mcpserver.Bool(false),
 				},
-				InputSchema:  json.RawMessage(MCPInputSchemas["raveesh_me.contacts.v1.LocationService.GetLocation"]),
-				OutputSchema: json.RawMessage(MCPOutputSchemas["raveesh_me.contacts.v1.LocationService.GetLocation"]),
+				InputSchema:  json.RawMessage(LocationServiceMCPInputSchemas["raveesh_me.contacts.v1.LocationService.GetLocation"]),
+				OutputSchema: json.RawMessage(LocationServiceMCPOutputSchemas["raveesh_me.contacts.v1.LocationService.GetLocation"]),
 			},
 			Call: mcpserver.Unary("/raveesh_me.contacts.v1.LocationService/GetLocation",
 				func() proto.Message { return new(GetLocationRequest) },
@@ -153,8 +165,8 @@ func LocationServiceMCPTools() []mcpserver.Tool {
 					IdempotentHint: false,
 					OpenWorldHint:  mcpserver.Bool(false),
 				},
-				InputSchema:  json.RawMessage(MCPInputSchemas["raveesh_me.contacts.v1.LocationService.ListLocations"]),
-				OutputSchema: json.RawMessage(MCPOutputSchemas["raveesh_me.contacts.v1.LocationService.ListLocations"]),
+				InputSchema:  json.RawMessage(LocationServiceMCPInputSchemas["raveesh_me.contacts.v1.LocationService.ListLocations"]),
+				OutputSchema: json.RawMessage(LocationServiceMCPOutputSchemas["raveesh_me.contacts.v1.LocationService.ListLocations"]),
 			},
 			Call: mcpserver.Unary("/raveesh_me.contacts.v1.LocationService/ListLocations",
 				func() proto.Message { return new(ListLocationsRequest) },

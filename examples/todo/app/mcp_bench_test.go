@@ -32,8 +32,8 @@ func BenchmarkMCPCall(b *testing.B) {
 		"reflective": func(s *mcp.Server) error {
 			return mcpserver.New(s, mcpserver.Config{
 				Services:      []protoreflect.ServiceDescriptor{todov1.File_raveesh_me_todo_v1_todo_proto.Services().ByName("TodoService")},
-				InputSchemas:  todov1.MCPInputSchemas,
-				OutputSchemas: todov1.MCPOutputSchemas,
+				InputSchemas:  todov1.TodoServiceMCPInputSchemas,
+				OutputSchemas: todov1.TodoServiceMCPOutputSchemas,
 				Client:        client,
 			})
 		},

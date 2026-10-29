@@ -51,9 +51,10 @@ var validName = regexp.MustCompile(`^[a-z_][a-z0-9_-]{0,63}$`)
 type Config struct {
 	// Services whose RPCs become tools.
 	Services []protoreflect.ServiceDescriptor
-	// InputSchemas and OutputSchemas are the generated MCPInputSchemas and
-	// MCPOutputSchemas of the services' proto files (protoc-gen-dedo-mcp),
-	// merged. Every tool needs an input schema; an output schema is optional.
+	// InputSchemas and OutputSchemas are the generated
+	// <Service>MCPInputSchemas and <Service>MCPOutputSchemas of the services
+	// (protoc-gen-dedo-mcp), merged. Every tool needs an input schema; an
+	// output schema is optional.
 	InputSchemas  map[string]string
 	OutputSchemas map[string]string
 	// Client sends the forwarded calls, usually
