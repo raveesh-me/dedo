@@ -116,6 +116,7 @@ What each option does:
 | Option | Read by | Effect |
 | --- | --- | --- |
 | `service.audience`, `service.owner_team` | Lint, docs | Who may call the API, and who owns it |
+| `service.title` | Docs | The heading the REST reference groups the service's operations under. Optional: without it, the service name without its `Service` suffix, split into words (`CatalogEntryService` reads "Catalog Entry") |
 | `method.scopes` | Runtime, docs | A caller needs one of them. The service will not start if an RPC has none. |
 | `method.errors` | Runtime, docs | Every error the RPC returns. Undeclared ones are logged. The docs list them per HTTP status. |
 | `method.cache` | Runtime, docs | `Cache-Control` on GET responses of read-only RPCs |

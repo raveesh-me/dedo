@@ -152,7 +152,12 @@ type ServiceRules struct {
 	OwnerTeam string `protobuf:"bytes,2,opt,name=owner_team,json=ownerTeam,proto3" json:"owner_team,omitempty"`
 	// Present on a multi-tenant service. The runtime then checks the tenant of
 	// every request against the caller's.
-	Tenancy       *Tenancy `protobuf:"bytes,3,opt,name=tenancy,proto3" json:"tenancy,omitempty"`
+	Tenancy *Tenancy `protobuf:"bytes,3,opt,name=tenancy,proto3" json:"tenancy,omitempty"`
+	// A short human-readable name for the service, such as "Catalog entries".
+	// The REST reference groups the service's operations under it. Without
+	// it, the reference uses the service name without its Service suffix,
+	// split into words: CatalogEntryService reads "Catalog Entry".
+	Title         string `protobuf:"bytes,4,opt,name=title,proto3" json:"title,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -206,6 +211,13 @@ func (x *ServiceRules) GetTenancy() *Tenancy {
 		return x.Tenancy
 	}
 	return nil
+}
+
+func (x *ServiceRules) GetTitle() string {
+	if x != nil {
+		return x.Title
+	}
+	return ""
 }
 
 // Tenancy declares that a service partitions its data between tenants. The
@@ -842,12 +854,13 @@ var File_dedo_v1_options_proto protoreflect.FileDescriptor
 
 const file_dedo_v1_options_proto_rawDesc = "" +
 	"\n" +
-	"\x15dedo/v1/options.proto\x12\adedo.v1\x1a google/protobuf/descriptor.proto\x1a\x1egoogle/protobuf/duration.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x15google/rpc/code.proto\"\x88\x01\n" +
+	"\x15dedo/v1/options.proto\x12\adedo.v1\x1a google/protobuf/descriptor.proto\x1a\x1egoogle/protobuf/duration.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x15google/rpc/code.proto\"\x9e\x01\n" +
 	"\fServiceRules\x12-\n" +
 	"\baudience\x18\x01 \x01(\x0e2\x11.dedo.v1.AudienceR\baudience\x12\x1d\n" +
 	"\n" +
 	"owner_team\x18\x02 \x01(\tR\townerTeam\x12*\n" +
-	"\atenancy\x18\x03 \x01(\v2\x10.dedo.v1.TenancyR\atenancy\")\n" +
+	"\atenancy\x18\x03 \x01(\v2\x10.dedo.v1.TenancyR\atenancy\x12\x14\n" +
+	"\x05title\x18\x04 \x01(\tR\x05title\")\n" +
 	"\aTenancy\x12\x1e\n" +
 	"\n" +
 	"collection\x18\x01 \x01(\tR\n" +

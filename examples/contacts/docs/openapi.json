@@ -11,13 +11,13 @@
   ],
   "tags": [
     {
-      "name": "ContactService",
+      "name": "Contact",
       "description": "ContactService keeps each location's contacts. Every location is a tenant:\na caller reaches only the locations it belongs to.",
       "x-audience": "AUDIENCE_EXTERNAL_PUBLIC",
       "x-owner-team": "contacts-team"
     },
     {
-      "name": "LocationService",
+      "name": "Location",
       "description": "LocationService describes the locations, the tenants of ContactService.",
       "x-audience": "AUDIENCE_EXTERNAL_PUBLIC",
       "x-owner-team": "contacts-team"
@@ -30,7 +30,7 @@
         "summary": "List my locations",
         "description": "Lists the locations the caller belongs to, a page at a time.\n\nRequires one of the token scopes: `contacts.location.read`.",
         "tags": [
-          "LocationService"
+          "Location"
         ],
         "parameters": [
           {
@@ -110,7 +110,7 @@
         "summary": "List contacts",
         "description": "Lists the contacts of one location, such as locations/1, a page at a time. Use locations/- to list across every location the caller may see.\n\nRequires one of the token scopes: `contacts.contact.read`.",
         "tags": [
-          "ContactService"
+          "Contact"
         ],
         "parameters": [
           {
@@ -197,7 +197,7 @@
         "summary": "Create a contact",
         "description": "Adds a contact to one location, such as locations/1.\n\nRequires one of the token scopes: `contacts.contact.write`.",
         "tags": [
-          "ContactService"
+          "Contact"
         ],
         "parameters": [
           {
@@ -288,7 +288,7 @@
         "summary": "Get a location",
         "description": "Returns one location by its resource name, such as locations/1.\n\nRequires one of the token scopes: `contacts.location.read`.",
         "tags": [
-          "LocationService"
+          "Location"
         ],
         "parameters": [
           {
@@ -360,7 +360,7 @@
         "summary": "Get a contact",
         "description": "Returns one contact by its resource name, such as locations/1/contacts/2.\n\nRequires one of the token scopes: `contacts.contact.read`.",
         "tags": [
-          "ContactService"
+          "Contact"
         ],
         "parameters": [
           {
@@ -445,7 +445,7 @@
         "summary": "Update a contact",
         "description": "Changes the fields of a contact named in update_mask, and leaves the others as they are.\n\nRequires one of the token scopes: `contacts.contact.write`.",
         "tags": [
-          "ContactService"
+          "Contact"
         ],
         "parameters": [
           {

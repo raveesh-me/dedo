@@ -11,7 +11,7 @@
   ],
   "tags": [
     {
-      "name": "TodoService",
+      "name": "Todo",
       "description": "TodoService manages a to-do list.",
       "x-audience": "AUDIENCE_EXTERNAL_PUBLIC",
       "x-owner-team": "todo-team"
@@ -24,7 +24,7 @@
         "summary": "List to-dos",
         "description": "Returns to-dos oldest first, one page at a time. Pass next_page_token back as page_token to read the next page.\n\nRequires one of the token scopes: `todo.todo.read`.",
         "tags": [
-          "TodoService"
+          "Todo"
         ],
         "parameters": [
           {
@@ -102,7 +102,7 @@
         "summary": "Create a to-do",
         "description": "Adds a to-do with a title, and optionally a budget and an assignee. Pass todo_id to choose its ID; otherwise the server picks one.\n\nRequires one of the token scopes: `todo.todo.write`.",
         "tags": [
-          "TodoService"
+          "Todo"
         ],
         "parameters": [
           {
@@ -194,7 +194,7 @@
         "summary": "Get a to-do",
         "description": "Returns one to-do by its resource name, such as todos/1. Use it when you already know which to-do you want.\n\nRequires one of the token scopes: `todo.todo.read`.",
         "tags": [
-          "TodoService"
+          "Todo"
         ],
         "parameters": [
           {
@@ -270,7 +270,7 @@
         "summary": "Delete a to-do",
         "description": "Removes a to-do for good. It cannot be recovered.\n\nRequires one of the token scopes: `todo.todo.write`.",
         "tags": [
-          "TodoService"
+          "Todo"
         ],
         "parameters": [
           {
@@ -341,7 +341,7 @@
         "summary": "Update a to-do",
         "description": "Changes fields of an existing to-do: the ones named in update_mask, or, without update_mask, the ones you set. Fields you leave out keep their values. To mark a to-do done, send its name and done: true.\n\nRequires one of the token scopes: `todo.todo.write`.",
         "tags": [
-          "TodoService"
+          "Todo"
         ],
         "parameters": [
           {
@@ -444,7 +444,7 @@
         "summary": "Remove a to-do (deprecated)",
         "description": "Deprecated: use DeleteTodo. Removes a to-do for good.\n\nRequires one of the token scopes: `todo.todo.write`.",
         "tags": [
-          "TodoService"
+          "Todo"
         ],
         "parameters": [
           {

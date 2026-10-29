@@ -11,7 +11,7 @@
   ],
   "tags": [
     {
-      "name": "LibraryService",
+      "name": "Library",
       "description": "LibraryService manages books on shelves.",
       "x-audience": "AUDIENCE_EXTERNAL_PUBLIC",
       "x-owner-team": "library-team"
@@ -24,7 +24,7 @@
         "summary": "Get a book",
         "description": "Returns one book by its resource name, such as shelves/1/books/2.\n\nRequires one of the token scopes: `library.book.read`.",
         "tags": [
-          "LibraryService"
+          "Library"
         ],
         "parameters": [
           {
@@ -109,7 +109,7 @@
         "summary": "Delete a book",
         "description": "Removes a book from its shelf for good.\n\nRequires one of the token scopes: `library.book.write`.",
         "tags": [
-          "LibraryService"
+          "Library"
         ],
         "parameters": [
           {

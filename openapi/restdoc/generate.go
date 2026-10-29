@@ -129,7 +129,7 @@ func (p *PathItem) set(method string, op *Operation) error {
 func tag(svc *protogen.Service) Tag {
 	rules, _ := proto.GetExtension(svc.Desc.Options(), dedov1.E_Service).(*dedov1.ServiceRules)
 	t := Tag{
-		Name:        string(svc.Desc.Name()),
+		Name:        serviceTag(svc),
 		Description: cleanComment(svc.Comments.Leading),
 		OwnerTeam:   rules.GetOwnerTeam(),
 	}

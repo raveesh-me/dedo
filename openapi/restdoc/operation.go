@@ -74,7 +74,7 @@ func (g *generator) operation(svc *protogen.Service, m *protogen.Method, b bindi
 		OperationID: fmt.Sprintf("%s_%s", svc.Desc.Name(), m.Desc.Name()),
 		Summary:     rules.GetTool().GetTitle(),
 		Description: operationDescription(m, rules),
-		Tags:        []string{string(svc.Desc.Name())},
+		Tags:        []string{serviceTag(svc)},
 		Procedure:   fmt.Sprintf("/%s/%s", svc.Desc.FullName(), m.Desc.Name()),
 		Destructive: rules.GetTool().GetAnnotations().GetDestructiveHint(),
 		Responses:   map[string]*Response{},
