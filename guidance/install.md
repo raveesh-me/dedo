@@ -84,7 +84,15 @@ Your organisation's own rules go in `rules.yml` next to `buf.yaml`, as CEL check
 
 If your services partition their data between tenants, declare `tenancy` on each and add `DEDO_MULTI_TENANT` to `rules.yml`'s `use` (`dedo init` does when a service declares it); then pass `Tenants` to the interceptor in section 4. [RULES.md](RULES.md#multi-tenant-rules) explains the model.
 
-Without Go on a machine, list the Wasm plugin from the BSR instead: `- plugin: buf.build/r-a/dedo-lint` (about 6 s per lint). It cannot read `rules.yml`, so it runs dedo's default rule sets and no house rules. To choose rules or run house rules there, have your platform team build a plugin with `rules.yml` built in, `dedo tools -wasm house-lint.wasm`, push it to the BSR (`buf plugin push buf.build/<org>/house-lint --binary=house-lint.wasm`), and list that plugin instead.
+A repository without `go.mod`, such as a TypeScript service or a schema repository, lists the same `.tools/buf-plugin-dedo-lint`. It still needs Go on the machine and in CI, but no Go module: `dedo install` puts the plugin in `$GOBIN`, and `dedo tools` copies it into `.tools/` at the options module's release in `buf.yaml`, so every repository runs the native plugin, with `rules.yml` and house rules. In CI:
+
+```sh
+go install github.com/raveesh-me/dedo/cmd/dedo@v0.15.0
+dedo tools          # installs the plugin at buf.yaml's release, copies it into .tools/, fetches the house rules
+buf lint
+```
+
+The Wasm plugin on the BSR (`buf.build/r-a/dedo-lint`) runs without Go but cannot read `rules.yml`, so it runs dedo's default rule sets and no house rules; `dedo init` replaces it. A platform team that must lint without Go can build a plugin with `rules.yml` built in, `dedo tools -wasm house-lint.wasm`, push it to the BSR (`buf plugin push buf.build/<org>/house-lint --binary=house-lint.wasm`), and list that plugin instead.
 
 ## 3. Code generators
 
