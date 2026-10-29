@@ -12,7 +12,7 @@ Every step below was run as written. [install.md](install.md) lists the same set
 - The `dedo` command:
 
   ```sh
-  go install github.com/raveesh-me/dedo/cmd/dedo@v0.15.0
+  go install github.com/raveesh-me/dedo/cmd/dedo@v0.16.0
   ```
 
 ## 1. Decide the names
@@ -546,5 +546,5 @@ The same RPCs also answer over Connect and gRPC at `/acme.time_counter.v1.Counte
 | `buf breaking: skipped; branch main has no .proto files yet` | Nothing to compare with yet: commit the contract to `main`. If your default branch has another name, run `make check API_BASE=<branch>`. |
 | `bind: address already in use` | Something else holds port 8080. Run with `ADDR=:9090`. |
 | No findings in the editor | The lint plugin is missing from `.tools/`, as after a fresh clone. Run `dedo tools` (or `make tools`), then reload the editor. |
-| `reading github.com/raveesh-me/dedo/go.mod at revision v0.0.0: unknown revision` | `go get` picked an old commit instead of a release. Add `@v0.15.0` (or the latest release) to the module path. |
+| `reading github.com/raveesh-me/dedo/go.mod at revision v0.0.0: unknown revision` | `go get` picked an old commit instead of a release. Add `@v0.16.0` (or the latest release) to the module path. |
 | `Module buf.build/bufbuild/protovalidate is declared ... but is unused` | A warning only. Remove the dependency from `buf.yaml` if you don't use protovalidate. |

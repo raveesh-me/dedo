@@ -9,8 +9,8 @@ require (
 	connectrpc.com/vanguard v0.5.0
 	github.com/modelcontextprotocol/go-sdk v1.8.0
 	github.com/pb33f/libopenapi v0.38.7
-	github.com/raveesh-me/dedo v0.15.0
-	github.com/raveesh-me/dedo/mcp v0.15.0
+	github.com/raveesh-me/dedo v0.16.0
+	github.com/raveesh-me/dedo/mcp v0.16.0
 	google.golang.org/genproto v0.0.0-20261012220534-4341edf3f941
 	google.golang.org/genproto/googleapis/api v0.0.0-20261019180522-ce908d29299b
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20261012220534-4341edf3f941
@@ -28,7 +28,7 @@ require (
 	github.com/google/jsonschema-go v0.4.3 // indirect
 	github.com/pb33f/jsonpath v0.8.2 // indirect
 	github.com/pb33f/ordered-map/v2 v2.3.1 // indirect
-	github.com/raveesh-me/dedo/openapi v0.15.0 // indirect
+	github.com/raveesh-me/dedo/openapi v0.16.0 // indirect
 	github.com/segmentio/asm v1.2.1 // indirect
 	github.com/segmentio/encoding v0.5.4 // indirect
 	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect

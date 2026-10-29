@@ -22,7 +22,7 @@
 
 New here? Everything is in [`guidance/`](guidance): [install.md](guidance/install.md) adds dedo to a Go service, one part at a time or all at once with `dedo init`, [tutorial.md](guidance/tutorial.md) builds a new product from scratch, [guideline.md](guidance/guideline.md) explains the reasoning, [RULES.md](guidance/RULES.md) documents every lint rule, and [claude.md](guidance/claude.md) is guidance for coding agents to append to your `AGENTS.md` or `CLAUDE.md`.
 
-**Latest release: [v0.15.0](https://github.com/raveesh-me/dedo/releases/tag/v0.15.0).** The options module is [`buf.build/r-a/dedo`](https://buf.build/r-a/dedo). The lint plugin's release is the options module's label in `buf.yaml`, and `dedo tools` installs it natively into any repository with protos; it also comes as native binaries on the GitHub release and as a Wasm plugin on the BSR. The Go modules are `github.com/raveesh-me/dedo/...@v0.15.0`.
+**Latest release: [v0.16.0](https://github.com/raveesh-me/dedo/releases/tag/v0.16.0).** The options module is [`buf.build/r-a/dedo`](https://buf.build/r-a/dedo). The lint plugin's release is the options module's label in `buf.yaml`, and `dedo tools` installs it natively into any repository with protos; it also comes as native binaries on the GitHub release and as a Wasm plugin on the BSR. The Go modules are `github.com/raveesh-me/dedo/...@v0.16.0`.
 
 Contract rules come from Google's AIPs. Operational rules (audience, ownership, scopes, caching, deprecation, error reasons) come from Zalando's guidelines. Both live in the schema.
 
@@ -131,7 +131,7 @@ Suppress one finding with `// buf:lint:ignore ZALANDO_MONEY_FIELD_TYPE` above th
 ## Using it in a service repository
 
 ```sh
-go install github.com/raveesh-me/dedo/cmd/dedo@v0.15.0
+go install github.com/raveesh-me/dedo/cmd/dedo@v0.16.0
 dedo init
 ```
 
