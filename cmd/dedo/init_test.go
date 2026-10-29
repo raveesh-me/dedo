@@ -472,7 +472,7 @@ func TestTemplatesCommand(t *testing.T) {
 	if err := run([]string{"templates"}, &list); err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"buf.yaml", "buf.gen.yaml", "Makefile.api", "main.go.tmpl", "docs/docs.go.tmpl", "claude.md"} {
+	for _, want := range []string{"buf.yaml", "buf.gen.yaml", "Makefile.api", "main.go.tmpl", "docs/docs.go.tmpl", "claude.md", "generators.md"} {
 		if !slices.Contains(strings.Split(strings.TrimSpace(list.String()), "\n"), want) {
 			t.Errorf("dedo templates lacks %s:\n%s", want, list.String())
 		}
@@ -669,6 +669,34 @@ func TestInitSchemaRepositoryVendorsPlugin(t *testing.T) {
 	}
 	if v, _ := pluginVersion(filepath.Join(dir, pluginPath())); v != version {
 		t.Errorf("vendored %q", v)
+	}
+}
+
+// Where dedo init adds no server, it tells coding agents how to add the
+// generators and the runtime by hand; a Go service gets them from init.
+func TestInitGeneratorGuidance(t *testing.T) {
+	proto := "syntax = \"proto3\";\npackage shop.cart.v1;\n"
+	schema := repo(t, map[string]string{
+		"buf.yaml":                      "version: v2\nmodules:\n  - path: proto\n",
+		"proto/shop/cart/v1/cart.proto": proto,
+		// Set up by an earlier release: the generator guidance is added
+		// beside the guidance already there.
+		"AGENTS.md": "notes\n\n" + guidanceMarker + "\n...\n",
+	})
+	initOffline(t, schema)
+	initOffline(t, schema)
+	got := read(t, schema, "AGENTS.md")
+	if strings.Count(got, guidanceMarker) != 1 || strings.Count(got, generatorsMarker) != 1 {
+		t.Errorf("AGENTS.md has the guidance %d times and the generator guidance %d times:\n%.300s",
+			strings.Count(got, guidanceMarker), strings.Count(got, generatorsMarker), got)
+	}
+	service := repo(t, map[string]string{
+		"go.mod":                        "module example.com/shop\n",
+		"proto/shop/cart/v1/cart.proto": proto,
+	})
+	initOffline(t, service)
+	if strings.Contains(read(t, service, "AGENTS.md"), generatorsMarker) {
+		t.Error("a Go service got the guidance for adding generators by hand")
 	}
 }
 
