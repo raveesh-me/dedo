@@ -6,7 +6,7 @@ require (
 	buf.build/go/bufplugin v0.11.1
 	github.com/google/cel-go v0.29.0
 	github.com/googleapis/api-linter/v2 v2.4.0
-	github.com/raveesh-me/dedo v0.16.1
+	github.com/raveesh-me/dedo v0.17.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20261012220534-4341edf3f941
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20261012220534-4341edf3f941
 	google.golang.org/protobuf v1.36.12
