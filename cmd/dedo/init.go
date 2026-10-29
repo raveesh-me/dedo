@@ -26,6 +26,9 @@ const (
 	googleapis     = "buf.build/googleapis/googleapis"
 	protovalidate  = "buf.build/bufbuild/protovalidate"
 	guidanceMarker = "# Building an API with dedo: guidance for coding agents"
+	// generatorsMarker heads the guidance for adding dedo's generators and
+	// server by hand, where dedo init adds neither.
+	generatorsMarker = "# Adding dedo's generators and server: guidance for coding agents"
 )
 
 // oldPlugins are plugin paths earlier dedo releases told services to list.
@@ -690,43 +693,65 @@ func hasNewServer(dir string) bool {
 	return false
 }
 
-// guidance appends the agent guidance to CLAUDE.md and AGENTS.md where they
-// lack it, and creates AGENTS.md when neither file exists.
+// guidance appends the dedo guidance for coding agents to CLAUDE.md and
+// AGENTS.md, or creates AGENTS.md. Where dedo init adds no generators or
+// server, it adds the guidance for adding them by hand too. Each section is
+// added once.
 func (in *initer) guidance() error {
-	text := asset("guidance/claude.md")
-	found := false
+	sections := [][2]string{{guidanceMarker, "guidance/claude.md"}}
+	if in.p.schemaOnly {
+		sections = append(sections, [2]string{generatorsMarker, "guidance/generators.md"})
+	}
+	var files []string
 	for _, name := range []string{"CLAUDE.md", "AGENTS.md"} {
-		b, err := os.ReadFile(in.path(name))
-		if errors.Is(err, fs.ErrNotExist) {
-			continue
-		}
-		if err != nil {
+		if _, err := os.Stat(in.path(name)); err == nil {
+			files = append(files, name)
+		} else if !errors.Is(err, fs.ErrNotExist) {
 			return err
 		}
-		found = true
-		if bytes.Contains(b, []byte(guidanceMarker)) {
-			in.say("%s: already has the dedo guidance", name)
-			continue
-		}
-		var add []byte
-		if len(b) > 0 && !bytes.HasSuffix(b, []byte("\n\n")) {
-			add = []byte("\n")
-			if !bytes.HasSuffix(b, []byte("\n")) {
-				add = []byte("\n\n")
+	}
+	if len(files) == 0 {
+		files = []string{"AGENTS.md"}
+	}
+	for _, name := range files {
+		for _, sec := range sections {
+			if err := in.appendGuidance(name, sec[0], asset(sec[1])); err != nil {
+				return err
 			}
 		}
-		if err := appendFile(in.path(name), append(add, text...)); err != nil {
+	}
+	return nil
+}
+
+// appendGuidance appends text to the file name unless it already has the
+// section marker heads, creating the file when it is missing.
+func (in *initer) appendGuidance(name, marker string, text []byte) error {
+	b, err := os.ReadFile(in.path(name))
+	if errors.Is(err, fs.ErrNotExist) {
+		if err := os.WriteFile(in.path(name), text, 0o644); err != nil {
 			return err
 		}
-		in.say("%s: appended the dedo guidance", name)
-	}
-	if found {
+		in.say("%s: created with %q", name, strings.TrimPrefix(marker, "# "))
 		return nil
 	}
-	if err := os.WriteFile(in.path("AGENTS.md"), text, 0o644); err != nil {
+	if err != nil {
 		return err
 	}
-	in.say("AGENTS.md: created with the dedo guidance")
+	if bytes.Contains(b, []byte(marker)) {
+		in.say("%s: already has %q", name, strings.TrimPrefix(marker, "# "))
+		return nil
+	}
+	var add []byte
+	if len(b) > 0 && !bytes.HasSuffix(b, []byte("\n\n")) {
+		add = []byte("\n")
+		if !bytes.HasSuffix(b, []byte("\n")) {
+			add = []byte("\n\n")
+		}
+	}
+	if err := appendFile(in.path(name), append(add, text...)); err != nil {
+		return err
+	}
+	in.say("%s: appended %q", name, strings.TrimPrefix(marker, "# "))
 	return nil
 }
 
