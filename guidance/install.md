@@ -41,15 +41,14 @@ import "dedo/v1/options.proto";
 
 ## 2. Linting: buf-plugin-dedo-lint
 
-Pin the plugin in `go.mod` like the generators, and build it into `.tools/`:
+The plugin lints `.proto` files, wherever they are, so it is not pinned in any Go module: the options module's label in `buf.yaml` (section 1) names its release. `dedo tools` installs it at that release into `$GOBIN` (`dedo install` does only that) and copies it into `.tools/`, next to `buf.yaml`:
 
 ```sh
-go get -tool github.com/raveesh-me/dedo/lint/cmd/buf-plugin-dedo-lint@v0.15.0
-dedo tools          # builds .tools/buf-plugin-dedo-lint from the pin, and lists the rule overrides
+dedo tools          # installs the plugin if needed, copies it into .tools/, and lists the rule overrides
 printf '.tools/\n' >> .gitignore
 ```
 
-Without the `dedo` command, `go build -o .tools/buf-plugin-dedo-lint github.com/raveesh-me/dedo/lint/cmd/buf-plugin-dedo-lint` does the same. It runs natively because Buf starts the plugin about a dozen times per lint; through `go tool` each lint would take 2 s instead of 0.3 s. Run `dedo tools` again after a fresh clone, a version change, or any change to `rules.yml` or its imports.
+Without the `dedo` command, `go install github.com/raveesh-me/dedo/lint/cmd/buf-plugin-dedo-lint@v0.15.0` and a copy into `.tools/` do the same. It runs natively because Buf starts the plugin about a dozen times per lint; through `go tool` each lint would take 2 s instead of 0.3 s. Run `dedo tools` again after a fresh clone, a version change, or any change to `rules.yml` or its imports.
 
 List the plugin and its one category, `DEDO`, in `buf.yaml`, and choose its rules in `rules.yml` next to it ([templates/rules.yml](../templates/rules.yml); `dedo templates rules.yml` prints it). `buf.yaml` names no other rule of the plugin, in `use` or `except`: dedo reads only `rules.yml` ([RULES.md](RULES.md#choosing-the-rules) says how it chooses):
 
@@ -84,7 +83,7 @@ Your organisation's own rules go in `rules.yml` next to `buf.yaml`, as CEL check
 
 If your services partition their data between tenants, declare `tenancy` on each and add `DEDO_MULTI_TENANT` to `rules.yml`'s `use` (`dedo init` does when a service declares it); then pass `Tenants` to the interceptor in section 4. [RULES.md](RULES.md#multi-tenant-rules) explains the model.
 
-A repository without `go.mod`, such as a TypeScript service or a schema repository, lists the same `.tools/buf-plugin-dedo-lint`. It still needs Go on the machine and in CI, but no Go module: `dedo install` puts the plugin in `$GOBIN`, and `dedo tools` copies it into `.tools/` at the options module's release in `buf.yaml`, so every repository runs the native plugin, with `rules.yml` and house rules. In CI:
+Repositories without a Go module, such as a TypeScript service or a schema repository, set the plugin up the same way. They need Go on the machine and in CI, to install it, but no `go.mod`. In CI:
 
 ```sh
 go install github.com/raveesh-me/dedo/cmd/dedo@v0.15.0
@@ -250,7 +249,7 @@ Append [claude.md](claude.md) to your `AGENTS.md` or `CLAUDE.md` (`dedo template
 | --- | --- |
 | A Go module with protos and `buf.gen.yaml` | Keeps your generators, including Buf's remote `protocolbuffers/go` and `connectrpc/go` plugins, and adds only dedo's two, writing to the same `out` with the same `paths=` option. Reads each file's `go_package`, or managed mode's `go_package_prefix`, for the Go names in `main.go`. Leaves managed mode as it is. Warns when `connectrpc/go` is pinned to a release that generates connect-go v1 code, which dedo's server cannot register. |
 | A Go module with protos, no `buf.gen.yaml` | Writes `buf.gen.yaml` with managed mode and four generators run through `go tool`. |
-| Protos and `buf.yaml`, but no Go module (a schema repository) | Adds the options module, pinned to the release, and the lint plugin. With no `go.mod` to pin the plugin in, it installs it once per machine into `$GOBIN` (`dedo install`) and copies it into `.tools/`; the options module's label in `buf.yaml` names its release, and `dedo tools` copies it again after a clone or an upgrade, and fetches the house rules. It replaces the BSR plugin (`buf.build/r-a/dedo-lint`) that earlier releases listed, which cannot read `rules.yml`. Nothing else needs Go. Run `go mod init` and `dedo init` again when you want generated code and a server. |
+| Protos and `buf.yaml`, but no Go module (a schema repository) | Adds the options module, pinned to the release, and the lint plugin, as in any repository. It replaces the BSR plugin (`buf.build/r-a/dedo-lint`) that earlier releases listed here, which cannot read `rules.yml`. Nothing that needs Go is added. Run `go mod init` and `dedo init` again when you want generated code and a server. |
 | A Go module without protos | Writes a starter service that passes lint. |
 
 In `buf.yaml` it adds the deps, the `DEDO` category and the plugin, and in `rules.yml` the rule sets that run. A `buf.yaml` from a release before v0.15.0 chose the plugin's rules itself: `dedo init` and `dedo upgrade` move that choice to `rules.yml`, its sets to `use` and its exceptions to `disable`, and drop the ones dedo now skips by itself. It keeps your own deps, Buf's categories and exceptions, plugins, and comments, in both files. It needs `buf.yaml` version v2: run `buf config migrate` first if yours is v1.
@@ -268,7 +267,7 @@ dedo upgrade    # moves this repository to it
 
 `dedo update` replaces the `dedo` command and changes no repository. `dedo upgrade`, run in each repository, moves everything to the release of the `dedo` you run, as one version:
 
-- the lint plugin, the generators and the runtime in `go.mod`, and the plugin rebuilt into `.tools/`;
+- the generators and the runtime in `go.mod`; the lint plugin installed into `$GOBIN` at the release and copied into `.tools/`;
 - the options module's label in `buf.yaml`, then `buf.lock` (`buf dep update`); in a schema repository, the lint plugin installed into `$GOBIN` and copied into `.tools/` at that release;
 - `Makefile.api`, and plugin entries and generated files that earlier releases named differently;
 - the generated code (`buf generate`) and `go.mod` (`go mod tidy`);

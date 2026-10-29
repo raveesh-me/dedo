@@ -10,13 +10,12 @@ import (
 	"runtime"
 	"strings"
 
-	"golang.org/x/mod/modfile"
+	"gopkg.in/yaml.v3"
 
 	"github.com/raveesh-me/dedo/lint/house/config"
 )
 
-// lintPluginPkg is the lint plugin's command, pinned in a service's go.mod
-// as a Go tool.
+// lintPluginPkg is the lint plugin's command.
 const lintPluginPkg = "github.com/raveesh-me/dedo/lint/cmd/buf-plugin-dedo-lint"
 
 // pluginPath is where buf.yaml finds the plugin. On Windows the file needs
@@ -32,33 +31,17 @@ func pluginPath() string {
 // pluginRulesFlag has the plugin report the consolidated rules and exit.
 const pluginRulesFlag = "-dedo-rules"
 
-func buildPluginCmd() []string {
-	return []string{"go", "build", "-o", pluginPath(), lintPluginPkg}
-}
-
-// tools builds the lint plugin pinned in go.mod into .tools/, for a fresh
-// clone, a CI job, or after the pin changes, then fetches and consolidates
-// the house rules. It is what make tools does, without make. Without
-// go.mod, it vendors the global plugin at buf.yaml's release instead.
+// tools vendors the lint plugin at the options module's release in
+// buf.yaml into .tools/, for a fresh clone, a CI job, or after the pin
+// changes, then fetches and consolidates the house rules. The plugin
+// belongs to the protos, so it is the same whether or not a Go module sits
+// beside them. It is what make tools does, without make.
 func tools(dir string, out io.Writer) error {
-	gomod, err := os.ReadFile(filepath.Join(dir, "go.mod"))
-	if errors.Is(err, os.ErrNotExist) {
-		release, err := pinnedRelease(dir)
-		if err != nil {
-			return err
-		}
-		if err := vendorPlugin(dir, release, out); err != nil {
-			return err
-		}
-		return houseRules(dir, out)
-	}
+	release, err := pinnedRelease(dir)
 	if err != nil {
 		return err
 	}
-	if !strings.Contains(string(gomod), lintPluginPkg) {
-		return fmt.Errorf("go.mod does not pin %s: run dedo init, or go get -tool %s@%s", lintPluginPkg, lintPluginPkg, version)
-	}
-	if err := buildPlugin(dir, out); err != nil {
+	if err := vendorPlugin(dir, release, out); err != nil {
 		return err
 	}
 	return houseRules(dir, out)
@@ -67,15 +50,20 @@ func tools(dir string, out io.Writer) error {
 // rulesVar is the lint plugin's variable that holds built-in house rules.
 const rulesVar = "github.com/raveesh-me/dedo/lint/rules.embedded"
 
-// wasmPlugin builds the lint plugin pinned in go.mod as WebAssembly into
-// out, with the repository's house rules built in, since the WebAssembly
-// plugin cannot read rules.yml. An organisation pushes it to the BSR for
-// repositories without Go. tools has already checked the rules.
+// wasmPlugin builds the lint plugin at buf.yaml's release as WebAssembly
+// into out, with the repository's house rules built in, since the
+// WebAssembly plugin cannot read rules.yml. An organisation pushes it to the
+// BSR for machines that cannot run the native plugin. tools has already
+// checked the rules.
 func wasmPlugin(dir, out string, w io.Writer) error {
-	if err := checkEmbedSupport(dir); err != nil {
+	release, err := pinnedRelease(dir)
+	if err != nil {
 		return err
 	}
-	out, err := filepath.Abs(out)
+	if err := checkEmbedSupport(release); err != nil {
+		return err
+	}
+	out, err = filepath.Abs(out)
 	if err != nil {
 		return err
 	}
@@ -92,15 +80,27 @@ func wasmPlugin(dir, out string, w io.Writer) error {
 		ldflags += " -X " + rulesVar + "=" + embedded
 		fmt.Fprintf(w, "building rules.yml, with %d house rules, into the WebAssembly plugin\n", len(c.Rules))
 	}
-	cmd := exec.Command("go", "build", "-trimpath", "-ldflags", ldflags, "-o", out, lintPluginPkg)
-	cmd.Dir = dir
-	cmd.Env = append(os.Environ(), "GOOS=wasip1", "GOARCH=wasm")
-	cmd.Stdout, cmd.Stderr = w, w
-	fmt.Fprintf(w, "$ GOOS=wasip1 GOARCH=wasm go build -o %s %s\n", out, lintPluginPkg)
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("building the WebAssembly lint plugin: %w", err)
+	// A throwaway module pins the release, so no go.mod of the
+	// repository's is needed or changed.
+	mod, err := os.MkdirTemp("", "dedo-wasm")
+	if err != nil {
+		return err
 	}
-	fmt.Fprintf(w, "built %s; push it with: buf plugin push <your BSR plugin> --binary=%s\n", out, out)
+	defer os.RemoveAll(mod)
+	for _, c := range [][]string{
+		{"go", "mod", "init", "dedo-wasm"},
+		{"go", "get", lintPluginPkg + "@" + release},
+		{"go", "build", "-trimpath", "-ldflags", ldflags, "-o", out, lintPluginPkg},
+	} {
+		cmd := exec.Command(c[0], c[1:]...)
+		cmd.Dir = mod
+		cmd.Env = append(os.Environ(), "GOOS=wasip1", "GOARCH=wasm")
+		cmd.Stdout, cmd.Stderr = w, w
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("building the WebAssembly lint plugin (%s): %w", strings.Join(c[:2], " "), err)
+		}
+	}
+	fmt.Fprintf(w, "built %s at %s; push it with: buf plugin push <your BSR plugin> --binary=%s\n", out, release, out)
 	return nil
 }
 
@@ -108,60 +108,42 @@ func wasmPlugin(dir, out string, w io.Writer) error {
 // rules; go build -X sets nothing in an earlier one, silently.
 const embedRelease = "v0.15.0"
 
-// checkEmbedSupport fails unless go.mod pins a lint plugin that reads
-// built-in house rules.
-func checkEmbedSupport(dir string) error {
-	b, err := os.ReadFile(filepath.Join(dir, "go.mod"))
-	if err != nil {
-		return err
+// checkEmbedSupport fails unless the lint plugin at release reads built-in
+// house rules.
+func checkEmbedSupport(release string) error {
+	if newer(embedRelease, release) {
+		return fmt.Errorf("-wasm needs the lint plugin at %s or later, and buf.yaml pins %s: run dedo upgrade", embedRelease, release)
 	}
-	f, err := modfile.Parse("go.mod", b, nil)
-	if err != nil {
-		return err
-	}
-	for _, r := range f.Require {
-		if r.Mod.Path == lintModule {
-			if newer(embedRelease, r.Mod.Version) {
-				return fmt.Errorf("-wasm needs the lint plugin at %s or later, and go.mod pins %s: run dedo upgrade", embedRelease, r.Mod.Version)
-			}
-			return nil
-		}
-	}
-	return fmt.Errorf("go.mod does not pin %s: run dedo init", lintModule)
-}
-
-// lintModule is the module of the lint plugin.
-const lintModule = "github.com/raveesh-me/dedo/lint"
-
-// toolsLint moves only the lint plugin to release, then builds it and
-// consolidates the house rules: dedo upgrade -lint.
-func toolsLint(dir, release string, out io.Writer) error {
-	if _, err := os.Stat(filepath.Join(dir, "go.mod")); errors.Is(err, os.ErrNotExist) {
-		return fmt.Errorf("no go.mod in %s: the options module's label in buf.yaml sets the lint plugin's release there, so run dedo upgrade to move both", dir)
-	}
-	c := []string{"go", "get", "-tool", lintPluginPkg + "@" + release}
-	fmt.Fprintf(out, "$ %s\n", strings.Join(c, " "))
-	cmd := exec.Command(c[0], c[1:]...)
-	cmd.Dir = dir
-	cmd.Stdout, cmd.Stderr = out, out
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("pinning the lint plugin: %w", err)
-	}
-	fmt.Fprintln(out, "go.mod requires the plugin's dedo runtime too, so Go moves github.com/raveesh-me/dedo with it if it was older; run dedo upgrade to move everything else")
-	return tools(dir, out)
-}
-
-func buildPlugin(dir string, out io.Writer) error {
-	c := buildPluginCmd()
-	fmt.Fprintf(out, "$ %s\n", strings.Join(c, " "))
-	cmd := exec.Command(c[0], c[1:]...)
-	cmd.Dir = dir
-	cmd.Stdout, cmd.Stderr = out, out
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("building the lint plugin: %w", err)
-	}
-	fmt.Fprintf(out, "built %s\n", pluginPath())
 	return nil
+}
+
+// toolsLint moves only the options module, whose label names the lint
+// plugin's release, to release, then vendors the plugin and consolidates
+// the house rules: dedo upgrade -lint.
+func toolsLint(dir, release string, offline bool, out io.Writer) error {
+	doc, ok, err := loadYAML(filepath.Join(dir, "buf.yaml"))
+	if err != nil {
+		return fmt.Errorf("buf.yaml: %w", err)
+	}
+	if !ok {
+		return fmt.Errorf("no buf.yaml in %s: run dedo init first", dir)
+	}
+	in := &initer{p: &project{dir: dir}, release: release, out: out}
+	if pinned := in.pinOptions(child(root(doc), "deps", yaml.SequenceNode)); pinned != "" {
+		if err := saveYAML(filepath.Join(dir, "buf.yaml"), doc); err != nil {
+			return err
+		}
+		in.say("buf.yaml: options module pinned to %s, the lint plugin's release", pinned)
+	}
+	in.depUpdate()
+	if failed := in.runCommands(offline); len(failed) > 0 {
+		return fmt.Errorf("%s failed; fix the cause and run dedo upgrade -lint again", strings.Join(failed, "; "))
+	}
+	if offline {
+		in.say("run dedo tools in %s: it vendors the lint plugin at %s", dir, release)
+		return nil
+	}
+	return tools(dir, out)
 }
 
 // houseRules fetches the git imports of the repository's rules.yml into

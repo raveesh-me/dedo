@@ -68,7 +68,7 @@ func run(args []string, out io.Writer) error {
 			return err
 		}
 		if *lint {
-			return toolsLint(*dir, version, out)
+			return toolsLint(*dir, version, *offline, out)
 		}
 		return upgrade(*dir, *offline, out)
 	case "update":

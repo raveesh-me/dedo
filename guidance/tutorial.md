@@ -224,7 +224,7 @@ dedo init
 `dedo init` finds `CounterService` and adds everything dedo needs, printing what it did:
 
 - `buf.yaml` with the options module and the lint plugin, `rules.yml`, which chooses the plugin's rules that run, and `buf.gen.yaml` with the four generators
-- the lint plugin, pinned in `go.mod` and built into `.tools/` (`dedo tools` rebuilds it), and `Makefile.api` (included from `Makefile`), which runs the checks
+- the lint plugin, at the options module's release, copied into `.tools/` (`dedo tools` copies it again), and `Makefile.api` (included from `Makefile`), which runs the checks
 - the generators pinned as Go tools in `go.mod`, the dedo runtime modules, and `buf.lock` (commit it)
 - `docs/`, which serves the REST reference
 - `server.go`, a stub where every RPC answers Unimplemented, and `policy_table_test.go`, which fails `go test` when a declaration is missing

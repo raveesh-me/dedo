@@ -82,20 +82,44 @@ func TestVendorPlugin(t *testing.T) {
 	}
 }
 
-// Without go.mod, dedo tools vendors the plugin at the options module's
-// release in buf.yaml and checks the rules with it.
-func TestToolsWithoutGoModule(t *testing.T) {
-	installed := stubGlobalPlugin(t)
-	dir := repo(t, map[string]string{
-		"buf.yaml":  "version: v2\ndeps:\n  - buf.build/r-a/dedo:v0.14.0\n",
-		"rules.yml": "use: [DEDO]\n",
-	})
-	var out bytes.Buffer
-	if err := run([]string{"tools", "-dir", dir}, &out); err != nil {
-		t.Fatalf("dedo tools: %v\n%s", err, out.String())
+// dedo tools vendors the plugin at the options module's release in
+// buf.yaml and checks the rules with it, go.mod or not.
+func TestToolsVendorsPlugin(t *testing.T) {
+	stubGlobalPlugin(t)
+	for _, gomod := range []bool{false, true} {
+		files := map[string]string{
+			"buf.yaml":  "version: v2\ndeps:\n  - buf.build/r-a/dedo:v0.14.0\n",
+			"rules.yml": "use: [DEDO]\n",
+		}
+		if gomod {
+			files["go.mod"] = "module example.com/shop\n"
+		}
+		dir := repo(t, files)
+		var out bytes.Buffer
+		if err := run([]string{"tools", "-dir", dir}, &out); err != nil {
+			t.Fatalf("go.mod %v: dedo tools: %v\n%s", gomod, err, out.String())
+		}
+		if v, _ := pluginVersion(filepath.Join(dir, pluginPath())); v != "v0.14.0" || !strings.Contains(out.String(), "lint rules: ok") {
+			t.Errorf("go.mod %v: vendored %q:\n%s", gomod, v, out.String())
+		}
 	}
-	if strings.Join(*installed, " ") != "v0.14.0" || !strings.Contains(out.String(), "lint rules: ok") {
-		t.Errorf("installed %v:\n%s", *installed, out.String())
+}
+
+// dedo upgrade -lint moves the options module's label, which names the lint
+// plugin's release.
+func TestUpgradeLintMovesOptionsPin(t *testing.T) {
+	dir := repo(t, map[string]string{"buf.yaml": "version: v2\ndeps:\n  - buf.build/r-a/dedo:v0.14.0\n"})
+	var out bytes.Buffer
+	if err := run([]string{"upgrade", "-lint", "-offline", "-dir", dir}, &out); err != nil {
+		t.Fatalf("dedo upgrade -lint: %v\n%s", err, out.String())
+	}
+	if got := read(t, dir, "buf.yaml"); !strings.Contains(got, optionsModule+":"+version) {
+		t.Errorf("buf.yaml:\n%s", got)
+	}
+	for _, want := range []string{"buf dep update", "dedo tools"} {
+		if !strings.Contains(out.String(), want) {
+			t.Errorf("output lacks %q:\n%s", want, out.String())
+		}
 	}
 }
 

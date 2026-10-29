@@ -17,8 +17,6 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/raveesh-me/dedo/lint/house/config"
-
 	"github.com/raveesh-me/dedo"
 )
 
@@ -88,11 +86,7 @@ func initRepo(dir, release string, offline bool, out io.Writer) error {
 		}
 	}
 	failed := in.runCommands(offline)
-	if !offline && in.hasHouseRules() {
-		if err := houseRules(in.p.dir, in.out); err != nil {
-			failed = append(failed, "dedo tools (house rules): "+err.Error())
-		}
-	}
+	failed = append(failed, in.vendor(offline)...)
 	src, wrote, err := in.writeMain()
 	if err != nil {
 		return err
@@ -133,11 +127,6 @@ const house = "HOUSE"
 // joins rules.yml's use when a service declares dedo.v1.service.tenancy.
 const multiTenant = "DEDO_MULTI_TENANT"
 
-// hasHouseRules reports whether the repository has a rules.yml.
-func (in *initer) hasHouseRules() bool {
-	return config.Find(in.p.dir) != ""
-}
-
 // remotePlugin is the lint plugin on the BSR, which releases before
 // v0.16.0 listed in repositories without Go. It cannot read rules.yml, so
 // dedo init replaces it with the vendored native plugin.
@@ -177,8 +166,7 @@ func (in *initer) initSchema(offline bool) error {
 
 // vendor copies the global lint plugin at this release into .tools/,
 // installing it first if needed, then fetches and checks the house rules:
-// what dedo tools does in a repository without go.mod. It returns what
-// failed.
+// what dedo tools does. It returns what failed.
 func (in *initer) vendor(offline bool) []string {
 	if offline {
 		in.say("run dedo tools in %s: it vendors the lint plugin into %s", in.p.dir, pluginPath())
@@ -338,10 +326,14 @@ func (in *initer) linter() error {
 	if err := in.ruleSet(sel); err != nil {
 		return fmt.Errorf("rules.yml: %w", err)
 	}
+	// The plugin belongs to the protos, not to a Go module: dedo init
+	// vendors the global one, at the options module's release, into
+	// .tools/, whatever the repository's language.
+	if err := in.ensureLine(".gitignore", ".tools/"); err != nil {
+		return err
+	}
 	if in.p.schemaOnly {
-		// No go.mod to pin the plugin in: initSchema vendors the global
-		// one, at the options module's release, into .tools/.
-		return in.ensureLine(".gitignore", ".tools/")
+		return nil
 	}
 	mk, err := os.ReadFile(in.path("Makefile"))
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
@@ -368,19 +360,13 @@ func (in *initer) linter() error {
 		}
 		in.say(".tools/: removed the download stamp of an earlier release")
 	}
-	if err := in.ensureLine(".gitignore", ".tools/"); err != nil {
-		return err
+	if gomod, _ := os.ReadFile(in.path("go.mod")); strings.Contains(string(gomod), lintPluginPkg) {
+		// Releases before v0.16.0 pinned the plugin in go.mod.
+		in.cmds = append(in.cmds, []string{"go", "get", "-tool", lintPluginPkg + "@none"})
+		in.say("go.mod: will drop the lint plugin's pin; buf.yaml's options module names its release")
 	}
-	// The plugin is pinned in go.mod like the generators, then built into
-	// .tools/: buf starts it a dozen times per lint, so it runs natively
-	// rather than through go tool.
-	in.cmds = append(in.cmds,
-		[]string{"go", "get", "-tool", lintPluginPkg + "@" + in.release},
-		// dedo itself, so make tools (go tool dedo tools) needs only Go.
-		[]string{"go", "get", "-tool", cliPkg + "@" + in.release},
-		buildPluginCmd(),
-	)
-	in.say("go.mod: will pin buf-plugin-dedo-lint as a Go tool and build it into %s", pluginPath())
+	// dedo itself, so make tools (go tool dedo tools) needs only Go.
+	in.cmds = append(in.cmds, []string{"go", "get", "-tool", cliPkg + "@" + in.release})
 	return nil
 }
 

@@ -57,7 +57,7 @@ my-service/
 Why it is set up this way:
 
 - **The generators are Go tools** pinned in `go.mod`, so every machine and CI generate the same code without Buf's remote plugins.
-- **The lint plugin is pinned in `go.mod` too**, and built into `.tools/` (ignored by git) by `dedo tools`, so the editor and CI run the same version. It runs as a native binary because Buf starts it about a dozen times per lint. Commit `buf.lock`.
+- **The lint plugin belongs to the protos, not to a Go module.** The options module's label in `buf.yaml` names its release; `dedo tools` installs it into `$GOBIN` and copies it into `.tools/` (ignored by git), so the editor and CI run the same version, in any repository with protos, whatever its language. It runs as a native binary because Buf starts it about a dozen times per lint. Commit `buf.lock`.
 - **connect-go v2:** one `connect.Server` holds the interceptors (flow IDs, auth, dedo's policy, validation); Connect and gRPC (`connecthttp.Mount`), REST (`vanguard.Mount`) and MCP (`connectinprocess`) all reach it, so every transport gets the same checks.
 
 [install.md](install.md) shows each part by hand, for repositories that prefer not to run `dedo init`. Add `.github/CODEOWNERS` yourself (`dedo templates CODEOWNERS`) so every change under `proto/` needs an API review.
@@ -270,7 +270,7 @@ The interceptor then reads the tenants of every request, on every transport, fro
 
 | Check | Fails when |
 | --- | --- |
-| `make tools` | The lint plugin pinned in `go.mod`, or a house-rules import, cannot be built or fetched, or a rule overrides one it may not |
+| `make tools` | The lint plugin at `buf.yaml`'s release, or a house-rules import, cannot be installed or fetched, or a rule overrides one it may not |
 | `buf format --diff --exit-code` | A `.proto` file is not formatted |
 | `buf lint` | Any Buf, AIP, Zalando, dedo or house rule is broken |
 | `buf breaking --against '.git#branch=main'` | The change breaks clients |
@@ -304,7 +304,7 @@ Point an MCP client at `http://localhost:8080/mcp`, with the header `Authorizati
 
 **Why both a proto comment and a `tool.description`?** The comment is for people who maintain the API. The description is published to API readers and AI agents, and the lint makes sure it exists.
 
-**Where do the options and the lint plugin come from?** A service depends on `buf.build/r-a/dedo` in `buf.yaml` and pins the lint plugin in `go.mod`; `dedo tools` builds it. The examples in this repository are the exception: they test the working tree, so they vendor `options.proto` under `third_party/` and load the plugin from `dist/`.
+**Where do the options and the lint plugin come from?** A repository depends on `buf.build/r-a/dedo` in `buf.yaml`, and its label names the lint plugin's release too; `dedo tools` installs that plugin and copies it into `.tools/`. The examples in this repository are the exception: they test the working tree, so they vendor `options.proto` under `third_party/` and load the plugin from `dist/`.
 
 **Why a native plugin binary instead of the BSR plugin?** Speed in the editor. One lint takes about 0.3 s with the native binary and about 5 s with the WebAssembly one, and the editor reruns it as you type. The BSR plugin (`buf.build/r-a/dedo-lint`) needs no Go, so it suits repositories of protos alone, which `dedo init` sets up with it; it cannot read `rules.yml`, so for house rules there, a platform team builds one with them built in (`dedo tools -wasm`) and pushes it to the BSR.
 
@@ -316,4 +316,4 @@ Point an MCP client at `http://localhost:8080/mcp`, with the header `Authorizati
 
 If they join Buf's plugin catalog, `remote: buf.build/community/...` becomes a fourth option that needs no install.
 
-**How do I update dedo?** `dedo update`, then `dedo upgrade` in each repository: it moves the options module's label in `buf.yaml` and the lint plugin, generators and runtime in `go.mod` to the new release together, refreshes `buf.lock`, rebuilds the plugin and regenerates the code. CI builds the plugin from the same `go.mod`, so the editor and CI always run the same rules.
+**How do I update dedo?** `dedo update`, then `dedo upgrade` in each repository: it moves the options module's label in `buf.yaml` (and with it the lint plugin) and the generators and runtime in `go.mod` to the new release together, refreshes `buf.lock`, copies in the new plugin and regenerates the code. CI runs `dedo tools` against the same `buf.yaml`, so the editor and CI always run the same rules.

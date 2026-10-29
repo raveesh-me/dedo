@@ -148,12 +148,15 @@ func TestInitFreshRepository(t *testing.T) {
 	for _, want := range []string{
 		"go get -tool github.com/raveesh-me/dedo/mcp/cmd/protoc-gen-dedo-mcp@" + version,
 		"buf dep update",
-		"go get -tool " + lintPluginPkg + "@" + version,
-		"go build -o " + pluginPath() + " " + lintPluginPkg,
+		"go get -tool " + cliPkg + "@" + version,
+		"run dedo tools",
 	} {
 		if !strings.Contains(out, want) {
 			t.Errorf("output lacks %q", want)
 		}
+	}
+	if strings.Contains(out, lintPluginPkg) {
+		t.Errorf("the lint plugin is pinned in go.mod:\n%s", out)
 	}
 	main := mainGo(t, dir, out)
 	formatted, err := format.Source([]byte(main))
@@ -523,14 +526,15 @@ func TestInitWritesMainOnce(t *testing.T) {
 	}
 }
 
-func TestToolsNeedsThePin(t *testing.T) {
-	var out bytes.Buffer
-	if err := run([]string{"tools", "-dir", t.TempDir()}, &out); err == nil || !strings.Contains(err.Error(), "dedo init") {
-		t.Errorf("without go.mod: %v", err)
-	}
-	dir := repo(t, map[string]string{"go.mod": "module example.com/notes\n"})
-	if err := run([]string{"tools", "-dir", dir}, &out); err == nil || !strings.Contains(err.Error(), "go get -tool "+lintPluginPkg+"@"+version) {
-		t.Errorf("without the pin: %v", err)
+// The lint plugin belongs to the protos, not to a Go module: dedo init
+// drops the go.mod pin earlier releases added.
+func TestInitDropsLintPin(t *testing.T) {
+	dir := repo(t, map[string]string{
+		"go.mod":                        "module example.com/shop\n\ngo 1.26\n\ntool " + lintPluginPkg + "\n",
+		"proto/shop/cart/v1/cart.proto": "syntax = \"proto3\";\npackage shop.cart.v1;\n",
+	})
+	if out := initOffline(t, dir); !strings.Contains(out, "go get -tool "+lintPluginPkg+"@none") {
+		t.Errorf("output:\n%s", out)
 	}
 }
 
