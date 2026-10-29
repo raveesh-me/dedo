@@ -114,3 +114,26 @@ func pinnedRelease(dir string) (string, error) {
 	}
 	return version, nil
 }
+
+// uninstall deletes dedo and the lint plugin from $GOBIN: dedo uninstall. It
+// changes no repository; each keeps its own copy in .tools/, ignored by git.
+func uninstall(out io.Writer) error {
+	removed := 0
+	for _, p := range []string{globalPlugin(), installedCLI()} {
+		err := os.Remove(p)
+		if errors.Is(err, os.ErrNotExist) {
+			continue
+		}
+		if err != nil {
+			return fmt.Errorf("removing %s: %w", p, err)
+		}
+		fmt.Fprintf(out, "removed %s\n", p)
+		removed++
+	}
+	if removed == 0 {
+		fmt.Fprintf(out, "nothing to remove: neither %s nor %s exists\n", globalPlugin(), installedCLI())
+		return nil
+	}
+	fmt.Fprintln(out, "repositories keep their copy in .tools/; rm -rf .tools/ in each to remove it")
+	return nil
+}

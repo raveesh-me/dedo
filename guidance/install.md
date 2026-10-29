@@ -274,3 +274,11 @@ dedo upgrade    # moves this repository to it
 - from connect-go v1 (dedo before v0.11.0): connect-go's own `connect-go-v2-migrate`, before and after regenerating, rewrites handlers and clients. It lists what it cannot rewrite; the wiring in `main.go` (one `connect.Server`, `connecthttp.Mount`, `vanguard.Mount`, auth as an interceptor) is printed beside yours to copy.
 
 It keeps your `main.go` and `server.go`, and prints dedo's current `main.go` beside yours to compare. `dedo update -version vX.Y.Z` installs a given release instead of the latest.
+
+## Uninstalling
+
+```sh
+dedo uninstall  # removes dedo and buf-plugin-dedo-lint from $GOBIN
+```
+
+It changes no repository. Each keeps its copy of the plugin and the fetched house rules in `.tools/`, ignored by git; `rm -rf .tools/` removes them. To take dedo out of a repository, revert what `dedo init` wrote: `buf.yaml`, `rules.yml`, the Go tools in `go.mod`, `Makefile.api` and the guidance in `AGENTS.md`.

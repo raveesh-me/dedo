@@ -129,3 +129,30 @@ func TestToolsNeedsBufYAML(t *testing.T) {
 		t.Errorf("err = %v", err)
 	}
 }
+
+// dedo uninstall deletes what dedo install and go install put in $GOBIN, and
+// says so when there is nothing to remove.
+func TestUninstallCommand(t *testing.T) {
+	stubGlobalPlugin(t)
+	for _, p := range []string{globalPlugin(), installedCLI()} {
+		if err := writeFakePlugin(p, version); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var out bytes.Buffer
+	if err := run([]string{"uninstall"}, &out); err != nil {
+		t.Fatal(err)
+	}
+	for _, p := range []string{globalPlugin(), installedCLI()} {
+		if _, err := os.Stat(p); !os.IsNotExist(err) {
+			t.Errorf("%s still there", p)
+		}
+		if !strings.Contains(out.String(), "removed "+p) {
+			t.Errorf("output lacks %s:\n%s", p, out.String())
+		}
+	}
+	out.Reset()
+	if err := run([]string{"uninstall"}, &out); err != nil || !strings.Contains(out.String(), "nothing to remove") {
+		t.Errorf("second run: %v\n%s", err, out.String())
+	}
+}
