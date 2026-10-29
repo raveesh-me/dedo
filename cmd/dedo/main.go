@@ -31,11 +31,14 @@ func main() {
 const usage = `usage:
   dedo init [-dir DIR] [-offline]   set up the repository in DIR (default .)
   dedo upgrade [-dir DIR]           move the repository to this dedo's release: pins, templates, buf.lock, generated code
-  dedo upgrade -lint [-dir DIR]     move only the lint plugin to this release, then do what dedo tools does
+  dedo upgrade -lint [-dir DIR]     move only the options module, whose label is the lint plugin's release, then dedo tools
   dedo update [-version V]          install the latest dedo (or V); then run dedo upgrade
-  dedo tools [-dir DIR] [-wasm F]   build the lint plugin pinned in go.mod into .tools/, fetch the house
-                                    rules and list every rule override, failing on one the order forbids;
-                                    -wasm also builds it as WebAssembly into F with the house rules built in
+  dedo install [-version V]         install the lint plugin at this release (or V) into $GOBIN
+  dedo uninstall                    remove dedo and the lint plugin from $GOBIN; repositories keep .tools/
+  dedo tools [-dir DIR] [-wasm F]   copy the lint plugin at buf.yaml's release into .tools/ (installing it
+                                    into $GOBIN first if needed), fetch the house rules and list every rule
+                                    override, failing on one the order forbids; -wasm also builds it as
+                                    WebAssembly into F with the house rules built in
   dedo templates [NAME]             list the bundled templates, or print one
   dedo version                      print the dedo release this command installs
 `
@@ -65,7 +68,7 @@ func run(args []string, out io.Writer) error {
 			return err
 		}
 		if *lint {
-			return toolsLint(*dir, version, out)
+			return toolsLint(*dir, version, *offline, out)
 		}
 		return upgrade(*dir, *offline, out)
 	case "update":
@@ -76,6 +79,16 @@ func run(args []string, out io.Writer) error {
 			return err
 		}
 		return update(*release, out)
+	case "install":
+		flags := flag.NewFlagSet("install", flag.ContinueOnError)
+		flags.SetOutput(out)
+		release := flags.String("version", version, "the lint plugin release to install")
+		if err := flags.Parse(args[1:]); err != nil {
+			return err
+		}
+		return install(*release, out)
+	case "uninstall":
+		return uninstall(out)
 	case "tools":
 		flags := flag.NewFlagSet("tools", flag.ContinueOnError)
 		flags.SetOutput(out)

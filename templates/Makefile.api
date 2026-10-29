@@ -1,10 +1,9 @@
 # Include from a service Makefile: `include Makefile.api`.
 # Deps are pinned in buf.lock; commit it. Add .tools/ to .gitignore.
 #
-# The lint plugin is pinned in go.mod as a Go tool, like the generators
-# (go get -tool github.com/raveesh-me/dedo/lint/cmd/buf-plugin-dedo-lint@vX.Y.Z),
-# and built into .tools/, where buf.yaml finds it, by dedo, which is pinned
-# as a Go tool too.
+# The lint plugin's release is the options module's label in buf.yaml; dedo,
+# pinned in go.mod as a Go tool, installs it into $GOBIN and copies it into
+# .tools/, where buf.yaml finds it.
 #
 # dedo init names a target api-<name> instead when the service's Makefile
 # already has one of these names.
@@ -41,7 +40,7 @@ check: tools
 test:
 	go test ./...
 
-## tools: build the lint plugin pinned in go.mod into .tools/, fetch the house
+## tools: copy the lint plugin at buf.yaml's release into .tools/, fetch the house
 ## rules rules.yml imports from git, and check their overrides; run it after a
 ## clone, an upgrade, or a change to rules.yml
 tools:
