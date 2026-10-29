@@ -8,7 +8,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
-	"runtime"
 	"strconv"
 	"strings"
 )
@@ -54,18 +53,8 @@ func update(release string, out io.Writer) error {
 	return nil
 }
 
-// installedCLI is where go install puts dedo: $GOBIN, else $GOPATH/bin.
-func installedCLI() string {
-	name := "dedo"
-	if runtime.GOOS == "windows" {
-		name += ".exe"
-	}
-	if bin, _ := exec.Command("go", "env", "GOBIN").Output(); strings.TrimSpace(string(bin)) != "" {
-		return filepath.Join(strings.TrimSpace(string(bin)), name)
-	}
-	gopath, _ := exec.Command("go", "env", "GOPATH").Output()
-	return filepath.Join(strings.TrimSpace(string(gopath)), "bin", name)
-}
+// installedCLI is where go install puts dedo.
+func installedCLI() string { return goBin("dedo") }
 
 // upgrade moves a repository to this command's release, as one version:
 // everything dedo init pins (the lint plugin, generators and runtime in

@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"go/format"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -604,32 +605,36 @@ plugins: []
 	}
 }
 
-// A repository of protos without Go gets the options module and the BSR
-// lint plugin, both at this release, and nothing that needs Go.
+// A repository of protos without Go gets the options module at this
+// release and the vendored lint plugin, replacing the BSR plugin earlier
+// releases listed, and nothing that needs Go.
 func TestInitSchemaRepository(t *testing.T) {
 	dir := repo(t, map[string]string{
 		"proto/shop/cart/v1/cart.proto": "syntax = \"proto3\";\npackage shop.cart.v1;\nservice CartService {}\n",
-		"buf.yaml":                      "version: v2\nmodules:\n  - path: proto\nplugins:\n  - plugin: .tools/buf-plugin-dedo-lint\n",
+		"buf.yaml":                      "version: v2\nmodules:\n  - path: proto\nplugins:\n  - plugin: " + remotePlugin + ":v0.14.0\n",
 	})
 	out := initOffline(t, dir)
 	buf := read(t, dir, "buf.yaml")
-	for _, want := range []string{"plugin: " + remotePlugin + ":" + version, optionsModule + ":" + version} {
+	for _, want := range []string{"plugin: " + lintPlugin, optionsModule + ":" + version} {
 		if !strings.Contains(buf, want) {
 			t.Errorf("buf.yaml lacks %s:\n%s", want, buf)
 		}
 	}
-	if strings.Contains(buf, ".tools/buf-plugin-dedo-lint") {
-		t.Error("the native plugin, which needs Go, is still listed")
+	if strings.Contains(buf, remotePlugin) {
+		t.Errorf("the BSR plugin, which cannot read rules.yml, is still listed:\n%s", buf)
+	}
+	if !strings.Contains(read(t, dir, ".gitignore"), ".tools/") {
+		t.Error(".tools/ is not ignored")
 	}
 	for _, name := range []string{"go.mod", "Makefile.api", "buf.gen.yaml", "main.go", "server.go"} {
 		if _, err := os.Stat(filepath.Join(dir, name)); err == nil {
 			t.Errorf("%s written into a schema repository", name)
 		}
 	}
-	if !strings.Contains(out, "buf plugin update") || !strings.HasPrefix(read(t, dir, "AGENTS.md"), guidanceMarker) {
+	if !strings.Contains(out, "dedo tools") || !strings.HasPrefix(read(t, dir, "AGENTS.md"), guidanceMarker) {
 		t.Errorf("output:\n%s", out)
 	}
-	// An upgrade moves the plugin's label too.
+	// An upgrade moves the options module's label, and so the plugin's.
 	if err := os.WriteFile(filepath.Join(dir, "buf.yaml"), []byte(strings.ReplaceAll(buf, version, "v0.1.0")), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -639,6 +644,50 @@ func TestInitSchemaRepository(t *testing.T) {
 	}
 	if got := read(t, dir, "buf.yaml"); strings.Contains(got, "v0.1.0") {
 		t.Errorf("upgrade left old labels:\n%s", got)
+	}
+}
+
+// Online, dedo init vendors the global plugin and checks the house rules
+// with it.
+func TestInitSchemaRepositoryVendorsPlugin(t *testing.T) {
+	installed := stubGlobalPlugin(t)
+	dir := repo(t, map[string]string{
+		"proto/shop/cart/v1/cart.proto": "syntax = \"proto3\";\npackage shop.cart.v1;\n",
+		"buf.yaml":                      "version: v2\nmodules:\n  - path: proto\n",
+		"buf.lock":                      "version: v2\n",
+	})
+	in := &initer{p: &project{dir: dir, schemaOnly: true}, release: version, out: io.Discard}
+	if failed := in.vendor(false); len(failed) > 0 {
+		t.Fatalf("failed: %v", failed)
+	}
+	if strings.Join(*installed, " ") != version {
+		t.Errorf("installed %v", *installed)
+	}
+	if v, _ := pluginVersion(filepath.Join(dir, pluginPath())); v != version {
+		t.Errorf("vendored %q", v)
+	}
+}
+
+// buf.yaml lists one buf-plugin-dedo-lint: dedo init replaces one listed at
+// another path rather than adding a second, which buf rejects.
+func TestInitReplacesOtherPluginPath(t *testing.T) {
+	for _, schema := range []bool{false, true} {
+		files := map[string]string{
+			"buf.yaml":                      "version: v2\nmodules:\n  - path: proto\nplugins:\n  - plugin: ../../dist/buf-plugin-dedo-lint\n",
+			"proto/shop/cart/v1/cart.proto": "syntax = \"proto3\";\npackage shop.cart.v1;\n",
+		}
+		if !schema {
+			files["go.mod"] = "module example.com/shop\n"
+		}
+		dir := repo(t, files)
+		initOffline(t, dir)
+		var plugins []string
+		for _, item := range lookup(yamlAt(t, dir, "buf.yaml"), "plugins").Content {
+			plugins = append(plugins, lookup(item, "plugin").Value)
+		}
+		if !slices.Equal(plugins, []string{lintPlugin}) {
+			t.Errorf("schema %v: plugins = %v", schema, plugins)
+		}
 	}
 }
 
@@ -796,17 +845,6 @@ service ContactService {
 	}
 	if main := mainGo(t, dir, out); strings.Contains(main, "tenant") || strings.Contains(main, `"slices"`) {
 		t.Errorf("main.go of a single-tenant service mentions tenants:\n%s", main)
-	}
-}
-
-func TestInitWarnsSchemaRepoHouseRules(t *testing.T) {
-	dir := repo(t, map[string]string{
-		"buf.yaml":                      "version: v2\nmodules:\n  - path: proto\n",
-		"rules.yml":                     "rules: []\n",
-		"proto/shop/cart/v1/cart.proto": "syntax = \"proto3\";\npackage shop.cart.v1;\n",
-	})
-	if out := initOffline(t, dir); !strings.Contains(out, "runs dedo's default rule sets and no house rules") {
-		t.Errorf("no warning:\n%s", out)
 	}
 }
 

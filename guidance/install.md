@@ -242,7 +242,7 @@ Append [claude.md](claude.md) to your `AGENTS.md` or `CLAUDE.md` (`dedo template
 | --- | --- |
 | A Go module with protos and `buf.gen.yaml` | Keeps your generators, including Buf's remote `protocolbuffers/go` and `connectrpc/go` plugins, and adds only dedo's two, writing to the same `out` with the same `paths=` option. Reads each file's `go_package`, or managed mode's `go_package_prefix`, for the Go names in `main.go`. Leaves managed mode as it is. Warns when `connectrpc/go` is pinned to a release that generates connect-go v1 code, which dedo's server cannot register. |
 | A Go module with protos, no `buf.gen.yaml` | Writes `buf.gen.yaml` with managed mode and four generators run through `go tool`. |
-| Protos and `buf.yaml`, but no Go module (a schema repository) | Adds the options module and the lint plugin from the BSR (`buf.build/r-a/dedo-lint:<release>`, about 5 s per lint, no Go needed), both pinned to the release. Nothing that needs Go. Run `go mod init` and `dedo init` again when you want generated code and a server. |
+| Protos and `buf.yaml`, but no Go module (a schema repository) | Adds the options module, pinned to the release, and the lint plugin. With no `go.mod` to pin the plugin in, it installs it once per machine into `$GOBIN` (`dedo install`) and copies it into `.tools/`; the options module's label in `buf.yaml` names its release, and `dedo tools` copies it again after a clone or an upgrade, and fetches the house rules. It replaces the BSR plugin (`buf.build/r-a/dedo-lint`) that earlier releases listed, which cannot read `rules.yml`. Nothing else needs Go. Run `go mod init` and `dedo init` again when you want generated code and a server. |
 | A Go module without protos | Writes a starter service that passes lint. |
 
 In `buf.yaml` it adds the deps, the `DEDO` category and the plugin, and in `rules.yml` the rule sets that run. A `buf.yaml` from a release before v0.15.0 chose the plugin's rules itself: `dedo init` and `dedo upgrade` move that choice to `rules.yml`, its sets to `use` and its exceptions to `disable`, and drop the ones dedo now skips by itself. It keeps your own deps, Buf's categories and exceptions, plugins, and comments, in both files. It needs `buf.yaml` version v2: run `buf config migrate` first if yours is v1.
@@ -261,7 +261,7 @@ dedo upgrade    # moves this repository to it
 `dedo update` replaces the `dedo` command and changes no repository. `dedo upgrade`, run in each repository, moves everything to the release of the `dedo` you run, as one version:
 
 - the lint plugin, the generators and the runtime in `go.mod`, and the plugin rebuilt into `.tools/`;
-- the options module's label in `buf.yaml`, then `buf.lock` (`buf dep update`); in a schema repository, the BSR lint plugin's label too (`buf plugin update`);
+- the options module's label in `buf.yaml`, then `buf.lock` (`buf dep update`); in a schema repository, the lint plugin installed into `$GOBIN` and copied into `.tools/` at that release;
 - `Makefile.api`, and plugin entries and generated files that earlier releases named differently;
 - the generated code (`buf generate`) and `go.mod` (`go mod tidy`);
 - from connect-go v1 (dedo before v0.11.0): connect-go's own `connect-go-v2-migrate`, before and after regenerating, rewrites handlers and clients. It lists what it cannot rewrite; the wiring in `main.go` (one `connect.Server`, `connecthttp.Mount`, `vanguard.Mount`, auth as an interceptor) is printed beside yours to copy.

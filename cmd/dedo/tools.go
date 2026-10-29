@@ -38,11 +38,19 @@ func buildPluginCmd() []string {
 
 // tools builds the lint plugin pinned in go.mod into .tools/, for a fresh
 // clone, a CI job, or after the pin changes, then fetches and consolidates
-// the house rules. It is what make tools does, without make.
+// the house rules. It is what make tools does, without make. Without
+// go.mod, it vendors the global plugin at buf.yaml's release instead.
 func tools(dir string, out io.Writer) error {
 	gomod, err := os.ReadFile(filepath.Join(dir, "go.mod"))
 	if errors.Is(err, os.ErrNotExist) {
-		return fmt.Errorf("no go.mod in %s: run dedo init first", dir)
+		release, err := pinnedRelease(dir)
+		if err != nil {
+			return err
+		}
+		if err := vendorPlugin(dir, release, out); err != nil {
+			return err
+		}
+		return houseRules(dir, out)
 	}
 	if err != nil {
 		return err
@@ -129,7 +137,7 @@ const lintModule = "github.com/raveesh-me/dedo/lint"
 // consolidates the house rules: dedo upgrade -lint.
 func toolsLint(dir, release string, out io.Writer) error {
 	if _, err := os.Stat(filepath.Join(dir, "go.mod")); errors.Is(err, os.ErrNotExist) {
-		return fmt.Errorf("no go.mod in %s: run dedo init first", dir)
+		return fmt.Errorf("no go.mod in %s: the options module's label in buf.yaml sets the lint plugin's release there, so run dedo upgrade to move both", dir)
 	}
 	c := []string{"go", "get", "-tool", lintPluginPkg + "@" + release}
 	fmt.Fprintf(out, "$ %s\n", strings.Join(c, " "))

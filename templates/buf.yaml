@@ -25,11 +25,11 @@ breaking:
     - FILE
   ignore_unstable_packages: true
 plugins:
-  # Pinned in go.mod and built into .tools/ by `dedo tools` (or make tools).
+  # Pinned in go.mod and built into .tools/ by `dedo tools` (or make tools);
+  # in a repository without go.mod, `dedo tools` copies the one `dedo
+  # install` put in $GOBIN there, at the options module's release above.
   # It is referred to by path, so editors started outside a shell find it
-  # too, and runs natively: buf starts it about a dozen times per lint. A
-  # machine without Go can list the BSR plugin instead
-  # (buf.build/r-a/dedo-lint), at about 5 s per lint.
+  # too, and runs natively: buf starts it about a dozen times per lint.
   - plugin: .tools/buf-plugin-dedo-lint
   # It reads rules.yml next to this file: the rule sets that run, the rules
   # opted out of, and your organisation's HOUSE_* rules. See

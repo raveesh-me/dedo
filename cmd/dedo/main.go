@@ -33,7 +33,10 @@ const usage = `usage:
   dedo upgrade [-dir DIR]           move the repository to this dedo's release: pins, templates, buf.lock, generated code
   dedo upgrade -lint [-dir DIR]     move only the lint plugin to this release, then do what dedo tools does
   dedo update [-version V]          install the latest dedo (or V); then run dedo upgrade
-  dedo tools [-dir DIR] [-wasm F]   build the lint plugin pinned in go.mod into .tools/, fetch the house
+  dedo install [-version V]         install the lint plugin at this release (or V) into $GOBIN, for
+                                    repositories without go.mod
+  dedo tools [-dir DIR] [-wasm F]   build the lint plugin pinned in go.mod into .tools/ (without go.mod,
+                                    copy the installed one at buf.yaml's release there), fetch the house
                                     rules and list every rule override, failing on one the order forbids;
                                     -wasm also builds it as WebAssembly into F with the house rules built in
   dedo templates [NAME]             list the bundled templates, or print one
@@ -76,6 +79,14 @@ func run(args []string, out io.Writer) error {
 			return err
 		}
 		return update(*release, out)
+	case "install":
+		flags := flag.NewFlagSet("install", flag.ContinueOnError)
+		flags.SetOutput(out)
+		release := flags.String("version", version, "the lint plugin release to install")
+		if err := flags.Parse(args[1:]); err != nil {
+			return err
+		}
+		return install(*release, out)
 	case "tools":
 		flags := flag.NewFlagSet("tools", flag.ContinueOnError)
 		flags.SetOutput(out)

@@ -138,30 +138,18 @@ func (in *initer) hasHouseRules() bool {
 	return config.Find(in.p.dir) != ""
 }
 
-// remotePlugin is the lint plugin on the BSR, for repositories without Go.
+// remotePlugin is the lint plugin on the BSR, which releases before
+// v0.16.0 listed in repositories without Go. It cannot read rules.yml, so
+// dedo init replaces it with the vendored native plugin.
 const remotePlugin = "buf.build/r-a/dedo-lint"
 
-// pinRemotePlugin lists the BSR lint plugin at this release, replacing any
-// other label of it. It reports whether buf.yaml changed.
-func (in *initer) pinRemotePlugin(plugins *yaml.Node) bool {
-	want := remotePlugin + ":" + in.release
-	for _, item := range plugins.Content {
-		p := lookup(item, "plugin")
-		if p == nil || (p.Value != remotePlugin && !strings.HasPrefix(p.Value, remotePlugin+":")) {
-			continue
-		}
-		if p.Value == want {
-			return false
-		}
-		p.Value = want
-		in.say("buf.yaml: lint plugin pinned to %s", want)
-		return true
-	}
-	item := &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map"}
-	set(item, "plugin", scalar(want))
-	plugins.Content = append(plugins.Content, item)
-	in.say("buf.yaml: added the plugin %s (from the BSR; it runs without Go, at about 5 s per lint)", want)
-	return true
+// replacedPlugin reports whether a plugin buf.yaml lists is one that
+// lintPlugin replaces: an earlier dedo plugin, the BSR one, or
+// buf-plugin-dedo-lint at another path, which buf would load twice.
+func replacedPlugin(p string) bool {
+	return isOldPlugin(p) ||
+		p == remotePlugin || strings.HasPrefix(p, remotePlugin+":") ||
+		p != lintPlugin && path.Base(p) == path.Base(lintPlugin)
 }
 
 // initSchema sets up a schema repository: options, lint, agent guidance.
@@ -176,11 +164,32 @@ func (in *initer) initSchema(offline bool) error {
 		}
 	}
 	failed := in.runCommands(offline)
+	failed = append(failed, in.vendor(offline)...)
 	fmt.Fprintln(in.out, "\nnext:")
 	in.say("1. buf lint: it lists the declarations each service still needs")
-	in.say("2. for generated code and a server, add a go.mod (go mod init) and run dedo init again")
+	in.say("2. after a clone, an upgrade or a change to rules.yml, run dedo tools: it vendors the lint plugin and fetches the house rules")
+	in.say("3. for generated code and a server, add a go.mod (go mod init) and run dedo init again")
 	if len(failed) > 0 {
 		return fmt.Errorf("%d commands failed: %s; fix the cause and run dedo init again", len(failed), strings.Join(failed, "; "))
+	}
+	return nil
+}
+
+// vendor copies the global lint plugin at this release into .tools/,
+// installing it first if needed, then fetches and checks the house rules:
+// what dedo tools does in a repository without go.mod. It returns what
+// failed.
+func (in *initer) vendor(offline bool) []string {
+	if offline {
+		in.say("run dedo tools in %s: it vendors the lint plugin into %s", in.p.dir, pluginPath())
+		return nil
+	}
+	fmt.Fprintln(in.out, "\nvendoring the lint plugin...")
+	if err := vendorPlugin(in.p.dir, in.release, in.out); err != nil {
+		return []string{"dedo install: " + err.Error()}
+	}
+	if err := houseRules(in.p.dir, in.out); err != nil {
+		return []string{"dedo tools (house rules): " + err.Error()}
 	}
 	return nil
 }
@@ -302,7 +311,7 @@ func (in *initer) linter() error {
 	plugins := child(root(doc), "plugins", yaml.SequenceNode)
 	kept := plugins.Content[:0]
 	for _, item := range plugins.Content {
-		if p := lookup(item, "plugin"); p != nil && (isOldPlugin(p.Value) || in.p.schemaOnly && p.Value == lintPlugin) {
+		if p := lookup(item, "plugin"); p != nil && replacedPlugin(p.Value) {
 			in.say("buf.yaml: removed %s, which buf-plugin-dedo-lint replaces", p.Value)
 			changed = true
 			continue
@@ -310,9 +319,7 @@ func (in *initer) linter() error {
 		kept = append(kept, item)
 	}
 	plugins.Content = kept
-	if in.p.schemaOnly {
-		changed = in.pinRemotePlugin(plugins) || changed
-	} else if findItem(plugins, func(n *yaml.Node) bool { return lookup(n, "plugin") != nil && lookup(n, "plugin").Value == lintPlugin }) == nil {
+	if findItem(plugins, func(n *yaml.Node) bool { return lookup(n, "plugin") != nil && lookup(n, "plugin").Value == lintPlugin }) == nil {
 		item := &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map"}
 		set(item, "plugin", scalar(lintPlugin))
 		plugins.Content = append(plugins.Content, item)
@@ -332,10 +339,9 @@ func (in *initer) linter() error {
 		return fmt.Errorf("rules.yml: %w", err)
 	}
 	if in.p.schemaOnly {
-		in.say("rules.yml: WARNING the BSR plugin cannot read files, so without Go it runs dedo's default rule sets and no house rules; add a go.mod and run dedo init again to use the native plugin, or list a plugin built with rules.yml (dedo tools -wasm in a Go repository)")
-		// No Go: the plugin is the BSR's, which buf.lock pins.
-		in.cmds = append(in.cmds, []string{"buf", "plugin", "update"})
-		return nil
+		// No go.mod to pin the plugin in: initSchema vendors the global
+		// one, at the options module's release, into .tools/.
+		return in.ensureLine(".gitignore", ".tools/")
 	}
 	mk, err := os.ReadFile(in.path("Makefile"))
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
