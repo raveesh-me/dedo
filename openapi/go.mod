@@ -5,7 +5,7 @@ go 1.26.0
 require (
 	github.com/bufbuild/protocompile v0.14.1
 	github.com/pb33f/libopenapi v0.38.7
-	github.com/raveesh-me/dedo v0.16.1
+	github.com/raveesh-me/dedo v0.17.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20261012220534-4341edf3f941
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20261012220534-4341edf3f941
 	google.golang.org/protobuf v1.36.12

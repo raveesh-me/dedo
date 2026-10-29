@@ -21,7 +21,7 @@ Install:
 - Go 1.25 or later
 - The [Buf CLI](https://buf.build/docs/installation)
 - VS Code with the Buf extension (`bufbuild.vscode-buf`), or Zed. Remove other Protobuf extensions.
-- The `dedo` command: `go install github.com/raveesh-me/dedo/cmd/dedo@v0.16.1`
+- The `dedo` command: `go install github.com/raveesh-me/dedo/cmd/dedo@v0.17.0`
 
 Decide these names with your team:
 
