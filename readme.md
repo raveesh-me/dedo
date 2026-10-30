@@ -101,7 +101,7 @@ See `examples/library/proto` for a complete module.
 
 ## Lint rules
 
-`buf-plugin-dedo-lint` runs three classes of rules: `AIP_*` (Google's AIPs, through api-linter), `ZALANDO_*` (the Zalando guidelines dedo adopts) and `DEDO_*` (dedo's own). A fourth, `HOUSE_*`, is your organisation's own: CEL checks in `rules.yml`, importable from a shared git repository; [`examples/house-rules`](examples/house-rules) shows them.
+`buf-plugin-dedo-lint` runs three classes of rules: `AIP_*` (Google's AIPs, through api-linter), `ZALANDO_*` (the Zalando guidelines dedo adopts) and `DEDO_*` (dedo's own). A fourth, `HOUSE_*`, is your organisation's own: CEL checks in `rules.yml`, importable from a shared git repository or from a release published over HTTPS, pinned by its SHA-256; [`examples/house-rules`](examples/house-rules) shows them.
 
 The classes rank in layers: your repository's own `rules.yml`, then the house rules it imports, then DEDO, AIP and ZALANDO. Nothing guesses at conflicts: a rule names the rules it replaces in `overrides`, the plugin checks that each ranks below it, and the overridden rules report nothing. Final rules cannot be overridden: three of dedo's, which the runtime depends on, so a contract that lints clean also starts, and any house rule marked `final: true`, which an organisation's shared rules use to lock a convention for every service. `dedo tools` lists every override in force. [RULES.md](guidance/RULES.md#precedence) has the order, dedo's own overrides and every rule dedo skips, by source.
 
