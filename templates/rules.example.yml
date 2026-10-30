@@ -36,6 +36,12 @@ imports:
   - git: https://github.com/acme/commerce-platform.git
     ref: 4f9c2a1
     path: api/rules.yml
+  # Rules published over HTTPS, for machines that cannot read the
+  # repository: pinned by the file's SHA-256, which dedo tools checks (and
+  # prints, when it is missing). A relative doc on its rules is resolved
+  # against this URL.
+  # - url: https://acme.github.io/payments-rules/v2/rules.yml
+  #   sha256: 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
   # Rules shared by this monorepo's services: a folder (its rules.yml) or
   # a file, relative to this file's folder.
   - path: ../shared-rules
