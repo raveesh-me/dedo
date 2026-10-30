@@ -20,7 +20,7 @@ import (
 //	ZALANDO < AIP < DEDO < HOUSE
 //
 // Among house rules, a rules file outranks the files it imports, so a
-// repository's own rules.yml outranks the shared rules it imports. No
+// repository's own dedo.yaml outranks the shared rules it imports. No
 // conflict is detected for you: a rule names the rules it overrides, and
 // Consolidate checks each against this order.
 const (
@@ -87,11 +87,11 @@ type Override struct {
 type Consolidated struct {
 	Rules     []*check.RuleSpec
 	Overrides []Override
-	// Use are the rule sets and rules of dedo's that rules.yml uses.
+	// Use are the rule sets and rules of dedo's that dedo.yaml uses.
 	Use []string
-	// DefaultUse is set when rules.yml does not say use.
+	// DefaultUse is set when dedo.yaml does not say use.
 	DefaultUse bool
-	// Disabled are the rules of dedo's that rules.yml disables.
+	// Disabled are the rules of dedo's that dedo.yaml disables.
 	Disabled []string
 	// House is the number of house rules.
 	House int
@@ -133,7 +133,7 @@ func outranks(a, b candidate) bool {
 	return slices.Contains(b.house.Importers, a.house.File)
 }
 
-// Consolidate checks rules.yml's use and disable and every override
+// Consolidate checks dedo.yaml's use and disable and every override
 // against the order of layers, the final rules and the rules that exist,
 // and returns the rules to run. It reports every mistake at once. A rule
 // runs when use names it or a set it is in (HOUSE for house rules), unless
@@ -225,7 +225,7 @@ func Consolidate(builtin []*check.RuleSpec, houseRules []config.Rule, houseSpecs
 	return out, nil
 }
 
-// selection checks rules.yml's use and disable against the rules, and
+// selection checks dedo.yaml's use and disable against the rules, and
 // returns why each rule that does not run is off.
 func selection(all []candidate, byID map[string]candidate, use, disabled []string) (map[string]string, error) {
 	sets := map[string]bool{house.Category: true}
@@ -237,7 +237,7 @@ func selection(all []candidate, byID map[string]candidate, use, disabled []strin
 	var errs []error
 	for _, u := range use {
 		if _, ok := byID[u]; !ok && !sets[u] {
-			errs = append(errs, fmt.Errorf("rules.yml: use names %s, which is neither a rule set such as AIP_NOLANG, ZALANDO, DEDO, HOUSE or DEDO_MULTI_TENANT nor a rule", u))
+			errs = append(errs, fmt.Errorf("dedo.yaml: use names %s, which is neither a rule set such as AIP_NOLANG, ZALANDO, DEDO, HOUSE or DEDO_MULTI_TENANT nor a rule", u))
 		}
 	}
 	for _, id := range disabled {
@@ -245,9 +245,9 @@ func selection(all []candidate, byID map[string]candidate, use, disabled []strin
 		case config.IsHouse(id):
 			// Checked against the rules files already.
 		case byID[id].spec == nil:
-			errs = append(errs, fmt.Errorf("rules.yml: disable names %s, which no rule defines", id))
+			errs = append(errs, fmt.Errorf("dedo.yaml: disable names %s, which no rule defines", id))
 		case Final[id] != "":
-			errs = append(errs, fmt.Errorf("rules.yml: disable names %s, which is final: %s. Keep it", id, Final[id]))
+			errs = append(errs, fmt.Errorf("dedo.yaml: disable names %s, which is final: %s. Keep it", id, Final[id]))
 		}
 	}
 	if err := errors.Join(errs...); err != nil {
@@ -260,13 +260,13 @@ func selection(all []candidate, byID map[string]candidate, use, disabled []strin
 		case Final[id] != "" || c.house != nil && c.house.Final:
 			// Always runs.
 		case slices.Contains(disabled, id):
-			off[id] = "Disabled in rules.yml."
+			off[id] = "Disabled in dedo.yaml."
 		case slices.Contains(use, id):
 			// Named by ID, skipped or not.
 		case Skipped[id] != "":
 			off[id] = "Skipped by dedo: " + Skipped[id]
 		case !slices.ContainsFunc(c.spec.CategoryIDs, func(set string) bool { return slices.Contains(use, set) }):
-			off[id] = "Not in rules.yml's use."
+			off[id] = "Not in dedo.yaml's use."
 		}
 	}
 	return off, nil
@@ -333,7 +333,7 @@ func (c *Consolidated) Report() string {
 	fmt.Fprintf(&b, "%d rules, %d of them house rules; %d run, %d overridden, %d not used, skipped or disabled\n", len(c.Rules), c.House, len(c.Rules)-c.Overridden-c.Off, c.Overridden, c.Off)
 	use := strings.Join(c.Use, ", ")
 	if c.DefaultUse {
-		use += " (the default; rules.yml does not say use)"
+		use += " (the default; dedo.yaml does not say use)"
 	}
 	fmt.Fprintf(&b, "  use: %s\n", use)
 	for _, id := range c.Disabled {
@@ -360,7 +360,7 @@ func (c *Consolidated) Report() string {
 	return b.String()
 }
 
-// consolidateHouse compiles a rules.yml's house rules and consolidates
+// consolidateHouse compiles a dedo.yaml's house rules and consolidates
 // them with dedo's own.
 func consolidateHouse(cfg config.Config, builtin []*check.RuleSpec) (*Consolidated, error) {
 	specs, err := house.Specs(cfg.Rules)

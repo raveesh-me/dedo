@@ -48,9 +48,9 @@ dedo tools          # installs the plugin if needed, copies it into .tools/, and
 printf '.tools/\n' >> .gitignore
 ```
 
-Without the `dedo` command, `go install github.com/raveesh-me/dedo/lint/cmd/buf-plugin-dedo-lint@v0.19.0` and a copy into `.tools/` do the same. It runs natively because Buf starts the plugin about a dozen times per lint; through `go tool` each lint would take 2 s instead of 0.3 s. Run `dedo tools` again after a fresh clone, a version change, or any change to `rules.yml` or its imports.
+Without the `dedo` command, `go install github.com/raveesh-me/dedo/lint/cmd/buf-plugin-dedo-lint@v0.19.0` and a copy into `.tools/` do the same. It runs natively because Buf starts the plugin about a dozen times per lint; through `go tool` each lint would take 2 s instead of 0.3 s. Run `dedo tools` again after a fresh clone, a version change, or any change to `dedo.yaml`'s rules or its imports.
 
-List the plugin and its one category, `DEDO`, in `buf.yaml`, and choose its rules in `rules.yml` next to it ([templates/rules.yml](../templates/rules.yml); `dedo templates rules.yml` prints it). `buf.yaml` names no other rule of the plugin, in `use` or `except`: dedo reads only `rules.yml` ([RULES.md](RULES.md#choosing-the-rules) says how it chooses):
+List the plugin and its one category, `DEDO`, in `buf.yaml`, and choose its rules in the `rules` section of `dedo.yaml` next to it ([templates/dedo.yaml](../templates/dedo.yaml); `dedo templates dedo.yaml` prints it). `buf.yaml` names no other rule of the plugin, in `use` or `except`: dedo reads only `dedo.yaml` ([RULES.md](RULES.md#choosing-the-rules) says how it chooses):
 
 ```yaml
 # buf.yaml
@@ -64,12 +64,13 @@ plugins:
 ```
 
 ```yaml
-# rules.yml
-use:
-  - AIP_NOLANG
-  - ZALANDO
-  - DEDO
-  - HOUSE
+# dedo.yaml
+rules:
+  use:
+    - AIP_NOLANG
+    - ZALANDO
+    - DEDO
+    - HOUSE
 ```
 
 ```sh
@@ -79,9 +80,9 @@ make check          # buf format, buf lint, buf breaking against main
 
 The breaking check compares with the `main` branch, and is skipped while `main` has no `.proto` files. Compare with another branch with `make check API_BASE=develop`. The targets of `Makefile.api` are `run`, `generate`, `check`, `test` and `tools`; where your `Makefile` already has one of those names, `dedo init` names dedo's `api-<name>` instead, and `api-check`, `api-generate` and `api-test` always exist, for CI.
 
-Your organisation's own rules go in `rules.yml` next to `buf.yaml`, as CEL checks that can import shared rules from git repositories, or from files published over HTTPS and pinned by their SHA-256, which CI fetches without access to a private repository ([RULES.md](RULES.md#house-rules), *Published rules*); `HOUSE` in `use` runs them. [templates/rules.example.yml](../templates/rules.example.yml) shows every key. A house rule can override a DEDO, AIP or ZALANDO rule by naming it in `overrides`, or lock itself with `final: true`; `dedo tools` lists every override and final rule in force. [RULES.md](RULES.md#house-rules) has the format, and [Precedence](RULES.md#precedence) the order.
+Your organisation's own rules go in `dedo.yaml`'s `rules` section, as CEL checks that can import shared rules from git repositories, or from files published over HTTPS and pinned by their SHA-256, which CI fetches without access to a private repository ([RULES.md](RULES.md#house-rules), *Published rules*); `HOUSE` in `use` runs them. [templates/dedo.example.yaml](../templates/dedo.example.yaml) shows every key. A house rule can override a DEDO, AIP or ZALANDO rule by naming it in `overrides`, or lock itself with `final: true`; `dedo tools` lists every override and final rule in force. [RULES.md](RULES.md#house-rules) has the format, and [Precedence](RULES.md#precedence) the order.
 
-If your services partition their data between tenants, declare `tenancy` on each and add `DEDO_MULTI_TENANT` to `rules.yml`'s `use` (`dedo init` does when a service declares it); then pass `Tenants` to the interceptor in section 4. [RULES.md](RULES.md#multi-tenant-rules) explains the model.
+If your services partition their data between tenants, declare `tenancy` on each and add `DEDO_MULTI_TENANT` to `dedo.yaml`'s `use` (`dedo init` does when a service declares it); then pass `Tenants` to the interceptor in section 4. [RULES.md](RULES.md#multi-tenant-rules) explains the model.
 
 Repositories without a Go module, such as a TypeScript service or a schema repository, set the plugin up the same way. They need Go on the machine and in CI, to install it, but no `go.mod`. In CI:
 
@@ -91,7 +92,7 @@ dedo tools          # installs the plugin at buf.yaml's release, copies it into 
 buf lint
 ```
 
-The Wasm plugin on the BSR (`buf.build/r-a/dedo-lint`) runs without Go but cannot read `rules.yml`, so it runs dedo's default rule sets and no house rules; `dedo init` replaces it. A platform team that must lint without Go can build a plugin with `rules.yml` built in, `dedo tools -wasm house-lint.wasm`, push it to the BSR (`buf plugin push buf.build/<org>/house-lint --binary=house-lint.wasm`), and list that plugin instead.
+The Wasm plugin on the BSR (`buf.build/r-a/dedo-lint`) runs without Go but cannot read `dedo.yaml`, so it runs dedo's default rule sets and no house rules; `dedo init` replaces it. A platform team that must lint without Go can build a plugin with `dedo.yaml`'s rules built in, `dedo tools -wasm house-lint.wasm`, push it to the BSR (`buf plugin push buf.build/<org>/house-lint --binary=house-lint.wasm`), and list that plugin instead.
 
 ## 3. Code generators
 
@@ -239,7 +240,19 @@ make run
 
 ## 5. Guidance for coding agents
 
-Append [claude.md](claude.md) to your `AGENTS.md` or `CLAUDE.md` (`dedo templates claude.md >> AGENTS.md`). `dedo init` does this where the file lacks it, and creates `AGENTS.md` when neither exists.
+`dedo init` adds [claude.md](claude.md) to your `AGENTS.md` and `CLAUDE.md`, creating `AGENTS.md` when neither exists, as a block between `<!-- dedo:begin guidance … -->` and `<!-- dedo:end guidance -->` lines. `dedo upgrade` rewrites the block from the new release, so the guidance moves with dedo; keep your own notes outside it. Guidance a release before v0.20.0 appended without those lines becomes the block on the next `dedo init` or `dedo upgrade`.
+
+Your organisation's own guidance for coding agents, such as the headers its platform requires, goes in `dedo.yaml`'s `annexure`: a Markdown file published over HTTPS, pinned by its SHA-256 like a `url` import (`dedo upgrade` prints the sum when it is missing), or one in the repository:
+
+```yaml
+# dedo.yaml
+annexure:
+  - url: https://acme.github.io/api-standards/v3/AGENTS.md
+    sha256: 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
+  - path: docs/agents.md
+```
+
+`dedo init` and `dedo upgrade` add each annexure after dedo's guidance, in a block of its own, rewrite it when its source changes, and remove it when `dedo.yaml` no longer names it. dedo's guidance tells agents that an annexure wins where the two conflict. With `-offline`, a url annexure keeps the copy already there.
 
 ## Adding dedo to an existing Buf repository
 
@@ -249,10 +262,10 @@ Append [claude.md](claude.md) to your `AGENTS.md` or `CLAUDE.md` (`dedo template
 | --- | --- |
 | A Go module with protos and `buf.gen.yaml` | Keeps your generators, including Buf's remote `protocolbuffers/go` and `connectrpc/go` plugins, and adds only dedo's two, writing to the same `out` with the same `paths=` option. Reads each file's `go_package`, or managed mode's `go_package_prefix`, for the Go names in `main.go`. Leaves managed mode as it is. Warns when `connectrpc/go` is pinned to a release that generates connect-go v1 code, which dedo's server cannot register. |
 | A Go module with protos, no `buf.gen.yaml` | Writes `buf.gen.yaml` with managed mode and four generators run through `go tool`. |
-| Protos and `buf.yaml`, but no Go module (a schema repository) | Adds the options module, pinned to the release, and the lint plugin, as in any repository. It replaces the BSR plugin (`buf.build/r-a/dedo-lint`) that earlier releases listed here, which cannot read `rules.yml`. Nothing that needs Go is added; instead it appends [generators.md](generators.md) to `AGENTS.md`, which tells coding agents how to add dedo's generators and runtime to the repository's own tooling and server. For a new service, run `go mod init` and `dedo init` again. |
+| Protos and `buf.yaml`, but no Go module (a schema repository) | Adds the options module, pinned to the release, and the lint plugin, as in any repository. It replaces the BSR plugin (`buf.build/r-a/dedo-lint`) that earlier releases listed here, which cannot read `dedo.yaml`. Nothing that needs Go is added; instead it appends [generators.md](generators.md) to `AGENTS.md`, which tells coding agents how to add dedo's generators and runtime to the repository's own tooling and server. For a new service, run `go mod init` and `dedo init` again. |
 | A Go module without protos | Writes a starter service that passes lint. |
 
-In `buf.yaml` it adds the deps, the `DEDO` category and the plugin, and in `rules.yml` the rule sets that run. A `buf.yaml` from a release before v0.15.0 chose the plugin's rules itself: `dedo init` and `dedo upgrade` move that choice to `rules.yml`, its sets to `use` and its exceptions to `disable`, and drop the ones dedo now skips by itself. It keeps your own deps, Buf's categories and exceptions, plugins, and comments, in both files. It needs `buf.yaml` version v2: run `buf config migrate` first if yours is v1.
+In `buf.yaml` it adds the deps, the `DEDO` category and the plugin, and in `dedo.yaml` the rule sets that run. A `buf.yaml` from a release before v0.15.0 chose the plugin's rules itself: `dedo init` and `dedo upgrade` move that choice to `dedo.yaml`, its sets to `use` and its exceptions to `disable`, and drop the ones dedo now skips by itself. A repository set up before v0.20.0 kept these in `rules.yml`: `dedo init` and `dedo upgrade` move it, comments and all, into `dedo.yaml`'s `rules` section and delete it. Where there is no `dedo.yaml`, the lint plugin still reads `rules.yml`. It keeps your own deps, Buf's categories and exceptions, plugins, and comments, in both files. It needs `buf.yaml` version v2: run `buf config migrate` first if yours is v1.
 
 Your existing services declare nothing for dedo yet, and `dedo init` names them. Until they do, `buf lint` lists what each RPC needs, and the policy-table test and the server's startup fail on purpose, naming the first missing declaration. Declare one service at a time; [guideline.md](guideline.md#3-write-the-contract) shows a complete one.
 
@@ -281,4 +294,4 @@ It keeps your `main.go` and `server.go`, and prints dedo's current `main.go` bes
 dedo uninstall  # removes dedo and buf-plugin-dedo-lint from $GOBIN
 ```
 
-It changes no repository. Each keeps its copy of the plugin and the fetched house rules in `.tools/`, ignored by git; `rm -rf .tools/` removes them. To take dedo out of a repository, revert what `dedo init` wrote: `buf.yaml`, `rules.yml`, the Go tools in `go.mod`, `Makefile.api` and the guidance in `AGENTS.md`.
+It changes no repository. Each keeps its copy of the plugin and the fetched house rules in `.tools/`, ignored by git; `rm -rf .tools/` removes them. To take dedo out of a repository, revert what `dedo init` wrote: `buf.yaml`, `dedo.yaml`, the Go tools in `go.mod`, `Makefile.api` and the guidance in `AGENTS.md`.

@@ -41,8 +41,8 @@ test:
 	go test ./...
 
 ## tools: copy the lint plugin at buf.yaml's release into .tools/, fetch the house
-## rules rules.yml imports from git, and check their overrides; run it after a
-## clone, an upgrade, or a change to rules.yml
+## rules dedo.yaml imports, and check their overrides; run it after a clone, an
+## upgrade, or a change to dedo.yaml's rules
 tools:
 	go tool dedo tools
 

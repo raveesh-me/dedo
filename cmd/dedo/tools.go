@@ -52,7 +52,7 @@ const rulesVar = "github.com/raveesh-me/dedo/lint/rules.embedded"
 
 // wasmPlugin builds the lint plugin at buf.yaml's release as WebAssembly
 // into out, with the repository's house rules built in, since the
-// WebAssembly plugin cannot read rules.yml. An organisation pushes it to the
+// WebAssembly plugin cannot read dedo.yaml. An organisation pushes it to the
 // BSR for machines that cannot run the native plugin. tools has already
 // checked the rules.
 func wasmPlugin(dir, out string, w io.Writer) error {
@@ -71,14 +71,14 @@ func wasmPlugin(dir, out string, w io.Writer) error {
 	if path := config.Find(dir); path != "" {
 		c, err := config.Load(path)
 		if err != nil {
-			return fmt.Errorf("rules.yml: %w", err)
+			return fmt.Errorf("%s: %w", filepath.Base(path), err)
 		}
 		embedded, err := config.Encode(c)
 		if err != nil {
 			return err
 		}
 		ldflags += " -X " + rulesVar + "=" + embedded
-		fmt.Fprintf(w, "building rules.yml, with %d house rules, into the WebAssembly plugin\n", len(c.Rules))
+		fmt.Fprintf(w, "building %s, with %d house rules, into the WebAssembly plugin\n", filepath.Base(path), len(c.Rules))
 	}
 	// A throwaway module pins the release, so no go.mod of the
 	// repository's is needed or changed.
@@ -146,7 +146,7 @@ func toolsLint(dir, release string, offline bool, out io.Writer) error {
 	return tools(dir, out)
 }
 
-// houseRules fetches the git imports of the repository's rules.yml into
+// houseRules fetches the git imports of the repository's dedo.yaml into
 // .tools/rules/, where buf-plugin-dedo-lint reads them (the plugin never
 // touches the network), then has the plugin consolidate every rule and
 // report its overrides, so a mistake shows here rather than in the editor.
@@ -163,7 +163,7 @@ func houseRules(dir string, out io.Writer) error {
 	return consolidate(dir, out)
 }
 
-// consolidate runs the built plugin's -dedo-rules report in dir: rules.yml
+// consolidate runs the built plugin's -dedo-rules report in dir: dedo.yaml
 // checked, and the rules in force.
 func consolidate(dir string, out io.Writer) error {
 	plugin, err := filepath.Abs(filepath.Join(dir, pluginPath()))

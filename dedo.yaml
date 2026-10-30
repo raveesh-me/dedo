@@ -1,5 +1,6 @@
 # The rule sets examples/library runs; the options module runs none
 # (buf.yaml). See guidance/RULES.md.
-use:
-  - ZALANDO
-  - DEDO
+rules:
+  use:
+    - ZALANDO
+    - DEDO

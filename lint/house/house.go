@@ -1,5 +1,5 @@
 // Package house runs a repository's house rules, the HOUSE_* rules in its
-// rules.yml (see package config), as rules of buf-plugin-dedo-lint. Each
+// dedo.yaml (see package config), as rules of buf-plugin-dedo-lint. Each
 // rule is a CEL check of one kind of element; Buf sees it as a rule of its
 // own, so lint.use, except and buf:lint:ignore work as for any other rule.
 package house
@@ -28,7 +28,7 @@ import (
 const Category = "HOUSE"
 
 // CategorySpec is the HOUSE category.
-var CategorySpec = &check.CategorySpec{ID: Category, Purpose: "Checks the organisation's own rules, from rules.yml."}
+var CategorySpec = &check.CategorySpec{ID: Category, Purpose: "Checks the organisation's own rules, from dedo.yaml."}
 
 // variables are the names a check can use, per kind of element.
 var variables = map[string][]string{

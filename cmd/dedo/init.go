@@ -44,6 +44,7 @@ type initer struct {
 	out        io.Writer
 	cmds       [][]string // network steps, run at the end or printed
 	createdBuf bool       // buf.yaml was written from the template this run
+	offline    bool       // no network: url annexures keep their copies
 	// make names each of makeTargets as Makefile.api does in this repository.
 	make map[string]string
 }
@@ -61,7 +62,7 @@ func initRepo(dir, release string, offline bool, out io.Writer) error {
 	if err != nil {
 		return err
 	}
-	in := &initer{p: p, release: release, out: out}
+	in := &initer{p: p, release: release, out: out, offline: offline}
 	if p.schemaOnly {
 		fmt.Fprintf(out, "dedo %s: setting up a schema repository (protos in %s/, no go.mod): the options module and the lint plugin, no Go parts\n", release, p.protoRoot)
 		return in.initSchema(offline)
@@ -159,7 +160,7 @@ func (in *initer) initSchema(offline bool) error {
 	failed = append(failed, in.vendor(offline)...)
 	fmt.Fprintln(in.out, "\nnext:")
 	in.say("1. buf lint: it lists the declarations each service still needs")
-	in.say("2. after a clone, an upgrade or a change to rules.yml, run dedo tools: it vendors the lint plugin and fetches the house rules")
+	in.say("2. after a clone, an upgrade or a change to dedo.yaml, run dedo tools: it vendors the lint plugin and fetches the house rules")
 	in.say("3. for generated code and a server, add a go.mod (go mod init) and run dedo init again")
 	if len(failed) > 0 {
 		return fmt.Errorf("%d commands failed: %s; fix the cause and run dedo init again", len(failed), strings.Join(failed, "; "))
@@ -327,7 +328,7 @@ func (in *initer) linter() error {
 		in.say("buf.yaml: lint plugin and categories already in place")
 	}
 	if err := in.ruleSet(sel); err != nil {
-		return fmt.Errorf("rules.yml: %w", err)
+		return fmt.Errorf("dedo.yaml: %w", err)
 	}
 	// The plugin belongs to the protos, not to a Go module: dedo init
 	// vendors the global one, at the options module's release, into
@@ -691,68 +692,6 @@ func hasNewServer(dir string) bool {
 		}
 	}
 	return false
-}
-
-// guidance appends the dedo guidance for coding agents to CLAUDE.md and
-// AGENTS.md, or creates AGENTS.md. Where dedo init adds no generators or
-// server, it adds the guidance for adding them by hand too. Each section is
-// added once.
-func (in *initer) guidance() error {
-	sections := [][2]string{{guidanceMarker, "guidance/claude.md"}}
-	if in.p.schemaOnly {
-		sections = append(sections, [2]string{generatorsMarker, "guidance/generators.md"})
-	}
-	var files []string
-	for _, name := range []string{"CLAUDE.md", "AGENTS.md"} {
-		if _, err := os.Stat(in.path(name)); err == nil {
-			files = append(files, name)
-		} else if !errors.Is(err, fs.ErrNotExist) {
-			return err
-		}
-	}
-	if len(files) == 0 {
-		files = []string{"AGENTS.md"}
-	}
-	for _, name := range files {
-		for _, sec := range sections {
-			if err := in.appendGuidance(name, sec[0], asset(sec[1])); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
-// appendGuidance appends text to the file name unless it already has the
-// section marker heads, creating the file when it is missing.
-func (in *initer) appendGuidance(name, marker string, text []byte) error {
-	b, err := os.ReadFile(in.path(name))
-	if errors.Is(err, fs.ErrNotExist) {
-		if err := os.WriteFile(in.path(name), text, 0o644); err != nil {
-			return err
-		}
-		in.say("%s: created with %q", name, strings.TrimPrefix(marker, "# "))
-		return nil
-	}
-	if err != nil {
-		return err
-	}
-	if bytes.Contains(b, []byte(marker)) {
-		in.say("%s: already has %q", name, strings.TrimPrefix(marker, "# "))
-		return nil
-	}
-	var add []byte
-	if len(b) > 0 && !bytes.HasSuffix(b, []byte("\n\n")) {
-		add = []byte("\n")
-		if !bytes.HasSuffix(b, []byte("\n")) {
-			add = []byte("\n\n")
-		}
-	}
-	if err := appendFile(in.path(name), append(add, text...)); err != nil {
-		return err
-	}
-	in.say("%s: appended %q", name, strings.TrimPrefix(marker, "# "))
-	return nil
 }
 
 // runCommands runs the network steps, or prints them when offline or when a

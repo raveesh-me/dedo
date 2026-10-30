@@ -167,28 +167,38 @@ func fetchBeside(repo, target, sum string) (bool, error) {
 // download writes the file at raw to dst, if its SHA-256 is want. Without
 // want it fails, naming the file's SHA-256 to pin.
 func download(raw, want, dst string) error {
+	b, err := get(raw, want)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(dst, b, 0o644)
+}
+
+// get returns the file at raw, if its SHA-256 is want. Without want it
+// fails, naming the file's SHA-256 to pin.
+func get(raw, want string) ([]byte, error) {
 	resp, err := httpClient.Get(raw)
 	if err != nil {
-		return fmt.Errorf("fetching %s: %w", raw, err)
+		return nil, fmt.Errorf("fetching %s: %w", raw, err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("fetching %s: %s", raw, resp.Status)
+		return nil, fmt.Errorf("fetching %s: %s", raw, resp.Status)
 	}
 	b, err := io.ReadAll(io.LimitReader(resp.Body, maxRulesFile+1))
 	if err != nil {
-		return fmt.Errorf("fetching %s: %w", raw, err)
+		return nil, fmt.Errorf("fetching %s: %w", raw, err)
 	}
 	if len(b) > maxRulesFile {
-		return fmt.Errorf("fetching %s: larger than %d bytes", raw, maxRulesFile)
+		return nil, fmt.Errorf("fetching %s: larger than %d bytes", raw, maxRulesFile)
 	}
 	sum := sha256.Sum256(b)
 	got := hex.EncodeToString(sum[:])
 	switch {
 	case want == "":
-		return fmt.Errorf("fetching %s: no sha256 to check it against; if you trust this file, pin it with sha256: %s", raw, got)
+		return nil, fmt.Errorf("fetching %s: no sha256 to check it against; if you trust this file, pin it with sha256: %s", raw, got)
 	case !strings.EqualFold(want, got):
-		return fmt.Errorf("fetching %s: its sha256 is %s, not the %s pinned: the file changed since it was pinned; check the change, then pin the new sum", raw, got, want)
+		return nil, fmt.Errorf("fetching %s: its sha256 is %s, not the %s pinned: the file changed since it was pinned; check the change, then pin the new sum", raw, got, want)
 	}
-	return os.WriteFile(dst, b, 0o644)
+	return b, nil
 }
