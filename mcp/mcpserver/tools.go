@@ -30,10 +30,30 @@ type Call func(client *connect.Client) mcp.ToolHandlerFor[json.RawMessage, json.
 // checks, validation, flow IDs and error audit as Connect, gRPC and REST
 // calls. It fails when the client is missing or two tools share a name,
 // which happens only when services sharing a server have RPCs of the same
-// name.
+// name. AddToolsWith also forwards more headers.
 func AddTools(s *mcp.Server, client *connect.Client, tools ...Tool) error {
-	if client == nil {
+	return AddToolsWith(s, Options{Client: client}, tools...)
+}
+
+// Options configures AddToolsWith.
+type Options struct {
+	// Client forwards the calls, as in AddTools.
+	Client *connect.Client
+	// ForwardHeaders are request headers copied from the MCP request onto
+	// the forwarded call, on top of Authorization and X-Flow-ID, which are
+	// always forwarded: headers the service's interceptors need, such as an
+	// API version. A header the MCP request lacks is left off.
+	ForwardHeaders []string
+}
+
+// AddToolsWith is AddTools with Options. It also fails on a ForwardHeaders
+// entry that is not a header name.
+func AddToolsWith(s *mcp.Server, opts Options, tools ...Tool) error {
+	if opts.Client == nil {
 		return errors.New("mcpserver: a client is required")
+	}
+	if err := checkHeaders(opts.ForwardHeaders); err != nil {
+		return err
 	}
 	seen := map[string]bool{}
 	for _, t := range tools {
@@ -47,7 +67,7 @@ func AddTools(s *mcp.Server, client *connect.Client, tools ...Tool) error {
 			return fmt.Errorf("mcpserver: two tools are named %q; serve their services from separate MCP servers", t.Tool.Name)
 		}
 		seen[t.Tool.Name] = true
-		mcp.AddTool(s, t.Tool, t.Call(client))
+		mcp.AddTool(s, t.Tool, withHeaders(t.Call(opts.Client), opts.ForwardHeaders))
 	}
 	return nil
 }
@@ -83,21 +103,6 @@ func Unary(procedure string, newRequest, newResponse func() proto.Message) Call 
 			return nil, res, err
 		}
 	}
-}
-
-// forwardHeaders puts the MCP caller's token and flow ID on the forwarded
-// call, where the server's interceptors read them.
-func forwardHeaders(ctx context.Context, req *mcp.CallToolRequest) context.Context {
-	if req == nil || req.Extra == nil {
-		return ctx
-	}
-	ctx, info := connect.NewClientContext(ctx)
-	for _, name := range forwardedHeaders {
-		if v := req.Extra.Header.Get(name); v != "" {
-			info.RequestHeader().Set(name, v)
-		}
-	}
-	return ctx
 }
 
 // marshalResult writes a response as structuredContent: proto field names,
