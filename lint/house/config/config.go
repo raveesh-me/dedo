@@ -1,7 +1,7 @@
 // Package config reads a repository's rules.yml, next to buf.yaml: which of
 // dedo's rules run, and the house rules, its own and those of the rules
-// files it imports from folders and git repositories. It has no CEL in it,
-// so the dedo command can fetch imports with it too.
+// files it imports from folders, git repositories and HTTPS URLs. It has no
+// CEL in it, so the dedo command can fetch imports with it too.
 //
 //	use: [AIP_NOLANG, ZALANDO, DEDO, DEDO_MULTI_TENANT] # dedo's rule sets, or rule IDs
 //
@@ -10,9 +10,12 @@
 //	  - git: https://github.com/acme/api-standards.git
 //	    ref: v3                         # a tag or a commit
 //	    path: rules.yml                 # in that repository; the default
+//	  - url: https://acme.github.io/api-standards/v3/rules.yml
+//	    sha256: 9f86d0…                 # the file's SHA-256, which dedo tools checks
 //
 // Every path is relative to the root of the repository whose file names it:
-// this repository's (the folder of rules.yml) or the git import's.
+// this repository's (the folder of rules.yml), the git import's, or the
+// folder of the url import's URL.
 //
 //	disable: [HOUSE_PLURAL_COLLECTIONS] # rules this repository opts out of
 //	rules:
@@ -90,6 +93,9 @@ type Import struct {
 	Path string `yaml:"path"`
 	Git  string `yaml:"git"`
 	Ref  string `yaml:"ref"`
+	URL  string `yaml:"url"`
+	// SHA256 pins a url import, and a path import of a url-imported file.
+	SHA256 string `yaml:"sha256"`
 }
 
 type file struct {
@@ -133,8 +139,8 @@ type Config struct {
 	Disabled []string `json:"disabled"`
 }
 
-// Load reads a rules file and everything it imports. Git imports are read
-// from the cache that Fetch fills, under the directory of the top file.
+// Load reads a rules file and everything it imports. Git and url imports are
+// read from the cache that Fetch fills, under the directory of the top file.
 func Load(path string) (Config, error) {
 	root := filepath.Dir(path)
 	l := &loader{root: root, seen: map[string]bool{}, ids: map[string]string{}, imports: map[string][]string{}}
@@ -248,6 +254,14 @@ func (l *loader) load(path, repo string, stack []string) (rules []Rule, disabled
 				return nil, nil, fmt.Errorf("%s: the import of %s@%s is not fetched yet: run dedo tools", abs, imp.Git, imp.Ref)
 			}
 		}
+		if overHTTPS(imp, repo) {
+			if err := checkPin(abs, importName(imp), imp.SHA256); err != nil {
+				return nil, nil, err
+			}
+			if _, err := os.Stat(target); err != nil {
+				return nil, nil, fmt.Errorf("%s: the import of %s is not fetched yet: run dedo tools", abs, importName(imp))
+			}
+		}
 		targetAbs, err := filepath.Abs(target)
 		if err != nil {
 			return nil, nil, err
@@ -265,6 +279,7 @@ func (l *loader) load(path, repo string, stack []string) (rules []Rule, disabled
 	for _, r := range f.Rules {
 		r.Source = path
 		r.File = abs
+		r.Doc = resolveDoc(r.Doc, repo, abs)
 		if err := validate(r); err != nil {
 			return nil, nil, fmt.Errorf("%s: %w", path, err)
 		}
@@ -277,8 +292,9 @@ func (l *loader) load(path, repo string, stack []string) (rules []Rule, disabled
 	return rules, append(disabled, f.Disable...), nil
 }
 
-// resolve returns the rules file an import names, and the git checkout it
-// lies in ("" for the service's own files). A folder means its rules.yml.
+// resolve returns the rules file an import names, and the git checkout or
+// url import cache it lies in ("" for the service's own files). A folder
+// means its rules.yml.
 //
 // A path is relative to the root of the repository the importing file
 // belongs to, wherever in it that file sits, so every file of a repository
@@ -291,6 +307,15 @@ func (l *loader) load(path, repo string, stack []string) (rules []Rule, disabled
 // the machine's.
 func resolve(root, from, repo string, imp Import) (target, targetRepo string, err error) {
 	switch {
+	case imp.Git != "" && imp.URL != "":
+		return "", "", fmt.Errorf("%s: an import names a git repository or a url, not both", from)
+	case imp.URL != "":
+		_, name, err := rootURL(imp.URL)
+		if err != nil {
+			return "", "", fmt.Errorf("%s: %w", from, err)
+		}
+		dir := CacheDir(root, imp)
+		return filepath.Join(dir, name), dir, nil
 	case imp.Git != "":
 		if imp.Ref == "" {
 			return "", "", fmt.Errorf("%s: the import of %s needs a ref: a tag or a commit, so every machine reads the same rules", from, imp.Git)
@@ -310,7 +335,7 @@ func resolve(root, from, repo string, imp Import) (target, targetRepo string, er
 	case imp.Path != "":
 		return folderFile(filepath.Join(root, filepath.FromSlash(imp.Path))), "", nil
 	}
-	return "", "", fmt.Errorf("%s: an import needs a path or a git URL", from)
+	return "", "", fmt.Errorf("%s: an import needs a path, a git repository or a url", from)
 }
 
 // inRepo resolves a path from the root of a git checkout, and refuses one
@@ -378,15 +403,20 @@ func validate(r Rule) error {
 	return nil
 }
 
-// CacheDir is where a git import is fetched, under root.
+// CacheDir is where a git or url import is fetched, under root.
 func CacheDir(root string, imp Import) string {
-	sum := sha256.Sum256([]byte(imp.Git + "@" + imp.Ref))
+	key := imp.Git + "@" + imp.Ref
+	if imp.URL != "" {
+		key = imp.URL + "#" + strings.ToLower(imp.SHA256)
+	}
+	sum := sha256.Sum256([]byte(key))
 	return filepath.Join(root, cacheDir, hex.EncodeToString(sum[:])[:16])
 }
 
 // Fetch clones every git import reachable from the rules file at path into
-// the cache, at its ref, and returns what it fetched. Imports already
-// fetched are kept: a ref names one version.
+// the cache, at its ref, downloads every url import and the files those
+// import, checking each against its sha256, and returns what it fetched.
+// Imports already fetched are kept: a ref or a sha256 names one version.
 func Fetch(path string) ([]string, error) {
 	root := filepath.Dir(path)
 	var fetched []string
@@ -407,6 +437,15 @@ func Fetch(path string) ([]string, error) {
 			return fmt.Errorf("%s: %w", p, err)
 		}
 		for _, imp := range f.Imports {
+			if imp.URL != "" && imp.Git == "" {
+				dir := CacheDir(root, imp)
+				if _, err := os.Stat(dir); errors.Is(err, fs.ErrNotExist) {
+					if err := fetchURL(imp, dir); err != nil {
+						return err
+					}
+					fetched = append(fetched, imp.URL)
+				}
+			}
 			if imp.Git != "" && imp.Ref != "" {
 				dir := CacheDir(root, imp)
 				if _, err := os.Stat(dir); errors.Is(err, fs.ErrNotExist) {
@@ -420,6 +459,20 @@ func Fetch(path string) ([]string, error) {
 			target, targetRepo, err := resolve(root, abs, repo, imp)
 			if err != nil {
 				return err
+			}
+			if imp.URL == "" && overHTTPS(imp, repo) {
+				// A path import of a url-imported file is fetched from beside it.
+				if err := checkPin(abs, importName(imp), imp.SHA256); err != nil {
+					return err
+				}
+				got, err := fetchBeside(repo, target, imp.SHA256)
+				if err != nil {
+					return err
+				}
+				if got {
+					u, _ := fileURL(repo, target)
+					fetched = append(fetched, u.String())
+				}
 			}
 			if err := walk(target, targetRepo); err != nil {
 				return err
@@ -450,4 +503,15 @@ func clone(imp Import, dir string) error {
 		}
 	}
 	return os.Rename(tmp, dir)
+}
+
+// importName names an import in messages.
+func importName(imp Import) string {
+	switch {
+	case imp.URL != "":
+		return imp.URL
+	case imp.Git != "":
+		return imp.Git + "@" + imp.Ref
+	}
+	return imp.Path
 }
