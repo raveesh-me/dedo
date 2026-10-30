@@ -2,8 +2,10 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"go/format"
 	"io"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -74,6 +76,12 @@ func read(t *testing.T, dir, name string) string {
 	return string(b)
 }
 
+// rulesAt returns the rules section of the dedo.yaml in dir.
+func rulesAt(t *testing.T, dir string) *yaml.Node {
+	t.Helper()
+	return lookup(yamlAt(t, dir, "dedo.yaml"), "rules")
+}
+
 func yamlAt(t *testing.T, dir, name string) *yaml.Node {
 	t.Helper()
 	doc, ok, err := loadYAML(filepath.Join(dir, name))
@@ -134,7 +142,7 @@ func TestInitFreshRepository(t *testing.T) {
 	if !strings.Contains(read(t, dir, ".gitignore"), ".tools/") {
 		t.Error(".gitignore lacks .tools/")
 	}
-	if !strings.HasPrefix(read(t, dir, "AGENTS.md"), guidanceMarker) {
+	if got := read(t, dir, "AGENTS.md"); !strings.HasPrefix(got, beginPrefix+"guidance ") || !strings.Contains(got, guidanceMarker) {
 		t.Error("AGENTS.md lacks the guidance")
 	}
 	if !strings.Contains(read(t, dir, "docs/index.html"), "<title>Time Counter API</title>") {
@@ -264,7 +272,7 @@ plugins:
 	if got := read(t, dir, "Makefile"); got != "build:\n\tgo build ./...\ninclude Makefile.api\n" {
 		t.Errorf("Makefile = %q", got)
 	}
-	if got := read(t, dir, "CLAUDE.md"); !strings.HasPrefix(got, "# Shop\n\nOur rules.\n\n"+guidanceMarker) {
+	if got := read(t, dir, "CLAUDE.md"); !strings.HasPrefix(got, "# Shop\n\nOur rules.\n\n"+beginPrefix+"guidance ") {
 		t.Errorf("CLAUDE.md = %.80q", got)
 	}
 	if got := read(t, dir, "AGENTS.md"); strings.Count(got, guidanceMarker) != 1 {
@@ -635,7 +643,7 @@ func TestInitSchemaRepository(t *testing.T) {
 			t.Errorf("%s written into a schema repository", name)
 		}
 	}
-	if !strings.Contains(out, "dedo tools") || !strings.HasPrefix(read(t, dir, "AGENTS.md"), guidanceMarker) {
+	if !strings.Contains(out, "dedo tools") || !strings.HasPrefix(read(t, dir, "AGENTS.md"), beginPrefix+"guidance ") {
 		t.Errorf("output:\n%s", out)
 	}
 	// An upgrade moves the options module's label, and so the plugin's.
@@ -746,7 +754,7 @@ func TestInitWarnsOnConnectV1Remote(t *testing.T) {
 }
 
 // buf.yaml lists DEDO of the plugin's rules, and nothing else of them;
-// rules.yml chooses which run. A new repository gets dedo's default sets.
+// dedo.yaml chooses which run. A new repository gets dedo's default sets.
 func TestInitRuleSet(t *testing.T) {
 	dir := repo(t, map[string]string{
 		"go.mod":   "module example.com/shop\n",
@@ -756,16 +764,16 @@ func TestInitRuleSet(t *testing.T) {
 	if got := scalars(lookup(lookup(yamlAt(t, dir, "buf.yaml"), "lint"), "use")); !slices.Equal(got, []string{"STANDARD", "DEDO"}) {
 		t.Errorf("lint.use = %v", got)
 	}
-	if got := scalars(lookup(yamlAt(t, dir, "rules.yml"), "use")); !slices.Equal(got, []string{"AIP_NOLANG", "ZALANDO", "DEDO", "HOUSE"}) {
-		t.Errorf("rules.yml use = %v", got)
+	if got := scalars(lookup(rulesAt(t, dir), "use")); !slices.Equal(got, []string{"AIP_NOLANG", "ZALANDO", "DEDO", "HOUSE"}) {
+		t.Errorf("dedo.yaml use = %v", got)
 	}
-	if out := initOffline(t, dir); strings.Contains(out, "rules.yml:") || strings.Contains(out, "lint.use") {
+	if out := initOffline(t, dir); strings.Contains(out, "dedo.yaml:") || strings.Contains(out, "lint.use") {
 		t.Errorf("a second run changed the rule selection:\n%s", out)
 	}
 }
 
 // Releases before v0.15.0 chose the plugin's rules in buf.yaml. init moves
-// that choice to rules.yml: the sets lint.use named become use, the rules
+// that choice to dedo.yaml, and a rules.yml's rules into it: the sets lint.use named become use, the rules
 // lint.except named become disable, except those dedo now skips or
 // overrides itself, and Buf's own entries stay.
 func TestInitMovesSelection(t *testing.T) {
@@ -784,17 +792,20 @@ func TestInitMovesSelection(t *testing.T) {
 	if got := scalars(lookup(lint, "except")); !slices.Equal(got, []string{"ENUM_VALUE_PREFIX"}) {
 		t.Errorf("lint.except = %v", got)
 	}
-	rules := yamlAt(t, dir, "rules.yml")
+	rules := rulesAt(t, dir)
 	if got := scalars(lookup(rules, "use")); !slices.Equal(got, []string{"AIP_CORE", "ZALANDO", "HOUSE", "DEDO"}) {
-		t.Errorf("rules.yml use = %v", got)
+		t.Errorf("dedo.yaml use = %v", got)
 	}
 	if got := scalars(lookup(rules, "disable")); !slices.Equal(got, []string{"DEDO_NO_JSON_NAME"}) {
-		t.Errorf("rules.yml disable = %v", got)
+		t.Errorf("dedo.yaml disable = %v", got)
 	}
 	if lookup(rules, "rules") == nil {
 		t.Error("the house rules are gone")
 	}
-	if !strings.Contains(out, "rules.yml: disable gained DEDO_NO_JSON_NAME") {
+	if _, err := os.Stat(filepath.Join(dir, "rules.yml")); !errors.Is(err, fs.ErrNotExist) {
+		t.Errorf("rules.yml is still there: %v", err)
+	}
+	if !strings.Contains(out, "dedo.yaml: created, with the rules of rules.yml") || !strings.Contains(out, "dedo.yaml: disable gained DEDO_NO_JSON_NAME") {
 		t.Errorf("output: %s", out)
 	}
 }
@@ -852,8 +863,8 @@ service ContactService {
 			}
 			dir := repo(t, files)
 			out := initOffline(t, dir)
-			if !slices.Contains(scalars(lookup(yamlAt(t, dir, "rules.yml"), "use")), "DEDO_MULTI_TENANT") {
-				t.Errorf("DEDO_MULTI_TENANT missing from rules.yml's use:\n%s", read(t, dir, "rules.yml"))
+			if !slices.Contains(scalars(lookup(rulesAt(t, dir), "use")), "DEDO_MULTI_TENANT") {
+				t.Errorf("DEDO_MULTI_TENANT missing from dedo.yaml's use:\n%s", read(t, dir, "dedo.yaml"))
 			}
 			main := mainGo(t, dir, out)
 			if formatted, err := format.Source([]byte(main)); err != nil || string(formatted) != main {
@@ -872,7 +883,7 @@ service ContactService {
 		"proto/acme/contacts/v1/contacts.proto": strings.Replace(tenantProto, `    tenancy: {collection: "locations"}`+"\n", "", 1),
 	})
 	out := initOffline(t, dir)
-	if slices.Contains(scalars(lookup(yamlAt(t, dir, "rules.yml"), "use")), "DEDO_MULTI_TENANT") {
+	if slices.Contains(scalars(lookup(rulesAt(t, dir), "use")), "DEDO_MULTI_TENANT") {
 		t.Error("DEDO_MULTI_TENANT added without tenancy")
 	}
 	if main := mainGo(t, dir, out); strings.Contains(main, "tenant") || strings.Contains(main, `"slices"`) {

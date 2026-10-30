@@ -247,7 +247,7 @@ func consolidateUse(t *testing.T, use, disabled []string) (*rules.Consolidated, 
 func silencedBy(c *rules.Consolidated) map[string]string {
 	out := map[string]string{}
 	for _, r := range c.Rules {
-		for _, why := range []string{"Not in rules.yml's use.", "Skipped by dedo:", "Disabled in rules.yml.", "Overridden by"} {
+		for _, why := range []string{"Not in dedo.yaml's use.", "Skipped by dedo:", "Disabled in dedo.yaml.", "Overridden by"} {
 			if strings.HasPrefix(r.Purpose, why) {
 				out[r.ID] = why
 			}
@@ -266,25 +266,25 @@ func TestUse(t *testing.T) {
 	}{
 		"default": {nil, nil, map[string]string{
 			"AIP_0131_HTTP_METHOD":              "",
-			"AIP_0191_JAVA_PACKAGE":             "Not in rules.yml's use.",
+			"AIP_0191_JAVA_PACKAGE":             "Not in dedo.yaml's use.",
 			"AIP_0131_METHOD_SIGNATURE":         "Skipped by dedo:",
 			"DEDO_NO_JSON_NAME":                 "",
 			"ZALANDO_SERVICE_RULES_REQUIRED":    "",
-			"DEDO_MULTI_TENANT_SERVICE_TENANCY": "Not in rules.yml's use.",
+			"DEDO_MULTI_TENANT_SERVICE_TENANCY": "Not in dedo.yaml's use.",
 			"DEDO_MULTI_TENANT_REQUEST_TENANT":  "", // final
 		}},
 		"sets and IDs": {[]string{"DEDO", "DEDO_MULTI_TENANT", "AIP_0131_METHOD_SIGNATURE"}, []string{"DEDO_NO_JSON_NAME"}, map[string]string{
-			"AIP_0131_HTTP_METHOD":              "Not in rules.yml's use.",
+			"AIP_0131_HTTP_METHOD":              "Not in dedo.yaml's use.",
 			"AIP_0131_METHOD_SIGNATURE":         "",
 			"AIP_0132_METHOD_SIGNATURE":         "Skipped by dedo:",
-			"DEDO_NO_JSON_NAME":                 "Disabled in rules.yml.",
+			"DEDO_NO_JSON_NAME":                 "Disabled in dedo.yaml.",
 			"DEDO_MULTI_TENANT_SERVICE_TENANCY": "",
 			"ZALANDO_SERVICE_RULES_REQUIRED":    "", // final, though ZALANDO is not used
 		}},
 		// A rule that does not run overrides nothing, so the AIP rules
 		// DEDO_HTTP_RESPONSE_BODY overrides run again.
 		"overrider off": {nil, []string{"DEDO_HTTP_RESPONSE_BODY"}, map[string]string{
-			"DEDO_HTTP_RESPONSE_BODY":        "Disabled in rules.yml.",
+			"DEDO_HTTP_RESPONSE_BODY":        "Disabled in dedo.yaml.",
 			"AIP_0131_RESPONSE_MESSAGE_NAME": "",
 		}},
 	} {
@@ -332,7 +332,7 @@ func TestReportUse(t *testing.T) {
 		t.Fatal(err)
 	}
 	report := c.Report()
-	for _, line := range []string{"  use: AIP_NOLANG, ZALANDO, DEDO, HOUSE (the default; rules.yml does not say use)\n", "  DEDO_NO_JSON_NAME is disabled\n"} {
+	for _, line := range []string{"  use: AIP_NOLANG, ZALANDO, DEDO, HOUSE (the default; dedo.yaml does not say use)\n", "  DEDO_NO_JSON_NAME is disabled\n"} {
 		if !strings.Contains(report, line) {
 			t.Errorf("report lacks %q:\n%s", line, report)
 		}
@@ -354,7 +354,7 @@ func TestUseHouse(t *testing.T) {
 		want map[string]string
 	}{
 		{nil, map[string]string{"HOUSE_OWN": "", "HOUSE_LOCKED": "", "DEDO_NO_JSON_NAME": "Overridden by"}},
-		{[]string{"DEDO"}, map[string]string{"HOUSE_OWN": "Not in rules.yml's use.", "HOUSE_LOCKED": "", "DEDO_NO_JSON_NAME": ""}},
+		{[]string{"DEDO"}, map[string]string{"HOUSE_OWN": "Not in dedo.yaml's use.", "HOUSE_LOCKED": "", "DEDO_NO_JSON_NAME": ""}},
 	} {
 		c, err := rules.Consolidate(builtin(t), houseRules, specs, tc.use, nil)
 		if err != nil {

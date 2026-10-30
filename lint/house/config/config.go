@@ -1,7 +1,13 @@
-// Package config reads a repository's rules.yml, next to buf.yaml: which of
-// dedo's rules run, and the house rules, its own and those of the rules
-// files it imports from folders, git repositories and HTTPS URLs. It has no
-// CEL in it, so the dedo command can fetch imports with it too.
+// Package config reads a repository's dedo.yaml, next to buf.yaml. Its rules
+// section says which of dedo's rules run, and holds the house rules, its own
+// and those of the rules files it imports from folders, git repositories and
+// HTTPS URLs; its annexure section names the guidance for coding agents that
+// dedo adds to CLAUDE.md and AGENTS.md (see Annexure). It has no CEL in it,
+// so the dedo command can fetch imports with it too.
+//
+// The rules section is what a shared rules file (rules.yml) holds, and what
+// a repository's rules.yml held before dedo.yaml, which is still read where
+// there is no dedo.yaml:
 //
 //	use: [AIP_NOLANG, ZALANDO, DEDO, DEDO_MULTI_TENANT] # dedo's rule sets, or rule IDs
 //
@@ -14,7 +20,7 @@
 //	    sha256: 9f86d0…                 # the file's SHA-256, which dedo tools checks
 //
 // Every path is relative to the root of the repository whose file names it:
-// this repository's (the folder of rules.yml), the git import's, or the
+// this repository's (the folder of dedo.yaml), the git import's, or the
 // folder of the url import's URL.
 //
 //	disable: [HOUSE_PLURAL_COLLECTIONS] # rules this repository opts out of
@@ -27,13 +33,14 @@
 //	    overrides: [HOUSE_RESOURCE_TYPE]    # rules this one replaces
 //	    final: true                         # no rule may override or disable it
 //
-// Only the repository's own rules.yml says use. disable names house rules
+// Only the repository's own file says use. disable names house rules
 // or dedo's own. A rule may override DEDO, AIP and ZALANDO rules, and the
 // rules of the files its own file imports, unless they are final; package
 // rules checks that, and the names in use and disable, and applies them.
 package config
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -50,10 +57,14 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// FileName is the house rules file, next to buf.yaml.
-const FileName = "rules.yml"
+// FileName is the repository's dedo file, next to buf.yaml.
+const FileName = "dedo.yaml"
 
-// EnvFile names a rules file to use instead of finding rules.yml.
+// RulesFileName is a shared rules file, which a folder or git import means
+// by default; a repository without dedo.yaml keeps its rules in one too.
+const RulesFileName = "rules.yml"
+
+// EnvFile names a dedo.yaml or rules file to use instead of finding one.
 const EnvFile = "DEDO_RULES"
 
 // cacheDir is where git imports are fetched, under the root.
@@ -105,18 +116,48 @@ type file struct {
 	Rules   []Rule   `yaml:"rules"`
 }
 
-// Find returns the rules file for a lint run started in dir: $DEDO_RULES,
-// else rules.yml in the nearest directory up from dir that holds buf.yaml.
-// It returns "" when there is none.
+// project is a dedo.yaml.
+type project struct {
+	Rules    file       `yaml:"rules"`
+	Annexure []Annexure `yaml:"annexure"`
+}
+
+// IsProject reports whether path names a dedo.yaml rather than a rules file.
+func IsProject(path string) bool {
+	return filepath.Base(path) == FileName
+}
+
+// decode reads a dedo.yaml or a rules file; strict rejects unknown keys.
+func decode(path string, b []byte, strict bool) (project, error) {
+	dec := yaml.NewDecoder(bytes.NewReader(b))
+	dec.KnownFields(strict)
+	var p project
+	var err error
+	if IsProject(path) {
+		err = dec.Decode(&p)
+	} else {
+		err = dec.Decode(&p.Rules)
+	}
+	// An empty file decodes to io.EOF: it simply has no rules.
+	if err != nil && !errors.Is(err, io.EOF) {
+		return project{}, fmt.Errorf("%s: %w", path, err)
+	}
+	return p, nil
+}
+
+// Find returns the file for a lint run started in dir: $DEDO_RULES, else
+// dedo.yaml, or failing that rules.yml, in the nearest directory up from dir
+// that holds buf.yaml. It returns "" when there is none.
 func Find(dir string) string {
 	if p := os.Getenv(EnvFile); p != "" {
 		return p
 	}
 	for d := dir; ; d = filepath.Dir(d) {
 		if _, err := os.Stat(filepath.Join(d, "buf.yaml")); err == nil {
-			p := filepath.Join(d, FileName)
-			if _, err := os.Stat(p); err == nil {
-				return p
+			for _, name := range []string{FileName, RulesFileName} {
+				if p := filepath.Join(d, name); exists(p) {
+					return p
+				}
 			}
 			return ""
 		}
@@ -126,10 +167,10 @@ func Find(dir string) string {
 	}
 }
 
-// Config is what a repository's rules.yml says, imports included.
+// Config is what a repository's rules say, imports included.
 type Config struct {
 	// Use lists the rule sets and rules of dedo's that run; nil means
-	// rules.yml does not say, so dedo's default runs.
+	// the rules do not say, so dedo's default runs.
 	Use []string `json:"use,omitempty"`
 	// Rules are the house rules, in the order they appear, imports first,
 	// without the disabled ones.
@@ -226,16 +267,14 @@ func (l *loader) load(path, repo string, stack []string) (rules []Rule, disabled
 	if err != nil {
 		return nil, nil, err
 	}
-	var f file
-	dec := yaml.NewDecoder(strings.NewReader(string(b)))
-	dec.KnownFields(true)
-	// An empty rules file decodes to io.EOF: it simply has no rules.
-	if err := dec.Decode(&f); err != nil && !errors.Is(err, io.EOF) {
-		return nil, nil, fmt.Errorf("%s: %w", path, err)
+	p, err := decode(path, b, true)
+	if err != nil {
+		return nil, nil, err
 	}
+	f := p.Rules
 	if f.Use != nil {
 		if len(stack) > 0 {
-			return nil, nil, fmt.Errorf("%s: use belongs in the repository's own rules.yml, which chooses the rules it runs; imported files add rules", path)
+			return nil, nil, fmt.Errorf("%s: use belongs in the repository's own dedo.yaml, which chooses the rules it runs; imported files add rules", path)
 		}
 		l.use = f.Use
 	}
@@ -299,7 +338,7 @@ func (l *loader) load(path, repo string, stack []string) (rules []Rule, disabled
 // A path is relative to the root of the repository the importing file
 // belongs to, wherever in it that file sits, so every file of a repository
 // names the same file the same way. For the service's own files the root is
-// the folder of its rules.yml, next to buf.yaml; there a path may also lead
+// the folder of its dedo.yaml, next to buf.yaml; there a path may also lead
 // outside, such as ../platform-rules in a monorepo. For a git import the
 // root is that repository's: the import's own path and every path its files
 // import must stay inside it, symlinks followed, since a shared repository is
@@ -369,14 +408,19 @@ func within(dir, path string) bool {
 // folderFile turns a folder into the rules.yml inside it.
 func folderFile(path string) string {
 	if info, err := os.Stat(path); err == nil && info.IsDir() {
-		return filepath.Join(path, FileName)
+		return filepath.Join(path, RulesFileName)
 	}
 	return path
 }
 
+func exists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
+}
+
 func orDefault(p string) string {
 	if p == "" {
-		return FileName
+		return RulesFileName
 	}
 	return p
 }
@@ -432,11 +476,11 @@ func Fetch(path string) ([]string, error) {
 		if err != nil {
 			return err
 		}
-		var f file
-		if err := yaml.Unmarshal(b, &f); err != nil {
-			return fmt.Errorf("%s: %w", p, err)
+		proj, err := decode(p, b, false)
+		if err != nil {
+			return err
 		}
-		for _, imp := range f.Imports {
+		for _, imp := range proj.Rules.Imports {
 			if imp.URL != "" && imp.Git == "" {
 				dir := CacheDir(root, imp)
 				if _, err := os.Stat(dir); errors.Is(err, fs.ErrNotExist) {

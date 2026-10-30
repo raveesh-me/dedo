@@ -38,8 +38,8 @@ func serve(t *testing.T, files map[string]string) string {
 func importURL(t *testing.T, url, pin string) string {
 	t.Helper()
 	dir := t.TempDir()
-	write(t, dir, map[string]string{FileName: "imports:\n  - url: " + url + "\n    sha256: " + pin + "\n"})
-	return filepath.Join(dir, FileName)
+	write(t, dir, map[string]string{RulesFileName: "imports:\n  - url: " + url + "\n    sha256: " + pin + "\n"})
+	return filepath.Join(dir, RulesFileName)
 }
 
 const docRules = `rules:
@@ -146,8 +146,8 @@ func TestURLImportRejects(t *testing.T) {
 // written: only a url import has a URL to resolve it against.
 func TestLocalRelativeDocKept(t *testing.T) {
 	dir := t.TempDir()
-	write(t, dir, map[string]string{FileName: docRules})
-	rules, err := loadRules(filepath.Join(dir, FileName))
+	write(t, dir, map[string]string{RulesFileName: docRules})
+	rules, err := loadRules(filepath.Join(dir, RulesFileName))
 	if err != nil || rules[0].Doc != "RULES.html#house_relative_doc" {
 		t.Fatalf("doc = %q, %v", rules[0].Doc, err)
 	}

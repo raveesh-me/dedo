@@ -7,7 +7,7 @@
 // services that partition their data between tenants.
 //
 // Together with the AIP_* rules of package aip they make up buf-plugin-dedo-lint
-// (see Spec). HOUSE_* rules are each organisation's own, from its rules.yml
+// (see Spec). HOUSE_* rules are each organisation's own, from its dedo.yaml
 // (package house), so they never collide with these.
 package rules
 
@@ -15,6 +15,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"buf.build/go/bufplugin/check"
@@ -30,15 +31,15 @@ const (
 	CategoryDedo    = "DEDO"
 	// CategoryMultiTenant holds the opt-in DEDO_MULTI_TENANT_* rules, for
 	// services that partition their data between tenants. Its rules are not
-	// in DEDO, so they run only where rules.yml's use lists the set.
+	// in DEDO, so they run only where dedo.yaml's use lists the set.
 	CategoryMultiTenant = "DEDO_MULTI_TENANT"
 )
 
-// DefaultUse are the rule sets that run when rules.yml does not say use.
+// DefaultUse are the rule sets that run when dedo.yaml does not say use.
 var DefaultUse = []string{aip.CategoryNoLang, CategoryZalando, CategoryDedo, house.Category}
 
 // Skipped are the rules dedo turns off on purpose, by why: they check
-// things dedo has no use for. They run only where rules.yml's use names
+// things dedo has no use for. They run only where dedo.yaml's use names
 // them by ID.
 var Skipped = map[string]string{
 	"AIP_0131_METHOD_SIGNATURE": methodSignature,
@@ -76,7 +77,7 @@ var All = []*check.RuleSpec{
 // NewSpec returns the plugin specification: the AIP_*, ZALANDO_*, DEDO_*
 // and HOUSE_* rules, consolidated (see Consolidate), run in one pass.
 // Every rule is in the one category DEDO, so buf.yaml lists only that, and
-// rules.yml chooses which of them run.
+// dedo.yaml chooses which of them run.
 func NewSpec() (*check.Spec, error) {
 	c, before, err := load()
 	if err != nil {
@@ -85,7 +86,7 @@ func NewSpec() (*check.Spec, error) {
 	return &check.Spec{
 		Rules: c.Rules,
 		Categories: []*check.CategorySpec{
-			{ID: CategoryDedo, Purpose: "Checks every rule of buf-plugin-dedo-lint that rules.yml chooses: AIP, ZALANDO, DEDO and house rules."},
+			{ID: CategoryDedo, Purpose: "Checks every rule of buf-plugin-dedo-lint that dedo.yaml chooses: AIP, ZALANDO, DEDO and house rules."},
 		},
 		Before: before,
 	}, nil
@@ -98,7 +99,7 @@ func Load() (*Consolidated, error) {
 	return c, err
 }
 
-// load reads dedo's own rules and the rules.yml of the repository buf runs
+// load reads dedo's own rules and the dedo.yaml of the repository buf runs
 // in, next to buf.yaml, with what it imports, and consolidates them. Buf
 // starts the plugin in the directory it runs in, and asks for the rules
 // before any lint request, so they come from there rather than from a
@@ -124,13 +125,13 @@ func load() (*Consolidated, func(context.Context, check.Request) (context.Contex
 	return c, before, nil
 }
 
-// embedded holds a rules.yml built into the plugin, as config.Encode wrote
+// embedded holds a dedo.yaml built into the plugin, as config.Encode wrote
 // it, set by dedo tools -wasm with
 // -ldflags "-X github.com/raveesh-me/dedo/lint/rules.embedded=<rules>":
-// the WebAssembly plugin cannot read rules.yml.
+// the WebAssembly plugin cannot read dedo.yaml.
 var embedded string
 
-// loadConfig returns the rules.yml the plugin built in, or else the one
+// loadConfig returns the dedo.yaml the plugin built in, or else the one
 // for a lint run in dir; with neither, dedo's default rules run.
 func loadConfig(dir string) (config.Config, error) {
 	if embedded != "" {
@@ -142,7 +143,7 @@ func loadConfig(dir string) (config.Config, error) {
 	}
 	c, err := config.Load(path)
 	if err != nil {
-		return config.Config{}, fmt.Errorf("rules.yml: %w", err)
+		return config.Config{}, fmt.Errorf("%s: %w", filepath.Base(path), err)
 	}
 	return c, nil
 }
@@ -156,7 +157,7 @@ func category(id string) string {
 	return prefix
 }
 
-// optInRule is a rule that runs only where rules.yml's use lists its set.
+// optInRule is a rule that runs only where dedo.yaml's use lists its set.
 func optInRule(id, purpose string, handler check.RuleHandler) *check.RuleSpec {
 	spec := lintRule(id, purpose, handler)
 	spec.Default = false

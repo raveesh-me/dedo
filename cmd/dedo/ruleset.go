@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+	"os"
 	"slices"
 	"strings"
 
@@ -21,8 +23,8 @@ var skippedRules = []string{
 	"AIP_0192_HAS_COMMENTS",
 }
 
-// defaultUse are the rule sets the lint plugin runs when rules.yml does not
-// say use (lint/rules.DefaultUse), which a new rules.yml lists.
+// defaultUse are the rule sets the lint plugin runs when dedo.yaml does not
+// say use (lint/rules.DefaultUse), which a new dedo.yaml lists.
 var defaultUse = []string{"AIP_NOLANG", "ZALANDO", "DEDO", house}
 
 // pluginRule reports whether a lint.use or lint.except entry names
@@ -36,14 +38,14 @@ func pluginRule(id string) bool {
 	return false
 }
 
-// selection is what buf.yaml chose of the plugin's rules before rules.yml
+// selection is what buf.yaml chose of the plugin's rules before dedo.yaml
 // did: the sets and rules lint.use named, and the rules lint.except named.
 type selection struct {
 	use, disable []string
 }
 
 // moveSelection takes the plugin's rules out of buf.yaml's lint section,
-// leaving DEDO in use, and returns what they selected, for rules.yml.
+// leaving DEDO in use, and returns what they selected, for dedo.yaml.
 func (in *initer) moveSelection(lint *yaml.Node) (selection, bool) {
 	var sel selection
 	changed := false
@@ -83,59 +85,87 @@ func (in *initer) moveSelection(lint *yaml.Node) (selection, bool) {
 		}
 	}
 	if changed {
-		in.say("buf.yaml: lint.use lists DEDO of buf-plugin-dedo-lint's rules, and rules.yml chooses which run")
+		in.say("buf.yaml: lint.use lists DEDO of buf-plugin-dedo-lint's rules, and dedo.yaml chooses which run")
 	}
 	return sel, changed
 }
 
-// ruleSet writes the rule selection to rules.yml, creating it from the
-// template: buf.yaml's former choice, and DEDO_MULTI_TENANT for a service
-// that declares tenancy.
+// ruleSet writes the rule selection to dedo.yaml's rules section: buf.yaml's
+// former choice, and DEDO_MULTI_TENANT for a service that declares tenancy.
+// It creates dedo.yaml from the template, moving the rules of a rules.yml,
+// which releases before v0.20.0 wrote, into it.
 func (in *initer) ruleSet(sel selection) error {
 	path := in.path(config.FileName)
 	doc, ok, err := loadYAML(path)
 	if err != nil {
 		return err
 	}
-	changed := false
+	changed, moved := false, false
 	if !ok || len(doc.Content) == 0 || root(doc).Kind != yaml.MappingNode {
-		if doc, err = parseYAML(asset("templates/" + config.FileName)); err != nil {
+		if doc, moved, err = in.newDedoYAML(); err != nil {
 			return err
 		}
-		in.say("rules.yml: created, with dedo's default rule sets")
 		changed = true
 	}
-	use := lookup(root(doc), "use")
+	rules := child(root(doc), "rules", yaml.MappingNode)
+	use := lookup(rules, "use")
 	if use == nil {
 		use = &yaml.Node{Kind: yaml.SequenceNode, Tag: "!!seq"}
 		for _, id := range defaultUse {
 			use.Content = append(use.Content, scalar(id))
 		}
-		// First, so the file opens with what runs.
-		root(doc).Content = append([]*yaml.Node{scalar("use"), use}, root(doc).Content...)
-		in.say("rules.yml: added use, with dedo's default rule sets")
+		// First, so the section opens with what runs.
+		rules.Content = append([]*yaml.Node{scalar("use"), use}, rules.Content...)
+		in.say("dedo.yaml: added use, with dedo's default rule sets")
 		changed = true
 	}
 	if len(sel.use) > 0 && changedUse(use, sel.use) {
-		in.say("rules.yml: use is now %s, as buf.yaml's lint.use had it", strings.Join(sel.use, ", "))
+		in.say("dedo.yaml: use is now %s, as buf.yaml's lint.use had it", strings.Join(sel.use, ", "))
 		changed = true
 	}
 	if in.p.tenancy != "" {
 		if added := addScalars(use, multiTenant); len(added) > 0 {
-			in.say("rules.yml: use gained %s, since the services declare tenancy", multiTenant)
+			in.say("dedo.yaml: use gained %s, since the services declare tenancy", multiTenant)
 			changed = true
 		}
 	}
 	if len(sel.disable) > 0 {
-		if added := addScalars(child(root(doc), "disable", yaml.SequenceNode), sel.disable...); len(added) > 0 {
-			in.say("rules.yml: disable gained %s, from buf.yaml's lint.except", strings.Join(added, ", "))
+		if added := addScalars(child(rules, "disable", yaml.SequenceNode), sel.disable...); len(added) > 0 {
+			in.say("dedo.yaml: disable gained %s, from buf.yaml's lint.except", strings.Join(added, ", "))
 			changed = true
 		}
 	}
 	if !changed {
 		return nil
 	}
-	return saveYAML(path, doc)
+	if err := saveYAML(path, doc); err != nil {
+		return err
+	}
+	if moved {
+		return os.Remove(in.path(config.RulesFileName))
+	}
+	return nil
+}
+
+// newDedoYAML returns a dedo.yaml from the template, with the rules of the
+// repository's rules.yml in its rules section when it has one, and reports
+// whether it had.
+func (in *initer) newDedoYAML() (*yaml.Node, bool, error) {
+	doc, err := parseYAML(asset("templates/" + config.FileName))
+	if err != nil {
+		return nil, false, err
+	}
+	old, ok, err := loadYAML(in.path(config.RulesFileName))
+	if err != nil {
+		return nil, false, fmt.Errorf("%s: %w", config.RulesFileName, err)
+	}
+	if !ok {
+		in.say("dedo.yaml: created, with dedo's default rule sets")
+		return doc, false, nil
+	}
+	set(root(doc), "rules", root(old))
+	in.say("dedo.yaml: created, with the rules of rules.yml, which it replaces")
+	return doc, true, nil
 }
 
 // changedUse sets use to want when it holds only dedo's defaults, which

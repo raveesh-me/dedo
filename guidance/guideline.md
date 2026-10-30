@@ -41,7 +41,7 @@ In a Go module (`go mod init`), run `dedo init`. A service repository then looks
 my-service/
   proto/acme/products/v1/products.proto
   buf.yaml               # deps and the lint plugin
-  rules.yml              # which lint rules run, and your house rules
+  dedo.yaml              # which lint rules run, your house rules, agent guidance
   buf.gen.yaml           # the four generators, run through go tool
   Makefile               # include Makefile.api
   Makefile.api           # run, generate, check, test, tools
@@ -254,7 +254,7 @@ When the data is partitioned between tenants (customers, sub-accounts, business 
 
 1. Put the tenant at the root of the resource hierarchy: `locations/{location}/products/{product}`, with paths such as `/commerce/pim/v1/{name=locations/*/products/*}`.
 2. Declare it on the service: `option (dedo.v1.service) = {... tenancy: {collection: "locations"}}`. Mark the few RPCs that span tenants, such as listing the caller's own locations, `cross_tenant: true`.
-3. Add `DEDO_MULTI_TENANT` to `rules.yml`'s `use` (`dedo init` does), so the lint checks that every resource and every request names its tenant.
+3. Add `DEDO_MULTI_TENANT` to `use` in `dedo.yaml`'s `rules` (`dedo init` does), so the lint checks that every resource and every request names its tenant.
 4. Pass `Tenants` to `interceptor.Config`: a function that says whether the caller may act in a tenant ID. Your auth interceptor puts what it needs in the context, as for scopes.
 
 The interceptor then reads the tenants of every request, on every transport, from the field the path binds and from every field with a `google.api.resource_reference`, and answers `PERMISSION_DENIED` for another tenant's data before your handler runs. The service will not start if an RPC names no tenant, or if `Tenants` is missing. [RULES.md](RULES.md#multi-tenant-rules) has the details, and [`examples/contacts`](../examples/contacts) a complete contract.
@@ -307,7 +307,7 @@ Point an MCP client at `http://localhost:8080/mcp`, with the header `Authorizati
 
 **Where do the options and the lint plugin come from?** A repository depends on `buf.build/r-a/dedo` in `buf.yaml`, and its label names the lint plugin's release too; `dedo tools` installs that plugin and copies it into `.tools/`. The examples in this repository are the exception: they test the working tree, so they vendor `options.proto` under `third_party/` and load the plugin from `dist/`.
 
-**Why a native plugin binary instead of the BSR plugin?** Speed in the editor. One lint takes about 0.3 s with the native binary and about 5 s with the WebAssembly one, and the editor reruns it as you type. The BSR plugin (`buf.build/r-a/dedo-lint`) needs no Go, so it suits repositories of protos alone, which `dedo init` sets up with it; it cannot read `rules.yml`, so for house rules there, a platform team builds one with them built in (`dedo tools -wasm`) and pushes it to the BSR.
+**Why a native plugin binary instead of the BSR plugin?** Speed in the editor. One lint takes about 0.3 s with the native binary and about 5 s with the WebAssembly one, and the editor reruns it as you type. The BSR plugin (`buf.build/r-a/dedo-lint`) needs no Go, so it suits repositories of protos alone, which `dedo init` sets up with it; it cannot read `dedo.yaml`, so for house rules there, a platform team builds one with them built in (`dedo tools -wasm`) and pushes it to the BSR.
 
 **How do I run the generators, `protoc-gen-dedo-mcp` and `protoc-gen-dedo-openapi`?** They run on your machine, the same way in the editor, locally and in CI. Pick one:
 

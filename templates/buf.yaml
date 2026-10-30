@@ -13,7 +13,7 @@ lint:
     - STANDARD
     - COMMENTS
     # Every rule of buf-plugin-dedo-lint: AIP, ZALANDO, DEDO and your house
-    # rules. rules.yml, next to this file, chooses which of them run; list
+    # rules. dedo.yaml, next to this file, chooses which of them run; list
     # none of them here, in use or except.
     - DEDO
   enum_zero_value_suffix: _UNSPECIFIED
@@ -30,6 +30,6 @@ plugins:
   # It is referred to by path, so editors started outside a shell find it
   # too, and runs natively: buf starts it about a dozen times per lint.
   - plugin: .tools/buf-plugin-dedo-lint
-  # It reads rules.yml next to this file: the rule sets that run, the rules
+  # It reads dedo.yaml next to this file: the rule sets that run, the rules
   # opted out of, and your organisation's HOUSE_* rules. See
   # guidance/RULES.md in the dedo repository.

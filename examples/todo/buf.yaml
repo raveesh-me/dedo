@@ -13,7 +13,7 @@ lint:
   use:
     - STANDARD
     - COMMENTS
-    # Every rule of buf-plugin-dedo-lint; rules.yml chooses which run.
+    # Every rule of buf-plugin-dedo-lint; dedo.yaml chooses which run.
     - DEDO
   enum_zero_value_suffix: _UNSPECIFIED
   service_suffix: Service
