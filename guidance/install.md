@@ -3,7 +3,7 @@
 Each numbered section below adds one part of dedo to a repository. `dedo init` does all of them, editing what is already there:
 
 ```sh
-go install github.com/raveesh-me/dedo/cmd/dedo@v0.19.0
+go install github.com/raveesh-me/dedo/cmd/dedo@v0.20.0
 dedo init
 ```
 
@@ -22,7 +22,7 @@ version: v2
 deps:
   - buf.build/googleapis/googleapis
   - buf.build/bufbuild/protovalidate
-  - buf.build/r-a/dedo:v0.19.0   # the same release as the lint plugin and runtime
+  - buf.build/r-a/dedo:v0.20.0   # the same release as the lint plugin and runtime
 ```
 
 ```sh
@@ -48,7 +48,7 @@ dedo tools          # installs the plugin if needed, copies it into .tools/, and
 printf '.tools/\n' >> .gitignore
 ```
 
-Without the `dedo` command, `go install github.com/raveesh-me/dedo/lint/cmd/buf-plugin-dedo-lint@v0.19.0` and a copy into `.tools/` do the same. It runs natively because Buf starts the plugin about a dozen times per lint; through `go tool` each lint would take 2 s instead of 0.3 s. Run `dedo tools` again after a fresh clone, a version change, or any change to `dedo.yaml`'s rules or its imports.
+Without the `dedo` command, `go install github.com/raveesh-me/dedo/lint/cmd/buf-plugin-dedo-lint@v0.20.0` and a copy into `.tools/` do the same. It runs natively because Buf starts the plugin about a dozen times per lint; through `go tool` each lint would take 2 s instead of 0.3 s. Run `dedo tools` again after a fresh clone, a version change, or any change to `dedo.yaml`'s rules or its imports.
 
 List the plugin and its one category, `DEDO`, in `buf.yaml`, and choose its rules in the `rules` section of `dedo.yaml` next to it ([templates/dedo.yaml](../templates/dedo.yaml); `dedo templates dedo.yaml` prints it). `buf.yaml` names no other rule of the plugin, in `use` or `except`: dedo reads only `dedo.yaml` ([RULES.md](RULES.md#choosing-the-rules) says how it chooses):
 
@@ -87,7 +87,7 @@ If your services partition their data between tenants, declare `tenancy` on each
 Repositories without a Go module, such as a TypeScript service or a schema repository, set the plugin up the same way. They need Go on the machine and in CI, to install it, but no `go.mod`. In CI:
 
 ```sh
-go install github.com/raveesh-me/dedo/cmd/dedo@v0.19.0
+go install github.com/raveesh-me/dedo/cmd/dedo@v0.20.0
 dedo tools          # installs the plugin at buf.yaml's release, copies it into .tools/, fetches the house rules
 buf lint
 ```
@@ -101,8 +101,8 @@ Pin the generators as Go tools:
 ```sh
 go get -tool google.golang.org/protobuf/cmd/protoc-gen-go
 go get -tool connectrpc.com/connect/v2/cmd/protoc-gen-connect-go@v2.0.1
-go get -tool github.com/raveesh-me/dedo/mcp/cmd/protoc-gen-dedo-mcp@v0.19.0
-go get -tool github.com/raveesh-me/dedo/openapi/cmd/protoc-gen-dedo-openapi@v0.19.0
+go get -tool github.com/raveesh-me/dedo/mcp/cmd/protoc-gen-dedo-mcp@v0.20.0
+go get -tool github.com/raveesh-me/dedo/openapi/cmd/protoc-gen-dedo-openapi@v0.20.0
 ```
 
 Add them to `buf.gen.yaml` ([templates/buf.gen.yaml](../templates/buf.gen.yaml) is a complete one):
@@ -154,7 +154,7 @@ make generate       # buf generate, then go mod tidy
 Add the runtime libraries. dedo is built on connect-go v2, where one `connect.Server` holds the interceptors and every transport mounts on it:
 
 ```sh
-go get github.com/raveesh-me/dedo@v0.19.0 github.com/raveesh-me/dedo/mcp@v0.19.0
+go get github.com/raveesh-me/dedo@v0.20.0 github.com/raveesh-me/dedo/mcp@v0.20.0
 go get connectrpc.com/connect/v2@v2.0.1 connectrpc.com/vanguard@v0.5.0 connectrpc.com/validate@v0.9.0
 ```
 
