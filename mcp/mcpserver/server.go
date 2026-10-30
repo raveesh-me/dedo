@@ -12,7 +12,8 @@
 // get_todo); its title, description, ToolAnnotations and error reasons come
 // from the proto options; its input and output schemas are the ones
 // protoc-gen-dedo-mcp generated. A tool call is forwarded as a Connect call
-// to the service, with the caller's Authorization and X-Flow-ID headers.
+// to the service, with the caller's Authorization and X-Flow-ID headers and
+// any ForwardHeaders the server is configured with.
 // Give them a client of the service's own connect.Server, such as
 // connect.NewClient(connectinprocess.New(server)), so MCP calls run through
 // the same auth, scope checks, flow IDs and error audit as REST and RPC
@@ -41,9 +42,6 @@ import (
 	dedov1 "github.com/raveesh-me/dedo/gen/go/dedo/v1"
 )
 
-// forwardedHeaders are copied from the MCP request onto the forwarded call.
-var forwardedHeaders = []string{"Authorization", "X-Flow-ID"}
-
 // validName is the tool name format every MCP client and LLM provider accepts.
 var validName = regexp.MustCompile(`^[a-z_][a-z0-9_-]{0,63}$`)
 
@@ -61,15 +59,21 @@ type Config struct {
 	// connect.NewClient(connectinprocess.New(server)): straight to the
 	// service's connect.Server, through its interceptors.
 	Client *connect.Client
+	// ForwardHeaders are forwarded on top of Authorization and X-Flow-ID, as
+	// Options.ForwardHeaders are.
+	ForwardHeaders []string
 }
 
 // New registers the tools of the services on s. It fails when an RPC has no
 // generated input schema, or when two RPCs would get the same tool name,
 // which happens only when services sharing a server have RPCs of the same
-// name.
+// name, or on a ForwardHeaders entry that is not a header name.
 func New(s *mcp.Server, cfg Config) error {
 	if cfg.Client == nil {
 		return errors.New("mcpserver: Config.Client is required")
+	}
+	if err := checkHeaders(cfg.ForwardHeaders); err != nil {
+		return err
 	}
 	owner := map[string]protoreflect.FullName{}
 	for _, svc := range cfg.Services {
@@ -89,7 +93,7 @@ func New(s *mcp.Server, cfg Config) error {
 			// The SDK's typed AddTool validates the arguments against the input
 			// schema and the result against the output schema, fills
 			// structuredContent, and turns a returned error into a tool error.
-			mcp.AddTool(s, tool, forward(m, cfg.Client))
+			mcp.AddTool(s, tool, withHeaders(forward(m, cfg.Client), cfg.ForwardHeaders))
 		}
 	}
 	return nil
