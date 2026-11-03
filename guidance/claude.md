@@ -1,6 +1,6 @@
 # Building an API with dedo: guidance for coding agents
 
-`dedo init` adds this file to your repository's `AGENTS.md` and `CLAUDE.md`, and `dedo upgrade` keeps it current. dedo's full guidance: [install.md](https://github.com/raveesh-me/dedo/blob/main/guidance/install.md) sets a service up, [tutorial.md](https://github.com/raveesh-me/dedo/blob/main/guidance/tutorial.md) builds one from scratch, [guideline.md](https://github.com/raveesh-me/dedo/blob/main/guidance/guideline.md) explains the reasoning, [domains.md](https://github.com/raveesh-me/dedo/blob/main/guidance/domains.md) maps domain-driven design onto packages and services, and [RULES.md](https://github.com/raveesh-me/dedo/blob/main/guidance/RULES.md) documents every lint rule. It tells a coding agent how a service built with [dedo](https://github.com/raveesh-me/dedo) works and which mistakes to avoid.
+`dedo init` adds this file to your repository's `AGENTS.md` and `CLAUDE.md`, followed by [domains.md](https://github.com/raveesh-me/dedo/blob/main/guidance/domains.md) in its own `dedo:begin domains` block, and `dedo upgrade` keeps both current. dedo's full guidance: [install.md](https://github.com/raveesh-me/dedo/blob/main/guidance/install.md) sets a service up, [tutorial.md](https://github.com/raveesh-me/dedo/blob/main/guidance/tutorial.md) builds one from scratch, [guideline.md](https://github.com/raveesh-me/dedo/blob/main/guidance/guideline.md) explains the reasoning, [domains.md](https://github.com/raveesh-me/dedo/blob/main/guidance/domains.md) maps domain-driven design onto packages and services, and [RULES.md](https://github.com/raveesh-me/dedo/blob/main/guidance/RULES.md) documents every lint rule. It tells a coding agent how a service built with [dedo](https://github.com/raveesh-me/dedo) works and which mistakes to avoid.
 
 **Your organisation's guidance wins.** An organisation can add its own guidance after this section: the annexures that `dedo.yaml`'s `annexure` names, each in its own `dedo:begin annexure:` block. Where an annexure and this section conflict, follow the annexure; where it is silent, this section holds. Never edit the text between a `<!-- dedo:begin … -->` line and its `<!-- dedo:end … -->` line: `dedo upgrade` rewrites those blocks from their sources. Change `dedo.yaml` or the annexure's source instead, and keep your own notes outside the blocks.
 
@@ -18,12 +18,7 @@
 
 ## Packages and services follow the domain
 
-[domains.md](https://github.com/raveesh-me/dedo/blob/main/guidance/domains.md) maps each building block of domain-driven design to a layer of the API. In short:
-
-- The repository is one bounded context: one API module, one REST root, one OpenAPI document. Every term in it has one meaning.
-- Each proto package is one module, named with a noun from the domain (`orders`, never `api` or `common`), with a leading comment directly above `package` that says what it is responsible for. The REST reference shows that comment as the module's description, and nests the module's services under it.
-- Each service manages one aggregate, and every one of its RPCs acts on that aggregate. Its `title` is the plural noun readers look for. Refer to another aggregate by its resource name with `google.api.resource_reference`; never embed its message.
-- Name commands with the domain's verbs (`CancelOrder` at `:cancel`, not `UpdateOrderStatus`). A vendor's or another context's model stays behind an adapter in the service, never in the proto.
+The `dedo:begin domains` block after this one, from [domains.md](https://github.com/raveesh-me/dedo/blob/main/guidance/domains.md), maps each building block of domain-driven design to a layer of the API: the repository is the bounded context, a proto package a module, a service an aggregate. Shape new packages and services by it, and check them against its checklist.
 
 ## Lint classes and precedence
 

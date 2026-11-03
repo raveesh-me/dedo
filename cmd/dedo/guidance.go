@@ -12,11 +12,12 @@ import (
 )
 
 // A block is a section of CLAUDE.md and AGENTS.md that dedo owns: its own
-// guidance for coding agents, and each annexure dedo.yaml names. dedo init
+// guidance for coding agents, its guidance for modelling the domain, and
+// each annexure dedo.yaml names. dedo init
 // and dedo upgrade write every block afresh, in order, where the first one
 // was, so the copies stay what this release and dedo.yaml say.
 type block struct {
-	key  string // guidance, generators, or annexure:<path or url>
+	key  string // guidance, domains, generators, or annexure:<path or url>
 	text string
 	keep bool // the source could not be read offline: keep the copy there
 }
@@ -33,7 +34,8 @@ func (b block) render() string {
 }
 
 // guidance writes dedo's blocks into CLAUDE.md and AGENTS.md, or creates
-// AGENTS.md: dedo's guidance; where dedo init adds no generators or server,
+// AGENTS.md: dedo's guidance; its guidance for modelling the domain (DDD
+// onto packages and services); where dedo init adds no generators or server,
 // the guidance for adding them by hand; then the annexures of dedo.yaml,
 // which dedo's guidance says win where they conflict with it.
 func (in *initer) guidance() error {
@@ -62,7 +64,10 @@ func (in *initer) guidance() error {
 
 // guidanceBlocks returns the blocks this release and dedo.yaml call for.
 func (in *initer) guidanceBlocks() ([]block, error) {
-	blocks := []block{{key: "guidance", text: string(asset("guidance/claude.md"))}}
+	blocks := []block{
+		{key: "guidance", text: string(asset("guidance/claude.md"))},
+		{key: "domains", text: string(asset("guidance/domains.md"))},
+	}
 	if in.p.schemaOnly {
 		blocks = append(blocks, block{key: "generators", text: string(asset("guidance/generators.md"))})
 	}
@@ -149,6 +154,8 @@ func label(key string) string {
 	switch {
 	case key == "guidance":
 		return "dedo's guidance"
+	case key == "domains":
+		return "dedo's domain guidance"
 	case key == "generators":
 		return "the guidance for adding dedo's generators"
 	default:
