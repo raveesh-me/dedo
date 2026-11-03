@@ -10,11 +10,14 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"flag"
 	"fmt"
 	"io"
 	"os"
+	"os/signal"
+	"syscall"
 )
 
 // version is the dedo release this command installs. The release job checks
@@ -39,6 +42,10 @@ const usage = `usage:
                                     into $GOBIN first if needed), fetch the house rules and list every rule
                                     override, failing on one the order forbids; -wasm also builds it as
                                     WebAssembly into F with the house rules built in
+  dedo docs [-dir DIR] [-addr A] [-tunnel]
+                                    serve the REST reference (docs/index.html and openapi.json only) on A
+                                    (default 127.0.0.1:8099) until Ctrl-C; -tunnel also shares it at a public
+                                    Cloudflare quick-tunnel URL (needs cloudflared)
   dedo templates [NAME]             list the bundled templates, or print one
   dedo version                      print the dedo release this command installs
 `
@@ -104,6 +111,18 @@ func run(args []string, out io.Writer) error {
 			return wasmPlugin(*dir, *wasm, out)
 		}
 		return nil
+	case "docs":
+		flags := flag.NewFlagSet("docs", flag.ContinueOnError)
+		flags.SetOutput(out)
+		dir := flags.String("dir", ".", "the repository whose docs/ to serve")
+		addr := flags.String("addr", defaultDocsAddr, "the local address to serve on")
+		tunnel := flags.Bool("tunnel", false, "also share the reference at a public Cloudflare quick-tunnel URL")
+		if err := flags.Parse(args[1:]); err != nil {
+			return err
+		}
+		ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+		defer stop()
+		return docs(ctx, *dir, *addr, *tunnel, out)
 	case "templates":
 		return templates(args[1:], out)
 	case "version":
