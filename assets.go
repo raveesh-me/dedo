@@ -5,7 +5,8 @@ package dedo
 
 import "embed"
 
-// Files holds templates/, guidance/claude.md and guidance/generators.md.
+// Files holds templates/, guidance/claude.md, guidance/domains.md and
+// guidance/generators.md.
 //
-//go:embed templates guidance/claude.md guidance/generators.md
+//go:embed templates guidance/claude.md guidance/domains.md guidance/generators.md
 var Files embed.FS
