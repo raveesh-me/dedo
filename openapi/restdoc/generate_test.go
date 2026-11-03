@@ -74,12 +74,8 @@ func request(t *testing.T, params string, protos ...string) *pluginpb.CodeGenera
 
 func generate(t *testing.T, params string, protos ...string) string {
 	t.Helper()
-	var cfg Config
-	plugin, err := protogen.Options{ParamFunc: cfg.Set}.New(request(t, params, protos...))
+	plugin, err := generatePlugin(t, params, protos...)
 	if err != nil {
-		t.Fatal(err)
-	}
-	if err := Generate(plugin, cfg); err != nil {
 		t.Fatal(err)
 	}
 	res := plugin.Response()
@@ -90,6 +86,18 @@ func generate(t *testing.T, params string, protos ...string) string {
 		t.Fatalf("got %d files, want 1", len(res.File))
 	}
 	return res.File[0].GetContent()
+}
+
+// generatePlugin runs the generator and returns its plugin, or the error
+// Generate reported.
+func generatePlugin(t *testing.T, params string, protos ...string) (*protogen.Plugin, error) {
+	t.Helper()
+	var cfg Config
+	plugin, err := protogen.Options{ParamFunc: cfg.Set}.New(request(t, params, protos...))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return plugin, Generate(plugin, cfg)
 }
 
 func TestGenerateLibraryGolden(t *testing.T) {

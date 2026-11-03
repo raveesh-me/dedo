@@ -80,7 +80,11 @@ func Generate(plugin *protogen.Plugin, cfg Config) error {
 			}
 		}
 	}
-	doc.Tags = mods.tags()
+	tags, err := mods.tags()
+	if err != nil {
+		return err
+	}
+	doc.Tags = tags
 	doc.Info.Title = firstNonEmpty(cfg.Title, strings.Join(names, ", "), "API")
 	doc.Info.Version = firstNonEmpty(cfg.Version, doc.Info.Version, "v1")
 	g.schemas.built[statusSchema] = statusSchemaDef()

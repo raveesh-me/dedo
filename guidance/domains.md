@@ -15,8 +15,8 @@ The terms come from Eric Evans' *Domain-Driven Design* (bounded context, module,
 | Aggregate root | The resource the service manages: a message with `google.api.resource` | Its resource name (`orders/{order}`) is its identity and its REST path |
 | Entity inside an aggregate | A child resource, its pattern nested under the root's (`orders/{order}/lines/{line}`) | A nested REST path |
 | Value object | A message without `google.api.resource`: `google.type.Money`, an address | A schema, never a path |
-| Command | An RPC that changes state: a standard method or a custom method (`:cancel`) | A `POST`, `PATCH` or `DELETE`; an MCP tool without `readOnlyHint` |
-| Query | `Get` and `List`, declared `NO_SIDE_EFFECTS` | A `GET`; an MCP tool with `readOnlyHint` |
+| Command | An RPC that changes state: a standard method or a custom method (`:cancel`) | A `POST`, `PATCH` or `DELETE`; an MCP tool with `read_only_hint: false` |
+| Query | `Get` and `List`, declared `NO_SIDE_EFFECTS` | A `GET`; an MCP tool with `read_only_hint: true` |
 | Domain event | A server stream (`WatchOrders`), or messages the service publishes | A streaming RPC; not a REST path |
 | Ubiquitous language | Names, `title`s and leading comments | Every heading and description in the reference, and every MCP tool description |
 
@@ -59,7 +59,7 @@ An aggregate is a cluster of objects that changes as one, with one root that gua
 ## Commands and queries
 
 - **Commands are named with the domain's verbs.** Use the standard methods (`Create`, `Update`, `Delete`) where they fit, and AIP-136 custom methods for transitions the business names: `CancelOrder` at `:cancel`, not `UpdateOrderStatus`. The RPC name becomes the MCP tool's name, so a model reads the same verb the business uses.
-- **Queries have no side effects.** Declare `Get` and `List` with `idempotency_level = NO_SIDE_EFFECTS`; dedo caches them as declared and marks their MCP tools read-only.
+- **Queries have no side effects.** Declare `Get` and `List` with `idempotency_level = NO_SIDE_EFFECTS`, and their tools' `read_only_hint: true`; `DEDO_TOOL_ANNOTATIONS` checks that the two agree. The runtime sets their cache headers from the cache policy they declare.
 - **Domain events leave the aggregate after the transaction.** A `Watch` stream or published messages tell other aggregates and contexts what happened; they act on it in transactions of their own.
 
 ## Between contexts: the context map
@@ -71,7 +71,7 @@ An aggregate is a cluster of objects that changes as one, with one root that gua
 
 ## How the reference shows it
 
-`protoc-gen-dedo-openapi` turns the layers into OpenAPI 3.2 tags. When the documented services span several packages, each package becomes a navigation tag (`kind: nav`) named after the package, so it cannot clash with a service's tag. Its `summary` is the package's last segment before the version, in sentence case (`acme.orders.v1` reads "Orders", `shop.tax_profile.v1` "Tax profile"), and its description is the package comment. Each service's tag names its package as its `parent`:
+`protoc-gen-dedo-openapi` turns the layers into OpenAPI 3.2 tags. When the documented services span several packages, each package becomes a navigation tag (`kind: nav`) named after the package. Its `summary` is the package's last segment before the version, in sentence case (`acme.orders.v1` reads "Orders", `shop.tax_profile.v1` "Tax profile"), and its description is the package comment. Each service's tag names its package as its `parent`:
 
 ```json
 "tags": [
@@ -81,6 +81,8 @@ An aggregate is a cluster of objects that changes as one, with one root that gua
   {"name": "Returns", "parent": "acme.orders.v1", "description": "ReturnService reads returns."}
 ]
 ```
+
+Operations name their tag by name alone, so every tag name must be unique across the document: two services titled `Orders` in different packages fail generation, and one of them needs another title. A package's comment comes from the first of its files that has one.
 
 A reference that supports 3.2 shows context, module, aggregate and operation as four levels. The docs page that `dedo init` writes uses Scalar, which does. A viewer that ignores `parent` still lists every service, without the package level.
 

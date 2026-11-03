@@ -11,8 +11,12 @@
     <!-- Scalar (MIT) renders /openapi.json with a request console, and nests
          each service under its package through OpenAPI 3.2 parent tags.
          Only Scalar's own options shape it, never CSS, so upgrades keep it
-         working. -->
-    <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference@1.75.1"></script>
+         working. The integrity hash pins the script's bytes. On an upgrade, take
+         the sha384 of the new version's dist/browser/standalone.js from
+         its npm package: jsDelivr serves that file unchanged at this path
+         (not at the bare package URL, which it minifies). -->
+    <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference@1.75.1/dist/browser/standalone.js"
+            integrity="sha384-G+2Q2i9l3PPfmYkk0b4BAIUrs7xb/DNaTL1wCYYab4c9dIKlCyiqzC0Qx3eq9Wf6" crossorigin="anonymous"></script>
     <script>
       Scalar.createApiReference('#reference', {
         url: '/openapi.json',

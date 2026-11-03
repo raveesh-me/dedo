@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/pb33f/libopenapi"
@@ -27,6 +28,10 @@ func TestModuleTitle(t *testing.T) {
 		{"taxes.content.v1", "Content"},
 		{"shop.tax_profile.v1", "Tax profile"},
 		{"acme.orders.v2beta1", "Orders"},
+		{"acme.orders.v1alpha", "Orders"},
+		{"acme.orders.v1p1beta1", "Orders"},
+		{"acme.orders.v1test", "Orders"},
+		{"acme.orders.version", "Version"},
 		{"acme.type", "Type"},
 		{"orders", "Orders"},
 		{"v1", "V1"},
@@ -103,6 +108,44 @@ func TestGenerateOnePackageHasNoPackageTag(t *testing.T) {
 	for _, tag := range doc.Tags {
 		if tag.Kind != "" || tag.Parent != "" {
 			t.Errorf("tag %+v nests, but the library has one package", tag)
+		}
+	}
+}
+
+// Operations name their tag by name alone, so two services of different
+// packages with one title would land in one group: generation fails and
+// names both.
+func TestGenerateRejectsDuplicateTagNames(t *testing.T) {
+	_, err := generatePlugin(t, "", "acme/orders/v1/orders.proto", "acme/billing/v1/billing.proto")
+	if err == nil {
+		t.Fatal("want an error for two tags named Orders")
+	}
+	for _, want := range []string{`"Orders"`, "acme.orders.v1", "acme.billing.v1"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("error %q does not mention %s", err, want)
+		}
+	}
+}
+
+// A service without a package cannot be grouped with other packages'.
+func TestGenerateRejectsPackagelessServiceAmongPackages(t *testing.T) {
+	_, err := generatePlugin(t, "", "acme/catalog/v1/catalog.proto", "nopackage.proto")
+	if err == nil || !strings.Contains(err.Error(), `"Ping"`) {
+		t.Fatalf("err = %v, want one naming the Ping service", err)
+	}
+}
+
+func TestTagPlace(t *testing.T) {
+	for _, c := range []struct {
+		tag  Tag
+		want string
+	}{
+		{Tag{Name: "acme.orders.v1", Kind: "nav"}, "package acme.orders.v1"},
+		{Tag{Name: "Orders", Parent: "acme.orders.v1"}, "a service of package acme.orders.v1"},
+		{Tag{Name: "Orders"}, "a service"},
+	} {
+		if got := tagPlace(c.tag); got != c.want {
+			t.Errorf("tagPlace(%+v) = %q, want %q", c.tag, got, c.want)
 		}
 	}
 }

@@ -1,6 +1,7 @@
 package restdoc
 
 import (
+	"fmt"
 	"regexp"
 	"strings"
 
@@ -12,8 +13,9 @@ import (
 // source path of a file's package statement and its comments.
 const packageField = 2
 
-// versionSegment matches the major version a package ends in: v1, v2beta1.
-var versionSegment = regexp.MustCompile(`^v[0-9]+((alpha|beta)[0-9]*)?$`)
+// versionSegment matches the version a package ends in, as buf's
+// PACKAGE_VERSION_SUFFIX accepts it: v1, v2beta1, v1p1alpha1, v1test.
+var versionSegment = regexp.MustCompile(`^v[0-9]+(test.*|(alpha|beta)[0-9]*|p[0-9]+(alpha|beta)[0-9]*)?$`)
 
 // module is one proto package: a module of the domain model, in the sense of
 // guidance/domains.md, and the services of the API it holds.
@@ -53,12 +55,16 @@ func (mods modules) with(f *protogen.File, t Tag) modules {
 
 // tags are the document's tags. A document whose services share one package
 // lists one tag per service, as before. One that spans packages also lists
-// a navigation tag per package, named after the package so it cannot clash
-// with a service's tag, and nests each service's tag under it.
-func (mods modules) tags() []Tag {
+// a navigation tag per package, named after the package, and nests each
+// service's tag under it. Operations name their tag by name alone, so two
+// tags with one name are an error: retitle one of the services.
+func (mods modules) tags() ([]Tag, error) {
 	var out []Tag
 	for _, m := range mods {
 		if len(mods) > 1 {
+			if m.pkg == "" {
+				return nil, fmt.Errorf("services %s are in a file without a package statement; the reference cannot group them with the other packages' services", serviceNames(m.services))
+			}
 			out = append(out, Tag{
 				Name:        string(m.pkg),
 				Summary:     moduleTitle(m.pkg),
@@ -73,7 +79,40 @@ func (mods modules) tags() []Tag {
 			out = append(out, t)
 		}
 	}
-	return out
+	return out, uniqueNames(out)
+}
+
+// uniqueNames reports tags that share a name.
+func uniqueNames(tags []Tag) error {
+	seen := map[string]Tag{}
+	for _, t := range tags {
+		if prev, ok := seen[t.Name]; ok {
+			return fmt.Errorf("two tags are named %q (in %s and %s): give one of the services a different dedo.v1.service title", t.Name, tagPlace(prev), tagPlace(t))
+		}
+		seen[t.Name] = t
+	}
+	return nil
+}
+
+// tagPlace says where a tag comes from, for error messages.
+func tagPlace(t Tag) string {
+	switch {
+	case t.Kind == "nav":
+		return "package " + t.Name
+	case t.Parent != "":
+		return "a service of package " + t.Parent
+	default:
+		return "a service"
+	}
+}
+
+// serviceNames lists the names of service tags, for error messages.
+func serviceNames(tags []Tag) string {
+	names := make([]string, 0, len(tags))
+	for _, t := range tags {
+		names = append(names, fmt.Sprintf("%q", t.Name))
+	}
+	return strings.Join(names, ", ")
 }
 
 // moduleTitle is how a reference shows a package: its last segment before
