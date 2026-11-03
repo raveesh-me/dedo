@@ -8,7 +8,7 @@ You write one `.proto` file per API. From it you get:
 
 - **Three transports with one behaviour.** Connect, gRPC and REST serve the same handlers. REST paths come from `google.api.http` annotations.
 - **Authorization without code.** Each RPC declares its scopes. The runtime rejects callers without one, on every transport. A multi-tenant service also declares its tenant, and the runtime keeps each caller to its own ([section 7](#multi-tenant-services)).
-- **REST docs.** `protoc-gen-dedo-openapi` writes an OpenAPI 3.1 document of the REST API only. Connect's own routes stay out of it.
+- **REST docs.** `protoc-gen-dedo-openapi` writes an OpenAPI 3.2 document of the REST API only. Connect's own routes stay out of it. When the API spans several packages, the reference nests each service under its package ([domains.md](domains.md)).
 - **MCP tools.** Every unary RPC becomes an MCP tool for AI agents, named after the RPC in snake_case (`GetProduct` becomes `get_product`). `protoc-gen-dedo-mcp` generates the tools; tool calls pass through the same scope checks and validation as REST calls.
 - **A blocking review gate.** `buf lint` runs Buf's rules and buf-plugin-dedo-lint's rules (`AIP_*` from Google's AIPs, `ZALANDO_*` from Zalando's guidelines, `DEDO_*` of its own, and the opt-in `DEDO_MULTI_TENANT_*`), plus any `HOUSE_*` rules your organisation adds, in your editor and in CI. [RULES.md](RULES.md) lists them, the order in which they may override each other (your house rules above dedo's, dedo's above the AIPs, the AIPs above Zalando), and which rules dedo skips.
 

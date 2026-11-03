@@ -1,6 +1,6 @@
 package restdoc
 
-// The subset of OpenAPI 3.1 the generator emits. Maps marshal with sorted
+// The subset of OpenAPI 3.2 the generator emits. Maps marshal with sorted
 // keys, so the output is deterministic.
 
 // Document is an OpenAPI document.
@@ -25,10 +25,15 @@ type Server struct {
 	URL string `json:"url"`
 }
 
-// Tag groups the operations of one service.
+// Tag groups the operations of one service, or, with Kind "nav", the
+// services of one proto package: OpenAPI 3.2 nests a service's tag under its
+// package's through Parent.
 type Tag struct {
 	Name        string `json:"name"`
+	Summary     string `json:"summary,omitempty"`
 	Description string `json:"description,omitempty"`
+	Parent      string `json:"parent,omitempty"`
+	Kind        string `json:"kind,omitempty"`
 	Audience    string `json:"x-audience,omitempty"`
 	OwnerTeam   string `json:"x-owner-team,omitempty"`
 }
@@ -106,7 +111,7 @@ type SecurityScheme struct {
 	Description string `json:"description,omitempty"`
 }
 
-// Schema is a JSON Schema as OpenAPI 3.1 uses it.
+// Schema is a JSON Schema as OpenAPI 3.1 and 3.2 use it.
 type Schema struct {
 	Ref                  string             `json:"$ref,omitempty"`
 	Type                 any                `json:"type,omitempty"`

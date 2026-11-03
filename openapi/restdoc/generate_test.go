@@ -22,22 +22,25 @@ var update = flag.Bool("update", false, "rewrite the golden files")
 
 const libraryProto = "raveesh_me/library/v1/library.proto"
 
-// request compiles the library example the way buf would and returns the
-// plugin request, encoded and decoded like a real plugin invocation so that
-// custom options arrive as resolved extensions.
-func request(t *testing.T, params string) *pluginpb.CodeGeneratorRequest {
+// request compiles protos (the library example by default) the way buf
+// would and returns the plugin request, encoded and decoded like a real
+// plugin invocation so that custom options arrive as resolved extensions.
+func request(t *testing.T, params string, protos ...string) *pluginpb.CodeGeneratorRequest {
 	t.Helper()
+	if len(protos) == 0 {
+		protos = []string{libraryProto}
+	}
 	compiler := protocompile.Compiler{
 		Resolver: protocompile.WithStandardImports(&protocompile.SourceResolver{
-			ImportPaths: []string{"../../examples/library/proto", "../../proto", "testdata/deps"},
+			ImportPaths: []string{"../../examples/library/proto", "../../proto", "testdata/deps", "testdata/domains"},
 		}),
 		SourceInfoMode: protocompile.SourceInfoStandard,
 	}
-	files, err := compiler.Compile(context.Background(), libraryProto)
+	files, err := compiler.Compile(context.Background(), protos...)
 	if err != nil {
 		t.Fatal(err)
 	}
-	req := &pluginpb.CodeGeneratorRequest{FileToGenerate: []string{libraryProto}, Parameter: proto.String(params)}
+	req := &pluginpb.CodeGeneratorRequest{FileToGenerate: protos, Parameter: proto.String(params)}
 	seen := map[string]bool{}
 	var add func(fd protoreflect.FileDescriptor)
 	add = func(fd protoreflect.FileDescriptor) {
@@ -55,7 +58,9 @@ func request(t *testing.T, params string) *pluginpb.CodeGeneratorRequest {
 		fdp.Options.GoPackage = proto.String("example.com/gen/" + strings.ReplaceAll(fd.Path(), ".proto", ""))
 		req.ProtoFile = append(req.ProtoFile, fdp)
 	}
-	add(files[0])
+	for _, f := range files {
+		add(f)
+	}
 	b, err := proto.Marshal(req)
 	if err != nil {
 		t.Fatal(err)
@@ -67,10 +72,10 @@ func request(t *testing.T, params string) *pluginpb.CodeGeneratorRequest {
 	return decoded
 }
 
-func generate(t *testing.T, params string) string {
+func generate(t *testing.T, params string, protos ...string) string {
 	t.Helper()
 	var cfg Config
-	plugin, err := protogen.Options{ParamFunc: cfg.Set}.New(request(t, params))
+	plugin, err := protogen.Options{ParamFunc: cfg.Set}.New(request(t, params, protos...))
 	if err != nil {
 		t.Fatal(err)
 	}

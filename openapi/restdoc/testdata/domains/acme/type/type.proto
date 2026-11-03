@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+// Type holds the value objects the other packages share. It has no
+// services, so the reference shows no group for it.
+package acme.type;
+
+// Sku identifies a product variant by value.
+message Sku {
+  // The code printed on the label.
+  string code = 1;
+}

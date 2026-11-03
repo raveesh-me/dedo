@@ -121,7 +121,7 @@ plugins:
   - local: ["go", "tool", "protoc-gen-dedo-mcp"]
     out: gen/go
     opt: paths=source_relative
-  # The OpenAPI 3.1 document for the REST reference.
+  # The OpenAPI 3.2 document for the REST reference.
   - local: ["go", "tool", "protoc-gen-dedo-openapi"]
     out: docs
     strategy: all
@@ -173,6 +173,8 @@ mkdir -p docs
 dedo templates docs/docs.go.tmpl > docs/docs.go
 dedo templates docs/index.html > docs/index.html   # then set its <title>
 ```
+
+`dedo upgrade` leaves `docs/index.html` alone once it exists. A service set up before the page moved to Scalar refreshes it with the same `dedo templates` command, then sets its `<title>` again.
 
 Then wire everything in `main.go`. `dedo init` writes it with your names filled in (or prints it, when you have a `main.go` already); here `CounterService` from `acme.time_counter.v1`:
 

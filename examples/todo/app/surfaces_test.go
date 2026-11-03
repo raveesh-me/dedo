@@ -37,7 +37,7 @@ func get(t *testing.T, url string) string {
 }
 
 // The REST reference documents the google.api.http bindings only, and is a
-// valid OpenAPI 3.1 document.
+// valid OpenAPI 3.2 document.
 func TestRESTReference(t *testing.T) {
 	e := newEnv(t)
 	spec := get(t, e.url+"/openapi.json")
@@ -69,7 +69,7 @@ func TestRESTReference(t *testing.T) {
 	if _, ok := item.Get.Responses.Codes.Get("404"); !ok {
 		t.Error("GetTodo documents no 404 for TODO_NOT_FOUND")
 	}
-	if page := get(t, e.url+"/docs"); !strings.Contains(page, `apiDescriptionUrl="/openapi.json"`) {
+	if page := get(t, e.url+"/docs"); !strings.Contains(page, `url: '/openapi.json'`) {
 		t.Errorf("docs page does not load the spec: %s", page)
 	}
 }
