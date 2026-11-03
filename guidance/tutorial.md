@@ -228,7 +228,7 @@ dedo init
 - the generators pinned as Go tools in `go.mod`, the dedo runtime modules, and `buf.lock` (commit it)
 - `docs/`, which serves the REST reference
 - `server.go`, a stub where every RPC answers Unimplemented, and `policy_table_test.go`, which fails `go test` when a declaration is missing
-- `AGENTS.md` with [the guidance for coding agents](claude.md)
+- `AGENTS.md` with [the guidance for coding agents](claude.md) and [the guidance for modelling the domain](domains.md)
 
 Then it generates the code from the contract (step 4) and tidies `go.mod`, and reports what `buf lint` finds. It also writes `main.go`, which serves `CounterService` on every transport; step 5 explains it. Fill in `.github/CODEOWNERS` (from [templates/CODEOWNERS](../templates/CODEOWNERS)) so every change under `proto/` needs an API review, and copy [templates/vscode](../templates/vscode) to `.vscode/` if you use VS Code.
 

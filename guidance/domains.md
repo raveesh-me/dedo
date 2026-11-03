@@ -1,5 +1,7 @@
 # Modelling the domain: DDD and dedo's layers
 
+`dedo init` adds this file to your repository's `AGENTS.md` and `CLAUDE.md`, after [claude.md](https://github.com/raveesh-me/dedo/blob/main/guidance/claude.md), and `dedo upgrade` keeps it current.
+
 An API built with dedo has layers: a repository, its proto packages, their services, the resources they manage, and the RPCs on those resources. Each layer is one of the building blocks of domain-driven design (DDD). Shape the API along that mapping, and the contract, the REST reference and the MCP tools all read in the language of the domain. Readers then navigate it the way the business thinks about it, not the way the code happens to be organised.
 
 The terms come from Eric Evans' *Domain-Driven Design* (bounded context, module, aggregate, entity, value object, ubiquitous language, context map) and Vaughn Vernon's *Effective Aggregate Design* (small aggregates, reference by identity). The resource terms come from Google's AIPs, which dedo lints against.

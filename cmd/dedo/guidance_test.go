@@ -26,8 +26,9 @@ func writeFile(t *testing.T, dir, name, content string) {
 	}
 }
 
-// dedo's guidance and the annexures dedo.yaml names go in as blocks, after
-// the file's own text, annexures last; a second run changes nothing.
+// dedo's guidance, its domain guidance and the annexures dedo.yaml names go
+// in as blocks, after the file's own text, annexures last; a second run
+// changes nothing.
 func TestGuidanceAnnexure(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, dir, "CLAUDE.md", "# Shop\n\nOur rules.\n")
@@ -40,11 +41,14 @@ func TestGuidanceAnnexure(t *testing.T) {
 	got := read(t, dir, "CLAUDE.md")
 	own := strings.Index(got, "Our rules.")
 	dedo := strings.Index(got, beginPrefix+"guidance ")
+	domains := strings.Index(got, beginPrefix+"domains ")
 	annex := strings.Index(got, beginPrefix+"annexure:docs/agents.md ")
-	if own < 0 || dedo < own || annex < dedo || !strings.Contains(got, "Send a Version header.\n"+endPrefix+"annexure:docs/agents.md -->") {
+	if own < 0 || dedo < own || domains < dedo || annex < domains ||
+		!strings.Contains(got, "# Modelling the domain: DDD and dedo's layers") || !strings.Contains(got, "Send a Version header.\n"+endPrefix+"annexure:docs/agents.md -->") {
 		t.Fatalf("CLAUDE.md:\n%s", got)
 	}
-	if !strings.Contains(out, "added dedo's guidance") || !strings.Contains(out, "added the annexure docs/agents.md") {
+	if !strings.Contains(out, "added dedo's guidance") || !strings.Contains(out, "added dedo's domain guidance") ||
+		!strings.Contains(out, "added the annexure docs/agents.md") {
 		t.Errorf("output: %s", out)
 	}
 	if _, err := os.Stat(filepath.Join(dir, "AGENTS.md")); err == nil {
@@ -73,8 +77,9 @@ func TestGuidanceAnnexure(t *testing.T) {
 	}
 }
 
-// Guidance an earlier release appended without markers becomes a block, and
-// whatever follows it under another top-level heading stays.
+// Guidance an earlier release appended without markers becomes a block, the
+// domain guidance follows it, and whatever follows it under another
+// top-level heading stays.
 func TestGuidanceLegacy(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, dir, "AGENTS.md", "notes\n\n"+guidanceMarker+"\n\nold text\n\n```sh\n# not a heading\n```\n\n# Ours\n\nkeep me\n")
@@ -84,7 +89,7 @@ func TestGuidanceLegacy(t *testing.T) {
 	}
 	got := read(t, dir, "AGENTS.md")
 	if strings.Contains(got, "old text") || strings.Count(got, guidanceMarker) != 1 ||
-		!strings.HasPrefix(got, "notes\n\n"+beginPrefix+"guidance ") || !strings.HasSuffix(got, endPrefix+"guidance -->\n\n# Ours\n\nkeep me\n") {
+		!strings.HasPrefix(got, "notes\n\n"+beginPrefix+"guidance ") || !strings.HasSuffix(got, endPrefix+"domains -->\n\n# Ours\n\nkeep me\n") {
 		t.Errorf("AGENTS.md:\n%s", got)
 	}
 	if !strings.Contains(out, "updated dedo's guidance") {

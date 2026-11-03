@@ -244,7 +244,7 @@ make run
 
 ## 5. Guidance for coding agents
 
-`dedo init` adds [claude.md](claude.md) to your `AGENTS.md` and `CLAUDE.md`, creating `AGENTS.md` when neither exists, as a block between `<!-- dedo:begin guidance … -->` and `<!-- dedo:end guidance -->` lines. `dedo upgrade` rewrites the block from the new release, so the guidance moves with dedo; keep your own notes outside it. Guidance a release before v0.20.0 appended without those lines becomes the block on the next `dedo init` or `dedo upgrade`.
+`dedo init` adds [claude.md](claude.md) to your `AGENTS.md` and `CLAUDE.md`, creating `AGENTS.md` when neither exists, as a block between `<!-- dedo:begin guidance … -->` and `<!-- dedo:end guidance -->` lines, and [domains.md](domains.md) after it as a `domains` block. `dedo upgrade` rewrites the blocks from the new release, so the guidance moves with dedo; keep your own notes outside them. Guidance a release before v0.20.0 appended without those lines becomes the block on the next `dedo init` or `dedo upgrade`.
 
 Your organisation's own guidance for coding agents, such as the headers its platform requires, goes in `dedo.yaml`'s `annexure`: a Markdown file published over HTTPS, pinned by its SHA-256 like a `url` import (`dedo upgrade` prints the sum when it is missing), or one in the repository:
 
