@@ -77,3 +77,21 @@ func TestInitNextStepsUseMake(t *testing.T) {
 		t.Errorf("Makefile.api:\n%s", mk)
 	}
 }
+
+// A service that already shares its docs keeps its own docs-tunnel, and
+// dedo's becomes api-docs-tunnel; docs keeps its short name.
+func TestMakefileAPIRenamesOwnDocsTunnel(t *testing.T) {
+	got, names := makefileAPI(asset("templates/Makefile.api"), []byte("docs-tunnel:\n\tbash share.sh\n"))
+	s := string(got)
+	if names["docs-tunnel"] != "api-docs-tunnel" || names["docs"] != "docs" {
+		t.Errorf("names = %v", names)
+	}
+	for _, want := range []string{"\napi-docs-tunnel:\n\tgo tool dedo docs -tunnel", "\ndocs:\n\tgo tool dedo docs -addr", "## api-docs-tunnel: share"} {
+		if !strings.Contains(s, want) {
+			t.Errorf("Makefile.api lacks %q:\n%s", want, s)
+		}
+	}
+	if strings.Contains(s, "\ndocs-tunnel:") {
+		t.Errorf("Makefile.api still defines docs-tunnel:\n%s", s)
+	}
+}

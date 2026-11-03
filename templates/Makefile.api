@@ -8,7 +8,7 @@
 # dedo init names a target api-<name> instead when the service's Makefile
 # already has one of these names.
 
-.PHONY: run generate check test tools api-update
+.PHONY: run generate check test tools docs docs-tunnel api-update
 
 ## run: serve the API on Connect, gRPC, REST, /docs and /mcp
 run:
@@ -45,6 +45,18 @@ test:
 ## upgrade, or a change to dedo.yaml's rules
 tools:
 	go tool dedo tools
+
+## docs: serve the REST reference (docs/index.html and openapi.json only) on
+## DOCS_ADDR until Ctrl-C
+DOCS_ADDR ?= 127.0.0.1:8099
+
+docs:
+	go tool dedo docs -addr $(DOCS_ADDR)
+
+## docs-tunnel: share the REST reference at a public Cloudflare quick-tunnel URL
+## until Ctrl-C; needs cloudflared. It never shares the service itself.
+docs-tunnel:
+	go tool dedo docs -tunnel -addr $(DOCS_ADDR)
 
 ## api-update: move deps to their latest versions
 api-update:
