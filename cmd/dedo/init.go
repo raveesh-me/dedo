@@ -657,15 +657,23 @@ func (in *initer) server() error {
 		in.say("policy_table_test.go, server.go: skipped; the repository root is package %s, not main", in.p.rootPkg)
 		return nil
 	}
-	test, err := in.render("templates/policy_table_test.go.tmpl")
-	if err != nil {
-		return err
-	}
-	if err := in.writeFile("policy_table_test.go", test, false); err != nil {
-		return err
+	if buildsPolicyTable(in.p.dir) {
+		in.say("policy_table_test.go: skipped; the service already builds its policy table (policy.Build)")
+	} else {
+		test, err := in.render("templates/policy_table_test.go.tmpl")
+		if err != nil {
+			return err
+		}
+		if err := in.writeFile("policy_table_test.go", test, false); err != nil {
+			return err
+		}
 	}
 	if hasNewServer(in.p.dir) {
 		in.say("server.go: newServer already exists; left as it is")
+		return nil
+	}
+	if ownServer(in.p.dir) {
+		in.say("server.go: skipped; main.go builds the service without newServer")
 		return nil
 	}
 	stub, err := in.render("templates/server.go.tmpl")
@@ -692,6 +700,44 @@ func hasNewServer(dir string) bool {
 		}
 	}
 	return false
+}
+
+// ownServer reports whether the repository's main.go builds the service its
+// own way, without the newServer that server.go would declare: such a service
+// moved its handlers elsewhere, and a stub server.go would only come back.
+func ownServer(dir string) bool {
+	src, err := os.ReadFile(filepath.Join(dir, "main.go"))
+	return err == nil && !strings.Contains(string(src), "newServer(")
+}
+
+// buildsPolicyTable reports whether any of the service's own Go files, outside
+// generated code, already calls policy.Build, so it checks its policy table
+// itself and needs no policy_table_test.go.
+func buildsPolicyTable(dir string) bool {
+	found := false
+	_ = filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+		if found {
+			return fs.SkipAll
+		}
+		if err != nil {
+			return nil
+		}
+		if d.IsDir() {
+			switch d.Name() {
+			case ".git", ".tools", "gen", "vendor", "node_modules":
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if !strings.HasSuffix(d.Name(), ".go") || path == filepath.Join(dir, "policy_table_test.go") {
+			return nil
+		}
+		if src, err := os.ReadFile(path); err == nil && strings.Contains(string(src), "policy.Build(") {
+			found = true
+		}
+		return nil
+	})
+	return found
 }
 
 // runCommands runs the network steps, or prints them when offline or when a
@@ -824,10 +870,14 @@ func (in *initer) printNext(src []byte, wrote, generated bool) {
 	if !generated {
 		steps = append(steps, "make "+in.target("generate"))
 	}
-	steps = append(steps,
-		"make "+in.target("run"),
-		"implement the RPCs in server.go; until then they answer Unimplemented",
-		"before shipping, replace auth and devTokens in main.go with your token verification")
+	steps = append(steps, "make "+in.target("run"))
+	// A service that builds its own server has no server.go stub or
+	// printed devTokens to replace.
+	if !ownServer(in.p.dir) || hasNewServer(in.p.dir) {
+		steps = append(steps,
+			"implement the RPCs in server.go; until then they answer Unimplemented",
+			"before shipping, replace auth and devTokens in main.go with your token verification")
+	}
 	for i, step := range steps {
 		in.say("%d. %s", i+1, step)
 	}

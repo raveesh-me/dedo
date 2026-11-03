@@ -95,3 +95,25 @@ func TestMakefileAPIRenamesOwnDocsTunnel(t *testing.T) {
 		t.Errorf("Makefile.api still defines docs-tunnel:\n%s", s)
 	}
 }
+
+// A rule that only adds prerequisites or sets a target-specific variable
+// extends dedo's target of that name, so it keeps its short name.
+func TestMakefileAPIKeepsExtendedTargets(t *testing.T) {
+	mk := []byte("run: export DEV_AUTH ?= true\n\n" +
+		"## sqlc-check: diff\nsqlc-check:\n\tgo tool sqlc diff\n\n" +
+		"check: sqlc-check\n\n" +
+		"test: test-db\ntest: export GOFLAGS += -race\n\n" +
+		"tools: ; echo mine\n")
+	got, names := makefileAPI(asset("templates/Makefile.api"), mk)
+	for _, t2 := range []string{"run", "check", "test"} {
+		if names[t2] != t2 {
+			t.Errorf("%s renamed to %s", t2, names[t2])
+		}
+	}
+	if names["tools"] != "api-tools" {
+		t.Errorf("tools with an inline recipe kept its name: %v", names)
+	}
+	if s := string(got); !strings.Contains(s, "\ncheck: api-tools\n") || !strings.Contains(s, "\ntest:\n\tgo test") {
+		t.Errorf("Makefile.api:\n%s", s)
+	}
+}

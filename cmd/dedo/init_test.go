@@ -922,3 +922,28 @@ func TestFetchRules(t *testing.T) {
 		t.Errorf("output: %s", out.String())
 	}
 }
+
+// A service that wired its own server and policy check elsewhere, and deleted
+// the starter's server.go and policy_table_test.go, does not get them back.
+func TestInitKeepsAServiceItsOwnServer(t *testing.T) {
+	dir := repo(t, map[string]string{
+		"go.mod":                     "module example.com/notes\n",
+		"main.go":                    "package main\n\nfunc main() { app.New() }\n",
+		"app/app.go":                 "package app\n\nfunc New() { _, _ = policy.Build(names...) }\n",
+		"proto/notes/v1/notes.proto": "syntax = \"proto3\";\npackage notes.v1;\nservice NoteService {}\n",
+	})
+	out := initOffline(t, dir)
+	for _, name := range []string{"server.go", "policy_table_test.go"} {
+		if _, err := os.Stat(filepath.Join(dir, name)); err == nil {
+			t.Errorf("%s written into a service that has its own", name)
+		}
+	}
+	for _, want := range []string{"policy_table_test.go: skipped; the service already builds its policy table", "server.go: skipped; main.go builds the service without newServer"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("output lacks %q:\n%s", want, out)
+		}
+	}
+	if strings.Contains(out, "implement the RPCs in server.go") {
+		t.Errorf("next steps point at a server.go the service does not have:\n%s", out)
+	}
+}
