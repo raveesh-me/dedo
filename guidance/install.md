@@ -78,7 +78,9 @@ dedo templates Makefile.api > Makefile.api && printf 'include Makefile.api\n' >>
 make check          # buf format, buf lint, buf breaking against main
 ```
 
-The breaking check compares with the `main` branch, and is skipped while `main` has no `.proto` files. Compare with another branch with `make check API_BASE=develop`. The targets of `Makefile.api` are `run`, `generate`, `check`, `test` and `tools`; where your `Makefile` already has one of those names, `dedo init` names dedo's `api-<name>` instead, and `api-check`, `api-generate` and `api-test` always exist, for CI.
+The breaking check compares with the `main` branch, and is skipped while `main` has no `.proto` files. Compare with another branch with `make check API_BASE=develop`. The targets of `Makefile.api` are `run`, `generate`, `check`, `test`, `tools`, `docs` and `docs-tunnel`; where your `Makefile` already has one of those names, `dedo init` names dedo's `api-<name>` instead, and `api-check`, `api-generate` and `api-test` always exist, for CI.
+
+`make docs` serves the REST reference, only `docs/index.html` and `docs/openapi.json`, on `127.0.0.1:8099` (`DOCS_ADDR` to change it). `make docs-tunnel` also shares it at a public `trycloudflare.com` URL until Ctrl-C, to show the API to someone off your machine; it needs [cloudflared](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/). It never shares the service itself: development tokens are often public.
 
 Your organisation's own rules go in `dedo.yaml`'s `rules` section, as CEL checks that can import shared rules from git repositories, or from files published over HTTPS and pinned by their SHA-256, which CI fetches without access to a private repository ([RULES.md](RULES.md#house-rules), *Published rules*); `HOUSE` in `use` runs them. [templates/dedo.example.yaml](../templates/dedo.example.yaml) shows every key. A house rule can override a DEDO, AIP or ZALANDO rule by naming it in `overrides`, or lock itself with `final: true`; `dedo tools` lists every override and final rule in force. [RULES.md](RULES.md#house-rules) has the format, and [Precedence](RULES.md#precedence) the order.
 
