@@ -19,12 +19,7 @@ var makeRule = regexp.MustCompile(`^([A-Za-z0-9_.-]+)[ \t]*:([^=].*)?$`)
 // named api-<name> instead, so the service's own keeps working, and the
 // alias of that name, which the renamed target replaces, is dropped.
 func makefileAPI(tmpl, mk []byte) ([]byte, map[string]string) {
-	defined := map[string]bool{}
-	for _, line := range strings.Split(string(mk), "\n") {
-		if m := makeRule.FindStringSubmatch(line); m != nil {
-			defined[m[1]] = true
-		}
-	}
+	defined := ownTargets(mk)
 	names := map[string]string{}
 	for _, t := range makeTargets {
 		names[t] = t
@@ -68,6 +63,38 @@ func makefileAPI(tmpl, mk []byte) ([]byte, map[string]string) {
 		out = append(out, line)
 	}
 	return []byte(strings.Join(out, "\n")), names
+}
+
+// targetVariable matches what follows a rule's colon when the line sets a
+// variable for that target only, such as "test: export GOFLAGS += -race".
+var targetVariable = regexp.MustCompile(`^\s*(export\s+|override\s+|private\s+)*[A-Za-z_][A-Za-z0-9_.-]*\s*(:::|::|:|\?|\+|!)?=`)
+
+// ownTargets returns the targets mk gives a recipe of its own. A rule that
+// only adds prerequisites ("check: sqlc-check") or sets a target-specific
+// variable extends Makefile.api's target of that name rather than replacing
+// it, so it does not count.
+func ownTargets(mk []byte) map[string]bool {
+	lines := strings.Split(string(mk), "\n")
+	own := map[string]bool{}
+	for i, line := range lines {
+		m := makeRule.FindStringSubmatch(line)
+		if m == nil || targetVariable.MatchString(m[2]) {
+			continue
+		}
+		recipe := strings.Contains(m[2], ";")
+		for j := i + 1; !recipe && j < len(lines); j++ {
+			next := lines[j]
+			if strings.HasPrefix(next, "\t") {
+				recipe = true
+			} else if strings.TrimSpace(next) != "" && !strings.HasPrefix(strings.TrimSpace(next), "#") {
+				break
+			}
+		}
+		if recipe {
+			own[m[1]] = true
+		}
+	}
+	return own
 }
 
 // isReplacedAlias reports whether target is the api- alias of a target that
