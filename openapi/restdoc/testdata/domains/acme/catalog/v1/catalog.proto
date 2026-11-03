@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+// Catalog is what the shop sells.
+package acme.catalog.v1;
+
+import "acme/type/type.proto";
+import "google/api/annotations.proto";
+
+// ProductService reads the products on sale.
+service ProductService {
+  // GetProduct returns one product.
+  rpc GetProduct(GetProductRequest) returns (GetProductResponse) {
+    option (google.api.http) = {get: "/shop/v1/{name=products/*}"};
+  }
+}
+
+// The request of GetProduct.
+message GetProductRequest {
+  // The product, products/{product}.
+  string name = 1;
+}
+
+// The response of GetProduct.
+message GetProductResponse {
+  // The product's variant.
+  acme.type.Sku sku = 1;
+}

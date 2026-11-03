@@ -1,0 +1,246 @@
+{
+  "openapi": "3.2.0",
+  "info": {
+    "title": "Shop API",
+    "version": "v1"
+  },
+  "tags": [
+    {
+      "name": "acme.catalog.v1",
+      "summary": "Catalog",
+      "description": "Catalog is what the shop sells.",
+      "kind": "nav"
+    },
+    {
+      "name": "Product",
+      "description": "ProductService reads the products on sale.",
+      "parent": "acme.catalog.v1"
+    },
+    {
+      "name": "acme.orders.v1",
+      "summary": "Orders",
+      "description": "Orders is what buyers commit to buy, and what they send back.",
+      "kind": "nav"
+    },
+    {
+      "name": "Orders",
+      "description": "OrderService reads orders. Its title is the package's title too: the\npackage's tag is named after the package, so the two cannot clash.",
+      "parent": "acme.orders.v1"
+    },
+    {
+      "name": "Return",
+      "description": "ReturnService reads returns.",
+      "parent": "acme.orders.v1"
+    }
+  ],
+  "paths": {
+    "/shop/v1/orders/{ordersId}": {
+      "get": {
+        "operationId": "OrderService_GetOrder",
+        "summary": "GetOrder",
+        "description": "GetOrder returns one order.",
+        "tags": [
+          "Orders"
+        ],
+        "parameters": [
+          {
+            "name": "ordersId",
+            "in": "path",
+            "description": "Part of `name`, which has the form `orders/{ordersId}`.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "X-Flow-ID": {
+                "description": "Correlates the call across services. Send one to set it.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetOrderResponse"
+                }
+              }
+            }
+          }
+        },
+        "x-rpc-procedure": "/acme.orders.v1.OrderService/GetOrder"
+      }
+    },
+    "/shop/v1/products/{productsId}": {
+      "get": {
+        "operationId": "ProductService_GetProduct",
+        "summary": "GetProduct",
+        "description": "GetProduct returns one product.",
+        "tags": [
+          "Product"
+        ],
+        "parameters": [
+          {
+            "name": "productsId",
+            "in": "path",
+            "description": "Part of `name`, which has the form `products/{productsId}`.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "X-Flow-ID": {
+                "description": "Correlates the call across services. Send one to set it.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetProductResponse"
+                }
+              }
+            }
+          }
+        },
+        "x-rpc-procedure": "/acme.catalog.v1.ProductService/GetProduct"
+      }
+    },
+    "/shop/v1/returns/{returnsId}": {
+      "get": {
+        "operationId": "ReturnService_GetReturn",
+        "summary": "GetReturn",
+        "description": "GetReturn returns one return.",
+        "tags": [
+          "Return"
+        ],
+        "parameters": [
+          {
+            "name": "returnsId",
+            "in": "path",
+            "description": "Part of `name`, which has the form `returns/{returnsId}`.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "X-Flow-ID": {
+                "description": "Correlates the call across services. Send one to set it.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetReturnResponse"
+                }
+              }
+            }
+          }
+        },
+        "x-rpc-procedure": "/acme.orders.v1.ReturnService/GetReturn"
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "GetOrderResponse": {
+        "type": "object",
+        "description": "The response of GetOrder.",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "The order, orders/{order}."
+          }
+        }
+      },
+      "GetProductResponse": {
+        "type": "object",
+        "description": "The response of GetProduct.",
+        "properties": {
+          "sku": {
+            "$ref": "#/components/schemas/Sku",
+            "description": "The product's variant."
+          }
+        }
+      },
+      "GetReturnResponse": {
+        "type": "object",
+        "description": "The response of GetReturn.",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "The return, returns/{return}."
+          }
+        }
+      },
+      "Sku": {
+        "type": "object",
+        "description": "Sku identifies a product variant by value.",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "The code printed on the label."
+          }
+        }
+      },
+      "Status": {
+        "type": "object",
+        "description": "An error. details holds a google.rpc.ErrorInfo whose reason is one of the operation's declared reasons.",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "format": "int32",
+            "description": "The google.rpc.Code."
+          },
+          "details": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "@type": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": {}
+            }
+          },
+          "message": {
+            "type": "string",
+            "description": "A developer-facing explanation."
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ]
+      }
+    },
+    "securitySchemes": {
+      "bearer": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "An access token carrying the operation's scopes."
+      }
+    }
+  }
+}

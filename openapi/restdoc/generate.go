@@ -1,4 +1,4 @@
-// Package restdoc generates an OpenAPI 3.1 document from the google.api.http
+// Package restdoc generates an OpenAPI 3.2 document from the google.api.http
 // bindings of protobuf services. Only those bindings are documented: the
 // Connect and gRPC routes every RPC also has are transport details, not the
 // public REST API.
@@ -52,7 +52,7 @@ type generator struct {
 func Generate(plugin *protogen.Plugin, cfg Config) error {
 	g := &generator{schemas: newSchemas(plugin.Files), resources: resourceIndex(plugin.Files)}
 	doc := &Document{
-		OpenAPI: "3.1.0",
+		OpenAPI: "3.2.0",
 		Paths:   map[string]*PathItem{},
 		Components: Components{
 			SecuritySchemes: map[string]SecurityScheme{
@@ -64,13 +64,14 @@ func Generate(plugin *protogen.Plugin, cfg Config) error {
 		doc.Servers = append(doc.Servers, Server{URL: s})
 	}
 	var names []string
+	mods := modules{}
 	for _, f := range plugin.Files {
 		if !f.Generate {
 			continue
 		}
 		for _, svc := range f.Services {
 			names = append(names, string(svc.Desc.Name()))
-			doc.Tags = append(doc.Tags, tag(svc))
+			mods = mods.with(f, tag(svc))
 			if doc.Info.Version == "" {
 				doc.Info.Version = string(f.Desc.Package().Name())
 			}
@@ -79,6 +80,11 @@ func Generate(plugin *protogen.Plugin, cfg Config) error {
 			}
 		}
 	}
+	tags, err := mods.tags()
+	if err != nil {
+		return err
+	}
+	doc.Tags = tags
 	doc.Info.Title = firstNonEmpty(cfg.Title, strings.Join(names, ", "), "API")
 	doc.Info.Version = firstNonEmpty(cfg.Version, doc.Info.Version, "v1")
 	g.schemas.built[statusSchema] = statusSchemaDef()

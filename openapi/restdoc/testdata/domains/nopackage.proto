@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+import "google/api/annotations.proto";
+
+// PingService has no package to be grouped under.
+service PingService {
+  // Ping answers.
+  rpc Ping(PingRequest) returns (PingResponse) {
+    option (google.api.http) = {get: "/shop/v1/ping"};
+  }
+}
+
+// The request of Ping.
+message PingRequest {}
+
+// The response of Ping.
+message PingResponse {}

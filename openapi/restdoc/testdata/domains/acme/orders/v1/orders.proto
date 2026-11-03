@@ -1,0 +1,50 @@
+syntax = "proto3";
+
+// Orders is what buyers commit to buy, and what they send back.
+package acme.orders.v1;
+
+import "dedo/v1/options.proto";
+import "google/api/annotations.proto";
+
+// OrderService reads orders. Its title is the package's title too: the
+// package's tag is named after the package, so the two cannot clash.
+service OrderService {
+  option (dedo.v1.service) = {title: "Orders"};
+
+  // GetOrder returns one order.
+  rpc GetOrder(GetOrderRequest) returns (GetOrderResponse) {
+    option (google.api.http) = {get: "/shop/v1/{name=orders/*}"};
+  }
+}
+
+// ReturnService reads returns.
+service ReturnService {
+  // GetReturn returns one return.
+  rpc GetReturn(GetReturnRequest) returns (GetReturnResponse) {
+    option (google.api.http) = {get: "/shop/v1/{name=returns/*}"};
+  }
+}
+
+// The request of GetOrder.
+message GetOrderRequest {
+  // The order, orders/{order}.
+  string name = 1;
+}
+
+// The response of GetOrder.
+message GetOrderResponse {
+  // The order, orders/{order}.
+  string name = 1;
+}
+
+// The request of GetReturn.
+message GetReturnRequest {
+  // The return, returns/{return}.
+  string name = 1;
+}
+
+// The response of GetReturn.
+message GetReturnResponse {
+  // The return, returns/{return}.
+  string name = 1;
+}

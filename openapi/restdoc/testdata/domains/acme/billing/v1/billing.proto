@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+// Billing is what buyers are charged. Its service reuses the title of the
+// orders package's service, which the reference cannot tell apart.
+package acme.billing.v1;
+
+import "dedo/v1/options.proto";
+import "google/api/annotations.proto";
+
+// InvoiceService reads invoices.
+service InvoiceService {
+  option (dedo.v1.service) = {title: "Orders"};
+
+  // GetInvoice returns one invoice.
+  rpc GetInvoice(GetInvoiceRequest) returns (GetInvoiceResponse) {
+    option (google.api.http) = {get: "/shop/v1/{name=invoices/*}"};
+  }
+}
+
+// The request of GetInvoice.
+message GetInvoiceRequest {
+  // The invoice, invoices/{invoice}.
+  string name = 1;
+}
+
+// The response of GetInvoice.
+message GetInvoiceResponse {
+  // The invoice, invoices/{invoice}.
+  string name = 1;
+}

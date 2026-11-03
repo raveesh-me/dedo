@@ -195,7 +195,7 @@ func applyFieldOptions(s *Schema, fd protoreflect.FieldDescriptor) {
 	rules, _ := proto.GetExtension(fd.Options(), dedov1.E_Field).(*dedov1.FieldRules)
 	s.Sensitive = rules.GetSensitive()
 	if s.Ref != "" {
-		// A $ref sibling only keeps its description in OpenAPI 3.1; keep
+		// A $ref sibling only keeps its description since OpenAPI 3.1; keep
 		// the reference clean otherwise.
 		s.Deprecated, s.ReadOnly, s.WriteOnly = false, false, false
 	}
