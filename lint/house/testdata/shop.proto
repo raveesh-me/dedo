@@ -11,7 +11,10 @@ import "google/api/resource.proto";
 service CartService {
   // GetCart returns a cart.
   rpc GetCart(GetCartRequest) returns (Cart) {
-    option (google.api.http) = {get: "/v1/{name=carts/*}"};
+    option (google.api.http) = {
+      get: "/v1/{name=carts/*}"
+      additional_bindings: {post: "/v1/{name=carts/*}:get" body: "*"}
+    };
     option (dedo.v1.method) = {scopes: "shop.cart.read"};
   }
 }
