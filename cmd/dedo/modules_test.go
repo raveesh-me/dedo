@@ -167,6 +167,7 @@ func TestClassify(t *testing.T) {
 		{shop + "/app", KindRoot, ""},
 		{shop + "/app/apptest", KindRoot, ""},
 		{shop + "/cmd/shopctl", KindRoot, ""},
+		{shop + "/cmd/shopctl/flags", KindRoot, ""},
 		{shop + "/internal/orders", KindModule, "orders"},
 		{shop + "/internal/orders/store", KindModule, "orders"},
 		{shop + "/gen/go/shop/orders/v1", KindModule, "orders"},

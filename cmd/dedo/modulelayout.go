@@ -14,8 +14,8 @@ import (
 // its packages (every version of a module is the same module). Shared code
 // is internal/shared/** and the code generated from the context's
 // unversioned packages, such as <context>.type, and imports no module. The
-// composition roots, the main packages and app/**, are the only code that
-// imports several modules.
+// composition roots, the main packages, app/** and cmd/** (commands such
+// as a migration runner), are the only code that imports several modules.
 type Layout struct {
 	// Module is the Go module path, such as github.com/acme/shop.
 	Module string
@@ -50,7 +50,7 @@ const (
 	KindModule
 	// KindShared imports no module.
 	KindShared
-	// KindRoot is a composition root: a main package, or app/**.
+	// KindRoot is a composition root: a main package, app/** or cmd/**.
 	KindRoot
 )
 
@@ -103,7 +103,7 @@ func (l Layout) Classify(importPath string) (Kind, string) {
 	rel = strings.TrimPrefix(rel, "/")
 	parts := strings.Split(rel, "/")
 	switch {
-	case rel == "" || parts[0] == "app":
+	case rel == "" || parts[0] == "app" || parts[0] == "cmd":
 		return KindRoot, ""
 	case parts[0] == "internal" && len(parts) > 1 && parts[1] == Shared:
 		return KindShared, ""
