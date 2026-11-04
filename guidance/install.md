@@ -298,7 +298,7 @@ In `buf.yaml` it adds the deps, the `DEDO` category and the plugin, and in `dedo
 
 Your existing services declare nothing for dedo yet, and `dedo init` names them. Until they do, `buf lint` lists what each RPC needs, and the policy-table test and the server's startup fail on purpose, naming the first missing declaration. Declare one service at a time; [guideline.md](guideline.md#3-write-the-contract) shows a complete one.
 
-`main.go`, `policy_table_test.go` and the handler stubs in `internal/<module>/` are written only where you have none, and only in a `package main` root. A library repository keeps its package. A repository that keeps its handlers in a root `server.go` (`newServer`, as `dedo init` wrote before v0.27.0), or whose `main.go` builds its services without dedo's stubs, gets no stubs; move the handlers into their modules as [domains.md](domains.md#code-and-data-follow-the-modules) lays out.
+`main.go`, `policy_table_test.go` and the handler stubs in `internal/<module>/` are written only where you have none, and only in a `package main` root. A library repository keeps its package. A repository that keeps its handlers in a root `server.go` (`newServer`, as `dedo init` wrote before v0.28.0), or whose `main.go` builds its services without dedo's stubs, gets no stubs; move the handlers into their modules as [domains.md](domains.md#code-and-data-follow-the-modules) lays out.
 
 ## Upgrading
 
