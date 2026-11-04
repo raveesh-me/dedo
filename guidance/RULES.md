@@ -314,7 +314,7 @@ errors: {reason: "PRODUCT_NOT_FOUND", code: UNKNOWN}    // Fails: code.
 errors: {reason: "PRODUCT_NOT_FOUND", code: NOT_FOUND}  // Passes.
 ```
 
-**Fix.** Rename the reason, or pick the code that describes the failure. `examples/todo/app/errors.go` shows how to return the reason in an `ErrorInfo`.
+**Fix.** Rename the reason, or pick the code that describes the failure. `examples/todo/internal/todo/errors.go` shows how to return the reason in an `ErrorInfo`.
 
 ### ZALANDO_CACHE_REQUIRES_NO_SIDE_EFFECTS
 

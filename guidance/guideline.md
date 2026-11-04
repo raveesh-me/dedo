@@ -44,21 +44,22 @@ my-service/
   dedo.yaml              # which lint rules run, your house rules, agent guidance
   buf.gen.yaml           # the four generators, run through go tool
   Makefile               # include Makefile.api
-  Makefile.api           # run, generate, check, test, tools
+  Makefile.api           # run, generate, check, test, tools, modules
   docs/                  # serves the REST reference
-  server.go              # your handlers (dedo init writes a stub)
+  internal/products/     # module products: its handlers (dedo init writes a stub), store, migrations
+  internal/shared/       # helpers every module uses, when there are any
   policy_table_test.go   # fails on a missing declaration
   AGENTS.md              # guidance for coding agents
   .github/CODEOWNERS     # from templates/CODEOWNERS
   go.mod                 # the generators as tools, the dedo runtime
-  main.go                # written by dedo init
+  main.go                # the composition root, written by dedo init: registers every module's services
 ```
 
 Why it is set up this way:
 
 - **The generators are Go tools** pinned in `go.mod`, so every machine and CI generate the same code without Buf's remote plugins.
 - **The lint plugin belongs to the protos, not to a Go module.** The options module's label in `buf.yaml` names its release; `dedo tools` installs it into `$GOBIN` and copies it into `.tools/` (ignored by git), so the editor and CI run the same version, in any repository with protos, whatever its language. It runs as a native binary because Buf starts it about a dozen times per lint. Commit `buf.lock`.
-- **Code follows the proto modules:** each module's handlers, domain, store, migrations and queries go in one Go package at `internal/<module>/`, with a Postgres schema of its own, even when the service has one module. Only `main` and an `app/` package import several modules. [domains.md](domains.md#code-and-data-follow-the-modules) has the layout and the rules that keep modules acyclic.
+- **Code follows the proto modules:** each module's handlers, domain, store, migrations and queries go in one Go package at `internal/<module>/`, with a Postgres schema of its own, even when the service has one module. Only `main` and an `app/` package import several modules. [domains.md](domains.md#code-and-data-follow-the-modules) has the layout and the rules that keep modules acyclic. `dedo modules`, which `make check` runs, fails on a cycle between modules, a shared package that imports a module, module code outside `internal/<module>/`, and SQL that names another module's schema, and prints the module graph.
 - **connect-go v2:** one `connect.Server` holds the interceptors (flow IDs, auth, dedo's policy, validation); Connect and gRPC (`connecthttp.Mount`), REST (`vanguard.Mount`) and MCP (`connectinprocess`) all reach it, so every transport gets the same checks.
 
 [install.md](install.md) shows each part by hand, for repositories that prefer not to run `dedo init`. Add `.github/CODEOWNERS` yourself (`dedo templates CODEOWNERS`) so every change under `proto/` needs an API review.
@@ -203,7 +204,7 @@ guard, err := interceptor.New(interceptor.Config{
 	Log:           log,
 })
 server := connect.NewServer(flowid.Interceptor(), auth.Interceptor(), guard, validate.NewServerInterceptor())
-productsv1connect.RegisterProductServiceHandler(server, newServer())
+productsv1connect.RegisterProductServiceHandler(server, products.NewProductService()) // from internal/products
 
 mux := http.NewServeMux()
 connecthttp.Mount(mux, server)                       // Connect, gRPC, gRPC-Web
@@ -235,7 +236,7 @@ An unknown value stops the service at startup rather than serving it publicly.
 
 **Calling another service over HTTP.** MCP tool calls stay in-process, but a handler that calls another service through a Connect client over HTTP (`connecthttp.NewTransport`) needs a connection pool sized for its traffic. `http.DefaultClient` keeps only two idle connections per host: under concurrent calls it keeps opening and closing connections, and the closed ones hold local ports until they time out, so a busy service runs out of ports and every call fails with `cannot assign requested address`. In dedo's benchmark that happened at 32 concurrent calls. Create one `http.Client` per backend, with an `http.Transport` whose `MaxIdleConnsPerHost` covers your concurrency (`examples/todo/cmd/todo-mcp` uses 256), and reuse it for every call.
 
-Return errors with a declared reason in a `google.rpc.ErrorInfo` detail. `examples/todo/app/errors.go` has a helper.
+Return errors with a declared reason in a `google.rpc.ErrorInfo` detail. `examples/todo/internal/todo/errors.go` has a helper.
 
 `dedo init` writes this `main.go` with your names when the repository has none, and `policy_table_test.go`, so a missing declaration fails `go test` before deploy.
 

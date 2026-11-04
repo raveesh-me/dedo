@@ -7,7 +7,7 @@ go install github.com/raveesh-me/dedo/cmd/dedo@v0.27.0
 dedo init
 ```
 
-It never removes your own deps, plugins or generators, and running it again changes nothing that is in place. In a module with no protos yet, it writes a starter service that passes lint, with a `server.go` stub, so the first lint, generate and build all succeed. If one of its `go`, `buf` or `make` commands fails, it runs the rest and lists what to fix. It ends by writing a `main.go` that serves your service, or, when you have one, printing dedo's to compare. `dedo init -offline` edits the files only and prints the `go`, `buf` and `make` commands instead of running them.
+It never removes your own deps, plugins or generators, and running it again changes nothing that is in place. In a module with no protos yet, it writes a starter service that passes lint, with a handler stub in its module's package, so the first lint, generate and build all succeed. If one of its `go`, `buf` or `make` commands fails, it runs the rest and lists what to fix. It ends by writing a `main.go` that serves every service, or, when you have one, printing dedo's to compare. `dedo init -offline` edits the files only and prints the `go`, `buf` and `make` commands instead of running them.
 
 New to dedo? [tutorial.md](tutorial.md) builds a whole service from an empty directory. Already on Buf? Read [Adding dedo to an existing Buf repository](#adding-dedo-to-an-existing-buf-repository) first.
 
@@ -75,10 +75,10 @@ rules:
 
 ```sh
 dedo templates Makefile.api > Makefile.api && printf 'include Makefile.api\n' >> Makefile
-make check          # buf format, buf lint, buf breaking against main
+make check          # buf format, buf lint, buf breaking against main, dedo modules
 ```
 
-The breaking check compares with the `main` branch, and is skipped while `main` has no `.proto` files. Compare with another branch with `make check API_BASE=develop`. The targets of `Makefile.api` are `run`, `generate`, `check`, `test`, `tools`, `docs`, `docs-tunnel` and `docs-static`; where your `Makefile` already has one of those names, `dedo init` names dedo's `api-<name>` instead, and `api-check`, `api-generate` and `api-test` always exist, for CI.
+The breaking check compares with the `main` branch, and is skipped while `main` has no `.proto` files. Compare with another branch with `make check API_BASE=develop`. `make check` also runs `make modules`, which is `dedo modules` (below). The targets of `Makefile.api` are `run`, `generate`, `check`, `test`, `tools`, `modules`, `docs`, `docs-tunnel` and `docs-static`; where your `Makefile` already has one of those names, `dedo init` names dedo's `api-<name>` instead, and `api-check`, `api-generate` and `api-test` always exist, for CI.
 
 `make docs` serves the REST reference, only `docs/index.html` and `docs/openapi.json`, on `127.0.0.1:8099` (`DOCS_ADDR` to change it). `make docs-tunnel` also shares it at a public `trycloudflare.com` URL until Ctrl-C, to show the API to someone off your machine; it needs [cloudflared](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/). It never shares the service itself: development tokens are often public.
 
@@ -178,7 +178,9 @@ dedo templates docs/index.html > docs/index.html   # then set its <title>
 
 Once these files exist, `dedo upgrade` leaves them alone. When one differs from the release's template, other than in the page's `<title>`, it says so and prints the `dedo templates` command that refreshes it. A page set up before the move to Scalar is one of these, and sets its `<title>` again after the refresh.
 
-Then wire everything in `main.go`. `dedo init` writes it with your names filled in (or prints it, when you have a `main.go` already); here `CounterService` from `acme.time_counter.v1`:
+Each service's handlers live in its module's package, `internal/<module>/` ([domains.md](domains.md#code-and-data-follow-the-modules)): the module of `acme.time_counter.v1` is `time_counter`. `dedo init` writes a stub there for each service, `internal/time_counter/counter_service.go`, whose type answers Unimplemented until you write the methods (`dedo templates server.go.tmpl` prints it). A second version of a module, `acme.time_counter.v2`, is the same module: its stub is `CounterServiceV2` in the same package.
+
+Then wire everything in `main.go`, the composition root: the only package, with `app/` if you add one, that imports several modules. `dedo init` writes it with your names filled in, registering every service (or prints it, when you have a `main.go` already); here `CounterService` from `acme.time_counter.v1`:
 
 ```go
 func newHandler(log *slog.Logger) (http.Handler, error) {
@@ -198,7 +200,8 @@ func newHandler(log *slog.Logger) (http.Handler, error) {
 	}
 	// One server, one interceptor chain, for every transport below.
 	server := connect.NewServer(flowid.Interceptor(), auth, guard, validate.NewServerInterceptor())
-	time_counterv1connect.RegisterCounterServiceHandler(server, newServer())
+	// Each module's handlers, from internal/<module>.
+	time_counterv1connect.RegisterCounterServiceHandler(server, time_counter.NewCounterService())
 
 	mux := http.NewServeMux()
 	// Connect, gRPC and gRPC-Web, then REST from the google.api.http bindings.
@@ -210,7 +213,8 @@ func newHandler(log *slog.Logger) (http.Handler, error) {
 	// MCP: every RPC is a tool, as protoc-gen-dedo-mcp generated it, called
 	// in-process on the same server with the caller's token.
 	tools := mcp.NewServer(&mcp.Implementation{Name: "time-counter", Version: "v1"}, nil)
-	if err := mcpserver.AddTools(tools, connect.NewClient(connectinprocess.New(server)), time_counterv1.CounterServiceMCPTools()...); err != nil {
+	client := connect.NewClient(connectinprocess.New(server))
+	if err := mcpserver.AddTools(tools, client, time_counterv1.CounterServiceMCPTools()...); err != nil {
 		return nil, err
 	}
 
@@ -237,7 +241,26 @@ func newHandler(log *slog.Logger) (http.Handler, error) {
 
 In a multi-tenant service, `interceptor.Config` also takes `Tenants`, a function that says whether the caller may act in a tenant ID; the server will not start without it. `dedo init` writes a development one, next to `devTokens`, when a service declares `tenancy`.
 
-Auth is a server interceptor (`auth` in the template), not HTTP middleware, so it covers MCP calls, which reach the server in-process, as well as Connect, gRPC and REST. The complete file, with `main`, imports and a development `auth`, is [templates/main.go.tmpl](../templates/main.go.tmpl) (`dedo init` fills it in). Add a policy-table test ([templates/policy_table_test.go.tmpl](../templates/policy_table_test.go.tmpl)) so a missing declaration fails `go test` before deploy.
+Auth is a server interceptor (`auth` in the template), not HTTP middleware, so it covers MCP calls, which reach the server in-process, as well as Connect, gRPC and REST. The complete file, with `main`, imports and a development `auth`, is [templates/main.go.tmpl](../templates/main.go.tmpl) (`dedo init` fills it in). Add a policy-table test ([templates/policy_table_test.go.tmpl](../templates/policy_table_test.go.tmpl)), which builds every service's table, so a missing declaration fails `go test` before deploy.
+
+### Keeping modules apart: `dedo modules`
+
+`dedo modules`, run in the repository (`make modules`; `make check` runs it), checks the layout of [domains.md](domains.md#code-and-data-follow-the-modules). It takes the modules from the repository's versioned proto packages, `<context>.<m>.v<n>`, and the Go module path from `go.mod`, and loads the import graph with `go list`. It fails on:
+
+- a cycle between modules, through an import of `internal/<m>/**` or of the code generated from `<m>`'s packages, messages or Connect clients, any version; it names the imports that close the cycle;
+- a shared package, `internal/shared/**` or the code generated from an unversioned package such as `<context>.type`, that imports a module;
+- a directory named after a module anywhere but `internal/<m>` and the trees that mirror the protos (`proto/`, `gen/`), and a directory in `internal/` that is neither a module nor `shared`;
+- SQL, in a module's or shared `.sql` files or in Go string literals outside generated code, that names another module's schema, quoted or not; shared SQL may name no module's schema.
+
+It finds generated packages by the `source:` line protoc plugins write at the top of each file, so it works wherever `buf.gen.yaml` writes them, and leaves tests out: a test may import the composition root or another module's fakes. On success it prints each module and the modules it depends on:
+
+```text
+dedo modules: 2 modules in acme, no cycles; each depends on:
+  catalog  (nothing)
+  orders   -> catalog
+```
+
+Events are not checked separately. A topic belongs to its publisher, so a subscriber imports the publisher's package to name it, and that import is an edge like any other. Which calls declare, publish and subscribe depends on the repository's own outbox, which dedo does not ship.
 
 ```sh
 make generate
@@ -275,7 +298,7 @@ In `buf.yaml` it adds the deps, the `DEDO` category and the plugin, and in `dedo
 
 Your existing services declare nothing for dedo yet, and `dedo init` names them. Until they do, `buf lint` lists what each RPC needs, and the policy-table test and the server's startup fail on purpose, naming the first missing declaration. Declare one service at a time; [guideline.md](guideline.md#3-write-the-contract) shows a complete one.
 
-`main.go` and `server.go` are written only if you have none, and only in a `package main` root. A library repository keeps its package.
+`main.go`, `policy_table_test.go` and the handler stubs in `internal/<module>/` are written only where you have none, and only in a `package main` root. A library repository keeps its package. A repository that keeps its handlers in a root `server.go` (`newServer`, as `dedo init` wrote before v0.27.0), or whose `main.go` builds its services without dedo's stubs, gets no stubs; move the handlers into their modules as [domains.md](domains.md#code-and-data-follow-the-modules) lays out.
 
 ## Upgrading
 
@@ -289,10 +312,11 @@ dedo upgrade    # moves this repository to it
 - the generators and the runtime in `go.mod`; the lint plugin installed into `$GOBIN` at the release and copied into `.tools/`;
 - the options module's label in `buf.yaml`, then `buf.lock` (`buf dep update`); in a schema repository, the lint plugin installed into `$GOBIN` and copied into `.tools/` at that release;
 - `Makefile.api`, and plugin entries and generated files that earlier releases named differently;
+- a handler stub in `internal/<module>/` for each service that has none, when `main.go` is dedo's;
 - the generated code (`buf generate`) and `go.mod` (`go mod tidy`);
 - from connect-go v1 (dedo before v0.11.0): connect-go's own `connect-go-v2-migrate`, before and after regenerating, rewrites handlers and clients. It lists what it cannot rewrite; the wiring in `main.go` (one `connect.Server`, `connecthttp.Mount`, `vanguard.Mount`, auth as an interceptor) is printed beside yours to copy.
 
-It keeps your `main.go` and `server.go`, and prints dedo's current `main.go` beside yours to compare. `dedo update -version vX.Y.Z` installs a given release instead of the latest.
+It keeps your `main.go`, your handlers and any root `server.go`, and prints dedo's current `main.go` beside yours to compare, naming any service yours does not register. `dedo update -version vX.Y.Z` installs a given release instead of the latest.
 
 ## Uninstalling
 
