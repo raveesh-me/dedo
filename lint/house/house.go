@@ -34,7 +34,7 @@ var CategorySpec = &check.CategorySpec{ID: Category, Purpose: "Checks the organi
 var variables = map[string][]string{
 	"file":     {"name", "proto_package", "imports"},
 	"service":  {"name", "full_name", "file", "proto_package", "methods"},
-	"method":   {"name", "full_name", "file", "proto_package", "service", "input", "output", "client_streaming", "server_streaming", "idempotency", "http_verb", "http_path", "scopes", "errors", "deprecated"},
+	"method":   {"name", "full_name", "file", "proto_package", "service", "input", "output", "client_streaming", "server_streaming", "idempotency", "http_verb", "http_path", "http_bindings", "scopes", "errors", "deprecated"},
 	"message":  {"name", "full_name", "file", "proto_package", "fields"},
 	"field":    {"name", "full_name", "file", "proto_package", "message", "type", "repeated", "optional", "behaviors", "json_name"},
 	"enum":     {"name", "full_name", "file", "proto_package", "values"},
@@ -62,18 +62,21 @@ func Specs(rules []config.Rule) ([]*check.RuleSpec, error) {
 	return specs, nil
 }
 
-// boolVars and listVars are the variables that are not strings. Typed
+// boolVars, listVars and bindingVars are the variables that are not strings. Typed
 // variables let a check that is not a bool, or compares the wrong types,
 // fail when the rules load rather than at lint time.
 var (
 	boolVars = []string{"client_streaming", "server_streaming", "deprecated", "repeated", "optional"}
 	listVars = []string{"imports", "methods", "scopes", "errors", "fields", "behaviors", "values", "patterns"}
+	// bindingVars are lists of maps from string to string.
+	bindingVars = []string{"http_bindings"}
 )
 
 func compile(r config.Rule) (cel.Program, error) {
 	// The strings extension adds split, lowerAscii, replace, trim and the
-	// like, which rule authors reach for.
-	opts := []cel.EnvOption{ext.Strings()}
+	// like, which rule authors reach for. Bindings adds cel.bind, which
+	// names a value once instead of repeating the expression for it.
+	opts := []cel.EnvOption{ext.Strings(), ext.Bindings()}
 	for _, v := range variables[r.On] {
 		t := cel.StringType
 		switch {
@@ -81,6 +84,8 @@ func compile(r config.Rule) (cel.Program, error) {
 			t = cel.BoolType
 		case slices.Contains(listVars, v):
 			t = cel.ListType(cel.StringType)
+		case slices.Contains(bindingVars, v):
+			t = cel.ListType(cel.MapType(cel.StringType, cel.StringType))
 		}
 		opts = append(opts, cel.Variable(v, t))
 	}
@@ -207,7 +212,8 @@ func serviceVars(s protoreflect.ServiceDescriptor) map[string]any {
 func methodVars(m protoreflect.MethodDescriptor) map[string]any {
 	v := base(m)
 	opts, _ := m.Options().(*descriptorpb.MethodOptions)
-	verb, path := httpRule(m)
+	rule, _ := proto.GetExtension(m.Options(), annotations.E_Http).(*annotations.HttpRule)
+	verb, path := binding(rule)
 	rules, _ := proto.GetExtension(m.Options(), dedov1.E_Method).(*dedov1.MethodRules)
 	var reasons []string
 	for _, e := range rules.GetErrors() {
@@ -221,16 +227,29 @@ func methodVars(m protoreflect.MethodDescriptor) map[string]any {
 	v["idempotency"] = strings.TrimPrefix(opts.GetIdempotencyLevel().String(), "IDEMPOTENCY_")
 	v["http_verb"] = verb
 	v["http_path"] = path
+	v["http_bindings"] = bindings(rule)
 	v["scopes"] = strs(rules.GetScopes())
 	v["errors"] = strs(reasons)
 	v["deprecated"] = opts.GetDeprecated()
 	return v
 }
 
-// httpRule returns the verb and path of a method's google.api.http
-// binding, or empty strings.
-func httpRule(m protoreflect.MethodDescriptor) (verb, path string) {
-	rule, _ := proto.GetExtension(m.Options(), annotations.E_Http).(*annotations.HttpRule)
+// bindings lists the verb and path of a google.api.http rule and of each
+// of its additional bindings, in order: the rule itself first.
+func bindings(rule *annotations.HttpRule) []map[string]string {
+	out := []map[string]string{}
+	if verb, path := binding(rule); path != "" {
+		out = append(out, map[string]string{"verb": verb, "path": path})
+	}
+	for _, b := range rule.GetAdditionalBindings() {
+		out = append(out, bindings(b)...)
+	}
+	return out
+}
+
+// binding returns the verb and path of a google.api.http rule, or empty
+// strings.
+func binding(rule *annotations.HttpRule) (verb, path string) {
 	switch p := rule.GetPattern().(type) {
 	case *annotations.HttpRule_Get:
 		return "GET", p.Get

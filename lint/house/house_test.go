@@ -61,6 +61,9 @@ func TestKinds(t *testing.T) {
 		rule("HOUSE_SERVICE_OK", "service", "name.endsWith('Service') && 'GetCart' in methods"),
 		rule("HOUSE_METHOD_OK", "method", "http_verb == 'GET' && http_path.startsWith('/v1/') && 'shop.cart.read' in scopes && !server_streaming"),
 		rule("HOUSE_METHOD_BAD", "method", "http_path.startsWith('/commerce/')"),
+		rule("HOUSE_BINDINGS_OK", "method", "http_bindings == [{'verb': 'GET', 'path': http_path}, {'verb': 'POST', 'path': '/v1/{name=carts/*}:get'}]"),
+		rule("HOUSE_BINDINGS_BAD", "method", "http_bindings.all(b, b.verb == 'GET')"),
+		rule("HOUSE_BIND_OK", "method", "cel.bind(version, http_path.split('/')[1], version == 'v1' && http_path.startsWith('/' + version + '/'))"),
 		rule("HOUSE_MESSAGE_BAD", "message", "fields.size() > 1"),
 		rule("HOUSE_FIELD_BAD", "field", "!name.endsWith('_id')"),
 		rule("HOUSE_FIELD_OK", "field", "type == 'string' && (name != 'name' || behaviors.size() > 0)"),
@@ -71,6 +74,7 @@ func TestKinds(t *testing.T) {
 	want := map[string]int{
 		"HOUSE_FILE_BAD":     1,
 		"HOUSE_METHOD_BAD":   1,
+		"HOUSE_BINDINGS_BAD": 1, // the POST binding
 		"HOUSE_MESSAGE_BAD":  1, // GetCartRequest has one field
 		"HOUSE_FIELD_BAD":    1, // owner_id
 		"HOUSE_RESOURCE_BAD": 1,
