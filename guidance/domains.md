@@ -43,7 +43,9 @@ A module groups the parts of the model that belong together, so that the model c
   ```
 
 - **Group by cohesion, not by size.** The services of one package change together, for the same reasons. A package that holds unrelated services is two modules.
-- **Keep modules acyclic.** One module may refer to another's resources by name, and import its messages where it must. Protobuf rejects import cycles, so a dependency in both directions shows up at compile time: it means the two packages are one module, or a third holds what both need.
+- **Keep modules acyclic.** One module may refer to another's resources by name, and import its messages where it must. A call to another module's service counts as a dependency, and so does an internal port or repository that reads its data, the same as an import. A cycle through any of them means what an import cycle means: the two packages are one module, or a third holds what both need.
+
+  Buf catches only import cycles. A `resource_reference` field is a string, so it adds no import, and cycles through calls and ports pass the build: reviewers have to spot them. If `catalog` calls `inventory` to show stock, and `inventory` calls `catalog` to refuse a discontinued product, buf passes, but the two depend on each other. To break the cycle, keep one direction and let the client or a later call combine the two; merge the modules; move what both need into a third; or let one keep its own copy of the other's state, updated through events. An export or report that reads every module belongs in a module of its own, which nothing else depends on.
 - **Put shared value objects in a package of their own**, such as `acme.type`, with no services and no version. It gets no tag in the reference.
 - **A context small enough for one module has one package.** Its reference lists its services without a package level.
 - **The package is not in the REST path.** Paths keep one root per context, so regrouping modules does not move a REST path. It does rename the Connect and gRPC procedures, which carry the package, so `buf breaking` reports it as a breaking change. Settle the modules before the first release.
