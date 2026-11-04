@@ -35,7 +35,8 @@ func modules(dir string, out io.Writer) error {
 	if err != nil {
 		return err
 	}
-	l, err := loadLayout(dir)
+	protos := protoFiles(dir)
+	l, err := loadLayout(dir, protos)
 	if err != nil {
 		return err
 	}
@@ -47,19 +48,19 @@ func modules(dir string, out io.Writer) error {
 	if err != nil {
 		return err
 	}
-	l.Generated, l.Mains = generatedPackages(pkgs, protoFiles(dir))
+	l.Generated, l.Mains = generatedPackages(pkgs, protos)
 	dirs, sql, err := walkRepo(dir, l)
 	if err != nil {
 		return err
 	}
-	goSQL, err := packageSQL(dir, l, pkgs)
+	literals, err := packageSQL(dir, l, pkgs)
 	if err != nil {
 		return err
 	}
 	graph, findings := l.Build(imports(pkgs))
 	findings = append(findings, l.Dirs(dirs)...)
 	findings = append(findings, graph.Cycles()...)
-	findings = append(findings, l.SQL(append(sql, goSQL...))...)
+	findings = append(findings, l.SQL(append(sql, literals...))...)
 	if len(findings) > 0 {
 		for _, f := range findings {
 			fmt.Fprintln(out, f)
@@ -80,7 +81,7 @@ func modules(dir string, out io.Writer) error {
 
 // loadLayout reads the Go module path from go.mod and the modules from the
 // repository's proto packages, wherever buf.yaml's modules keep them.
-func loadLayout(dir string) (Layout, error) {
+func loadLayout(dir string, protos []protoFile) (Layout, error) {
 	gomod, err := os.ReadFile(filepath.Join(dir, "go.mod"))
 	if err != nil {
 		return Layout{}, fmt.Errorf("dedo modules runs in a Go service repository: %w", err)
@@ -90,8 +91,7 @@ func loadLayout(dir string) (Layout, error) {
 		return Layout{}, fmt.Errorf("%s: no module line", filepath.Join(dir, "go.mod"))
 	}
 	l := Layout{Module: string(m[1])}
-	files := protoFiles(dir)
-	for _, f := range files {
+	for _, f := range protos {
 		if f.pkg != "" {
 			l.addPackage(f.pkg)
 		}
