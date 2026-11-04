@@ -188,12 +188,12 @@ func TestInitFreshRepository(t *testing.T) {
 	// A second run changes nothing.
 	before := snapshot(t, dir)
 	initOffline(t, dir)
-	if after := snapshot(t, dir); !maps(before, after) {
+	if after := snapshot(t, dir); !sameFiles(before, after) {
 		t.Error("a second dedo init changed files")
 	}
 }
 
-func maps(a, b map[string]string) bool {
+func sameFiles(a, b map[string]string) bool {
 	if len(a) != len(b) {
 		return false
 	}
@@ -336,7 +336,7 @@ func TestInitWritesStarterService(t *testing.T) {
 	// The starter exists now, so a second run writes nothing new.
 	before := snapshot(t, dir)
 	initOffline(t, dir)
-	if !maps(before, snapshot(t, dir)) {
+	if !sameFiles(before, snapshot(t, dir)) {
 		t.Error("a second dedo init changed files")
 	}
 }

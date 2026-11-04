@@ -8,7 +8,7 @@
 # dedo init names a target api-<name> instead when the service's Makefile
 # already has one of these names.
 
-.PHONY: run generate check test tools docs docs-tunnel docs-static api-update
+.PHONY: run generate check test tools modules docs docs-tunnel docs-static api-update
 
 ## run: serve the API on Connect, gRPC, REST, /docs and /mcp
 run:
@@ -20,12 +20,13 @@ generate:
 	buf generate
 	go mod tidy
 
-## check: format, lint, and breaking changes against API_BASE; CI runs it
+## check: format, lint, breaking changes against API_BASE, and the modules
+## kept apart; CI runs it
 # The branch breaking changes are checked against. A new repository, or a
 # base without protos yet, has nothing to break, so that check is skipped.
 API_BASE ?= main
 
-check: tools
+check: tools modules
 	buf format --diff --exit-code
 	buf lint
 	@if git rev-parse --verify --quiet 'refs/heads/$(API_BASE)' >/dev/null && \
@@ -45,6 +46,13 @@ test:
 ## upgrade, or a change to dedo.yaml's rules
 tools:
 	go tool dedo tools
+
+## modules: check that the modules (proto packages <context>.<m>.v<n>) stay
+## apart: no import cycle between them, shared code imports none, each one's
+## code in internal/<m>, its SQL naming only its own schema; then print the
+## module graph
+modules:
+	go tool dedo modules
 
 ## docs: serve the REST reference (docs/index.html and openapi.json only) on
 ## DOCS_ADDR until Ctrl-C

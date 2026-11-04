@@ -49,6 +49,10 @@ const usage = `usage:
   dedo docs [-dir DIR] -static FILE  write the REST reference as one HTML file that opens from disk with
                                     no network: the OpenAPI document and the page's scripts inline, each
                                     script checked against its integrity hash and cached for offline builds
+  dedo modules [-dir DIR]           check that the modules (proto packages <context>.<m>.v<n>) stay apart:
+                                    no import cycle between them, shared code imports none, module code
+                                    only in internal/<m>, SQL naming only its own schema; then print
+                                    the module graph
   dedo templates [NAME]             list the bundled templates, or print one
   dedo version                      print the dedo release this command installs
 `
@@ -133,6 +137,14 @@ func run(args []string, out io.Writer) error {
 		ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 		defer stop()
 		return docs(ctx, *dir, *addr, *tunnel, out)
+	case "modules":
+		flags := flag.NewFlagSet("modules", flag.ContinueOnError)
+		flags.SetOutput(out)
+		dir := flags.String("dir", ".", "the service repository")
+		if err := flags.Parse(args[1:]); err != nil {
+			return err
+		}
+		return modules(*dir, out)
 	case "templates":
 		return templates(args[1:], out)
 	case "version":
