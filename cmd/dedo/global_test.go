@@ -124,7 +124,7 @@ func TestUpgradeLintMovesOptionsPin(t *testing.T) {
 }
 
 // The options module's label is a Go version, pre-releases included, such
-// as a fork's v0.14.0-acme.1: dedo reads it and replaces it whole.
+// as v0.14.0-acme.1: dedo reads it and replaces it whole.
 func TestOptionsPinPreRelease(t *testing.T) {
 	cases := []struct{ label, want string }{
 		{"v0.14.0", "v0.14.0"},

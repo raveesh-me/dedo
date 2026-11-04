@@ -118,5 +118,5 @@ func newerHint(out io.Writer) {
 }
 
 // newer reports whether release a is later than b, by semantic versioning:
-// v0.22.1 is later than v0.22.1-acme.1, a fork's fix released before it.
+// v0.22.1 is later than its pre-release v0.22.1-rc.1.
 func newer(a, b string) bool { return semver.Compare(a, b) > 0 }

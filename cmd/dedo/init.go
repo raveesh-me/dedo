@@ -188,8 +188,8 @@ func (in *initer) vendor(offline bool) []string {
 
 // optionsPin matches the labelled options module in the buf.yaml template,
 // such as buf.build/r-a/dedo:v0.10.0 (not the dedo-lint plugin beside it).
-// The label is a Go version, so it may be a pre-release, such as a fork's
-// v0.10.0-acme.1.
+// The label is a Go version, so it may be a pre-release, such as
+// v0.10.1-rc.1.
 var optionsPin = regexp.MustCompile(regexp.QuoteMeta(optionsModule) + `:[A-Za-z0-9._-]+`)
 
 // pinOptions pins the options module to this release, so the options and

@@ -20,7 +20,7 @@
 
 **First-class lint guidance.** A Buf check plugin turns the standard into findings in your editor as you type, each linked to an explanation in [RULES.md](guidance/RULES.md). The same `buf lint` gates CI. Handlers carry business logic only.
 
-New here? Everything is in [`guidance/`](guidance): [install.md](guidance/install.md) adds dedo to a Go service, one part at a time or all at once with `dedo init`, [tutorial.md](guidance/tutorial.md) builds a new product from scratch, [guideline.md](guidance/guideline.md) explains the reasoning, [RULES.md](guidance/RULES.md) documents every lint rule, [domains.md](guidance/domains.md) maps domain-driven design onto packages and services, and [claude.md](guidance/claude.md) and domains.md are the guidance for coding agents that `dedo init` adds to your `AGENTS.md` or `CLAUDE.md`. [forking.md](guidance/forking.md) is for an organisation that wants to own its copy of dedo: what a fork renames, installing from a private or public fork, and taking upstream releases.
+New here? Everything is in [`guidance/`](guidance): [install.md](guidance/install.md) adds dedo to a Go service, one part at a time or all at once with `dedo init`, [tutorial.md](guidance/tutorial.md) builds a new product from scratch, [guideline.md](guidance/guideline.md) explains the reasoning, [RULES.md](guidance/RULES.md) documents every lint rule, [domains.md](guidance/domains.md) maps domain-driven design onto packages and services, and [claude.md](guidance/claude.md) and domains.md are the guidance for coding agents that `dedo init` adds to your `AGENTS.md` or `CLAUDE.md`.
 
 **Latest release: [v0.24.0](https://github.com/raveesh-me/dedo/releases/tag/v0.24.0).** The options module is [`buf.build/r-a/dedo`](https://buf.build/r-a/dedo). The lint plugin's release is the options module's label in `buf.yaml`, and `dedo tools` installs it natively into any repository with protos; it also comes as native binaries on the GitHub release and as a Wasm plugin on the BSR. The Go modules are `github.com/raveesh-me/dedo/...@v0.24.0`.
 
@@ -240,6 +240,10 @@ Two weekly jobs keep dedo current with the sources it follows:
 
 - **AIPs.** Dependabot (`.github/dependabot.yml`) opens a pull request for each new release of api-linter, which carries the `AIP_*` rules. If a new or changed rule fires on `examples/bad-todo`, CI fails on `expected-lint.txt`; decide whether to follow the rule or skip it, and record the decision in [RULES.md](guidance/RULES.md#skipped-rules). The MCP go-sdk gets its own pull request the same way.
 - **MCP specification.** `.github/workflows/mcp-spec.yaml` runs `scripts/check-mcp-spec.sh` every Monday. It compares the newest dated specification and the draft with the `Tool` definition vendored in `mcp/mcpserver/testdata`, and checks the tools `mcpserver` serves against each. When a newer version is out, the definition changed, or the tools no longer match, it opens (or updates) one issue labelled `mcp-spec` with the report. Run it locally with `scripts/check-mcp-spec.sh report.md`.
+
+## Forking
+
+Using dedo needs none of this. An organisation that wants its own copy of dedo, its Go modules and BSR names, and to review each upstream release before its services take it, can fork it: [forking.md](guidance/forking.md) says how, and `scripts/fork.sh` does the renaming.
 
 ## Why "dedo"?
 

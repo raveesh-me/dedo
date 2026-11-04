@@ -1,5 +1,7 @@
 # Forking dedo
 
+Using dedo needs none of this: install it as [install.md](install.md) says, and upgrade with `dedo update` and `dedo upgrade`. Nothing else in dedo's guidance depends on this page.
+
 An organisation that wants to own every part of dedo its services run, and review each upstream change before it reaches them, can fork it. This guide lists what a fork owns, how its services install it, whether you make the fork public or private, where the options module goes in your own BSR, and how the fork keeps taking upstream releases.
 
 `scripts/fork.sh` does the renaming. Run it once when you fork, and again after every merge from upstream.
