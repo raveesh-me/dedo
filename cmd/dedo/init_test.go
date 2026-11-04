@@ -947,3 +947,30 @@ func TestInitKeepsAServiceItsOwnServer(t *testing.T) {
 		t.Errorf("next steps point at a server.go the service does not have:\n%s", out)
 	}
 }
+
+// Every import of dedo's own packages in a Go template sits in a group of
+// its own. gofmt sorts imports within a group, so a fork that renames
+// dedo's module (scripts/fork.sh) keeps the templates gofmt-formatted.
+func TestTemplateImportsGroupDedo(t *testing.T) {
+	module := `"` + strings.TrimSuffix(cliPkg, "/cmd/dedo")
+	for _, name := range []string{"templates/main.go.tmpl", "templates/policy_table_test.go.tmpl", "templates/server.go.tmpl", "templates/docs/docs.go.tmpl"} {
+		src := string(asset(name))
+		start := strings.Index(src, "import (\n")
+		if start < 0 {
+			continue
+		}
+		block, _, _ := strings.Cut(src[start+len("import (\n"):], "\n)")
+		for group := range strings.SplitSeq(block, "\n\n") {
+			lines := strings.Split(group, "\n")
+			dedo := 0
+			for _, l := range lines {
+				if strings.Contains(l, module) {
+					dedo++
+				}
+			}
+			if dedo > 0 && dedo != len(lines) {
+				t.Errorf("%s: dedo's imports share a group with others:\n%s", name, group)
+			}
+		}
+	}
+}

@@ -8,7 +8,7 @@ tag="$1"
 status=0
 check() {
   file="$1"; shift
-  found=$(grep -oE "$@" "$file" | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+' | sort -u)
+  found=$(grep -oE "$@" "$file" | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?' | sort -u)
   for v in $found; do
     if [ "$v" != "$tag" ]; then
       echo "$file names $v, but the release is $tag" >&2
@@ -20,18 +20,18 @@ check() {
     status=1
   fi
 }
-check guidance/install.md 'raveesh-me/dedo[a-z/-]*@v[0-9.]+'
-check templates/buf.yaml 'r-a/dedo:v[0-9.]+'
-check guidance/install.md 'r-a/dedo:v[0-9.]+'
-check guidance/tutorial.md 'raveesh-me/dedo[a-z/-]*@v[0-9.]+'
-check cmd/dedo/main.go 'const version = "v[0-9.]+"'
-check guidance/guideline.md 'raveesh-me/dedo[a-z/-]*@v[0-9.]+'
-check readme.md 'Latest release: \[v[0-9.]+\]'
+check guidance/install.md 'raveesh-me/dedo[a-z/-]*@v[0-9.]+(-[0-9A-Za-z.]+)?'
+check templates/buf.yaml 'r-a/dedo:v[0-9.]+(-[0-9A-Za-z.]+)?'
+check guidance/install.md 'r-a/dedo:v[0-9.]+(-[0-9A-Za-z.]+)?'
+check guidance/tutorial.md 'raveesh-me/dedo[a-z/-]*@v[0-9.]+(-[0-9A-Za-z.]+)?'
+check cmd/dedo/main.go 'const version = "v[0-9.]+(-[0-9A-Za-z.]+)?"'
+check guidance/guideline.md 'raveesh-me/dedo[a-z/-]*@v[0-9.]+(-[0-9A-Za-z.]+)?'
+check readme.md 'Latest release: \[v[0-9.]+(-[0-9A-Za-z.]+)?\]'
 # Inside the repository: the workspace replacements and every module's
 # requirement on the others name the release too.
-check go.work 'dedo[a-z/]* v[0-9.]+ =>'
+check go.work 'dedo[a-z/]* v[0-9.]+(-[0-9A-Za-z.]+)? =>'
 for mod in lint/go.mod openapi/go.mod mcp/go.mod cmd/dedo/go.mod examples/todo/go.mod examples/bad-todo/go.mod; do
-  check "$mod" 'github.com/raveesh-me/dedo[a-z/]* v[0-9.]+'
+  check "$mod" 'github.com/raveesh-me/dedo[a-z/]* v[0-9.]+(-[0-9A-Za-z.]+)?'
 done
 # Services replace the MCP Go SDK with dedo's build of it: the tag must be
 # published, and the examples must build against the same one.
