@@ -1013,3 +1013,37 @@ func TestInitMovesRulesYMLWithoutItsHeader(t *testing.T) {
 		}
 	}
 }
+
+// An upgrade keeps the files dedo scaffolds once, and says which of them
+// differ from this release's template and how to take the new one. A page
+// whose only change is its title is current.
+func TestInitNotesOutdatedTemplates(t *testing.T) {
+	dir := repo(t, map[string]string{
+		"go.mod": "module github.com/acme/time-counter\n\ngo 1.26\n",
+		"proto/acme/time_counter/v1/time_counter.proto": counterProto,
+	})
+	initOffline(t, dir)
+	page := read(t, dir, "docs/index.html")
+	retitled := strings.Replace(page, "<title>Time Counter API</title>", "<title>Counters</title>", 1)
+	writeFile(t, dir, "docs/index.html", retitled)
+
+	out := initOffline(t, dir)
+	if !strings.Contains(out, "docs/index.html: already in place") {
+		t.Errorf("a retitled page is not current:\n%s", out)
+	}
+
+	writeFile(t, dir, "docs/index.html", "<html><title>Counters</title>stoplight</html>")
+	writeFile(t, dir, "docs/docs.go", "package docs\n")
+	out = initOffline(t, dir)
+	for _, want := range []string{
+		"docs/index.html: differs from dedo " + version + "'s template; to take it, run dedo templates docs/index.html > docs/index.html and set its <title>",
+		"docs/docs.go: differs from dedo " + version + "'s template; to take it, run dedo templates docs/docs.go.tmpl > docs/docs.go",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("output lacks %q:\n%s", want, out)
+		}
+	}
+	if got := read(t, dir, "docs/index.html"); !strings.Contains(got, "stoplight") {
+		t.Error("the upgrade replaced docs/index.html")
+	}
+}

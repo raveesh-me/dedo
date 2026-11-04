@@ -644,11 +644,11 @@ func (in *initer) server() error {
 	if err := os.MkdirAll(in.path("docs"), 0o755); err != nil {
 		return err
 	}
-	if err := in.writeFile("docs/docs.go", asset("templates/docs/docs.go.tmpl"), false); err != nil {
+	if err := in.writeTemplate("docs/docs.go", asset("templates/docs/docs.go.tmpl"), "dedo templates docs/docs.go.tmpl > docs/docs.go"); err != nil {
 		return err
 	}
 	page := bytes.Replace(asset("templates/docs/index.html"), []byte("YOUR_API_TITLE"), []byte(apiTitle(in.p.module)), 1)
-	if err := in.writeFile("docs/index.html", page, false); err != nil {
+	if err := in.writeTemplate("docs/index.html", page, "dedo templates docs/index.html > docs/index.html and set its <title>"); err != nil {
 		return err
 	}
 	if in.p.service == nil {
@@ -950,6 +950,32 @@ func (in *initer) writeFile(rel string, content []byte, replace bool) error {
 		in.say("%s: created", rel)
 	}
 	return nil
+}
+
+// writeTemplate writes a file dedo scaffolds once and then leaves to the
+// repository. An existing file is kept; when it differs from this release's
+// template, it says so and how to take the template.
+func (in *initer) writeTemplate(rel string, content []byte, refresh string) error {
+	old, err := os.ReadFile(in.path(rel))
+	switch {
+	case err == nil && sameTemplate(old, content):
+		in.say("%s: already in place", rel)
+		return nil
+	case err == nil:
+		in.say("%s: differs from dedo %s's template; to take it, run %s", rel, in.release, refresh)
+		return nil
+	}
+	return in.writeFile(rel, content, false)
+}
+
+// titleTag is an HTML page's <title>, which the repository sets itself.
+var titleTag = regexp.MustCompile(`(?s)<title>.*?</title>`)
+
+// sameTemplate reports whether a scaffolded file is still the template,
+// ignoring the <title> a page was given.
+func sameTemplate(old, template []byte) bool {
+	blank := []byte("<title></title>")
+	return bytes.Equal(titleTag.ReplaceAll(old, blank), titleTag.ReplaceAll(template, blank))
 }
 
 // ensureLine appends a line to a file that lacks it, creating the file.
