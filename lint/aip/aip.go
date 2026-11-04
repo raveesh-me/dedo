@@ -53,6 +53,11 @@ func Rules() ([]*check.RuleSpec, []*check.CategorySpec, func(context.Context, ch
 	if err := rules.Add(registry); err != nil {
 		return nil, nil, nil, fmt.Errorf("aip: registering api-linter rules: %w", err)
 	}
+	const suffixRule = lint.RuleName("core::0136::http-uri-suffix")
+	if upstream, ok := registry[suffixRule].(*lint.MethodRule); ok {
+		registry[suffixRule] = collectionSuffixRule(upstream)
+	}
+
 	aipNumbers := map[string]bool{}
 	var specs []*check.RuleSpec
 	for name := range registry {

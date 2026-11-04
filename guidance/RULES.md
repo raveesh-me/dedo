@@ -82,6 +82,11 @@ The known conflicts between the guidelines themselves, and how they resolve:
 
 When you write a new rule that contradicts one of a lower layer, name that rule in its overrides; a contradiction left undeclared is a bug, since both rules then report.
 
+The `AIP_0136_HTTP_URI_SUFFIX` check recognizes both camelCase and kebab-case
+collection nouns: `SuggestTariffCodes` can use `tariff-codes:suggest` without
+repeating the noun in the verb. This does not change the path-naming rules;
+all HTTP bindings still have to satisfy the suffix check.
+
 ## Overrides
 
 Nothing detects a conflict between two rules for you. A rule that replaces others says so, by naming them: its `overrides`. An overridden rule reports nothing. It stays a rule, so `buf config ls-lint-rules` shows it as `Overridden by <rule>`, as it shows a rule `dedo.yaml` leaves out as `Not in dedo.yaml's use` or `Disabled in dedo.yaml`.
