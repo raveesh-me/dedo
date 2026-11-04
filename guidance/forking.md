@@ -1,6 +1,6 @@
 # Forking dedo
 
-An organisation that wants to own every part of dedo its services run, and review each upstream change before it reaches them, can fork it. This guide lists what a fork owns, how its services install it when the fork is private or public, where the options module goes in your own BSR, and how the fork keeps taking upstream releases.
+An organisation that wants to own every part of dedo its services run, and review each upstream change before it reaches them, can fork it. This guide lists what a fork owns, how its services install it, whether you make the fork public or private, where the options module goes in your own BSR, and how the fork keeps taking upstream releases.
 
 `scripts/fork.sh` does the renaming. Run it once when you fork, and again after every merge from upstream.
 
@@ -73,13 +73,25 @@ A service builds against upstream dedo or the fork, never both: each registers `
 
    The script stops if any upstream name is left. It never edits generated code: a `.pb.go` file carries `go_package` inside a length-prefixed descriptor, so editing it makes the package panic at init. It regenerates instead.
 
-4. Set up the repository: a `BUF_KEY` secret (a BSR token for your organisation that can create and push modules and plugins), branch and tag protection ([Supply-chain checklist](#supply-chain-checklist)), and, for a private fork, Go's access to it in CI ([Installing from a private fork](#installing-from-a-private-fork)). Turn off Dependabot in the fork: upstream already takes its updates, and you get them in the next sync.
+4. Set up the repository: a `BUF_KEY` secret (a BSR token for your organisation that can create and push modules and plugins), branch and tag protection ([Supply-chain checklist](#supply-chain-checklist)), and, for a private fork, Go's access to it in CI ([Installing if your fork is private](#installing-if-your-fork-is-private)). Turn off Dependabot in the fork: upstream already takes its updates, and you get them in the next sync.
 
 5. Release as upstream does, with upstream's version number: push the module tags `cmd/dedo/v0.22.0`, `lint/v0.22.0`, `mcp/v0.22.0` and `openapi/v0.22.0` first, at most three per push, then `v0.22.0` on its own. The `v` tag runs the release job, which pushes the options module and the Wasm plugin to your BSR and attaches the binaries to a GitHub release. GitHub starts no workflow when more than three tags arrive in one push, and in a public fork the Go proxy caches a lookup of a version whose module tags aren't pushed yet as "not found" for a while.
 
 Keep the fork's version numbers equal to upstream's, so a version means the same code in both. A fix you can't wait for upstream to release goes out as a pre-release of the next patch, such as `v0.22.1-acme.1` for a fix on top of `v0.22.0`. Semantic versioning orders it after `v0.22.0` and before upstream's `v0.22.1`, which supersedes it. (A pre-release of `v0.22.0` itself would sort before `v0.22.0`, so Go would treat the fix as older than the release it fixes.) Release it like any other version: a release pull request that sets every pin `scripts/check-release-versions.sh` checks to `v0.22.1-acme.1`, then the same five tags. `go install …@latest` and `dedo update` skip pre-releases while a release exists, so install it by name with `dedo update -version v0.22.1-acme.1`, then run `dedo upgrade` in each service as usual. Send the fix upstream too. When you next sync, check that upstream's release has the fix: `-X theirs` takes upstream's side wherever its lines conflict with the fix.
 
-## Installing from a private fork
+## Installing if your fork is public
+
+Whether the fork is public or private is your decision: this section and the next say what each one takes.
+
+Nothing to configure. `proxy.golang.org` fetches and caches the fork's modules, `sum.golang.org` records each version's checksum in its public, append-only log, and anyone installs it as they install upstream, with the fork's path:
+
+```sh
+go install github.com/acme/dedo/cmd/dedo@v0.22.0
+```
+
+The checksum database makes a public fork tamper-evident: once a version has been fetched, nobody, including you, can change what that version contains. A private fork has to trust its tag protection for the same guarantee.
+
+## Installing if your fork is private
 
 Go fetches a private module straight from git, with your git credentials, once `GOPRIVATE` names it. `GOPRIVATE` also keeps its path away from the public proxy and checksum database, which can't fetch it and must not learn of it. Set both on every machine and in every CI job that installs the `dedo` command, runs `dedo tools` or `dedo upgrade`, or builds a service, since `go tool` and the runtime libraries come from the same modules:
 
@@ -116,16 +128,6 @@ With many repositories, a Go module proxy of your own scales better than git tok
 The public checksum database never sees a private module, so a service's committed `go.sum` is the only record of what each release contained. If anyone moves a tag in the fork, builds fail on a checksum mismatch. Protect the tags so that never needs to happen.
 
 `go install`, `dedo update`, `dedo tools` and `go tool` all honour these settings; dedo asks for nothing of its own.
-
-## Installing from a public fork
-
-Nothing to configure. `proxy.golang.org` fetches and caches the fork's modules, `sum.golang.org` records each version's checksum in its public, append-only log, and anyone installs it as they install upstream, with the fork's path:
-
-```sh
-go install github.com/acme/dedo/cmd/dedo@v0.22.0
-```
-
-The checksum database makes a public fork tamper-evident: once a version has been fetched, nobody, including you, can change what that version contains. A private fork has to trust its tag protection for the same guarantee.
 
 ## The options module in your own BSR
 
