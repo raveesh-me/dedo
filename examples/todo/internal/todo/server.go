@@ -1,4 +1,6 @@
-package app
+// Package todo is the todo module, raveesh_me.todo.v1: the TodoService's
+// handlers and its store. app, the composition root, registers it.
+package todo
 
 import (
 	"context"

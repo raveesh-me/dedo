@@ -1,6 +1,7 @@
-// Package app wires the TodoService to the dedo runtime: the
-// policy table, the policy interceptor, flow IDs, REST transcoding, the REST
-// reference and the MCP server.
+// Package app is the composition root: it wires the todo module's
+// TodoService (internal/todo) to the dedo runtime: the policy table, the
+// policy interceptor, flow IDs, REST transcoding, the REST reference and the
+// MCP server.
 package app
 
 import (
@@ -16,6 +17,7 @@ import (
 
 	"github.com/raveesh-me/dedo/examples/todo/docs"
 	"github.com/raveesh-me/dedo/examples/todo/gen/go/raveesh_me/todo/v1/todov1connect"
+	"github.com/raveesh-me/dedo/examples/todo/internal/todo"
 	"github.com/raveesh-me/dedo/flowid"
 	"github.com/raveesh-me/dedo/interceptor"
 	"github.com/raveesh-me/dedo/mcp/mcpserver"
@@ -87,6 +89,6 @@ func newServer(cfg Config) (*connect.Server, error) {
 		return nil, err
 	}
 	server := connect.NewServer(flowid.Interceptor(), Auth(), guard, validate.NewServerInterceptor())
-	todov1connect.RegisterTodoServiceHandler(server, NewServer())
+	todov1connect.RegisterTodoServiceHandler(server, todo.NewServer())
 	return server, nil
 }

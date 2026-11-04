@@ -1,4 +1,7 @@
-package app
+// Package contacts is the contacts module, raveesh_me.contacts.v1: the
+// ContactService's and LocationService's handlers and their store. app, the
+// composition root, registers them.
+package contacts
 
 import (
 	"context"
@@ -24,16 +27,23 @@ const (
 // error audit come from the interceptor. It only narrows the reads that
 // span tenants, which the interceptor cannot, to the caller's locations.
 type Server struct {
-	store *store
+	store  *store
+	access TenantAccess
 }
+
+// TenantAccess reports whether the caller may act in a tenant, by its ID:
+// "1" for locations/1. The composition root passes the interceptor's own
+// check, so the handlers narrow reads by the same rule.
+type TenantAccess func(ctx context.Context, tenant string) bool
 
 var (
 	_ contactsv1connect.ContactServiceHandler  = (*Server)(nil)
 	_ contactsv1connect.LocationServiceHandler = (*Server)(nil)
 )
 
-// NewServer returns a server with the seed locations and no contacts.
-func NewServer() *Server { return &Server{store: newStore()} }
+// NewServer returns a server with the seed locations and no contacts, which
+// shows each caller the locations access lets it act in.
+func NewServer(access TenantAccess) *Server { return &Server{store: newStore(), access: access} }
 
 // GetContact returns one contact.
 func (s *Server) GetContact(_ context.Context, req *contactsv1.GetContactRequest) (*contactsv1.GetContactResponse, error) {
@@ -55,7 +65,7 @@ func (s *Server) ListContacts(ctx context.Context, req *contactsv1.ListContactsR
 	parent := req.GetParent()
 	match := func(location string) bool { return location == parent }
 	if parent == everyLocation {
-		match = func(location string) bool { return visible(ctx, location) }
+		match = func(location string) bool { return s.visible(ctx, location) }
 	}
 	contacts, more := s.store.list(match, offset, size)
 	res := &contactsv1.ListContactsResponse{Contacts: contacts}
@@ -112,7 +122,7 @@ func (s *Server) ListLocations(ctx context.Context, req *contactsv1.ListLocation
 	if err != nil {
 		return nil, err
 	}
-	locations, more := s.store.listLocations(func(name string) bool { return visible(ctx, name) }, offset, size)
+	locations, more := s.store.listLocations(func(name string) bool { return s.visible(ctx, name) }, offset, size)
 	res := &contactsv1.ListLocationsResponse{Locations: locations}
 	if more {
 		res.NextPageToken = strconv.Itoa(offset + len(locations))
@@ -122,9 +132,9 @@ func (s *Server) ListLocations(ctx context.Context, req *contactsv1.ListLocation
 
 // visible reports whether the caller may see a location, such as
 // locations/1.
-func visible(ctx context.Context, location string) bool {
+func (s *Server) visible(ctx context.Context, location string) bool {
 	id, ok := strings.CutPrefix(location, "locations/")
-	return ok && TenantAccess(ctx, id)
+	return ok && s.access(ctx, id)
 }
 
 // pageOf returns the offset a page token names and the page size to use.

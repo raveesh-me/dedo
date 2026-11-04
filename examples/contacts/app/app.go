@@ -1,4 +1,5 @@
-// Package app wires the ContactService and LocationService to the dedo
+// Package app is the composition root: it wires the contacts module's
+// ContactService and LocationService (internal/contacts) to the dedo
 // runtime: the policy table, the policy interceptor with its tenant check,
 // flow IDs, REST transcoding, the REST reference and the MCP server.
 package app
@@ -16,6 +17,7 @@ import (
 
 	"github.com/raveesh-me/dedo/examples/contacts/docs"
 	"github.com/raveesh-me/dedo/examples/contacts/gen/go/raveesh_me/contacts/v1/contactsv1connect"
+	"github.com/raveesh-me/dedo/examples/contacts/internal/contacts"
 	"github.com/raveesh-me/dedo/flowid"
 	"github.com/raveesh-me/dedo/interceptor"
 	"github.com/raveesh-me/dedo/mcp/mcpserver"
@@ -89,7 +91,7 @@ func newServer(cfg Config) (*connect.Server, error) {
 		return nil, err
 	}
 	server := connect.NewServer(flowid.Interceptor(), Auth(), guard, validate.NewServerInterceptor())
-	api := NewServer()
+	api := contacts.NewServer(TenantAccess)
 	contactsv1connect.RegisterContactServiceHandler(server, api)
 	contactsv1connect.RegisterLocationServiceHandler(server, api)
 	return server, nil
