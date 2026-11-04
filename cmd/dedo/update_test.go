@@ -90,7 +90,11 @@ func TestNewer(t *testing.T) {
 	for _, c := range []struct {
 		a, b string
 		want bool
-	}{{"v0.11.0", "v0.10.0", true}, {"v0.10.0", "v0.10.0", false}, {"v0.9.9", "v0.10.0", false}, {"v1.0.0", "v0.99.0", true}} {
+	}{{"v0.11.0", "v0.10.0", true}, {"v0.10.0", "v0.10.0", false}, {"v0.9.9", "v0.10.0", false}, {"v1.0.0", "v0.99.0", true},
+		// A fork's fix ships as a pre-release of the next patch, which the
+		// release supersedes.
+		{"v0.22.1", "v0.22.1-acme.1", true}, {"v0.22.1-acme.1", "v0.22.0", true}, {"v0.22.1-acme.1", "v0.22.1", false},
+		{"v0.22.1-acme.2", "v0.22.1-acme.1", true}} {
 		if got := newer(c.a, c.b); got != c.want {
 			t.Errorf("newer(%s, %s) = %v", c.a, c.b, got)
 		}

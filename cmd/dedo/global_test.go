@@ -123,6 +123,28 @@ func TestUpgradeLintMovesOptionsPin(t *testing.T) {
 	}
 }
 
+// The options module's label is a Go version, pre-releases included, such
+// as a fork's v0.14.0-acme.1: dedo reads it and replaces it whole.
+func TestOptionsPinPreRelease(t *testing.T) {
+	cases := []struct{ label, want string }{
+		{"v0.14.0", "v0.14.0"},
+		{"v0.14.0-acme.1", "v0.14.0-acme.1"},
+		{"v0.14.0-rc.2", "v0.14.0-rc.2"},
+	}
+	for _, c := range cases {
+		dir := repo(t, map[string]string{"buf.yaml": "version: v2\ndeps:\n  - " + optionsModule + ":" + c.label + "\n"})
+		if got, err := pinnedRelease(dir); err != nil || got != c.want {
+			t.Errorf("%s: pinnedRelease = %q, %v; want %q", c.label, got, err, c.want)
+		}
+		if err := run([]string{"upgrade", "-lint", "-offline", "-dir", dir}, io.Discard); err != nil {
+			t.Fatalf("%s: dedo upgrade -lint: %v", c.label, err)
+		}
+		if got, want := read(t, dir, "buf.yaml"), optionsModule+":"+version+"\n"; !strings.Contains(got, want) {
+			t.Errorf("%s: buf.yaml after upgrade lacks %q:\n%s", c.label, want, got)
+		}
+	}
+}
+
 func TestToolsNeedsBufYAML(t *testing.T) {
 	stubGlobalPlugin(t)
 	if err := run([]string{"tools", "-dir", t.TempDir()}, io.Discard); err == nil || !strings.Contains(err.Error(), "dedo init") {

@@ -39,7 +39,7 @@ keep=(':!scripts/fork.sh' ':!guidance/forking.md')
 
 # 1. Every name outside generated code. A .pb.go embeds go_package in a
 #    length-prefixed descriptor: editing it corrupts the descriptor, and the
-#    package panics at init. Step 4 regenerates it instead.
+#    package panics at init. Step 3 regenerates it instead.
 export go_from sdk_from bsr_from GO_MODULE SDK_MODULE BSR_OWNER
 # shellcheck disable=SC2016 # perl, not the shell, reads $ENV
 git grep -lzE "$upstream" -- . ':!*.pb.go' "${keep[@]}" | xargs -0 -r perl -pi -e '
@@ -53,24 +53,19 @@ git grep -lzE "$upstream" -- . ':!*.pb.go' "${keep[@]}" | xargs -0 -r perl -pi -
   s{\Q$gfs\E}{$gts}g; s{\Q$bfs/dedo\E}{$bts/dedo}g;
 '
 
-# 2. gofmt orders imports by path, and the new path can sort differently.
-#    The templates are not Go until filled in, so sort each run of plain
-#    import lines in them as gofmt would.
-perl -0pi -e 's{((?:^\t"[^"{}]+"\n){2,})}{join "", sort split /(?<=\n)/, $1}gme' templates/*.tmpl
-
-# 3. The visibility the release job creates the BSR module and plugin with.
+# 2. The visibility the release job creates the BSR module and plugin with.
 if [ -n "${BSR_VISIBILITY:-}" ]; then
   perl -pi -e "s{--create-visibility \\w+}{--create-visibility ${BSR_VISIBILITY}}g" .github/workflows/ci.yaml
 fi
 
-# 4. Regenerate, so every descriptor carries the new go_package.
+# 3. Regenerate, so every descriptor carries the new go_package.
 buf generate
 for example in examples/*/; do
   if [ -f "${example}buf.gen.yaml" ]; then (cd "$example" && buf generate); fi
 done
 git ls-files -z '*.go' | xargs -0 gofmt -w
 
-# 5. A name left over would install or import upstream's code.
+# 4. A name left over would install or import upstream's code.
 if git grep -nE "$upstream" -- . "${keep[@]}"; then
   echo "scripts/fork.sh: upstream names remain (above)" >&2
   exit 1

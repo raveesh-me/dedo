@@ -8,8 +8,9 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
-	"strconv"
 	"strings"
+
+	"golang.org/x/mod/semver"
 )
 
 const cliPkg = "github.com/raveesh-me/dedo/cmd/dedo"
@@ -116,22 +117,6 @@ func newerHint(out io.Writer) {
 	}
 }
 
-// newer reports whether release a is later than b; both are vX.Y.Z.
-func newer(a, b string) bool {
-	pa, pb := semverParts(a), semverParts(b)
-	for i := range pa {
-		if pa[i] != pb[i] {
-			return pa[i] > pb[i]
-		}
-	}
-	return false
-}
-
-func semverParts(v string) [3]int {
-	var out [3]int
-	core, _, _ := strings.Cut(strings.TrimPrefix(v, "v"), "-")
-	for i, p := range strings.SplitN(core, ".", 3) {
-		out[i], _ = strconv.Atoi(p)
-	}
-	return out
-}
+// newer reports whether release a is later than b, by semantic versioning:
+// v0.22.1 is later than v0.22.1-acme.1, a fork's fix released before it.
+func newer(a, b string) bool { return semver.Compare(a, b) > 0 }
