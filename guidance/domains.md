@@ -12,7 +12,7 @@ The terms come from Eric Evans' *Domain-Driven Design* (bounded context, module,
 | --- | --- | --- |
 | Domain | The organisation's business as a whole | The shared house rules and the root every path starts with (`/shop`) |
 | Bounded context | One repository: one API module on the BSR | One REST root (`/shop/v1`), one OpenAPI document, one MCP server |
-| Module | One proto package: `acme.orders.v1` | A navigation tag in the reference, holding the package's services |
+| Module | One proto package: `acme.orders.v1` | A navigation tag in the reference, holding the package's services; in the service, one Go package (`internal/orders/`) and one Postgres schema |
 | Aggregate | One service: `OrderService` | A tag in the reference, nested under its package's |
 | Aggregate root | The resource the service manages: a message with `google.api.resource` | Its resource name (`orders/{order}`) is its identity and its REST path |
 | Entity inside an aggregate | A child resource, its pattern nested under the root's (`orders/{order}/lines/{line}`) | A nested REST path |
@@ -45,10 +45,43 @@ A module groups the parts of the model that belong together, so that the model c
 - **Group by cohesion, not by size.** The services of one package change together, for the same reasons. A package that holds unrelated services is two modules.
 - **Keep modules acyclic.** One module may refer to another's resources by name, and import its messages where it must. A call to another module's service counts as a dependency, and so does an internal port or repository that reads its data, the same as an import. A cycle through any of them means what an import cycle means: the two packages are one module, or a third holds what both need.
 
-  Buf catches only import cycles. A `resource_reference` field is a string, so it adds no import, and cycles through calls and ports pass the build: reviewers have to spot them. If `catalog` calls `inventory` to show stock, and `inventory` calls `catalog` to refuse a discontinued product, buf passes, but the two depend on each other. To break the cycle, keep one direction and let the client or a later call combine the two; merge the modules; move what both need into a third; or let one keep its own copy of the other's state, updated through events. An export or report that reads every module belongs in a module of its own, which nothing else depends on.
+  Buf catches only import cycles. A `resource_reference` field is a string, so it adds no import, and cycles through calls pass the build. In the Go layout below, a port is an import, so Go rejects a cycle through ports, and `dedo modules` checks calls through generated clients. If `catalog` calls `inventory` to show stock, and `inventory` calls `catalog` to refuse a discontinued product, buf passes, but the two depend on each other. To break the cycle, keep one direction and let the client or a later call combine the two; merge the modules; move what both need into a third; or let one keep its own copy of the other's state, updated through events. An export or report that reads every module belongs in a module of its own, which nothing else depends on.
 - **Put shared value objects in a package of their own**, such as `acme.type`, with no services and no version. It gets no tag in the reference.
 - **A context small enough for one module has one package.** Its reference lists its services without a package level.
 - **The package is not in the REST path.** Paths keep one root per context, so regrouping modules does not move a REST path. It does rename the Connect and gRPC procedures, which carry the package, so `buf breaking` reports it as a breaking change. Settle the modules before the first release.
+
+### Code and data follow the modules
+
+The service keeps the modules of its protos in its Go code and in its database. Each module's dependencies are then explicit, so the cycles that the bullet on keeping modules acyclic warns about fail a build, a check or a query, not only a review. A context `acme` with the packages `acme.orders.v1`, `acme.orders.v2` and `acme.catalog.v1` looks like this:
+
+```text
+internal/
+  orders/              # module orders: acme.orders.v1 and acme.orders.v2
+    handlers_v1.go     # adapters for acme.orders.v1
+    handlers_v2.go     # adapters for acme.orders.v2
+    orders.go          # the domain: aggregates and their rules
+    port.go            # Port: what other modules may read
+    store.go           # the only code that reads the orders schema
+    migrations/
+    queries/
+  catalog/             # module catalog: acme.catalog.v1
+    ...
+  shared/
+    outbox/            # shared helpers
+app/                   # the composition root, with main
+main.go
+```
+
+- **One Go package per proto module.** The packages `<ctx>.<m>.vN` of a context `<ctx>` put module `m`'s code at `internal/<m>/`: its handlers, domain, store, migrations and queries. A service with one module uses the same layout, so every service reads the same way.
+- **Shared helpers go at `internal/shared/<x>/`.** `shared` is reserved, so no proto module may be called `shared`: `DEDO_PACKAGE_SHARED_RESERVED` rejects `acme.shared.v1`. Value objects that the protos share go in `<ctx>.type`, as above.
+- **Everything stays under `internal/`**, so no other repository can import it. Other contexts call the API.
+- **The composition root is the only code that imports several modules.** `main` and the `app/` package build each module's dependencies, run the migrations in dependency order and register the handlers.
+- **Every version of a module shares one package.** During an AIP-185 migration, `<ctx>.<m>.v1` and `<ctx>.<m>.v2` are two API surfaces over one domain and one store. Their handlers are adapters in `internal/<m>/`, such as `handlers_v1.go` and `handlers_v2.go`, and moving from v1 to v2 is not a cycle. The module boundary is the domain, not the API version: both versions serve the same aggregates, keep the same rules and own the same data. Split into two packages, they would have to share all three.
+- **Ports belong to their provider.** A module that reads another depends on the provider's own `Port` interface, such as `filing.Port`, which returns the provider's generated messages. The dependency is then a Go import, and Go rejects an import cycle at compile time. Never put ports in a shared package: it hides every edge, and a cycle through it compiles. A module declares the event topics it publishes, and subscribing to one is a dependency on that module.
+- **Generated clients and messages are edges too.** A call through another module's generated client (`<m>v1connect`) or an import of its messages is a dependency. Go cannot see a cycle through them, since every module imports only generated code, so `dedo modules` checks them.
+- **Each module owns a Postgres schema named after it.** Only its migrations and queries touch it. Shared infrastructure, such as the outbox and migration bookkeeping, lives in a `shared` schema.
+- **No foreign keys or views across modules.** A reference to another module's data is a resource name, as in the protos.
+- **Each module runs as its own database role**, with privileges only on its own schema. A query that reaches into another module's tables then fails at runtime.
 
 ## Aggregates: one service each
 
@@ -93,7 +126,10 @@ A reference that supports 3.2 shows context, module, aggregate and operation as 
 ## Checklist
 
 - One repository, one context, one REST root.
-- One package per module, named with a domain noun and opened with a comment that says what it is responsible for.
+- One package per module, named with a domain noun and opened with a comment that says what it is responsible for. No module is called `shared`.
+- One Go package per module at `internal/<m>/`, holding every version's handlers, its domain, store, migrations and queries; shared helpers at `internal/shared/<x>/`; only `main` and `app/` import several modules.
+- A module reads another only through the provider's `Port`, its generated client or its events, and the modules stay acyclic.
+- One Postgres schema and one database role per module; no foreign keys or views across modules.
 - One service per aggregate, titled with the noun readers look for; every RPC acts on that aggregate.
 - References to other aggregates are resource names with `resource_reference`, never embedded messages.
 - Commands are named with the domain's verbs; queries are `NO_SIDE_EFFECTS`.
