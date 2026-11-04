@@ -15,10 +15,10 @@ import (
 // project is what dedo init learns about a repository before changing it.
 type project struct {
 	dir       string
-	module    string // the Go module path
-	protoRoot string // the proto source root, relative to dir
-	service   *service
-	others    int // services beyond the first
+	module    string    // the Go module path
+	protoRoot string    // the proto source root, relative to dir
+	service   *service  // the first service
+	services  []service // every service, the first among them
 	scopes    []string
 	protos    int    // proto files found
 	rootPkg   string // the Go package of the repository root, if it has one
@@ -33,12 +33,53 @@ type project struct {
 	tenancy string
 }
 
-// service is the first service found, with the Go names that buf generate
-// gives it under the managed mode dedo's buf.gen.yaml sets.
+// service is a service of the repository, with the Go names that buf
+// generate gives it under the managed mode dedo's buf.gen.yaml sets, and
+// the module its handler lives in (guidance/domains.md).
 type service struct {
 	Name     string // CounterService
 	GoPkg    string // time_counterv1
 	GoImport string // github.com/acme/time-counter/gen/go/acme/time_counter/v1
+	// Module is the proto package's module, time_counter for
+	// acme.time_counter.v1: the handler lives in internal/<Module>.
+	Module string
+	// Type is the handler's type in internal/<Module>: the service's name,
+	// with the version after it for any but v1 (CounterServiceV2).
+	Type string
+}
+
+// HandlerFile is the handler stub's path: internal/time_counter/counter_service.go.
+func (s service) HandlerFile() string {
+	return path.Join("internal", s.Module, snakeCase(s.Type)+".go")
+}
+
+// snakeCase turns a Go name into a file name: CounterServiceV2 becomes
+// counter_service_v2.
+func snakeCase(name string) string {
+	var b strings.Builder
+	for i, r := range name {
+		if i > 0 && r >= 'A' && r <= 'Z' {
+			b.WriteByte('_')
+		}
+		b.WriteRune(r)
+	}
+	return strings.ToLower(b.String())
+}
+
+// moduleOf returns the module of a proto package and the handler type of
+// its service name: acme.time_counter.v2 and CounterService give
+// time_counter and CounterServiceV2. An unversioned package is a module of
+// its last element.
+func moduleOf(pkg, name string) (module, typ string) {
+	_, module, version, ok := protoModule(pkg)
+	if !ok {
+		parts := strings.Split(pkg, ".")
+		return parts[len(parts)-1], name
+	}
+	if version != "v1" {
+		name += strings.ToUpper(version[:1]) + version[1:]
+	}
+	return module, name
 }
 
 var (
@@ -90,6 +131,9 @@ func analyze(dir string) (*project, error) {
 	}
 	slices.Sort(p.scopes)
 	p.scopes = slices.Compact(p.scopes)
+	if len(p.services) > 0 {
+		p.service = &p.services[0]
+	}
 	return p, nil
 }
 
@@ -115,25 +159,19 @@ func (p *project) read(rel string) error {
 	if len(svcs) == 0 || pkg == nil {
 		return nil
 	}
-	if p.service != nil {
-		p.others += len(svcs)
-		return nil
-	}
-	p.others += len(svcs) - 1
 	inRoot, err := filepath.Rel(p.protoRoot, rel)
 	if err != nil || strings.HasPrefix(inRoot, "..") {
 		inRoot = rel
 	}
 	inRoot = filepath.ToSlash(inRoot)
-	p.service = &service{
-		Name:     string(svcs[0][1]),
+	base := service{
 		GoPkg:    goPackageName(string(pkg[1])),
 		GoImport: p.module + "/gen/go/" + filepath.ToSlash(filepath.Dir(inRoot)),
 	}
 	switch gp := goPackage.FindSubmatch(src); {
 	case p.goPrefix != "":
 		// Managed mode overrides go_package with its prefix.
-		p.service.GoImport = p.goPrefix + "/" + filepath.ToSlash(filepath.Dir(inRoot))
+		base.GoImport = p.goPrefix + "/" + filepath.ToSlash(filepath.Dir(inRoot))
 	case gp != nil:
 		// The file names its own Go package: "import/path;name" or
 		// "import/path", whose last element protoc-gen-go then uses.
@@ -141,7 +179,13 @@ func (p *project) read(rel string) error {
 		if !ok {
 			name = nonIdent.ReplaceAllString(path.Base(importPath), "_")
 		}
-		p.service.GoImport, p.service.GoPkg = importPath, name
+		base.GoImport, base.GoPkg = importPath, name
+	}
+	for _, s := range svcs {
+		svc := base
+		svc.Name = string(s[1])
+		svc.Module, svc.Type = moduleOf(string(pkg[1]), svc.Name)
+		p.services = append(p.services, svc)
 	}
 	return nil
 }

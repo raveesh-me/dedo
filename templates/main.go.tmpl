@@ -1,4 +1,6 @@
-// Command {{.Name}} serves {{.Service}} over Connect, gRPC, REST and MCP.
+// Command {{.Name}} serves {{range $i, $s := .Services}}{{if $i}}, {{end}}{{$s.Name}}{{end}} over Connect, gRPC, REST
+// and MCP. It is the composition root: the only package that imports
+// several modules, each from internal/<module>.
 package main
 
 import (
@@ -24,8 +26,13 @@ import (
 	"github.com/raveesh-me/dedo/policy"
 
 	"{{.Module}}/docs"
+{{- range .GenPkgs}}
 	{{.GoPkg}} "{{.GoImport}}"
 	"{{.GoImport}}/{{.GoPkg}}connect"
+{{- end}}
+{{- range .Mods}}
+	{{if ne .Alias .Name}}{{.Alias}} {{end}}"{{$.Module}}/internal/{{.Name}}"
+{{- end}}
 )
 
 func main() {
@@ -52,7 +59,11 @@ func main() {
 
 func newHandler(log *slog.Logger) (http.Handler, error) {
 	// The API: scopes and policy come from the .proto, not from handlers.
-	table, err := policy.Build({{.GoPkg}}connect.{{.Service}}Name)
+	table, err := policy.Build(
+{{- range .Services}}
+		{{.GoPkg}}connect.{{.Name}}Name,
+{{- end}}
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -72,8 +83,10 @@ func newHandler(log *slog.Logger) (http.Handler, error) {
 	// auth, the declared contract (scopes, headers, error audit), then the
 	// buf.validate rules.
 	server := connect.NewServer(flowid.Interceptor(), auth, guard, validate.NewServerInterceptor())
-	// newServer returns your implementation of {{.GoPkg}}connect.{{.Service}}Handler.
-	{{.GoPkg}}connect.Register{{.Service}}Handler(server, newServer())
+	// Each module's handlers, from internal/<module>.
+{{- range .Services}}
+	{{.GoPkg}}connect.Register{{.Name}}Handler(server, {{.ModAlias}}.New{{.Type}}())
+{{- end}}
 
 	mux := http.NewServeMux()
 	// Connect, gRPC and gRPC-Web, then REST from the google.api.http bindings.
@@ -85,9 +98,12 @@ func newHandler(log *slog.Logger) (http.Handler, error) {
 	// MCP: every RPC is a tool, as protoc-gen-dedo-mcp generated it, called
 	// in-process on the same server with the caller's token.
 	tools := mcp.NewServer(&mcp.Implementation{Name: "{{.Name}}", Version: "v1"}, nil)
-	if err := mcpserver.AddTools(tools, connect.NewClient(connectinprocess.New(server)), {{.GoPkg}}.{{.Service}}MCPTools()...); err != nil {
+	client := connect.NewClient(connectinprocess.New(server))
+{{- range .Services}}
+	if err := mcpserver.AddTools(tools, client, {{.GoPkg}}.{{.Name}}MCPTools()...); err != nil {
 		return nil, err
 	}
+{{- end}}
 
 	// MCP_ACCESS=authenticated answers only callers whose token you accept,
 	// tool discovery included; public, the default, lets anyone list the

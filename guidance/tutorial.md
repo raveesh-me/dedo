@@ -227,7 +227,7 @@ dedo init
 - the lint plugin, at the options module's release, copied into `.tools/` (`dedo tools` copies it again), and `Makefile.api` (included from `Makefile`), which runs the checks
 - the generators pinned as Go tools in `go.mod`, the dedo runtime modules, and `buf.lock` (commit it)
 - `docs/`, which serves the REST reference
-- `server.go`, a stub where every RPC answers Unimplemented, and `policy_table_test.go`, which fails `go test` when a declaration is missing
+- `internal/time_counter/counter_service.go`, a stub where every RPC answers Unimplemented, in the package of the module `time_counter` (the proto package `acme.time_counter.v1`), and `policy_table_test.go`, which fails `go test` when a declaration is missing
 - `AGENTS.md` with [the guidance for coding agents](claude.md) and [the guidance for modelling the domain](domains.md)
 
 Then it generates the code from the contract (step 4) and tidies `go.mod`, and reports what `buf lint` finds. It also writes `main.go`, which serves `CounterService` on every transport; step 5 explains it. Fill in `.github/CODEOWNERS` (from [templates/CODEOWNERS](../templates/CODEOWNERS)) so every change under `proto/` needs an API review, and copy [templates/vscode](../templates/vscode) to `.vscode/` if you use VS Code.
@@ -238,7 +238,7 @@ Now check the contract:
 make check
 ```
 
-It checks formatting, lints, and, once `main` has a contract, checks for breaking changes. It prints no findings when the contract is clean. Your editor shows the same findings as you type, each linking to its explanation.
+It checks formatting, lints, and, once `main` has a contract, checks for breaking changes. Then `dedo modules` checks that the Go code keeps the modules of the protos apart ([domains.md](domains.md#code-and-data-follow-the-modules)) and prints their graph; with one module, it has nothing to depend on. It prints no findings when the contract is clean. Your editor shows the same findings as you type, each linking to its explanation.
 
 ## 4. Generate
 
@@ -257,10 +257,10 @@ Commit all of it. CI fails when it is stale.
 
 ## 5. Write the service
 
-`server.go` holds the business logic, and nothing else. Replace the stub `dedo init` wrote with:
+The module's package, `internal/time_counter/`, holds the business logic, and nothing else: the handlers, and, as the service grows, the module's store, migrations and queries. A second module gets a package of its own beside it, and only `main.go` imports both. Replace the stub `dedo init` wrote, `internal/time_counter/counter_service.go`, with:
 
 ```go
-package main
+package time_counter
 
 import (
 	"context"
@@ -277,17 +277,20 @@ import (
 	timecounterv1 "github.com/acme/time-counter/gen/go/acme/time_counter/v1"
 )
 
-// server holds business logic only. Scopes, headers, flow IDs and error
-// audit come from the dedo runtime.
-type server struct {
+// CounterService holds business logic only. Scopes, headers, flow IDs and
+// error audit come from the dedo runtime.
+type CounterService struct {
 	mu       sync.Mutex
 	counters map[string]*timecounterv1.Counter
 	next     int
 }
 
-func newServer() *server { return &server{counters: map[string]*timecounterv1.Counter{}} }
+// NewCounterService returns the CounterService handler main.go registers.
+func NewCounterService() *CounterService {
+	return &CounterService{counters: map[string]*timecounterv1.Counter{}}
+}
 
-func (s *server) GetCounter(_ context.Context, req *timecounterv1.GetCounterRequest) (*timecounterv1.GetCounterResponse, error) {
+func (s *CounterService) GetCounter(_ context.Context, req *timecounterv1.GetCounterRequest) (*timecounterv1.GetCounterResponse, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	c, ok := s.counters[req.GetName()]
@@ -297,7 +300,7 @@ func (s *server) GetCounter(_ context.Context, req *timecounterv1.GetCounterRequ
 	return &timecounterv1.GetCounterResponse{Counter: proto.CloneOf(c)}, nil
 }
 
-func (s *server) CreateCounter(_ context.Context, req *timecounterv1.CreateCounterRequest) (*timecounterv1.CreateCounterResponse, error) {
+func (s *CounterService) CreateCounter(_ context.Context, req *timecounterv1.CreateCounterRequest) (*timecounterv1.CreateCounterResponse, error) {
 	if req.GetCounter().GetDisplayName() == "" {
 		return nil, apiError(connect.CodeInvalidArgument, "DISPLAY_NAME_REQUIRED", "display_name is required")
 	}
@@ -318,7 +321,7 @@ func (s *server) CreateCounter(_ context.Context, req *timecounterv1.CreateCount
 	return &timecounterv1.CreateCounterResponse{Counter: proto.CloneOf(c)}, nil
 }
 
-func (s *server) AddTime(_ context.Context, req *timecounterv1.AddTimeRequest) (*timecounterv1.AddTimeResponse, error) {
+func (s *CounterService) AddTime(_ context.Context, req *timecounterv1.AddTimeRequest) (*timecounterv1.AddTimeResponse, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	c, ok := s.counters[req.GetName()]
@@ -346,7 +349,9 @@ func apiError(code connect.Code, reason, message string) error {
 `main.go` wires the API, the REST reference and MCP. Scopes and policy come from the `.proto`, so the handlers above contain no authorization code. `devTokens` holds the scopes declared in the `.proto`:
 
 ```go
-// Command time-counter serves CounterService over Connect, gRPC, REST and MCP.
+// Command time-counter serves CounterService over Connect, gRPC, REST
+// and MCP. It is the composition root: the only package that imports
+// several modules, each from internal/<module>.
 package main
 
 import (
@@ -371,6 +376,7 @@ import (
 	"github.com/acme/time-counter/docs"
 	time_counterv1 "github.com/acme/time-counter/gen/go/acme/time_counter/v1"
 	"github.com/acme/time-counter/gen/go/acme/time_counter/v1/time_counterv1connect"
+	"github.com/acme/time-counter/internal/time_counter"
 )
 
 func main() {
@@ -397,7 +403,9 @@ func main() {
 
 func newHandler(log *slog.Logger) (http.Handler, error) {
 	// The API: scopes and policy come from the .proto, not from handlers.
-	table, err := policy.Build(time_counterv1connect.CounterServiceName)
+	table, err := policy.Build(
+		time_counterv1connect.CounterServiceName,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -414,8 +422,8 @@ func newHandler(log *slog.Logger) (http.Handler, error) {
 	// auth, the declared contract (scopes, headers, error audit), then the
 	// buf.validate rules.
 	server := connect.NewServer(flowid.Interceptor(), auth, guard, validate.NewServerInterceptor())
-	// newServer returns your implementation of time_counterv1connect.CounterServiceHandler.
-	time_counterv1connect.RegisterCounterServiceHandler(server, newServer())
+	// Each module's handlers, from internal/<module>.
+	time_counterv1connect.RegisterCounterServiceHandler(server, time_counter.NewCounterService())
 
 	mux := http.NewServeMux()
 	// Connect, gRPC and gRPC-Web, then REST from the google.api.http bindings.
@@ -427,7 +435,8 @@ func newHandler(log *slog.Logger) (http.Handler, error) {
 	// MCP: every RPC is a tool, as protoc-gen-dedo-mcp generated it, called
 	// in-process on the same server with the caller's token.
 	tools := mcp.NewServer(&mcp.Implementation{Name: "time-counter", Version: "v1"}, nil)
-	if err := mcpserver.AddTools(tools, connect.NewClient(connectinprocess.New(server)), time_counterv1.CounterServiceMCPTools()...); err != nil {
+	client := connect.NewClient(connectinprocess.New(server))
+	if err := mcpserver.AddTools(tools, client, time_counterv1.CounterServiceMCPTools()...); err != nil {
 		return nil, err
 	}
 
@@ -533,7 +542,7 @@ The same RPCs also answer over Connect and gRPC at `/acme.time_counter.v1.Counte
 ## Updating later
 
 - **A new dedo release:** `dedo update`, then `dedo upgrade`. The options module, the lint plugin, the generators and the runtime move together, and the code is regenerated. [install.md](install.md#upgrading) lists what changes.
-- **A new RPC:** add it to the `.proto`, then run `make generate` and `make check`, and implement the method in `server.go`. The REST route, the docs and the MCP tool follow from the `.proto`.
+- **A new RPC:** add it to the `.proto`, then run `make generate` and `make check`, and implement the method in `internal/time_counter/counter_service.go`. The REST route, the docs and the MCP tool follow from the `.proto`.
 - **Your organisation's own rules:** write them as CEL checks in the `rules` section of `dedo.yaml` next to `buf.yaml`, or import your organisation's shared file from git, then run `dedo tools` (`make tools`), which fetches the imports and checks them; `buf lint` then reports them like any other rule. Run it again after every edit to `dedo.yaml`'s rules or its imports. A house rule outranks dedo's: to replace one, name it in the rule's `overrides`, and `dedo tools` lists every override in force. [RULES.md](RULES.md#house-rules) has the format.
 
 ## Troubleshooting

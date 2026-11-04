@@ -94,18 +94,20 @@ vendored-options:
 	for ex in todo bad-todo contacts; do diff -r proto/dedo examples/$$ex/third_party/dedo/dedo || exit 1; done
 	for ex in todo contacts; do diff templates/docs/docs.go.tmpl examples/$$ex/docs/docs.go || exit 1; done
 
-## example-todo: the compliant service lints clean and passes its tests
+## example-todo: the compliant service lints clean, passes its tests and keeps its modules apart
 example-todo: plugins
 	cd examples/todo && buf format --diff --exit-code && buf lint proto
 	cd examples/todo && buf generate && git diff --exit-code gen/ docs/
 	$(MAKE) -C examples/todo web-gen && git diff --exit-code examples/todo/web/src/gen
 	cd examples/todo && go vet ./... && go test -race ./...
+	cd cmd/dedo && go run . modules -dir ../../examples/todo
 
-## example-contacts: the multi-tenant service lints clean and passes its tests
+## example-contacts: the multi-tenant service lints clean, passes its tests and keeps its modules apart
 example-contacts: plugins
 	cd examples/contacts && buf format --diff --exit-code && buf lint proto
 	cd examples/contacts && buf generate && git diff --exit-code gen/ docs/
 	cd examples/contacts && go vet ./... && go test -race ./...
+	cd cmd/dedo && go run . modules -dir ../../examples/contacts
 
 ## example-bad-todo: the rule-breaking service reports exactly the expected findings
 example-bad-todo: plugins

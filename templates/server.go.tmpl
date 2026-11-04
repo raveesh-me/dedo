@@ -1,11 +1,14 @@
-package main
+package {{.Module}}
 
 import "{{.GoImport}}/{{.GoPkg}}connect"
 
-// server implements {{.Service}}. Until you write a method, it answers
-// Unimplemented: add the methods of {{.GoPkg}}connect.{{.Service}}Handler.
-type server struct {
-	{{.GoPkg}}connect.Unimplemented{{.Service}}Handler
+// {{.Type}} implements {{.Name}}. Until you write a method, it answers
+// Unimplemented: add the methods of {{.GoPkg}}connect.{{.Name}}Handler.
+// The module's store and migrations live beside it; only main.go, the
+// composition root, imports this package beside other modules.
+type {{.Type}} struct {
+	{{.GoPkg}}connect.Unimplemented{{.Name}}Handler
 }
 
-func newServer() *server { return &server{} }
+// New{{.Type}} returns the {{.Name}} handler main.go registers.
+func New{{.Type}}() *{{.Type}} { return &{{.Type}}{} }
