@@ -974,3 +974,42 @@ func TestTemplateImportsGroupDedo(t *testing.T) {
 		}
 	}
 }
+
+// Moving a rules.yml that dedo init wrote before v0.20.0 into dedo.yaml drops
+// its header, which dedo.yaml's comment above rules replaces, and keeps the
+// comments the repository added (#75).
+func TestInitMovesRulesYMLWithoutItsHeader(t *testing.T) {
+	old, err := os.ReadFile(filepath.Join("testdata", "rules-v0.19.0.yml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	cases := map[string]struct{ rulesYML, keep string }{
+		"as templated": {string(old), ""},
+		"a comment above the header": {"# Shop's rules: ask #api before disabling one.\n" + string(old),
+			"# Shop's rules: ask #api before disabling one."},
+		"a comment under use": {strings.Replace(string(old), "  - HOUSE\n", "  - HOUSE\n# The money rules arrive in v3.\n", 1),
+			"# The money rules arrive in v3."},
+		"the header separated by a blank line": {strings.Replace(string(old), "\nuse:", "\n\nuse:", 1), ""},
+		"a comment of its own above a blank line": {"# Owned by the platform team.\n\n" + string(old),
+			"# Owned by the platform team."},
+	}
+	for name, c := range cases {
+		dir := repo(t, map[string]string{"go.mod": "module example.com/shop\n", "rules.yml": c.rulesYML})
+		initOffline(t, dir)
+		got := read(t, dir, "dedo.yaml")
+		if n := strings.Count(got, "Which lint rules run."); n != 1 {
+			t.Errorf("%s: dedo.yaml explains the rule sets %d times:\n%s", name, n, got)
+		}
+		for _, stale := range []string{"this file chooses", "rules.example.yml"} {
+			if strings.Contains(got, stale) {
+				t.Errorf("%s: dedo.yaml keeps rules.yml's header (%q):\n%s", name, stale, got)
+			}
+		}
+		if c.keep != "" && !strings.Contains(got, c.keep) {
+			t.Errorf("%s: dedo.yaml lost %q:\n%s", name, c.keep, got)
+		}
+		if got := scalars(lookup(rulesAt(t, dir), "use")); !slices.Equal(got, []string{"AIP_NOLANG", "ZALANDO", "DEDO", "HOUSE"}) {
+			t.Errorf("%s: use = %v", name, got)
+		}
+	}
+}

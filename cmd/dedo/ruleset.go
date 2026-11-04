@@ -163,9 +163,43 @@ func (in *initer) newDedoYAML() (*yaml.Node, bool, error) {
 		in.say("dedo.yaml: created, with dedo's default rule sets")
 		return doc, false, nil
 	}
-	set(root(doc), "rules", root(old))
+	set(root(doc), "rules", movedRules(old))
 	in.say("dedo.yaml: created, with the rules of rules.yml, which it replaces")
 	return doc, true, nil
+}
+
+// rulesYMLHeader is the header dedo init wrote at the top of rules.yml from
+// v0.15.0 to v0.19.0. dedo.yaml's comment above its rules section replaces it.
+const rulesYMLHeader = `# Which lint rules run. buf.yaml lists only DEDO of buf-plugin-dedo-lint's
+# rules; this file chooses among them. Run dedo tools (make tools) after
+# every change: it checks this file and lists the rules in force. See
+# guidance/RULES.md in the dedo repository, and rules.example.yml (dedo
+# templates rules.example.yml) for a file that uses everything.
+#
+# The rule sets this repository runs: AIP_NOLANG, ZALANDO, DEDO, HOUSE (the
+# house rules below and the ones imported), and DEDO_MULTI_TENANT for
+# services that declare tenancy. Rule IDs work too. The imports and rules
+# below build on these, and override them where they say so.`
+
+// movedRules returns rules.yml's mapping for dedo.yaml's rules section,
+// without the header dedo wrote. The repository's own comments above it,
+// which YAML keeps on the document when a blank line follows them, move onto
+// the mapping's first key so they are not lost.
+func movedRules(old *yaml.Node) *yaml.Node {
+	rules := root(old)
+	if len(rules.Content) == 0 {
+		return rules
+	}
+	first := rules.Content[0]
+	own := []string{withoutHeader(old.HeadComment), withoutHeader(first.HeadComment)}
+	first.HeadComment = strings.Join(slices.DeleteFunc(own, func(c string) bool { return c == "" }), "\n#\n")
+	old.HeadComment = ""
+	return rules
+}
+
+// withoutHeader removes rulesYMLHeader from a comment, keeping the rest.
+func withoutHeader(comment string) string {
+	return strings.Trim(strings.Replace(comment, rulesYMLHeader, "", 1), "\n")
 }
 
 // changedUse sets use to want when it holds only dedo's defaults, which
