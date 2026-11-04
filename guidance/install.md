@@ -176,7 +176,7 @@ dedo templates docs/docs.go.tmpl > docs/docs.go
 dedo templates docs/index.html > docs/index.html   # then set its <title>
 ```
 
-`dedo upgrade` leaves `docs/index.html` alone once it exists. A service set up before the page moved to Scalar refreshes it with the same `dedo templates` command, then sets its `<title>` again.
+Once these files exist, `dedo upgrade` leaves them alone. When one differs from the release's template, other than in the page's `<title>`, it says so and prints the `dedo templates` command that refreshes it. A page set up before the move to Scalar is one of these, and sets its `<title>` again after the refresh.
 
 Then wire everything in `main.go`. `dedo init` writes it with your names filled in (or prints it, when you have a `main.go` already); here `CounterService` from `acme.time_counter.v1`:
 
