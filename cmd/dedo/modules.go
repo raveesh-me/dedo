@@ -70,7 +70,11 @@ func modules(dir string, out io.Writer) error {
 	if c := strings.Join(l.Contexts, ", "); c != "" {
 		in = " in " + c
 	}
-	fmt.Fprintf(out, "dedo modules: %d modules%s, no cycles; each depends on:\n%s", len(l.Modules), in, graph)
+	count := fmt.Sprintf("%d modules", len(l.Modules))
+	if len(l.Modules) == 1 {
+		count = "1 module"
+	}
+	fmt.Fprintf(out, "dedo modules: %s%s, no cycles; each depends on:\n%s", count, in, graph)
 	return nil
 }
 

@@ -2,16 +2,21 @@ package main
 
 import (
 	"testing"
+{{range .GenPkgs}}
+	"{{.GoImport}}/{{.GoPkg}}connect"
+{{- end}}
 
 	"github.com/raveesh-me/dedo/policy"
-
-	"{{.GoImport}}/{{.GoPkg}}connect"
 )
 
 // TestPolicyTable fails before deploy when a service or method lacks its
 // declared operational contract.
 func TestPolicyTable(t *testing.T) {
-	if _, err := policy.Build({{.GoPkg}}connect.{{.Service}}Name); err != nil {
+	if _, err := policy.Build(
+{{- range .Services}}
+		{{.GoPkg}}connect.{{.Name}}Name,
+{{- end}}
+	); err != nil {
 		t.Fatal(err)
 	}
 }

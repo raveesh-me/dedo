@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"go/format"
 	"io"
 	"io/fs"
 	"os"
@@ -652,41 +653,102 @@ func (in *initer) server() error {
 		return err
 	}
 	if in.p.service == nil {
-		in.say("policy_table_test.go, server.go: skipped until the repository has a service")
+		in.say("policy_table_test.go, internal/<module>/: skipped until the repository has a service")
 		return nil
 	}
 	if in.p.rootPkg != "" && in.p.rootPkg != "main" {
-		in.say("policy_table_test.go, server.go: skipped; the repository root is package %s, not main", in.p.rootPkg)
+		in.say("policy_table_test.go, internal/<module>/: skipped; the repository root is package %s, not main", in.p.rootPkg)
 		return nil
 	}
+	if err := in.policyTest(); err != nil {
+		return err
+	}
+	return in.handlers()
+}
+
+// policyTest writes policy_table_test.go, which builds every service's
+// policy table, unless the service builds it already.
+func (in *initer) policyTest() error {
 	if buildsPolicyTable(in.p.dir) {
 		in.say("policy_table_test.go: skipped; the service already builds its policy table (policy.Build)")
-	} else {
-		test, err := in.render("templates/policy_table_test.go.tmpl")
-		if err != nil {
-			return err
-		}
-		if err := in.writeFile("policy_table_test.go", test, false); err != nil {
-			return err
-		}
-	}
-	if hasNewServer(in.p.dir) {
-		in.say("server.go: newServer already exists; left as it is")
 		return nil
 	}
-	if ownServer(in.p.dir) {
-		in.say("server.go: skipped; main.go builds the service without newServer")
-		return nil
-	}
-	stub, err := in.render("templates/server.go.tmpl")
+	test, err := in.render("templates/policy_table_test.go.tmpl")
 	if err != nil {
 		return err
 	}
-	return in.writeFile("server.go", stub, false)
+	return in.writeFile("policy_table_test.go", test, false)
 }
 
-// hasNewServer reports whether a Go file in the repository root already
-// declares newServer, which the printed main.go calls.
+// handlers writes a handler stub for each service into its module's
+// package, internal/<module>/, as guidance/domains.md lays modules out. It
+// leaves alone a repository whose main.go builds the services its own way,
+// and a handler type the module declares already.
+func (in *initer) handlers() error {
+	if hasNewServer(in.p.dir) {
+		in.say("internal/<module>/: skipped; newServer in the repository root serves the API. dedo's layout keeps each module's handlers in internal/<module>/ (guidance/domains.md): move them there")
+		return nil
+	}
+	if src, err := os.ReadFile(in.path("main.go")); err == nil && !in.callsStubs(string(src)) {
+		in.say("internal/<module>/: skipped; main.go builds the services without dedo's handler stubs")
+		return nil
+	}
+	for _, s := range in.p.services {
+		if s.Module == Shared {
+			in.say("%s: skipped; %q is reserved for shared code, not a module: rename its proto package", s.Name, Shared)
+			continue
+		}
+		if file := declaresHandler(in.path(path.Join("internal", s.Module)), s.Type); file != "" && file != s.HandlerFile() {
+			in.say("%s: %s declares %s already; left as it is", s.HandlerFile(), file, s.Type)
+			continue
+		}
+		stub, err := in.renderGo("templates/server.go.tmpl", s)
+		if err != nil {
+			return err
+		}
+		if err := os.MkdirAll(in.path(path.Dir(s.HandlerFile())), 0o755); err != nil {
+			return err
+		}
+		if err := in.writeFile(s.HandlerFile(), stub, false); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// callsStubs reports whether a main.go constructs any service's handler
+// stub, as dedo's template does.
+func (in *initer) callsStubs(main string) bool {
+	for _, s := range in.p.services {
+		if strings.Contains(main, ".New"+s.Type+"(") {
+			return true
+		}
+	}
+	return false
+}
+
+// declaresHandler returns the file of a module's package, relative to the
+// repository, that declares a handler type or its constructor, or "".
+func declaresHandler(dir, typ string) string {
+	decl := regexp.MustCompile(`(?m)^(type\s+` + typ + `\s|func\s+New` + typ + `\()`)
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return ""
+	}
+	for _, e := range entries {
+		if e.IsDir() || !strings.HasSuffix(e.Name(), ".go") || strings.HasSuffix(e.Name(), "_test.go") {
+			continue
+		}
+		if src, err := os.ReadFile(filepath.Join(dir, e.Name())); err == nil && decl.Match(src) {
+			return path.Join("internal", filepath.Base(dir), e.Name())
+		}
+	}
+	return ""
+}
+
+// hasNewServer reports whether a Go file in the repository root declares
+// newServer, which dedo's main.go called before handlers moved into their
+// modules.
 func hasNewServer(dir string) bool {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
@@ -704,23 +766,18 @@ func hasNewServer(dir string) bool {
 	return false
 }
 
-// ownServer reports whether the repository's main.go builds the service its
-// own way, without the newServer that server.go would declare: such a service
-// moved its handlers elsewhere, and a stub server.go would only come back.
-func ownServer(dir string) bool {
-	src, err := os.ReadFile(filepath.Join(dir, "main.go"))
-	return err == nil && !strings.Contains(string(src), "newServer(")
-}
-
 // buildsPolicyTable reports whether any of the service's own Go files, outside
 // generated code, already calls policy.Build, so it checks its policy table
 // itself and needs no policy_table_test.go.
 func buildsPolicyTable(dir string) bool {
-	found := false
+	return len(sourcesContaining(dir, "policy.Build(", "policy_table_test.go")) > 0
+}
+
+// sourcesContaining returns the repository's own Go files, outside
+// generated code and skip, whose source contains text.
+func sourcesContaining(dir, text, skip string) []string {
+	var found []string
 	_ = filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
-		if found {
-			return fs.SkipAll
-		}
 		if err != nil {
 			return nil
 		}
@@ -731,15 +788,26 @@ func buildsPolicyTable(dir string) bool {
 			}
 			return nil
 		}
-		if !strings.HasSuffix(d.Name(), ".go") || path == filepath.Join(dir, "policy_table_test.go") {
+		if !strings.HasSuffix(d.Name(), ".go") || path == filepath.Join(dir, skip) {
 			return nil
 		}
-		if src, err := os.ReadFile(path); err == nil && strings.Contains(string(src), "policy.Build(") {
-			found = true
+		if src, err := os.ReadFile(path); err == nil && strings.Contains(string(src), text) {
+			found = append(found, path)
 		}
 		return nil
 	})
 	return found
+}
+
+// unregistered returns the services no Go file of the repository registers.
+func (in *initer) unregistered() []string {
+	var out []string
+	for _, s := range in.p.services {
+		if len(sourcesContaining(in.p.dir, "Register"+s.Name+"Handler(", "")) == 0 {
+			out = append(out, s.Name)
+		}
+	}
+	return out
 }
 
 // runCommands runs the network steps, or prints them when offline or when a
@@ -789,9 +857,9 @@ func (in *initer) run(cmds [][]string, offline bool) []string {
 	return failed
 }
 
-// writeMain writes main.go, which serves the first service on every
-// transport, where it can be built: a service to serve, a package main root,
-// and no main.go of the user's. It returns the source, and whether it wrote
+// writeMain writes main.go, which serves every service on every transport,
+// where it can be built: a service to serve, a package main root, and no
+// main.go of the user's. It returns the source, and whether it wrote
 // it. Its imports also keep the pinned Vanguard in go.mod, which go mod
 // tidy would otherwise drop.
 func (in *initer) writeMain() ([]byte, bool, error) {
@@ -805,7 +873,7 @@ func (in *initer) writeMain() ([]byte, bool, error) {
 		if err := os.WriteFile(in.path("main.go"), src, 0o644); err != nil {
 			return nil, false, err
 		}
-		fmt.Fprintf(in.out, "\nmain.go: created; it serves %s on Connect, gRPC, REST, /docs and /mcp\n", in.p.service.Name)
+		fmt.Fprintf(in.out, "\nmain.go: created; it serves %s on Connect, gRPC, REST, /docs and /mcp\n", strings.Join(in.serviceNames(), ", "))
 	}
 	return src, write, nil
 }
@@ -873,19 +941,22 @@ func (in *initer) printNext(src []byte, wrote, generated bool) {
 		steps = append(steps, "make "+in.target("generate"))
 	}
 	steps = append(steps, "make "+in.target("run"))
-	// A service that builds its own server has no server.go stub or
-	// printed devTokens to replace.
-	if !ownServer(in.p.dir) || hasNewServer(in.p.dir) {
-		steps = append(steps,
-			"implement the RPCs in server.go; until then they answer Unimplemented",
-			"before shipping, replace auth and devTokens in main.go with your token verification")
+	if stubs := in.stubFiles(); len(stubs) > 0 {
+		steps = append(steps, "implement the RPCs in "+strings.Join(stubs, ", ")+"; until then they answer Unimplemented")
+	} else if hasNewServer(in.p.dir) {
+		steps = append(steps, "implement the RPCs in server.go; until then they answer Unimplemented")
+	}
+	// A service that builds its own server has no printed devTokens to
+	// replace.
+	if src, err := os.ReadFile(in.path("main.go")); err != nil || strings.Contains(string(src), "devTokens") {
+		steps = append(steps, "before shipping, replace auth and devTokens in main.go with your token verification")
 	}
 	for i, step := range steps {
 		in.say("%d. %s", i+1, step)
 	}
 	in.say("after changing a .proto: make %s; before committing: make %s", in.target("generate"), in.target("check"))
-	if in.p.others > 0 {
-		in.say("main.go serves %s; %d more services need the same three lines each", in.p.service.Name, in.p.others)
+	if missing := in.unregistered(); !wrote && statErr == nil && len(missing) > 0 {
+		in.say("main.go registers no handler for %s: dedo's template below registers every service", strings.Join(missing, ", "))
 	}
 	if wrote {
 		return
@@ -900,9 +971,9 @@ func (in *initer) printNext(src []byte, wrote, generated bool) {
 // render fills a Go template with this repository's names, or with
 // placeholders when it has no service yet.
 func (in *initer) render(name string) ([]byte, error) {
-	svc := service{Name: "YourService", GoPkg: "yourv1", GoImport: in.p.module + "/gen/go/your/package/v1"}
-	if in.p.service != nil {
-		svc = *in.p.service
+	services := in.p.services
+	if len(services) == 0 {
+		services = []service{{Name: "YourService", GoPkg: "yourv1", GoImport: in.p.module + "/gen/go/your/package/v1", Module: "your", Type: "YourService"}}
 	}
 	var read []string
 	for _, s := range in.p.scopes {
@@ -910,12 +981,54 @@ func (in *initer) render(name string) ([]byte, error) {
 			read = append(read, s)
 		}
 	}
-	data := struct {
+	type module struct{ Name, Alias string }
+	type wired struct {
 		service
-		Module, Service, Name string
+		ModAlias string
+	}
+	var (
+		gen   []service
+		mods  []module
+		wires []wired
+	)
+	for _, s := range services {
+		if !slices.ContainsFunc(gen, func(g service) bool { return g.GoImport == s.GoImport }) {
+			gen = append(gen, s)
+		}
+		alias := moduleAlias(s.Module)
+		if !slices.ContainsFunc(mods, func(m module) bool { return m.Name == s.Module }) {
+			mods = append(mods, module{s.Module, alias})
+		}
+		wires = append(wires, wired{s, alias})
+	}
+	data := struct {
+		Module, Name          string
+		Services              []wired
+		GenPkgs               []service
+		Mods                  []module
 		ReadScopes, AllScopes []string
 		Tenancy               string
-	}{svc, in.p.module, svc.Name, path.Base(in.p.module), read, in.p.scopes, in.p.tenancy}
+	}{in.p.module, path.Base(in.p.module), wires, gen, mods, read, in.p.scopes, in.p.tenancy}
+	return in.renderGo(name, data)
+}
+
+// mainNames are the names main.go declares or imports, which a module's
+// package may not take there.
+var mainNames = []string{"auth", "bearer", "connect", "connecthttp", "connectinprocess", "context", "docs", "flowid",
+	"http", "interceptor", "log", "main", "mcp", "mcpserver", "os", "policy", "slices", "slog", "strings", "validate", "vanguard"}
+
+// moduleAlias is the name main.go imports a module's package under: its
+// own, unless main.go uses that name already.
+func moduleAlias(module string) string {
+	if slices.Contains(mainNames, module) {
+		return module + "module"
+	}
+	return module
+}
+
+// renderGo fills a Go template with data and formats the result as gofmt
+// does, sorting its imports.
+func (in *initer) renderGo(name string, data any) ([]byte, error) {
 	t, err := template.New(name).Parse(string(asset(name)))
 	if err != nil {
 		return nil, err
@@ -924,7 +1037,31 @@ func (in *initer) render(name string) ([]byte, error) {
 	if err := t.Execute(&buf, data); err != nil {
 		return nil, err
 	}
-	return buf.Bytes(), nil
+	src, err := format.Source(buf.Bytes())
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", name, err)
+	}
+	return src, nil
+}
+
+// serviceNames are the repository's services.
+func (in *initer) serviceNames() []string {
+	var names []string
+	for _, s := range in.p.services {
+		names = append(names, s.Name)
+	}
+	return names
+}
+
+// stubFiles are the handler stubs in place, relative to the repository.
+func (in *initer) stubFiles() []string {
+	var out []string
+	for _, s := range in.p.services {
+		if _, err := os.Stat(in.path(s.HandlerFile())); err == nil && !slices.Contains(out, s.HandlerFile()) {
+			out = append(out, s.HandlerFile())
+		}
+	}
+	return out
 }
 
 // writeFile writes a file. An existing file is kept unless replace is set,

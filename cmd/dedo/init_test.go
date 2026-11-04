@@ -176,7 +176,10 @@ func TestInitFreshRepository(t *testing.T) {
 	}
 	for _, want := range []string{
 		`time_counterv1 "github.com/acme/time-counter/gen/go/acme/time_counter/v1"`,
-		`mcpserver.AddTools(tools, connect.NewClient(connectinprocess.New(server)), time_counterv1.CounterServiceMCPTools()...)`,
+		`client := connect.NewClient(connectinprocess.New(server))`,
+		`mcpserver.AddTools(tools, client, time_counterv1.CounterServiceMCPTools()...)`,
+		`"github.com/acme/time-counter/internal/time_counter"`,
+		`time_counterv1connect.RegisterCounterServiceHandler(server, time_counter.NewCounterService())`,
 		`"reader": {"time_counter.counter.read"}`,
 		`"writer": {"time_counter.counter.read", "time_counter.counter.write"}`,
 	} {
@@ -278,8 +281,21 @@ plugins:
 	if got := read(t, dir, "AGENTS.md"); strings.Count(got, guidanceMarker) != 1 {
 		t.Error("AGENTS.md got the guidance twice")
 	}
-	if !strings.Contains(out, "1 more services") {
-		t.Errorf("output does not mention the second service:\n%s", out)
+	// main.go serves every service, each from its module's package.
+	main := mainGo(t, dir, out)
+	for _, want := range []string{
+		"cartv1connect.RegisterCartServiceHandler(server, cart.NewCartService())",
+		"orderv1connect.RegisterOrderServiceHandler(server, order.NewOrderService())",
+		"mcpserver.AddTools(tools, client, orderv1.OrderServiceMCPTools()...)",
+	} {
+		if !strings.Contains(main, want) {
+			t.Errorf("main.go lacks %s:\n%s", want, main)
+		}
+	}
+	for _, stub := range []string{"internal/cart/cart_service.go", "internal/order/order_service.go"} {
+		if _, err := os.Stat(filepath.Join(dir, stub)); err != nil {
+			t.Errorf("no handler stub %s: %v", stub, err)
+		}
 	}
 }
 
@@ -316,8 +332,14 @@ func TestInitWritesStarterService(t *testing.T) {
 			t.Errorf("starter lacks %s", want)
 		}
 	}
-	if !strings.Contains(read(t, dir, "server.go"), "time_counterv1connect.UnimplementedTimeCounterServiceHandler") {
-		t.Errorf("server.go:\n%s", read(t, dir, "server.go"))
+	const stub = "internal/time_counter/time_counter_service.go"
+	if got := read(t, dir, stub); !strings.Contains(got, "package time_counter\n") ||
+		!strings.Contains(got, "time_counterv1connect.UnimplementedTimeCounterServiceHandler") ||
+		!strings.Contains(got, "func NewTimeCounterService() *TimeCounterService") {
+		t.Errorf("%s:\n%s", stub, got)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "server.go")); err == nil {
+		t.Error("a root server.go was written; handlers live in their module")
 	}
 	if !strings.Contains(read(t, dir, "policy_table_test.go"), "time_counterv1connect.TimeCounterServiceName") {
 		t.Error("policy test does not name the starter service")
@@ -328,7 +350,7 @@ func TestInitWritesStarterService(t *testing.T) {
 			t.Errorf("main.go lacks %s", want)
 		}
 	}
-	for _, src := range []string{read(t, dir, "server.go"), read(t, dir, "policy_table_test.go"), main} {
+	for _, src := range []string{read(t, dir, stub), read(t, dir, "policy_table_test.go"), main} {
 		if _, err := format.Source([]byte(src)); err != nil {
 			t.Errorf("generated Go does not parse: %v\n%s", err, src)
 		}
@@ -381,9 +403,15 @@ func TestInitKeepsExistingServer(t *testing.T) {
 		"handlers.go":                "package main\n\nfunc newServer() any { return nil }\n",
 		"proto/notes/v1/notes.proto": "syntax = \"proto3\";\npackage notes.v1;\nservice NoteService {}\n",
 	})
-	initOffline(t, dir)
+	out := initOffline(t, dir)
 	if _, err := os.Stat(filepath.Join(dir, "server.go")); err == nil {
 		t.Error("server.go written beside an existing newServer")
+	}
+	if _, err := os.Stat(filepath.Join(dir, "internal")); err == nil {
+		t.Error("handler stubs written beside an existing newServer")
+	}
+	if !strings.Contains(out, "keeps each module's handlers in internal/<module>/") {
+		t.Errorf("output does not point at the module layout:\n%s", out)
 	}
 }
 
@@ -938,7 +966,10 @@ func TestInitKeepsAServiceItsOwnServer(t *testing.T) {
 			t.Errorf("%s written into a service that has its own", name)
 		}
 	}
-	for _, want := range []string{"policy_table_test.go: skipped; the service already builds its policy table", "server.go: skipped; main.go builds the service without newServer"} {
+	if _, err := os.Stat(filepath.Join(dir, "internal")); err == nil {
+		t.Error("handler stubs written into a service that has its own")
+	}
+	for _, want := range []string{"policy_table_test.go: skipped; the service already builds its policy table", "internal/<module>/: skipped; main.go builds the services without dedo's handler stubs"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("output lacks %q:\n%s", want, out)
 		}
