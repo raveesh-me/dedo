@@ -58,6 +58,7 @@ Why it is set up this way:
 
 - **The generators are Go tools** pinned in `go.mod`, so every machine and CI generate the same code without Buf's remote plugins.
 - **The lint plugin belongs to the protos, not to a Go module.** The options module's label in `buf.yaml` names its release; `dedo tools` installs it into `$GOBIN` and copies it into `.tools/` (ignored by git), so the editor and CI run the same version, in any repository with protos, whatever its language. It runs as a native binary because Buf starts it about a dozen times per lint. Commit `buf.lock`.
+- **Code follows the proto modules:** each module's handlers, domain, store, migrations and queries go in one Go package at `internal/<module>/`, with a Postgres schema of its own, even when the service has one module. Only `main` and an `app/` package import several modules. [domains.md](domains.md#code-and-data-follow-the-modules) has the layout and the rules that keep modules acyclic.
 - **connect-go v2:** one `connect.Server` holds the interceptors (flow IDs, auth, dedo's policy, validation); Connect and gRPC (`connecthttp.Mount`), REST (`vanguard.Mount`) and MCP (`connectinprocess`) all reach it, so every transport gets the same checks.
 
 [install.md](install.md) shows each part by hand, for repositories that prefer not to run `dedo init`. Add `.github/CODEOWNERS` yourself (`dedo templates CODEOWNERS`) so every change under `proto/` needs an API review.
@@ -169,6 +170,7 @@ dedo's own rules (each finding links to its section in [RULES.md](RULES.md), whi
 | `DEDO_TOOL_REQUIRED` | Give every unary RPC a tool title and description. |
 | `DEDO_TOOL_ANNOTATIONS` | Declare the MCP hints. They must match `idempotency_level`, and Delete and Remove are destructive. |
 | `DEDO_MESSAGE_DESCRIPTION_REQUIRED` | Give every message a `message.description`. |
+| `DEDO_PACKAGE_SHARED_RESERVED` | Name the module after what it does, not `shared`. Shared value objects go in `<context>.type`. |
 
 `examples/bad-todo` breaks every rule once. Its `expected-lint.txt` lists the findings, and its tests show what each mistake does at runtime.
 

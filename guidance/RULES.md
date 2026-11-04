@@ -91,7 +91,7 @@ A rule may override only rules of a lower layer. Among house rules, that means t
 The plugin consolidates the rules every time it starts: it reads `dedo.yaml`, gathers every rule and every override, checks `use`, `disable` and each override against this order, and runs what is left. Loading and checking the house rules takes well under a millisecond of a lint's 0.3 s, so `dedo.yaml` is never compiled into the plugin, and an edit takes effect on the next lint. **Run `dedo tools` (or `make tools`) every time `dedo.yaml`'s rules or an import changes.** It runs the same step and lists what runs and every override, so a mistake shows there, with the rule and file that made it, rather than as a failing lint in the editor; it also fetches a changed import's `ref`, which the lint never does:
 
 ```text
-lint rules: 363 rules, 3 of them house rules; 338 run, 8 overridden, 17 not used, skipped or disabled
+lint rules: 364 rules, 3 of them house rules; 339 run, 8 overridden, 17 not used, skipped or disabled
   use: AIP_NOLANG, ZALANDO, DEDO, HOUSE
   DEDO_HTTP_RESPONSE_BODY overrides AIP_0131_RESPONSE_MESSAGE_NAME
   ...
@@ -238,6 +238,7 @@ A house rule that contradicts a DEDO, AIP or ZALANDO rule without overriding it 
 | [`DEDO_TOOL_REQUIRED`](#dedo_tool_required) | RPCs declare their MCP tool and REST docs text |
 | [`DEDO_TOOL_ANNOTATIONS`](#dedo_tool_annotations) | RPCs declare the MCP ToolAnnotations hints, consistent with the proto |
 | [`DEDO_MESSAGE_DESCRIPTION_REQUIRED`](#dedo_message_description_required) | Messages declare a consumer-facing description |
+| [`DEDO_PACKAGE_SHARED_RESERVED`](#dedo_package_shared_reserved) | No package names its module `shared` |
 
 ---
 
@@ -514,6 +515,21 @@ message GetProductRequest {
 ```
 
 **Fix.** Add the option. Describe what the message represents for a caller.
+
+### DEDO_PACKAGE_SHARED_RESERVED
+
+**Checks** that no proto package names its module `shared`. The module is the segment before the version, or the last segment of an unversioned package.
+
+**Why.** Each module's code lives at `internal/<module>/`, and its tables in a Postgres schema of the same name. `internal/shared/` and the `shared` schema hold what the service's modules share: helpers, the outbox, bookkeeping. A module called `shared` would collide with both (see [domains.md](domains.md#modules-one-package-each)). It is also a technical name, not a domain noun.
+
+```protobuf
+package acme.shared.v1;   // Fails.
+package acme.shared;      // Fails.
+package acme.type;        // Passes: shared value objects, not a module.
+package acme.orders.v1;   // Passes.
+```
+
+**Fix.** Name the module with the domain noun for what it is responsible for. Put value objects that several modules use in `<context>.type`, with no services and no version.
 
 ## Multi-tenant rules
 
