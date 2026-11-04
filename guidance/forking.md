@@ -41,6 +41,8 @@ A service builds against upstream dedo or the fork, never both: each registers `
 
 ## Making the fork
 
+Fork v0.24.0 or a later release: it is the first with `scripts/fork.sh`, and with the pre-release versions that step 5 relies on.
+
 1. Copy the MCP Go SDK build, with its tags, to your organisation, private or public (it is the upstream SDK plus one fix, with nothing of yours in it):
 
    ```sh
@@ -66,20 +68,20 @@ A service builds against upstream dedo or the fork, never both: each registers `
 
    ```sh
    git fetch upstream '+refs/tags/*:refs/upstream-tags/*'
-   git switch -c fork-v0.22.0 refs/upstream-tags/v0.22.0
+   git switch -c fork-v0.24.0 refs/upstream-tags/v0.24.0
    GO_MODULE=github.com/acme/dedo SDK_MODULE=github.com/acme/go-sdk \
      BSR_OWNER=buf.build/acme BSR_VISIBILITY=private scripts/fork.sh
    make test
-   git commit -am "chore: fork dedo v0.22.0 as acme/dedo"
+   git commit -am "chore: fork dedo v0.24.0 as acme/dedo"
    ```
 
    The script stops if any upstream name is left. It never edits generated code: a `.pb.go` file carries `go_package` inside a length-prefixed descriptor, so editing it makes the package panic at init. It regenerates instead.
 
 4. Set up the repository: a `BUF_KEY` secret (a BSR token for your organisation that can create and push modules and plugins), branch and tag protection ([Supply-chain checklist](#supply-chain-checklist)), and, for a private fork, Go's access to it in CI ([Installing if your fork is private](#installing-if-your-fork-is-private)). Turn off Dependabot in the fork: upstream already takes its updates, and you get them in the next sync.
 
-5. Release as upstream does, with upstream's version number: push the module tags `cmd/dedo/v0.22.0`, `lint/v0.22.0`, `mcp/v0.22.0` and `openapi/v0.22.0` first, at most three per push, then `v0.22.0` on its own. The `v` tag runs the release job, which pushes the options module and the Wasm plugin to your BSR and attaches the binaries to a GitHub release. GitHub starts no workflow when more than three tags arrive in one push, and in a public fork the Go proxy caches a lookup of a version whose module tags aren't pushed yet as "not found" for a while.
+5. Release as upstream does, with upstream's version number: push the module tags `cmd/dedo/v0.24.0`, `lint/v0.24.0`, `mcp/v0.24.0` and `openapi/v0.24.0` first, at most three per push, then `v0.24.0` on its own. The `v` tag runs the release job, which pushes the options module and the Wasm plugin to your BSR and attaches the binaries to a GitHub release. GitHub starts no workflow when more than three tags arrive in one push, and in a public fork the Go proxy caches a lookup of a version whose module tags aren't pushed yet as "not found" for a while.
 
-Keep the fork's version numbers equal to upstream's, so a version means the same code in both. A fix you can't wait for upstream to release goes out as a pre-release of the next patch, such as `v0.22.1-acme.1` for a fix on top of `v0.22.0`. Semantic versioning orders it after `v0.22.0` and before upstream's `v0.22.1`, which supersedes it. (A pre-release of `v0.22.0` itself would sort before `v0.22.0`, so Go would treat the fix as older than the release it fixes.) Release it like any other version: a release pull request that sets every pin `scripts/check-release-versions.sh` checks to `v0.22.1-acme.1`, then the same five tags. `go install …@latest` and `dedo update` skip pre-releases while a release exists, so install it by name with `dedo update -version v0.22.1-acme.1`, then run `dedo upgrade` in each service as usual. Send the fix upstream too. When you next sync, check that upstream's release has the fix: `-X theirs` takes upstream's side wherever its lines conflict with the fix.
+Keep the fork's version numbers equal to upstream's, so a version means the same code in both. A fix you can't wait for upstream to release goes out as a pre-release of the next patch, such as `v0.24.1-acme.1` for a fix on top of `v0.24.0`. Semantic versioning orders it after `v0.24.0` and before upstream's `v0.24.1`, which supersedes it. (A pre-release of `v0.24.0` itself would sort before `v0.24.0`, so Go would treat the fix as older than the release it fixes.) Release it like any other version: a release pull request that sets every pin `scripts/check-release-versions.sh` checks to `v0.24.1-acme.1`, then the same five tags. `go install …@latest` and `dedo update` skip pre-releases while a release exists, so install it by name with `dedo update -version v0.24.1-acme.1`, then run `dedo upgrade` in each service as usual. Send the fix upstream too. When you next sync, check that upstream's release has the fix: `-X theirs` takes upstream's side wherever its lines conflict with the fix.
 
 ## Installing if your fork is public
 
@@ -88,7 +90,7 @@ Whether the fork is public or private is your decision: this section and the nex
 Nothing to configure. `proxy.golang.org` fetches and caches the fork's modules, `sum.golang.org` records each version's checksum in its public, append-only log, and anyone installs it as they install upstream, with the fork's path:
 
 ```sh
-go install github.com/acme/dedo/cmd/dedo@v0.22.0
+go install github.com/acme/dedo/cmd/dedo@v0.24.0
 ```
 
 The checksum database makes a public fork tamper-evident: once a version has been fetched, nobody, including you, can change what that version contains. A private fork has to trust its tag protection for the same guarantee.
@@ -102,7 +104,7 @@ go env -w GOPRIVATE=github.com/acme/*
 gh auth setup-git                      # or, with SSH keys:
 # git config --global url."git@github.com:acme/".insteadOf "https://github.com/acme/"
 
-go install github.com/acme/dedo/cmd/dedo@v0.22.0
+go install github.com/acme/dedo/cmd/dedo@v0.24.0
 dedo tools                             # installs the lint plugin from the fork too
 ```
 
@@ -120,7 +122,7 @@ steps:
       owner: acme
       repositories: dedo,go-sdk
   - run: git config --global url."https://x-access-token:${{ steps.dedo.outputs.token }}@github.com/acme/".insteadOf "https://github.com/acme/"
-  - run: go install github.com/acme/dedo/cmd/dedo@v0.22.0 && dedo tools && buf lint
+  - run: go install github.com/acme/dedo/cmd/dedo@v0.24.0 && dedo tools && buf lint
 ```
 
 The fork's own release job needs the same: its release check reads `acme/go-sdk`'s tags, and its examples build against it. In a Docker build, pass the token as a build secret (`RUN --mount=type=secret`), never as a build argument or a file in a layer.
@@ -133,10 +135,10 @@ The public checksum database never sees a private module, so a service's committ
 
 ## The options module in your own BSR
 
-The annotations, `dedo/v1/options.proto`, reach services as a BSR module that each `buf.yaml` pins to the release: `buf.build/acme/dedo:v0.22.0`. dedo reads that label to know the release, so `dedo tools` installs the lint plugin to match and `dedo upgrade` moves both together. Choose where the module lives:
+The annotations, `dedo/v1/options.proto`, reach services as a BSR module that each `buf.yaml` pins to the release: `buf.build/acme/dedo:v0.24.0`. dedo reads that label to know the release, so `dedo tools` installs the lint plugin to match and `dedo upgrade` moves both together. Choose where the module lives:
 
 - **A module in your organisation on buf.build** (what `scripts/fork.sh` sets up). The release job creates it on the first push, with the visibility you chose, and labels each release and `main`. A private module needs a BSR plan that allows them; every machine that runs `buf dep update`, `buf lint` or `buf generate` then needs a BSR token with read access (`buf registry login`, or `BUF_TOKEN` in CI).
-- **Your own BSR instance**, such as `buf.acme.com`. Set `BSR_OWNER=buf.acme.com/platform`, and services depend on `buf.acme.com/platform/dedo:v0.22.0`. `buf registry login buf.acme.com` gives each machine access.
+- **Your own BSR instance**, such as `buf.acme.com`. Set `BSR_OWNER=buf.acme.com/platform`, and services depend on `buf.acme.com/platform/dedo:v0.24.0`. `buf registry login buf.acme.com` gives each machine access.
 - **No BSR.** Copy `proto/dedo` from the fork's release into each repository and list it as a module of its `buf.yaml` workspace, as dedo's examples do (`examples/todo/third_party/dedo`). It works, but `buf.yaml` no longer names a release: `dedo tools` installs the plugin of the `dedo` command you run, and `dedo upgrade` doesn't refresh the copy. Copy it again on every upgrade, and have CI compare it with the fork's tag.
 
 A service on the fork's BSR module has these in its Buf files. `dedo init` and `dedo upgrade` from the fork write them:
@@ -144,7 +146,7 @@ A service on the fork's BSR module has these in its Buf files. `dedo init` and `
 ```yaml
 # buf.yaml
 deps:
-  - buf.build/acme/dedo:v0.22.0
+  - buf.build/acme/dedo:v0.24.0
 ```
 
 ```yaml
@@ -177,13 +179,13 @@ The fork's only change is the renaming, so a sync is a merge that prefers upstre
 
 ```sh
 git fetch upstream '+refs/tags/*:refs/upstream-tags/*'
-git switch -c sync-v0.23.0 origin/main
-git merge -X theirs --no-edit refs/upstream-tags/v0.23.0
+git switch -c sync-v0.25.0 origin/main
+git merge -X theirs --no-edit refs/upstream-tags/v0.25.0
 GO_MODULE=github.com/acme/dedo SDK_MODULE=github.com/acme/go-sdk \
   BSR_OWNER=buf.build/acme BSR_VISIBILITY=private scripts/fork.sh
 make test
-git commit -am "chore: sync upstream v0.23.0"
-git diff refs/upstream-tags/v0.23.0 -- . ':!*.pb.go'   # names only
+git commit -am "chore: sync upstream v0.25.0"
+git diff refs/upstream-tags/v0.25.0 -- . ':!*.pb.go'   # names only
 ```
 
 Where a line conflicts, upstream's is the one you want, renamed, and the script renames it. The last diff should show nothing but names and the BSR visibility. Open a pull request, have it reviewed, merge it, and release with upstream's number (step 5 of [Making the fork](#making-the-fork)).
@@ -193,7 +195,7 @@ If the release moves services to a new SDK build (`sdkForkRelease` in `cmd/dedo/
 Review the upstream changes before you merge them, and review them as code that runs with your access:
 
 ```sh
-git diff refs/upstream-tags/v0.22.0 refs/upstream-tags/v0.23.0 --stat
+git diff refs/upstream-tags/v0.24.0 refs/upstream-tags/v0.25.0 --stat
 ```
 
 | Path | Why it matters |
