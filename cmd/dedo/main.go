@@ -46,6 +46,9 @@ const usage = `usage:
                                     serve the REST reference (docs/index.html and openapi.json only) on A
                                     (default 127.0.0.1:8099) until Ctrl-C; -tunnel also shares it at a public
                                     Cloudflare quick-tunnel URL (needs cloudflared)
+  dedo docs [-dir DIR] -static FILE  write the REST reference as one HTML file that opens from disk with
+                                    no network: the OpenAPI document and the page's scripts inline, each
+                                    script checked against its integrity hash and cached for offline builds
   dedo templates [NAME]             list the bundled templates, or print one
   dedo version                      print the dedo release this command installs
 `
@@ -117,8 +120,15 @@ func run(args []string, out io.Writer) error {
 		dir := flags.String("dir", ".", "the repository whose docs/ to serve")
 		addr := flags.String("addr", defaultDocsAddr, "the local address to serve on")
 		tunnel := flags.Bool("tunnel", false, "also share the reference at a public Cloudflare quick-tunnel URL")
+		static := flags.String("static", "", "write the reference as one self-contained HTML `file` instead of serving it")
 		if err := flags.Parse(args[1:]); err != nil {
 			return err
+		}
+		if *static != "" {
+			if *tunnel || flagSet(flags, "addr") {
+				return errors.New("dedo docs -static writes a file and serves nothing: it takes no -addr or -tunnel")
+			}
+			return docsStatic(*dir, *static, out)
 		}
 		ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 		defer stop()
@@ -133,4 +143,11 @@ func run(args []string, out io.Writer) error {
 		return nil
 	}
 	return fmt.Errorf("unknown command %q\n%s", args[0], usage)
+}
+
+// flagSet reports whether name was given on the command line.
+func flagSet(flags *flag.FlagSet, name string) bool {
+	set := false
+	flags.Visit(func(f *flag.Flag) { set = set || f.Name == name })
+	return set
 }

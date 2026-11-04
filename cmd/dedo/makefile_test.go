@@ -117,3 +117,14 @@ func TestMakefileAPIKeepsExtendedTargets(t *testing.T) {
 		t.Errorf("Makefile.api:\n%s", s)
 	}
 }
+
+// docs-static writes the one-file reference into .tools/, which git ignores.
+func TestMakefileAPIDocsStatic(t *testing.T) {
+	got, names := makefileAPI(asset("templates/Makefile.api"), nil)
+	s := string(got)
+	if names["docs-static"] != "docs-static" ||
+		!strings.Contains(s, "\nDOCS_STATIC ?= .tools/docs.html\n") ||
+		!strings.Contains(s, "\ndocs-static:\n\tgo tool dedo docs -static $(DOCS_STATIC)\n") {
+		t.Errorf("names = %v, Makefile.api:\n%s", names, s)
+	}
+}
