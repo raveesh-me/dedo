@@ -31,6 +31,7 @@ const (
 	idToolRequired               = "DEDO_TOOL_REQUIRED"
 	idToolAnnotations            = "DEDO_TOOL_ANNOTATIONS"
 	idMessageDescriptionRequired = "DEDO_MESSAGE_DESCRIPTION_REQUIRED"
+	idPackageSharedReserved      = "DEDO_PACKAGE_SHARED_RESERVED"
 
 	idMultiTenantServiceTenancy  = "DEDO_MULTI_TENANT_SERVICE_TENANCY"
 	idMultiTenantResourcePattern = "DEDO_MULTI_TENANT_RESOURCE_PATTERN"

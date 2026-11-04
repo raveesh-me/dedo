@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+// Shared holds what the to-do modules have in common.
+package raveesh_me.shared.v1;
+
+import "dedo/v1/options.proto";
+
+// Priority ranks a to-do against the others.
+message Priority {
+  option (dedo.v1.message) = {description: "How urgent a to-do is."};
+
+  // The rank, highest first.
+  int32 rank = 1;
+}

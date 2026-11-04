@@ -1,0 +1,7 @@
+syntax = "proto3";
+
+package raveesh_me.library.v1;
+
+message Book {
+  string name = 1;
+}

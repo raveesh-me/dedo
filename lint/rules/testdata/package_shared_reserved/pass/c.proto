@@ -1,0 +1,8 @@
+syntax = "proto3";
+
+// "shared" is reserved only as the module segment, before the version.
+package raveesh_me.shared_shelves.v1beta1;
+
+message Shelf {
+  string name = 1;
+}

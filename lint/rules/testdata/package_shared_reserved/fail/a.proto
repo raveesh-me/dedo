@@ -1,0 +1,7 @@
+syntax = "proto3";
+
+package raveesh_me.shared.v1; // want
+
+message Book {
+  string name = 1;
+}

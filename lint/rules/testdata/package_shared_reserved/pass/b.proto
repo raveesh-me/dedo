@@ -1,0 +1,8 @@
+syntax = "proto3";
+
+// Shared value objects belong in <context>.type, which is not a module.
+package raveesh_me.type;
+
+message Isbn {
+  string value = 1;
+}

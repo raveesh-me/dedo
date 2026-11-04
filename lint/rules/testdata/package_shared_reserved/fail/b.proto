@@ -1,0 +1,7 @@
+syntax = "proto3";
+
+package raveesh_me.shared; // want
+
+message Money {
+  string currency_code = 1;
+}
