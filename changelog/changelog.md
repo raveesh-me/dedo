@@ -8,6 +8,14 @@ Version bumps, dependency updates and changes to benchmarks or examples alone ar
 
 ## [Unreleased]
 
+## [v0.32.2] - 2026-11-05
+
+The release of the breaking rules, **DEDO BREAKING RULES**: the same code as v0.32.1, released in full.
+
+### Fixed
+
+- v0.32.1 was tagged on a commit whose examples required `cel.dev/cel-go` v0.32.1, which does not exist, so its release job stopped before publishing the options module to the BSR (`buf.build/r-a/dedo:v0.32.1`) and the plugin binaries. Every Go module retracts v0.32.1; use v0.32.2. [#123](https://github.com/raveesh-me/dedo/pull/123)
+
 ## [v0.32.1] - 2026-11-05
 
 ### Breaking
@@ -431,7 +439,8 @@ The first release, as http-proto-lint (`github.com/raveesh-me/http-proto-lint`, 
 - MCP tools, served on the official MCP Go SDK under short snake_case names and through the same auth and policy as REST. [#1](https://github.com/raveesh-me/dedo/pull/1), [#2](https://github.com/raveesh-me/dedo/pull/2)
 - Templates for service repositories, `guideline.md`, and the `todo`, `bad-todo` and `library` examples. [#1](https://github.com/raveesh-me/dedo/pull/1), [#5](https://github.com/raveesh-me/dedo/pull/5)
 
-[Unreleased]: https://github.com/raveesh-me/dedo/compare/v0.32.1...HEAD
+[Unreleased]: https://github.com/raveesh-me/dedo/compare/v0.32.2...HEAD
+[v0.32.2]: https://github.com/raveesh-me/dedo/compare/v0.32.1...v0.32.2
 [v0.32.1]: https://github.com/raveesh-me/dedo/compare/v0.32.0...v0.32.1
 [v0.32.0]: https://github.com/raveesh-me/dedo/compare/v0.31.0...v0.32.0
 [v0.31.0]: https://github.com/raveesh-me/dedo/compare/v0.30.0...v0.31.0

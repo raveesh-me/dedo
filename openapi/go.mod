@@ -5,7 +5,7 @@ go 1.26.0
 require (
 	github.com/bufbuild/protocompile v0.14.1
 	github.com/pb33f/libopenapi v0.38.7
-	github.com/raveesh-me/dedo v0.32.1
+	github.com/raveesh-me/dedo v0.32.2
 	google.golang.org/genproto/googleapis/api v0.0.0-20261012220534-4341edf3f941
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20261012220534-4341edf3f941
 	google.golang.org/protobuf v1.36.12
@@ -19,3 +19,8 @@ require (
 	go.yaml.in/yaml/v4 v4.0.0-rc.6 // indirect
 	golang.org/x/sync v0.22.0 // indirect
 )
+
+// v0.32.1 was tagged on a commit whose examples did not build, so its
+// release job published neither the options module to the BSR nor the
+// plugin binaries. v0.32.2 is the same code, released in full.
+retract v0.32.1

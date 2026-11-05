@@ -6,7 +6,7 @@ require (
 	github.com/bufbuild/protocompile v0.14.1
 	github.com/google/jsonschema-go v0.4.3
 	github.com/modelcontextprotocol/go-sdk v1.8.0
-	github.com/raveesh-me/dedo v0.32.1
+	github.com/raveesh-me/dedo v0.32.2
 	google.golang.org/genproto/googleapis/api v0.0.0-20260414002931-afd174a4e478
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20261012220534-4341edf3f941
 	google.golang.org/protobuf v1.36.12
@@ -24,3 +24,8 @@ require (
 	golang.org/x/time v0.15.0 // indirect
 	golang.org/x/tools v0.44.0 // indirect
 )
+
+// v0.32.1 was tagged on a commit whose examples did not build, so its
+// release job published neither the options module to the BSR nor the
+// plugin binaries. v0.32.2 is the same code, released in full.
+retract v0.32.1

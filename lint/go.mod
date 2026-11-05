@@ -6,7 +6,7 @@ require (
 	buf.build/go/bufplugin v0.11.1
 	github.com/google/cel-go v0.29.0
 	github.com/googleapis/api-linter/v2 v2.4.1
-	github.com/raveesh-me/dedo v0.32.1
+	github.com/raveesh-me/dedo v0.32.2
 	google.golang.org/genproto/googleapis/api v0.0.0-20261026165753-2ffab32bce7e
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20261019180522-ce908d29299b
 	google.golang.org/protobuf v1.36.12
@@ -39,3 +39,8 @@ require (
 	google.golang.org/grpc v1.84.0 // indirect
 	pluginrpc.com/pluginrpc v0.5.1-0.20260825152034-473fc805d0d1 // indirect
 )
+
+// v0.32.1 was tagged on a commit whose examples did not build, so its
+// release job published neither the options module to the BSR nor the
+// plugin binaries. v0.32.2 is the same code, released in full.
+retract v0.32.1
