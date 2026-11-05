@@ -936,7 +936,7 @@ func (in *initer) printNext(src []byte, wrote, generated bool) {
 	}
 	if in.p.service == nil {
 		in.say("1. write your service in %s/ (see guidance/tutorial.md)", in.p.protoRoot)
-		in.say("2. run dedo init again: it writes server.go and main.go for it")
+		in.say("2. run dedo init again: it writes main.go and a handler stub for each service in internal/<module>/")
 		return
 	}
 	var steps []string
