@@ -11,7 +11,7 @@ It never removes your own deps, plugins or generators, and running it again chan
 
 New to dedo? [tutorial.md](tutorial.md) builds a whole service from an empty directory. Already on Buf? Read [Adding dedo to an existing Buf repository](#adding-dedo-to-an-existing-buf-repository) first.
 
-You need Go 1.25 or later and the [Buf CLI](https://buf.build/docs/installation).
+You need Go 1.26 or later and the [Buf CLI](https://buf.build/docs/installation).
 
 ## 1. Annotations: the options module
 

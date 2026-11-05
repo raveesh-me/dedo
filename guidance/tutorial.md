@@ -6,7 +6,7 @@ Every step below was run as written. [install.md](install.md) lists the same set
 
 ## 0. Install once per machine
 
-- Go 1.25 or later
+- Go 1.26 or later
 - The [Buf CLI](https://buf.build/docs/installation)
 - An editor with Buf's language server: VS Code with the Buf extension (`bufbuild.vscode-buf`), or Zed. Remove other Protobuf extensions.
 - The `dedo` command:
