@@ -8,6 +8,11 @@ Version bumps, dependency updates and changes to benchmarks or examples alone ar
 
 ## [Unreleased]
 
+### Added
+
+- `protoc-gen-dedo-openapi` warns, without failing, when a service's title repeats its package's heading ("Calculation › Calculation") and the service is not named after the one root it manages. The warning names that root, such as `TaxQuoteService` titled "Tax quotes". A service named after its root, like `OrderService` titled `Orders` in package `orders`, draws none. [#117](https://github.com/raveesh-me/dedo/pull/117), closes [#100](https://github.com/raveesh-me/dedo/issues/100)
+- Package `github.com/raveesh-me/dedo/aggregate` finds the resources a service takes or returns and the roots among them. House rules and the REST doc generator share it. [#117](https://github.com/raveesh-me/dedo/pull/117)
+
 ## [v0.30.0] - 2026-11-05
 
 ### Added
