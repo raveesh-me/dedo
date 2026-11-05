@@ -499,7 +499,7 @@ rpc DeleteProduct(DeleteProductRequest) returns (DeleteProductResponse) {
 | `read_only_hint` | `true` for reads, which also set `idempotency_level = NO_SIDE_EFFECTS`; otherwise `false` |
 | `destructive_hint` | `true` if the tool may overwrite or delete anything; `false` only if it purely adds, as a Create does |
 | `idempotent_hint` | `true` if repeating the call with the same arguments changes nothing more, which also sets `idempotency_level = IDEMPOTENT` (Update and Delete usually are) |
-| `open_world_hint` | `false` if the tool only touches this service's own data; `true` if it reaches outside, such as sending email, charging a card, or calling a third party |
+| `open_world_hint` | `false` if the tool only touches this service's own data; `true` if it reaches outside, such as sending email, charging a card, or calling a third party. A read-only call to a third party may stay `false` when it returns reference data the service could hold itself ([domains.md](domains.md#domain-services-operations-with-no-aggregate)) |
 
 ### DEDO_MESSAGE_DESCRIPTION_REQUIRED
 
