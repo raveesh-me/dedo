@@ -100,6 +100,19 @@ func generatePlugin(t *testing.T, params string, protos ...string) (*protogen.Pl
 	return plugin, Generate(plugin, cfg)
 }
 
+// generateWith runs the generator with cfg and returns the document.
+func generateWith(t *testing.T, cfg Config, protos ...string) string {
+	t.Helper()
+	plugin, err := protogen.Options{}.New(request(t, "", protos...))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := Generate(plugin, cfg); err != nil {
+		t.Fatal(err)
+	}
+	return plugin.Response().File[0].GetContent()
+}
+
 func TestGenerateLibraryGolden(t *testing.T) {
 	got := generate(t, "title=Library API,server=https://api.example.com,filename=library.openapi.json")
 	golden := filepath.Join("testdata", "library.openapi.json")

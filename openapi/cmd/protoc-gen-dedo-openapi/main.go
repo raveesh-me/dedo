@@ -4,6 +4,9 @@
 package main
 
 import (
+	"fmt"
+	"os"
+
 	"google.golang.org/protobuf/compiler/protogen"
 	"google.golang.org/protobuf/types/pluginpb"
 
@@ -11,7 +14,10 @@ import (
 )
 
 func main() {
-	var cfg restdoc.Config
+	// Warnings go to stderr, which buf shows; they do not fail generation.
+	cfg := restdoc.Config{Warn: func(msg string) {
+		fmt.Fprintln(os.Stderr, "protoc-gen-dedo-openapi: warning: "+msg)
+	}}
 	protogen.Options{ParamFunc: cfg.Set}.Run(func(plugin *protogen.Plugin) error {
 		plugin.SupportedFeatures = uint64(pluginpb.CodeGeneratorResponse_FEATURE_PROTO3_OPTIONAL)
 		return restdoc.Generate(plugin, cfg)

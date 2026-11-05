@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+// Calculation works out what a basket owes in tax.
+package acme.calculation.v1;
+
+import "google/api/annotations.proto";
+import "google/api/resource.proto";
+
+// CalculationService keeps tax quotes. It is named after its module, not
+// the root it manages, so the reference would read "Calculation ›
+// Calculation".
+service CalculationService {
+  // GetTaxQuote returns one tax quote.
+  rpc GetTaxQuote(GetTaxQuoteRequest) returns (GetTaxQuoteResponse) {
+    option (google.api.http) = {get: "/shop/v1/{name=taxQuotes/*}"};
+  }
+}
+
+// A tax quote.
+message TaxQuote {
+  option (google.api.resource) = {
+    type: "acme.example.com/TaxQuote"
+    pattern: "taxQuotes/{tax_quote}"
+    plural: "taxQuotes"
+    singular: "taxQuote"
+  };
+
+  // The quote, taxQuotes/{tax_quote}.
+  string name = 1;
+}
+
+// The request of GetTaxQuote.
+message GetTaxQuoteRequest {
+  // The quote, taxQuotes/{tax_quote}.
+  string name = 1;
+}
+
+// The response of GetTaxQuote.
+message GetTaxQuoteResponse {
+  // The quote.
+  TaxQuote tax_quote = 1;
+}

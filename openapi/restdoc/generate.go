@@ -23,6 +23,10 @@ type Config struct {
 	Version  string   // info.version; defaults to the package version
 	Servers  []string // base URLs
 	Filename string   // output file; defaults to openapi.json
+
+	// Warn, when set, receives each warning: a problem worth fixing that
+	// does not stop generation. It is not a plugin parameter.
+	Warn func(msg string)
 }
 
 // Set applies one plugin parameter, as protogen.Options.ParamFunc.
@@ -64,6 +68,7 @@ func Generate(plugin *protogen.Plugin, cfg Config) error {
 		doc.Servers = append(doc.Servers, Server{URL: s})
 	}
 	var names []string
+	var services []*protogen.Service
 	mods := modules{}
 	for _, f := range plugin.Files {
 		if !f.Generate {
@@ -71,6 +76,7 @@ func Generate(plugin *protogen.Plugin, cfg Config) error {
 		}
 		for _, svc := range f.Services {
 			names = append(names, string(svc.Desc.Name()))
+			services = append(services, svc)
 			mods = mods.with(f, tag(svc))
 			if doc.Info.Version == "" {
 				doc.Info.Version = string(f.Desc.Package().Name())
@@ -85,6 +91,7 @@ func Generate(plugin *protogen.Plugin, cfg Config) error {
 		return err
 	}
 	doc.Tags = tags
+	warnTitles(cfg, services, mods)
 	doc.Info.Title = firstNonEmpty(cfg.Title, strings.Join(names, ", "), "API")
 	doc.Info.Version = firstNonEmpty(cfg.Version, doc.Info.Version, "v1")
 	g.schemas.built[statusSchema] = statusSchemaDef()
