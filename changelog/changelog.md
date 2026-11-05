@@ -8,6 +8,8 @@ Version bumps, dependency updates and changes to benchmarks or examples alone ar
 
 ## [Unreleased]
 
+## [v0.29.0] - 2026-11-05
+
 ### Added
 
 - This changelog, covering every release since v0.1.0. [#112](https://github.com/raveesh-me/dedo/pull/112)
@@ -392,7 +394,8 @@ The first release, as http-proto-lint (`github.com/raveesh-me/http-proto-lint`, 
 - MCP tools, served on the official MCP Go SDK under short snake_case names and through the same auth and policy as REST. [#1](https://github.com/raveesh-me/dedo/pull/1), [#2](https://github.com/raveesh-me/dedo/pull/2)
 - Templates for service repositories, `guideline.md`, and the `todo`, `bad-todo` and `library` examples. [#1](https://github.com/raveesh-me/dedo/pull/1), [#5](https://github.com/raveesh-me/dedo/pull/5)
 
-[Unreleased]: https://github.com/raveesh-me/dedo/compare/v0.28.0...HEAD
+[Unreleased]: https://github.com/raveesh-me/dedo/compare/v0.29.0...HEAD
+[v0.29.0]: https://github.com/raveesh-me/dedo/compare/v0.28.0...v0.29.0
 [v0.28.0]: https://github.com/raveesh-me/dedo/compare/v0.27.0...v0.28.0
 [v0.27.0]: https://github.com/raveesh-me/dedo/compare/v0.26.0...v0.27.0
 [v0.26.0]: https://github.com/raveesh-me/dedo/compare/v0.25.0...v0.26.0
