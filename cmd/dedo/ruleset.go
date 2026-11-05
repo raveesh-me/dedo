@@ -209,6 +209,7 @@ func (in *initer) newDedoYAML() (*yaml.Node, bool, error) {
 func intoLint(doc, old *yaml.Node) {
 	imports := lookup(old, "imports")
 	if imports != nil {
+		keepSectionComments(old, "imports")
 		remove(old, "imports")
 	}
 	set(doc, "lint", old)
@@ -225,6 +226,34 @@ func intoLint(doc, old *yaml.Node) {
 			return
 		}
 	}
+}
+
+// keepSectionComments moves the comments around key, which YAML keeps on
+// the key, onto the last other entry of the mapping, so they stay in the
+// section when key moves out of it: in the dedo.yaml that dedo init wrote,
+// those are the commented-out disable and rules examples.
+func keepSectionComments(m *yaml.Node, key string) {
+	var comments []string
+	var last *yaml.Node
+	for i := 0; i+1 < len(m.Content); i += 2 {
+		k, v := m.Content[i], m.Content[i+1]
+		if k.Value != key {
+			last = k
+			continue
+		}
+		for _, c := range []string{k.HeadComment, k.LineComment, k.FootComment, v.FootComment} {
+			if c != "" {
+				comments = append(comments, c)
+			}
+		}
+	}
+	if len(comments) == 0 || last == nil {
+		return
+	}
+	if last.FootComment != "" {
+		comments = append([]string{last.FootComment}, comments...)
+	}
+	last.FootComment = strings.Join(comments, "\n")
 }
 
 // renameKey renames a mapping's key in place, keeping its comments.

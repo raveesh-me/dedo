@@ -8,6 +8,10 @@ Version bumps, dependency updates and changes to benchmarks or examples alone ar
 
 ## [Unreleased]
 
+### Fixed
+
+- `dedo upgrade` keeps the commented-out `disable` and `rules` examples that `dedo init` wrote, when it moves a `dedo.yaml` from before v0.32.1 to the `lint` section. YAML kept them on the `imports` key, so they left with it. [#125](https://github.com/raveesh-me/dedo/pull/125)
+
 ## [v0.32.2] - 2026-11-05
 
 The release of the breaking rules, **DEDO BREAKING RULES**: the same code as v0.32.1, released in full.
