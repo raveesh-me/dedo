@@ -7,6 +7,7 @@ package house
 import (
 	"context"
 	"fmt"
+	"maps"
 	"slices"
 	"strings"
 
@@ -33,7 +34,7 @@ var CategorySpec = &check.CategorySpec{ID: Category, Purpose: "Checks the organi
 // variables are the names a check can use, per kind of element.
 var variables = map[string][]string{
 	"file":     {"name", "proto_package", "imports"},
-	"service":  {"name", "full_name", "file", "proto_package", "methods"},
+	"service":  {"name", "full_name", "file", "proto_package", "methods", "resources", "roots", "title"},
 	"method":   {"name", "full_name", "file", "proto_package", "service", "input", "output", "client_streaming", "server_streaming", "idempotency", "http_verb", "http_path", "http_bindings", "scopes", "errors", "deprecated"},
 	"message":  {"name", "full_name", "file", "proto_package", "fields"},
 	"field":    {"name", "full_name", "file", "proto_package", "message", "type", "repeated", "optional", "behaviors", "json_name"},
@@ -67,7 +68,7 @@ func Specs(rules []config.Rule) ([]*check.RuleSpec, error) {
 // fail when the rules load rather than at lint time.
 var (
 	boolVars = []string{"client_streaming", "server_streaming", "deprecated", "repeated", "optional"}
-	listVars = []string{"imports", "methods", "scopes", "errors", "fields", "behaviors", "values", "patterns"}
+	listVars = []string{"imports", "methods", "resources", "roots", "scopes", "errors", "fields", "behaviors", "values", "patterns"}
 	// bindingVars are lists of maps from string to string.
 	bindingVars = []string{"http_bindings"}
 )
@@ -206,6 +207,7 @@ func serviceVars(s protoreflect.ServiceDescriptor) map[string]any {
 		methods = append(methods, string(s.Methods().Get(i).Name()))
 	}
 	v["methods"] = strs(methods)
+	maps.Copy(v, aggregateVars(s))
 	return v
 }
 

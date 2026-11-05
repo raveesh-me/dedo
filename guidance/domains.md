@@ -88,7 +88,7 @@ main.go
 
 An aggregate is a cluster of objects that changes as one, with one root that guards its rules. In dedo an aggregate is one service and the resource it manages.
 
-- **One service per aggregate root**, named after it: `OrderService` manages `Order`. Give the service the plural noun readers look for as its `title` (`Orders`); the reference uses it as the service's heading.
+- **One service per aggregate root**, named after it: `OrderService` manages `Order`. Give the service the plural noun readers look for as its `title` (`Orders`); the reference uses it as the service's heading. dedo doesn't lint this, but a house rule on a service's `roots` can ([RULES.md](RULES.md#house-rules)).
 - **Every RPC of the service acts on that aggregate.** An RPC is one transaction, so the aggregate is the consistency boundary: what must always hold true is enforced inside one RPC. A rule that spans two aggregates holds eventually, through events or a later call, not inside one transaction.
 - **Keep aggregates small.** Put only what must be consistent at once inside the boundary. Large aggregates make for large requests, conflicting writes and slow pages.
 - **Refer to another aggregate by its resource name, never by embedding its message.** Declare the field with `google.api.resource_reference`. Embedding couples two lifecycles and leaks the other aggregate's rules into this one. A multi-tenant service also checks the tenant of every referenced name.

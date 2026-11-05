@@ -207,7 +207,7 @@ House rules run while `dedo.yaml`'s `use` lists `HOUSE`, as it does by default; 
 | `on` | Variables |
 | --- | --- |
 | `file` | `name` (the path), `proto_package`, `imports` |
-| `service` | `name`, `full_name`, `file`, `proto_package`, `methods` |
+| `service` | `name`, `full_name`, `file`, `proto_package`, `methods`, `resources` (the `google.api.resource` types its methods take or return, at any depth, each once), `roots` (those of `resources` with no pattern nested under another's: `orders/{order}/lines/{line}` belongs to `orders/{order}`), `title` (of `dedo.v1.service`, empty when unset) |
 | `method` | `name`, `full_name`, `file`, `proto_package`, `service`, `input`, `output`, `client_streaming`, `server_streaming`, `idempotency` (`NO_SIDE_EFFECTS`, `IDEMPOTENT`, `UNKNOWN`), `http_verb` and `http_path` (of the `google.api.http` rule), `http_bindings` (the rule and each of its `additional_bindings`, as `{verb, path}` maps), `scopes`, `errors` (reasons), `deprecated` |
 | `message` | `name`, `full_name`, `file`, `proto_package`, `fields` |
 | `field` | `name`, `full_name`, `file`, `proto_package`, `message`, `type` (a scalar kind such as `string`, or a message or enum full name), `repeated`, `optional`, `behaviors` (such as `REQUIRED`), `json_name` |
@@ -215,6 +215,19 @@ House rules run while `dedo.yaml`'s `use` lists `HOUSE`, as it does by default; 
 | `resource` | `name`, `full_name`, `file`, `proto_package`, `type`, `patterns`, `singular`, `plural` |
 
 Lists are lists of strings (`'shop.cart.read' in scopes`, `fields.size() < 30`), except `http_bindings`, a list of maps (`http_bindings.all(b, !b.path.contains('_'))`, empty for a method without HTTP); booleans are booleans. CEL's string extensions are on (`split`, `lowerAscii`, `replace`, `trim`), and so is `cel.bind`, which names a value once instead of repeating the expression for it: `cel.bind(verb, http_path.substring(http_path.lastIndexOf(':') + 1), verb == '' || verb.matches('^[a-z][a-zA-Z0-9]*$'))`. A check that does not compile, or is not a bool, stops the lint and names the rule and its file.
+
+A service's `resources` and `roots` let an organisation lint the aggregate shape that [domains.md](domains.md#aggregates-one-service-each) asks for. A domain service has neither, so both rules pass it:
+
+```yaml
+- id: HOUSE_SERVICE_ONE_ROOT
+  on: service
+  check: roots.size() <= 1
+  message: A service manages one aggregate root, with its child resources.
+- id: HOUSE_SERVICE_NAMED_AFTER_ROOT
+  on: service
+  check: roots.all(r, name == r.split('/')[1] + 'Service')
+  message: A service is named after the root it manages, such as OrderService for shop.example.com/Order.
+```
 
 House rules run in the native plugin, which reads `dedo.yaml`. The WebAssembly plugin cannot read files, so a repository that cannot run the native plugin (`dedo install` and `dedo tools` give it one even without `go.mod`) needs a platform team to build one with the house rules built in, `dedo tools -wasm house-lint.wasm` in a repository that has them, and pushes it to the BSR (`buf plugin push buf.build/<org>/house-lint --binary=house-lint.wasm`); those repositories list that plugin instead of `buf.build/r-a/dedo-lint`. It checks the rules exactly as the native plugin does, overrides and final rules included, and reads changes only when it is rebuilt and pushed. [`examples/house-rules`](../examples/house-rules) holds shared rules that both todo examples import, each adding one of its own: `examples/todo` follows them and `examples/bad-todo` breaks them. `examples/todo` also overrides the shared `HOUSE_RESOURCE_TYPE_DOMAIN` with a narrower rule of its own, `HOUSE_TODO_RESOURCE_TYPE`.
 

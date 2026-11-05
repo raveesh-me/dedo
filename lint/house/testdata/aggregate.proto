@@ -1,0 +1,147 @@
+syntax = "proto3";
+
+package shop.orders.v1;
+
+import "dedo/v1/options.proto";
+import "google/api/resource.proto";
+
+// OrderService manages orders and their lines: one root with a child.
+service OrderService {
+  option (dedo.v1.service) = {title: "Orders"};
+
+  // GetOrder returns an order in a response of its own.
+  rpc GetOrder(GetOrderRequest) returns (GetOrderResponse);
+  // ListLines returns an order's lines, a child resource.
+  rpc ListLines(ListLinesRequest) returns (ListLinesResponse);
+  // SearchOrders returns orders nested in results, and the order again.
+  rpc SearchOrders(SearchOrdersRequest) returns (SearchOrdersResponse);
+}
+
+// CheckoutService returns two roots.
+service CheckoutService {
+  // GetBasket returns a basket itself.
+  rpc GetBasket(GetBasketRequest) returns (Basket);
+  // PlaceOrder returns an order.
+  rpc PlaceOrder(PlaceOrderRequest) returns (PlaceOrderResponse);
+}
+
+// AddressService is a domain service: no resource, and a recursive value object.
+service AddressService {
+  // ResolveAddress returns a value object.
+  rpc ResolveAddress(ResolveAddressRequest) returns (ResolveAddressResponse);
+}
+
+// An order.
+message Order {
+  option (google.api.resource) = {
+    type: "shop.example.com/Order"
+    pattern: "orders/{order}"
+  };
+
+  // The resource name.
+  string name = 1;
+  // The lines, embedded.
+  repeated Line lines = 2;
+}
+
+// A line of an order.
+message Line {
+  option (google.api.resource) = {
+    type: "shop.example.com/Line"
+    pattern: "orders/{order}/lines/{line}"
+  };
+
+  // The resource name.
+  string name = 1;
+}
+
+// A basket.
+message Basket {
+  option (google.api.resource) = {
+    type: "shop.example.com/Basket"
+    pattern: "baskets/{basket}"
+  };
+
+  // The resource name.
+  string name = 1;
+}
+
+// GetOrderRequest names an order.
+message GetOrderRequest {
+  // The order's name.
+  string name = 1;
+}
+
+// GetOrderResponse holds the order.
+message GetOrderResponse {
+  // The order.
+  Order order = 1;
+}
+
+// ListLinesRequest names an order.
+message ListLinesRequest {
+  // The order's name.
+  string parent = 1;
+}
+
+// ListLinesResponse holds lines.
+message ListLinesResponse {
+  // The lines.
+  repeated Line lines = 1;
+}
+
+// SearchOrdersRequest is a query.
+message SearchOrdersRequest {
+  // The query.
+  string query = 1;
+}
+
+// SearchOrdersResponse holds results.
+message SearchOrdersResponse {
+  // A result.
+  message Result {
+    // The order found.
+    Order order = 1;
+  }
+
+  // The results.
+  repeated Result results = 1;
+  // The results by order name.
+  map<string, Result> by_name = 2;
+}
+
+// GetBasketRequest names a basket.
+message GetBasketRequest {
+  // The basket's name.
+  string name = 1;
+}
+
+// PlaceOrderRequest names a basket.
+message PlaceOrderRequest {
+  // The basket's name.
+  string basket = 1;
+}
+
+// PlaceOrderResponse holds the order placed.
+message PlaceOrderResponse {
+  // The order.
+  Order order = 1;
+}
+
+// ResolveAddressRequest is free text.
+message ResolveAddressRequest {
+  // The text.
+  string text = 1;
+}
+
+// ResolveAddressResponse is a structured address.
+message ResolveAddressResponse {
+  // The address.
+  Part address = 1;
+}
+
+// A part of an address, made of parts.
+message Part {
+  // The parts within it.
+  repeated Part parts = 1;
+}
