@@ -8,6 +8,8 @@ Version bumps, dependency updates and changes to benchmarks or examples alone ar
 
 ## [Unreleased]
 
+## [v0.32.0] - 2026-11-05
+
 ### Added
 
 - Domain events, outward only. An RPC declares the event types it may publish in `dedo.v1.method`'s new `emits` field, as `<context>.<module>.<resource>.<past-tense verb>` (`acme.orders.order.cancelled`), and `DEDO_EVENT_TYPES` checks them. The new `events` package publishes them through a bus driver the service injects (`events/driver`, in the pattern of `database/sql/driver`; `events/eventstest` for tests): an event is a type, the resource's name, an ID and a time, with no payload, and consumers fetch the resource through the API. `Publish` refuses a type the RPC does not declare, and retries with exponential backoff within the request's deadline until the driver acknowledges; then it returns `UNAVAILABLE` with reason `EVENT_NOT_PUBLISHED`, so the caller retries the command. The policy interceptor puts the RPC's contract in the handler's context (`policy.MethodFrom`). The REST reference lists each operation's events, in its description and as `x-emits`. `guidance/domains.md` says how: a core service only answers calls, never subscribes or watches, and announces what happened to a bus when it takes part in orchestration. [#119](https://github.com/raveesh-me/dedo/pull/119), closes [#98](https://github.com/raveesh-me/dedo/issues/98)
@@ -415,7 +417,8 @@ The first release, as http-proto-lint (`github.com/raveesh-me/http-proto-lint`, 
 - MCP tools, served on the official MCP Go SDK under short snake_case names and through the same auth and policy as REST. [#1](https://github.com/raveesh-me/dedo/pull/1), [#2](https://github.com/raveesh-me/dedo/pull/2)
 - Templates for service repositories, `guideline.md`, and the `todo`, `bad-todo` and `library` examples. [#1](https://github.com/raveesh-me/dedo/pull/1), [#5](https://github.com/raveesh-me/dedo/pull/5)
 
-[Unreleased]: https://github.com/raveesh-me/dedo/compare/v0.31.0...HEAD
+[Unreleased]: https://github.com/raveesh-me/dedo/compare/v0.32.0...HEAD
+[v0.32.0]: https://github.com/raveesh-me/dedo/compare/v0.31.0...v0.32.0
 [v0.31.0]: https://github.com/raveesh-me/dedo/compare/v0.30.0...v0.31.0
 [v0.30.0]: https://github.com/raveesh-me/dedo/compare/v0.29.0...v0.30.0
 [v0.29.0]: https://github.com/raveesh-me/dedo/compare/v0.28.0...v0.29.0
