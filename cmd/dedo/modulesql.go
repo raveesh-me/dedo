@@ -25,7 +25,7 @@ var (
 	lineComment  = regexp.MustCompile(`--[^\n]*`)
 	blockComment = regexp.MustCompile(`(?s)/\*.*?\*/`)
 	// qualified matches schema.name, the schema quoted or not, not preceded
-	// by a word or a dot, so acme.orders.created (a topic name) is not
+	// by a word or a dot, so acme.orders.order.created (an event type) is not
 	// orders.created.
 	qualified = regexp.MustCompile(`(?:^|[^\w."])"?([a-z_][a-z0-9_]*)"?\.[a-z_"]`)
 )
@@ -48,7 +48,7 @@ func (l Layout) SQL(files []SQLFile) []string {
 				out = append(out, fmt.Sprintf("%s: shared SQL names module %s's schema", f.Name, schema))
 				continue
 			}
-			out = append(out, fmt.Sprintf("%s: module %s's SQL names module %s's schema: read it through %s.Port, or keep a copy from its events",
+			out = append(out, fmt.Sprintf("%s: module %s's SQL names module %s's schema: read it through %s.Port",
 				f.Name, f.Module, schema, schema))
 		}
 	}
@@ -56,7 +56,7 @@ func (l Layout) SQL(files []SQLFile) []string {
 }
 
 // sqlKeyword tells a Go string literal that holds SQL from one that does
-// not, such as an error message or a subscriber name.
+// not, such as an error message or an event type.
 var sqlKeyword = regexp.MustCompile(`(?i)\b(select|insert\s+into|update|delete\s+from|from|join)\s`)
 
 // LooksLikeSQL reports whether a Go string literal is a query that may name

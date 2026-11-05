@@ -142,6 +142,13 @@ message MethodRules {
   // listing the tenants themselves. The runtime does no tenant check, so its
   // scopes alone guard it.
   bool cross_tenant = 6;
+  // The event types the RPC may publish when it succeeds, each
+  // <context>.<module>.<resource>.<past-tense verb> of its own package,
+  // such as "acme.orders.order.cancelled". An event says only that
+  // something happened to a resource; consumers fetch the resource through
+  // the API. Most RPCs publish none. The runtime refuses to publish a type
+  // the RPC does not declare.
+  repeated string emits = 7;
 }
 
 // MessageRules documents a message for API consumers and models.

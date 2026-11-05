@@ -24,12 +24,9 @@ import (
 // packages, <context>.<m>.v<n>; guidance/domains.md lays out where each
 // one's code lives.
 //
-// Events are not checked here: a topic belongs to its publisher, so a
-// subscriber imports the publisher's package to name it, and Build counts
-// that import as a dependency like any other. Which calls declare, publish
-// or subscribe to a topic depends on the repository's own outbox, which
-// dedo does not ship, so a repository that wants those calls checked
-// checks them itself.
+// Events add no edges: a service publishes them outward only, to a bus,
+// and never subscribes, so an event type is a string in the contract, not
+// a dependency between modules (guidance/domains.md).
 func modules(dir string, out io.Writer) error {
 	dir, err := realPath(dir)
 	if err != nil {

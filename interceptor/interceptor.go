@@ -1,5 +1,6 @@
 // Package interceptor applies the declared operational contract of each RPC:
-// it checks scopes, sets cache and deprecation headers, and logs undeclared
+// it checks scopes, sets cache and deprecation headers, puts the RPC's
+// contract in the handler's context (policy.MethodFrom), and logs undeclared
 // error reasons.
 package interceptor
 
@@ -67,6 +68,7 @@ func (i *guard) wrap(next connect.ServerFunc) connect.ServerFunc {
 		if err != nil {
 			return err
 		}
+		ctx = policy.WithMethod(ctx, m)
 		if info, ok := connect.CallInfoForServerContext(ctx); ok {
 			// Deprecation headers go on every response, errors included;
 			// Cache-Control only on a response message, so an error is

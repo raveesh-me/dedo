@@ -613,7 +613,14 @@ type MethodRules struct {
 	// In a multi-tenant service, the RPC is not scoped to one tenant, such as
 	// listing the tenants themselves. The runtime does no tenant check, so its
 	// scopes alone guard it.
-	CrossTenant   bool `protobuf:"varint,6,opt,name=cross_tenant,json=crossTenant,proto3" json:"cross_tenant,omitempty"`
+	CrossTenant bool `protobuf:"varint,6,opt,name=cross_tenant,json=crossTenant,proto3" json:"cross_tenant,omitempty"`
+	// The event types the RPC may publish when it succeeds, each
+	// <context>.<module>.<resource>.<past-tense verb> of its own package,
+	// such as "acme.orders.order.cancelled". An event says only that
+	// something happened to a resource; consumers fetch the resource through
+	// the API. Most RPCs publish none. The runtime refuses to publish a type
+	// the RPC does not declare.
+	Emits         []string `protobuf:"bytes,7,rep,name=emits,proto3" json:"emits,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -688,6 +695,13 @@ func (x *MethodRules) GetCrossTenant() bool {
 		return x.CrossTenant
 	}
 	return false
+}
+
+func (x *MethodRules) GetEmits() []string {
+	if x != nil {
+		return x.Emits
+	}
+	return nil
 }
 
 // MessageRules documents a message for API consumers and models.
@@ -895,14 +909,15 @@ const file_dedo_v1_options_proto_rawDesc = "" +
 	"\x0f_read_only_hintB\x13\n" +
 	"\x11_destructive_hintB\x12\n" +
 	"\x10_idempotent_hintB\x12\n" +
-	"\x10_open_world_hint\"\xfd\x01\n" +
+	"\x10_open_world_hint\"\x93\x02\n" +
 	"\vMethodRules\x12\x16\n" +
 	"\x06scopes\x18\x01 \x03(\tR\x06scopes\x12*\n" +
 	"\x05cache\x18\x02 \x01(\v2\x14.dedo.v1.CachePolicyR\x05cache\x126\n" +
 	"\vdeprecation\x18\x03 \x01(\v2\x14.dedo.v1.DeprecationR\vdeprecation\x12,\n" +
 	"\x06errors\x18\x04 \x03(\v2\x14.dedo.v1.ErrorReasonR\x06errors\x12!\n" +
 	"\x04tool\x18\x05 \x01(\v2\r.dedo.v1.ToolR\x04tool\x12!\n" +
-	"\fcross_tenant\x18\x06 \x01(\bR\vcrossTenant\"0\n" +
+	"\fcross_tenant\x18\x06 \x01(\bR\vcrossTenant\x12\x14\n" +
+	"\x05emits\x18\a \x03(\tR\x05emits\"0\n" +
 	"\fMessageRules\x12 \n" +
 	"\vdescription\x18\x01 \x01(\tR\vdescription\"*\n" +
 	"\n" +

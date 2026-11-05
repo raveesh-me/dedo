@@ -45,9 +45,9 @@ service LibraryService {
     };
   }
 
-  // DeleteBook removes one book.
+  // DeleteBook removes one book, and announces it to other contexts.
   //
-  // Errors: BOOK_NOT_FOUND.
+  // Errors: BOOK_NOT_FOUND, EVENT_NOT_PUBLISHED.
   rpc DeleteBook(DeleteBookRequest) returns (DeleteBookResponse) {
     option idempotency_level = IDEMPOTENT;
     option (google.api.http) = {delete: "/v1/{name=shelves/*/books/*}"};
@@ -67,6 +67,11 @@ service LibraryService {
         reason: "BOOK_NOT_FOUND"
         code: NOT_FOUND
       }
+      errors: {
+        reason: "EVENT_NOT_PUBLISHED"
+        code: UNAVAILABLE
+      }
+      emits: "raveesh_me.library.book.deleted"
     };
   }
 

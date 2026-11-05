@@ -243,6 +243,34 @@ In a multi-tenant service, `interceptor.Config` also takes `Tenants`, a function
 
 Auth is a server interceptor (`auth` in the template), not HTTP middleware, so it covers MCP calls, which reach the server in-process, as well as Connect, gRPC and REST. The complete file, with `main`, imports and a development `auth`, is [templates/main.go.tmpl](../templates/main.go.tmpl) (`dedo init` fills it in). Add a policy-table test ([templates/policy_table_test.go.tmpl](../templates/policy_table_test.go.tmpl)), which builds every service's table, so a missing declaration fails `go test` before deploy.
 
+### Publishing events
+
+Most services publish no events; skip this until a command declares one in `emits` ([domains.md](domains.md#domain-events-outward-only)). The handler then publishes through `events.Publisher`, from `github.com/raveesh-me/dedo/events`, which the root module already holds.
+
+The bus is a driver: anything that implements `driver.Driver` (`github.com/raveesh-me/dedo/events/driver`), one method that hands an event to Pub/Sub, Kafka, NATS or an HTTP sink and returns nil once the bus holds it durably. dedo ships no broker driver, only `eventstest.Driver` for tests. Build the publisher in `main.go` and inject it into the handlers that publish:
+
+```go
+	pub, err := events.New(events.Config{
+		Driver: bus,                         // your driver.Driver
+		Source: "//time-counter.example.com", // names this service in every event
+		Log:    log,
+	})
+	if err != nil {
+		return nil, err
+	}
+	time_counterv1connect.RegisterCounterServiceHandler(server, time_counter.NewCounterService(pub))
+```
+
+In the handler, publish after the change commits, and return the error if the bus did not take the event, so the caller retries:
+
+```go
+	if _, err := s.events.Publish(ctx, "acme.time_counter.counter.reset", counter.GetName()); err != nil {
+		return nil, err // UNAVAILABLE, EVENT_NOT_PUBLISHED; declare it in the RPC's errors
+	}
+```
+
+`Publish` refuses, with `INTERNAL`, a type the RPC does not declare and a call outside an RPC: it reads the RPC's contract from the context the policy interceptor sets. It retries with exponential backoff and jitter until the driver acknowledges the event, the driver marks an error `driver.Permanent`, or the request's deadline passes; `events.Retry` sets the backoff and `Timeout` bounds requests without a deadline (5s by default). The event's ID stays the same on every retry, and the request's flow ID goes with it as the `flowid` extension. In tests, give the handler a publisher over `eventstest.New()` and read what it published with `Events()`.
+
 ### Keeping modules apart: `dedo modules`
 
 `dedo modules`, run in the repository (`make modules`; `make check` runs it), checks the layout of [domains.md](domains.md#code-and-data-follow-the-modules). It takes the modules from the repository's versioned proto packages, `<context>.<m>.v<n>`, and the Go module path from `go.mod`, and loads the import graph with `go list`. It fails on:
@@ -260,7 +288,7 @@ dedo modules: 2 modules in acme, no cycles; each depends on:
   orders   -> catalog
 ```
 
-Events are not checked separately. A topic belongs to its publisher, so a subscriber imports the publisher's package to name it, and that import is an edge like any other. Which calls declare, publish and subscribe depends on the repository's own outbox, which dedo does not ship.
+Events add no edges: a service publishes them outward only and never subscribes, so an event type is a string in the contract, not a dependency between modules.
 
 ```sh
 make generate

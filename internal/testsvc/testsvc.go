@@ -33,6 +33,9 @@ const (
 // Reason declared by GetThing with NOT_FOUND.
 const Reason = "THING_NOT_FOUND"
 
+// Deleted is the event type DeleteThing declares in emits.
+const Deleted = "raveesh_me.test.thing.deleted"
+
 // Deprecation and sunset times of DeleteThing, in Unix seconds.
 const (
 	DeprecatedAt = 1767225600 // 2026-01-01T00:00:00Z
@@ -121,6 +124,7 @@ func deleteOptions() *descriptorpb.MethodOptions {
 			Successor:       "raveesh_me.test.v2.TestService.DeleteThing",
 		},
 		Errors: []*dedov1.ErrorReason{{Reason: Reason, Code: code.Code_NOT_FOUND}},
+		Emits:  []string{Deleted},
 	})
 	return opts
 }

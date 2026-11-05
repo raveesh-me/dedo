@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package raveesh_me.library.v1;
+
+import "google/protobuf/empty.proto";
+import "dedo/v1/options.proto";
+
+service LibraryService {
+  rpc OtherPackage(google.protobuf.Empty) returns (google.protobuf.Empty) { // want
+    option (dedo.v1.method) = {emits: "acme.orders.order.created"};
+  }
+  rpc UpperCase(google.protobuf.Empty) returns (google.protobuf.Empty) { // want
+    option (dedo.v1.method) = {emits: "raveesh_me.library.Book.created"};
+  }
+  rpc NoResource(google.protobuf.Empty) returns (google.protobuf.Empty) { // want
+    option (dedo.v1.method) = {emits: "raveesh_me.library.created"};
+  }
+  rpc WithVersion(google.protobuf.Empty) returns (google.protobuf.Empty) { // want
+    option (dedo.v1.method) = {emits: "raveesh_me.library.v1.book.created"};
+  }
+  rpc Twice(google.protobuf.Empty) returns (google.protobuf.Empty) { // want
+    option (dedo.v1.method) = {
+      emits: ["raveesh_me.library.book.created", "raveesh_me.library.book.created"]
+    };
+  }
+  rpc ReadOnly(google.protobuf.Empty) returns (google.protobuf.Empty) { // want
+    option idempotency_level = NO_SIDE_EFFECTS;
+    option (dedo.v1.method) = {emits: "raveesh_me.library.book.read"};
+  }
+}

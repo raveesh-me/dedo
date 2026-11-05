@@ -224,3 +224,21 @@ func TestErrorAudit(t *testing.T) {
 		})
 	}
 }
+
+func TestHandlerSeesMethod(t *testing.T) {
+	var got string
+	f := newFixture(t, true, []string{testsvc.WriteScope}, func(ctx context.Context) error {
+		m, ok := policy.MethodFrom(ctx)
+		if !ok {
+			return connect.NewError(connect.CodeInternal, "no method in the handler's context")
+		}
+		got = m.Procedure
+		return nil
+	})
+	if _, err := f.call(t, testsvc.DeleteThing); err != nil {
+		t.Fatal(err)
+	}
+	if got != testsvc.DeleteThing {
+		t.Fatalf("handler saw method %q, want %q", got, testsvc.DeleteThing)
+	}
+}
