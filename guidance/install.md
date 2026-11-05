@@ -264,10 +264,13 @@ The bus is a driver: anything that implements `driver.Driver` (`github.com/ravee
 In the handler, publish after the change commits, and return the error if the bus did not take the event, so the caller retries:
 
 ```go
-	if _, err := s.events.Publish(ctx, "acme.time_counter.counter.reset", counter.GetName()); err != nil {
+	if _, err := s.events.Publish(ctx, "acme.time_counter.counter.reset", counter.GetName(),
+		events.IdempotencyKey(req.GetRequestId())); err != nil {
 		return nil, err // UNAVAILABLE, EVENT_NOT_PUBLISHED; declare it in the RPC's errors
 	}
 ```
+
+`events.IdempotencyKey` is optional. With the request's `request_id` (AIP-155), the events a retried command publishes all carry the same key, though each has an ID of its own, so a consumer can drop the repeats.
 
 `Publish` refuses, with `INTERNAL`, a type the RPC does not declare and a call outside an RPC: it reads the RPC's contract from the context the policy interceptor sets. It retries with exponential backoff and jitter until the driver acknowledges the event, the driver marks an error `driver.Permanent`, or the request's deadline passes; `events.Retry` sets the backoff and `Timeout` bounds requests without a deadline (5s by default). The event's ID stays the same on every retry, and the request's flow ID goes with it as the `flowid` extension. In tests, give the handler a publisher over `eventstest.New()` and read what it published with `Events()`.
 

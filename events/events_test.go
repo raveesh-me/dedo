@@ -292,3 +292,43 @@ func TestPublishIsolatesAttempts(t *testing.T) {
 		t.Fatalf("time = %v, want %v in UTC", got.Time, epoch)
 	}
 }
+
+func TestPublishIdempotencyKey(t *testing.T) {
+	f := newFixture(t, events.Retry{})
+	ctx := inMethod(t.Context(), cancelled)
+	const requestID = "8f0c2a2e-3b1d-4c55-9a51-6c0e8d1f7b11"
+	first, err := f.pub.Publish(ctx, cancelled, subject, events.IdempotencyKey(requestID))
+	if err != nil {
+		t.Fatal(err)
+	}
+	// The caller retries the command with the same request_id.
+	second, err := f.pub.Publish(ctx, cancelled, subject, events.IdempotencyKey(requestID))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if first.ID == second.ID {
+		t.Fatal("two publishes share an ID")
+	}
+	for _, e := range f.driver.Events() {
+		if e.IdempotencyKey != requestID {
+			t.Fatalf("driver saw key %q, want %q", e.IdempotencyKey, requestID)
+		}
+	}
+	plain, err := f.pub.Publish(ctx, cancelled, subject)
+	if err != nil || plain.IdempotencyKey != "" {
+		t.Fatalf("without the option: key %q, err %v", plain.IdempotencyKey, err)
+	}
+}
+
+func TestPublishRefusesBadIdempotencyKey(t *testing.T) {
+	for _, key := range []string{"", "has space", strings.Repeat("k", 129), "tab\there"} {
+		f := newFixture(t, events.Retry{})
+		_, err := f.pub.Publish(inMethod(t.Context(), cancelled), cancelled, subject, events.IdempotencyKey(key))
+		if connect.CodeOf(err) != connect.CodeInternal || !errors.Is(err, events.ErrBadIdempotencyKey) {
+			t.Fatalf("key %q: err = %v, want internal error caused by %v", key, err, events.ErrBadIdempotencyKey)
+		}
+		if n := len(f.driver.Attempts()); n != 0 {
+			t.Fatalf("key %q reached the driver", key)
+		}
+	}
+}
