@@ -15,6 +15,12 @@ import (
 // annotations of each rule.
 func findings(t *testing.T, rules ...config.Rule) map[string]int {
 	t.Helper()
+	return findingsIn(t, "shop.proto", rules...)
+}
+
+// findingsIn runs house rules over one file of testdata.
+func findingsIn(t *testing.T, file string, rules ...config.Rule) map[string]int {
+	t.Helper()
 	specs, err := house.Specs(rules)
 	if err != nil {
 		t.Fatal(err)
@@ -24,7 +30,7 @@ func findings(t *testing.T, rules ...config.Rule) map[string]int {
 	request, err := (&checktest.RequestSpec{
 		Files: &checktest.ProtoFileSpec{
 			DirPaths:  []string{"testdata", "testdata/deps", "../rules/testdata/deps", "../../proto"},
-			FilePaths: []string{"shop.proto"},
+			FilePaths: []string{file},
 		},
 	}).ToRequest(t.Context())
 	if err != nil {
@@ -78,6 +84,40 @@ func TestKinds(t *testing.T) {
 		"HOUSE_MESSAGE_BAD":  1, // GetCartRequest has one field
 		"HOUSE_FIELD_BAD":    1, // owner_id
 		"HOUSE_RESOURCE_BAD": 1,
+	}
+	for id, n := range want {
+		if got[id] != n {
+			t.Errorf("%s reported %d times, want %d", id, got[id], n)
+		}
+	}
+	for id, n := range got {
+		if want[id] == 0 {
+			t.Errorf("%s reported %d times, want none", id, n)
+		}
+	}
+}
+
+// A service sees the resource types its methods take or return, at any
+// depth, in order and once each; the roots among them, which are not nested
+// under another's pattern; and its title.
+func TestServiceAggregate(t *testing.T) {
+	got := findingsIn(t, "aggregate.proto",
+		rule("HOUSE_ORDER_OK", "service", "name != 'OrderService' || ("+
+			"resources == ['shop.example.com/Order', 'shop.example.com/Line'] && "+
+			"roots == ['shop.example.com/Order'] && title == 'Orders')"),
+		rule("HOUSE_CHECKOUT_OK", "service", "name != 'CheckoutService' || ("+
+			"resources == ['shop.example.com/Basket', 'shop.example.com/Order', 'shop.example.com/Line'] && "+
+			"roots == ['shop.example.com/Basket', 'shop.example.com/Order'] && title == '')"),
+		rule("HOUSE_DOMAIN_OK", "service", "name != 'AddressService' || (resources == [] && roots == [])"),
+		rule("HOUSE_TITLED", "service", "title != ''"),
+		// The examples in guidance/RULES.md.
+		rule("HOUSE_SERVICE_ONE_ROOT", "service", "roots.size() <= 1"),
+		rule("HOUSE_SERVICE_NAMED_AFTER_ROOT", "service", "roots.all(r, name == r.split('/')[1] + 'Service')"),
+	)
+	want := map[string]int{
+		"HOUSE_TITLED":                   2, // CheckoutService, AddressService
+		"HOUSE_SERVICE_ONE_ROOT":         1, // CheckoutService
+		"HOUSE_SERVICE_NAMED_AFTER_ROOT": 1, // CheckoutService
 	}
 	for id, n := range want {
 		if got[id] != n {
