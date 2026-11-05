@@ -1161,3 +1161,25 @@ rules:
 		t.Errorf("init did not say it moved the section:\n%s", out)
 	}
 }
+
+// Migrating a dedo.yaml that dedo init wrote before v0.32.1 (its v0.30.0
+// template, importing shared rules) keeps every
+// comment, the commented-out examples between imports and annexure too.
+func TestInitMovesRulesSectionKeepsComments(t *testing.T) {
+	old, err := os.ReadFile(filepath.Join("testdata", "old-rules-dedo.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	dir := repo(t, map[string]string{
+		"go.mod":    "module example.com/shop\n",
+		"buf.yaml":  "version: v2\nmodules:\n  - path: proto\n",
+		"dedo.yaml": string(old),
+	})
+	initOffline(t, dir)
+	got := read(t, dir, "dedo.yaml")
+	for _, want := range []string{"# disable: [DEDO_NO_JSON_NAME]", "#   - id: HOUSE_RESOURCE_TYPE_DOMAIN", "# Your organisation's guidance for coding agents", "annexure:"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("lost %q:\n%s", want, got)
+		}
+	}
+}
