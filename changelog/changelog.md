@@ -8,6 +8,10 @@ Version bumps, dependency updates and changes to benchmarks or examples alone ar
 
 ## [Unreleased]
 
+### Added
+
+- House rules on `service` get `resources`, the `google.api.resource` types its methods take or return at any depth; `roots`, those not nested under another's pattern; and `title`, its `dedo.v1.service` title. An organisation can then lint one root per service (`roots.size() <= 1`) and a service named after its root, as `guidance/RULES.md` shows. [#115](https://github.com/raveesh-me/dedo/pull/115), closes [#94](https://github.com/raveesh-me/dedo/issues/94)
+
 ## [v0.29.0] - 2026-11-05
 
 ### Added
