@@ -33,7 +33,7 @@ A fork changes names, never behaviour. These are the names `scripts/fork.sh` cha
 | Links in lint findings | `github.com/raveesh-me/dedo/blob/<tag>/guidance/RULES.md` | `docsBase` (`lint/rules/docs.go`), `DEDO_LDFLAGS` in the `Makefile` |
 | Release | the `r-a` BSR organization, public visibility | `.github/workflows/ci.yaml`, the `BUF_KEY` secret, `scripts/check-release-versions.sh` |
 
-What stays the same, so that no service changes a `.proto` file: the proto package `dedo.v1` and its file `dedo/v1/options.proto`, every option name and extension number, every rule ID, the `dedo.yaml` format, and the names of the binaries.
+What stays the same, so that no service changes a `.proto` file: the proto package `dedo.v1` and its file `dedo/v1/options.proto`, every option name and extension number, every rule ID, the `dedo.yaml` format, and the names of the binaries. [changelog.md](../changelog/changelog.md) keeps naming upstream too: it records upstream's releases and links upstream's pull requests.
 
 The fork renames the Go modules rather than pointing upstream's paths at itself with `replace`, because `go install pkg@version` ignores `go.work` and refuses a module whose `go.mod` has a `replace` directive. A renamed module installs like any other.
 
