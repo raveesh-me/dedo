@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package raveesh_me.library.v1;
+
+import "google/protobuf/empty.proto";
+import "dedo/v1/options.proto";
+
+service LibraryService {
+  // Renamed its type.
+  rpc DeleteBook(google.protobuf.Empty) returns (google.protobuf.Empty) { // want
+    option (dedo.v1.method) = {emits: "raveesh_me.library.book.removed"};
+  }
+  // Dropped one of two.
+  rpc MoveBook(google.protobuf.Empty) returns (google.protobuf.Empty) { // want
+    option (dedo.v1.method) = {emits: "raveesh_me.library.book.moved"};
+  }
+  rpc GetBook(google.protobuf.Empty) returns (google.protobuf.Empty) {}
+}

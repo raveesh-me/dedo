@@ -27,6 +27,34 @@ var skippedRules = []string{
 // say use (lint/rules.DefaultUse), which a new dedo.yaml lists.
 var defaultUse = []string{"AIP_NOLANG", "ZALANDO", "DEDO", house}
 
+// breakingCategory holds buf-plugin-dedo-lint's breaking rules
+// (lint/rules.CategoryBreaking), which run only where buf.yaml's
+// breaking.use lists it.
+const breakingCategory = "DEDO_BREAKING"
+
+// breakingRules lists dedo's breaking rules in buf.yaml's breaking.use,
+// keeping the rules the repository chose. A section that names none
+// keeps Buf's default, FILE, which listing a category would otherwise
+// replace.
+func (in *initer) breakingRules(buf, tmpl *yaml.Node) bool {
+	breaking := lookup(buf, "breaking")
+	if breaking == nil {
+		set(buf, "breaking", lookup(tmpl, "breaking"))
+		in.say("buf.yaml: added the breaking section, with dedo's breaking rules (%s)", breakingCategory)
+		return true
+	}
+	use := lookup(breaking, "use")
+	if use == nil {
+		use = child(breaking, "use", yaml.SequenceNode)
+		addScalars(use, "FILE")
+	}
+	if len(addScalars(use, breakingCategory)) == 0 {
+		return false
+	}
+	in.say("buf.yaml: breaking.use lists %s, dedo's breaking rules", breakingCategory)
+	return true
+}
+
 // pluginRule reports whether a lint.use or lint.except entry names
 // buf-plugin-dedo-lint's rules rather than Buf's own.
 func pluginRule(id string) bool {

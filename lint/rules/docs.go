@@ -33,6 +33,18 @@ const (
 	idMessageDescriptionRequired = "DEDO_MESSAGE_DESCRIPTION_REQUIRED"
 	idPackageSharedReserved      = "DEDO_PACKAGE_SHARED_RESERVED"
 	idEventTypes                 = "DEDO_EVENT_TYPES"
+	idEventNotPublishedDeclared  = "DEDO_EVENT_NOT_PUBLISHED_DECLARED"
+
+	idEmitsNoDelete       = "DEDO_EMITS_NO_DELETE"
+	idScopesNoDelete      = "DEDO_SCOPES_NO_DELETE"
+	idErrorReasonSameCode = "DEDO_ERROR_REASON_SAME_CODE"
+	idAudienceNoNarrow    = "DEDO_AUDIENCE_NO_NARROW"
+	idTenancySame         = "DEDO_TENANCY_SAME"
+	idCrossTenantNoDelete = "DEDO_CROSS_TENANT_NO_DELETE"
+	idHTTPBindingSame     = "DEDO_HTTP_BINDING_SAME"
+	idFieldNoNewRequired  = "DEDO_FIELD_NO_NEW_REQUIRED"
+	idResourceSame        = "DEDO_RESOURCE_SAME"
+	idSunsetNoEarlier     = "DEDO_SUNSET_NO_EARLIER"
 
 	idMultiTenantServiceTenancy  = "DEDO_MULTI_TENANT_SERVICE_TENANCY"
 	idMultiTenantResourcePattern = "DEDO_MULTI_TENANT_RESOURCE_PATTERN"

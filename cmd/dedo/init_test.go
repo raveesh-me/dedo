@@ -248,6 +248,9 @@ plugins:
 	if got := scalars(lookup(lookup(buf, "lint"), "use")); !slices.Equal(got, []string{"DEFAULT", "DEDO"}) {
 		t.Errorf("lint.use = %v", got)
 	}
+	if got := scalars(lookup(lookup(buf, "breaking"), "use")); !slices.Equal(got, []string{"FILE", breakingCategory}) {
+		t.Errorf("breaking.use = %v", got)
+	}
 	var plugins []string
 	for _, item := range lookup(buf, "plugins").Content {
 		plugins = append(plugins, lookup(item, "plugin").Value)
@@ -1076,5 +1079,35 @@ func TestInitNotesOutdatedTemplates(t *testing.T) {
 	}
 	if got := read(t, dir, "docs/index.html"); !strings.Contains(got, "stoplight") {
 		t.Error("the upgrade replaced docs/index.html")
+	}
+}
+
+// dedo init adds dedo's breaking rules to a breaking section of the
+// repository's own, keeping what it chose; buf's default, FILE, stays when
+// the section named no rules.
+func TestInitBreakingRules(t *testing.T) {
+	tests := []struct {
+		name, breaking string
+		want           []string
+	}{
+		{"own rules", "breaking:\n  use:\n    - WIRE_JSON\n", []string{"WIRE_JSON", breakingCategory}},
+		{"no use", "breaking:\n  ignore_unstable_packages: true\n", []string{"FILE", breakingCategory}},
+		{"already listed", "breaking:\n  use:\n    - FILE\n    - " + breakingCategory + "\n", []string{"FILE", breakingCategory}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dir := repo(t, map[string]string{
+				"go.mod":   "module example.com/shop\n",
+				"buf.yaml": "version: v2\nmodules:\n  - path: proto\n" + tt.breaking,
+			})
+			initOffline(t, dir)
+			breaking := lookup(yamlAt(t, dir, "buf.yaml"), "breaking")
+			if got := scalars(lookup(breaking, "use")); !slices.Equal(got, tt.want) {
+				t.Errorf("breaking.use = %v, want %v", got, tt.want)
+			}
+			if tt.name == "no use" && lookup(breaking, "ignore_unstable_packages") == nil {
+				t.Error("breaking lost ignore_unstable_packages")
+			}
+		})
 	}
 }

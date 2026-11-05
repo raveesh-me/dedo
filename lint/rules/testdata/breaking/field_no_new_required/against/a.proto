@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package raveesh_me.library.v1;
+
+import "google/api/annotations.proto";
+import "google/api/field_behavior.proto";
+import "google/api/resource.proto";
+import "google/protobuf/empty.proto";
+import "dedo/v1/options.proto";
+
+message Book {
+  string title = 1;
+  string isbn = 2 [(google.api.field_behavior) = REQUIRED];
+}

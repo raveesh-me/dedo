@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"buf.build/go/bufplugin/check"
@@ -70,6 +71,7 @@ var All = []*check.RuleSpec{
 	messageDescriptionRequired,
 	packageSharedReserved,
 	eventTypes,
+	eventNotPublishedDeclared,
 	multiTenantServiceTenancy,
 	multiTenantResourcePattern,
 	multiTenantRequestTenant,
@@ -86,9 +88,10 @@ func NewSpec() (*check.Spec, error) {
 		return nil, err
 	}
 	return &check.Spec{
-		Rules: c.Rules,
+		Rules: append(slices.Clone(c.Rules), breakingSpecs()...),
 		Categories: []*check.CategorySpec{
 			{ID: CategoryDedo, Purpose: "Checks every rule of buf-plugin-dedo-lint that dedo.yaml chooses: AIP, ZALANDO, DEDO and house rules."},
+			{ID: CategoryBreaking, Purpose: "Checks that changes to dedo's options do not break consumers, in buf breaking."},
 		},
 		Before: before,
 	}, nil

@@ -252,7 +252,8 @@ A house rule that contradicts a DEDO, AIP or ZALANDO rule without overriding it 
 | [`DEDO_TOOL_ANNOTATIONS`](#dedo_tool_annotations) | RPCs declare the MCP ToolAnnotations hints, consistent with the proto |
 | [`DEDO_MESSAGE_DESCRIPTION_REQUIRED`](#dedo_message_description_required) | Messages declare a consumer-facing description |
 | [`DEDO_PACKAGE_SHARED_RESERVED`](#dedo_package_shared_reserved) | No package names its module `shared` |
-| [`DEDO_EVENT_TYPES`](#dedo_event_types) | Declared event types belong to the package, appear once, and only on RPCs that change state |
+| [`DEDO_EVENT_TYPES`](#dedo_event_types) | Declared event types belong to the package, name one of its resources, appear once, and only on RPCs that change state |
+| [`DEDO_EVENT_NOT_PUBLISHED_DECLARED`](#dedo_event_not_published_declared) | RPCs that emit events declare `EVENT_NOT_PUBLISHED` with `UNAVAILABLE` |
 
 ---
 
@@ -550,6 +551,7 @@ package acme.orders.v1;   // Passes.
 **Checks** the event types an RPC declares in `emits`:
 
 - each is `<context>.<module>.<resource>.<past-tense verb>`: the RPC's package without its version, then the resource and the verb, in snake_case;
+- the resource is one the package declares with `google.api.resource`, by its singular in snake_case: `order_line` for `singular: "orderLine"`, or for the type `example.com/OrderLine`;
 - each appears once;
 - the RPC is not `NO_SIDE_EFFECTS`.
 
@@ -564,13 +566,150 @@ rpc CancelOrder(CancelOrderRequest) returns (Order) {
     // emits: "acme.orders.v1.order.cancelled"  Fails: no version.
     // emits: "billing.invoice.voided"          Fails: another context's type.
     // emits: "acme.orders.cancelled"           Fails: no resource.
+    // emits: "acme.orders.basket.cancelled"    Fails unless the package declares a Basket resource.
   };
 }
 ```
 
 dedo does not check that the verb is in the past tense: a heuristic would reject `paid` and `sent`. A house rule can.
 
-**Fix.** Start the type with the package without its version, then name the resource and what happened to it. Declare events only on RPCs that change state.
+**Fix.** Start the type with the package without its version, then name the resource and what happened to it. Declare events only on RPCs that change state. `emits` stays optional: these checks apply only to an RPC that declares it.
+
+### DEDO_EVENT_NOT_PUBLISHED_DECLARED
+
+**Checks** that an RPC with `emits` declares the error `{reason: "EVENT_NOT_PUBLISHED", code: UNAVAILABLE}`. An RPC without `emits` is not checked.
+
+**Why.** `events.Publish` returns that error when the bus does not take an event within the request's deadline, and the handler returns it so the caller retries the command ([domains.md](domains.md#domain-events-outward-only)). Undeclared, the error is missing from the REST reference and the MCP tool description, and the policy interceptor logs it as an undeclared reason.
+
+```protobuf
+option (dedo.v1.method) = {
+  errors: {reason: "ORDER_NOT_FOUND", code: NOT_FOUND}
+  errors: {reason: "EVENT_NOT_PUBLISHED", code: UNAVAILABLE}  // Passes; without it, fails.
+  emits: "acme.orders.order.cancelled"
+};
+```
+
+**Fix.** Add the error. A handler that logs a failed publish and succeeds instead still declares it, since the RPC's contract allows either.
+
+## Breaking rules
+
+`buf breaking` compares a contract with an earlier version of itself. Buf's own rules (`FILE`) check the descriptors but never the values of options, so they pass a change to a scope, an event type, a REST path or a resource pattern that breaks every caller who relied on it. dedo's breaking rules check those, in the same plugin: `buf.yaml`'s `breaking.use` lists `DEDO_BREAKING` beside `FILE` (`dedo init` and `dedo upgrade` add it), and `dedo.yaml`'s `breaking` section chooses which of them run, as its `lint` section does for lint rules. Your organisation's own breaking rules are house rules there ([House rules](#house-rules)).
+
+Each rule pairs an element with the one of the same name in the version compared against, so an element that was added, or deleted (which Buf's `FILE` rules report), is not checked.
+
+| Rule | Checks |
+| --- | --- |
+| [`DEDO_EMITS_NO_DELETE`](#dedo_emits_no_delete) | An RPC still declares every event type it declared |
+| [`DEDO_SCOPES_NO_DELETE`](#dedo_scopes_no_delete) | An RPC still accepts every scope it accepted |
+| [`DEDO_ERROR_REASON_SAME_CODE`](#dedo_error_reason_same_code) | An error reason keeps its status code |
+| [`DEDO_AUDIENCE_NO_NARROW`](#dedo_audience_no_narrow) | A service's audience does not narrow |
+| [`DEDO_TENANCY_SAME`](#dedo_tenancy_same) | A service's tenancy does not change |
+| [`DEDO_CROSS_TENANT_NO_DELETE`](#dedo_cross_tenant_no_delete) | A cross-tenant RPC stays cross-tenant |
+| [`DEDO_HTTP_BINDING_SAME`](#dedo_http_binding_same) | Every REST binding stays, with the same body and response body |
+| [`DEDO_FIELD_NO_NEW_REQUIRED`](#dedo_field_no_new_required) | No field becomes `REQUIRED` |
+| [`DEDO_RESOURCE_SAME`](#dedo_resource_same) | A resource keeps its type and every pattern |
+| [`DEDO_SUNSET_NO_EARLIER`](#dedo_sunset_no_earlier) | A sunset does not move earlier |
+
+A change these rules report is still possible: make it in a new major version of the package (AIP-185), or add the label your CI reads to allow a breaking change.
+
+### DEDO_EMITS_NO_DELETE
+
+**Checks** that an RPC still declares, in `emits`, every event type it declared. Adding a type passes, and so does reordering.
+
+**Why.** Consumers subscribe to an event by its type. A renamed or dropped type silently stops them hearing about the change.
+
+```protobuf
+// Before:
+option (dedo.v1.method) = {emits: "acme.orders.order.cancelled"};
+// After, fails: the type was renamed.
+option (dedo.v1.method) = {emits: "acme.orders.order.voided"};
+// After, passes: the old type stays, and the new one joins it.
+option (dedo.v1.method) = {emits: ["acme.orders.order.cancelled", "acme.orders.order.voided"]};
+```
+
+**Fix.** Keep the type, and publish the new one beside it until no consumer needs the old one.
+
+### DEDO_SCOPES_NO_DELETE
+
+**Checks** that an RPC still accepts every token scope it accepted. Adding a scope passes: a caller needs only one.
+
+**Why.** A caller whose token holds only the removed scope is denied from the next deploy.
+
+**Fix.** Keep the scope. To move callers to another, add it, and remove the old one in a new major version.
+
+### DEDO_ERROR_REASON_SAME_CODE
+
+**Checks** that an error reason an RPC still declares keeps its status code. Adding or removing a reason passes.
+
+**Why.** Clients handle errors by reason and code, and retry on some codes but not others. `ORDER_NOT_FOUND` turning from `NOT_FOUND` into `INVALID_ARGUMENT` changes what they do.
+
+**Fix.** Declare a new reason for the new code.
+
+### DEDO_AUDIENCE_NO_NARROW
+
+**Checks** that a service's `audience` does not narrow, as from `AUDIENCE_EXTERNAL_PUBLIC` to `AUDIENCE_COMPANY_INTERNAL`. Widening passes.
+
+**Why.** Callers outside the new audience were admitted before, and are shut out after.
+
+**Fix.** Keep the audience, or move what must be narrower to a service of its own.
+
+### DEDO_TENANCY_SAME
+
+**Checks** that a service's `tenancy` does not change: it is not added, removed, or moved to another collection.
+
+**Why.** The tenant is the root of every resource name and request path ([multi-tenant rules](#multi-tenant-rules)), so changing it changes all of them.
+
+**Fix.** Change tenancy in a new major version of the package.
+
+### DEDO_CROSS_TENANT_NO_DELETE
+
+**Checks** that an RPC marked `cross_tenant` stays so.
+
+**Why.** Without it the runtime checks the request's tenant, so a call that spans tenants, or names none, fails.
+
+**Fix.** Keep it, or replace the RPC in a new major version.
+
+### DEDO_HTTP_BINDING_SAME
+
+**Checks** that every REST binding of an RPC, its `google.api.http` rule and each additional binding, stays at the same verb and path, with the same `body` and `response_body`. New bindings pass.
+
+**Why.** REST clients call the path and send and read the shape the binding names. Buf compares no `google.api.http` option, so a moved path passes `FILE`.
+
+```protobuf
+// Before:
+option (google.api.http) = {get: "/v1/{name=shelves/*/books/*}"};
+// After, passes: the new path joins the old one.
+option (google.api.http) = {
+  get: "/v1/{name=shelves/*/books/*}"
+  additional_bindings: {get: "/v1/{name=books/*}"}
+};
+```
+
+**Fix.** Keep the old binding, as an `additional_bindings` entry if a new path joins it.
+
+### DEDO_FIELD_NO_NEW_REQUIRED
+
+**Checks** that no field becomes `REQUIRED` in `google.api.field_behavior`. A new field may be `REQUIRED`, and an existing one may stop being so.
+
+**Why.** Callers that leave the field out, as they could before, start failing (AIP-180).
+
+**Fix.** Keep the field optional, or add a new field.
+
+### DEDO_RESOURCE_SAME
+
+**Checks** that a resource keeps its `type` and every `pattern` it had. Adding a pattern passes.
+
+**Why.** Clients store resource names and refer to resources by type. A dropped pattern leaves stored names that no longer resolve; a new type breaks every `resource_reference` to the old one.
+
+**Fix.** Keep the type and the old pattern, and add the new pattern beside it.
+
+### DEDO_SUNSET_NO_EARLIER
+
+**Checks** that a deprecated RPC's `sunset_time` does not move earlier. Moving it later, or removing the deprecation, passes.
+
+**Why.** Callers plan their migration by the sunset they were told.
+
+**Fix.** Keep the date, or move it later.
 
 ## Multi-tenant rules
 
