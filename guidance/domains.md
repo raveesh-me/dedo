@@ -151,7 +151,7 @@ Some operations belong to no aggregate and keep no state: resolving a free-text 
 ]
 ```
 
-Operations name their tag by name alone, so every tag name must be unique across the document: two services titled `Orders` in different packages fail generation, and one of them needs another title. A package's comment comes from the first of its files that has one.
+Operations name their tag by name alone, so every tag name must be unique across the document: two services titled `Orders` in different packages fail generation, and one of them needs another title. A package's comment comes from the first of its files that has one. A service whose tag repeats its package's heading, so that the reference reads "Calculation › Calculation", draws a warning when it is not named after the one root it manages: it is probably named after its module. The warning names the root to call it after (`TaxQuoteService` titled "Tax quotes"). `OrderService` titled `Orders` in `acme.orders.v1` draws none: that is the layout this guide describes.
 
 A reference that supports 3.2 shows context, module, aggregate and operation as four levels. The docs page that `dedo init` writes uses Scalar, which does. A viewer that ignores `parent` still lists every service, without the package level.
 
