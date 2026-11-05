@@ -11,6 +11,7 @@ Version bumps, dependency updates and changes to benchmarks or examples alone ar
 ### Added
 
 - This changelog, covering every release since v0.1.0. [#112](https://github.com/raveesh-me/dedo/pull/112)
+- `guidance/domains.md` says how to model a domain service, an operation with no aggregate: a service that manages no resource and holds only custom methods. In a multi-tenant service they hang off the tenant (`{location=locations/*}:resolveAddress`), otherwise off a collection noun (`addresses:resolveAddress`). One that only answers is a `NO_SIDE_EFFECTS` query, over `GET` where the input fits in a URL, and none changes an aggregate. `guidance/RULES.md` lets a read-only call that returns reference data from a third party keep `open_world_hint: false`. [#113](https://github.com/raveesh-me/dedo/pull/113), closes [#95](https://github.com/raveesh-me/dedo/issues/95)
 
 ## [v0.28.0] - 2026-11-04
 
