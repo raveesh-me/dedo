@@ -17,6 +17,7 @@ The terms come from Eric Evans' *Domain-Driven Design* (bounded context, module,
 | Aggregate root | The resource the service manages: a message with `google.api.resource` | Its resource name (`orders/{order}`) is its identity and its REST path |
 | Entity inside an aggregate | A child resource, its pattern nested under the root's (`orders/{order}/lines/{line}`) | A nested REST path |
 | Value object | A message without `google.api.resource`: `google.type.Money`, an address | A schema, never a path |
+| Domain service | A service that manages no resource, holding only custom methods: `AddressService` | A tag in the reference; paths that start at the tenant (`locations/{location}:resolveAddress`) or at a collection noun (`addresses:resolveAddress`) |
 | Command | An RPC that changes state: a standard method or a custom method (`:cancel`) | A `POST`, `PATCH` or `DELETE`; an MCP tool with `read_only_hint: false` |
 | Query | `Get` and `List`, declared `NO_SIDE_EFFECTS` | A `GET`; an MCP tool with `read_only_hint: true` |
 | Domain event | A server stream (`WatchOrders`), or messages the service publishes | A streaming RPC; not a REST path |
@@ -93,6 +94,37 @@ An aggregate is a cluster of objects that changes as one, with one root that gua
 - **Refer to another aggregate by its resource name, never by embedding its message.** Declare the field with `google.api.resource_reference`. Embedding couples two lifecycles and leaks the other aggregate's rules into this one. A multi-tenant service also checks the tenant of every referenced name.
 - **Entities inside the aggregate are child resources**, with patterns nested under the root's. They change through the root's service, so the root can keep its rules.
 
+## Domain services: operations with no aggregate
+
+Some operations belong to no aggregate and keep no state: resolving a free-text address, suggesting tariff codes for a product description, converting between currencies. DDD calls them domain services. In dedo a domain service is a service that manages no resource.
+
+- **Name it after the noun readers look for.** `AddressService`, titled `Addresses`; `TariffCodeService`, titled `Tariff codes`. It declares no `google.api.resource` and has no standard methods, only custom methods named with the domain's verbs: `ResolveAddress`, `SuggestTariffCodes`.
+- **In a multi-tenant service, hang its methods off the tenant.** AIP-136 attaches a stateless method to the resource that scopes it, with the whole RPC name after the `:`. Here that resource is the tenant. The request names the tenant in a field of its own, so the runtime checks the tenant as it does for any other call:
+
+  ```proto
+  rpc ResolveAddress(ResolveAddressRequest) returns (ResolveAddressResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+    option (google.api.http) = {get: "/shop/v1/{location=locations/*}:resolveAddress"};
+  }
+
+  message ResolveAddressRequest {
+    // The location asking, such as locations/1.
+    string location = 1 [
+      (google.api.field_behavior) = REQUIRED,
+      (google.api.resource_reference).type = "shop.example.com/Location"
+    ];
+    // The address as a person typed it.
+    string text = 2 [(google.api.field_behavior) = REQUIRED];
+  }
+  ```
+
+  A path without the tenant, such as `/shop/v1/addresses:resolveAddress`, fails `DEDO_MULTI_TENANT_REQUEST_TENANT`. Don't make the method `cross_tenant` to get past the rule: then only its scopes would guard it.
+- **With one tenant, put its methods after a collection noun.** Such a service has no resource to scope the method, and a path straight after the version (`/shop/v1:resolveAddress`) fails `DEDO_HTTP_PATH_VERSION`. Use the plural noun of what the method is about. The custom verb in the path follows `AIP_0136_HTTP_URI_SUFFIX`: just the verb when the RPC name ends with the collection noun (`SuggestTariffCodes` at `/shop/v1/tariffCodes:suggest`), and the whole RPC name when it doesn't (`ResolveAddress` at `/shop/v1/addresses:resolveAddress`, not `addresses:resolve`).
+- **One that only answers is a query.** Declare it `idempotency_level = NO_SIDE_EFFECTS`, with `read_only_hint: true`. Prefer `GET`, with the input in query parameters: Connect can then call it over GET too, and the method can declare a cache policy (`VISIBILITY_PRIVATE` in a multi-tenant service). Use `POST` with `body: "*"` when the input may not fit in a URL, such as a product description. The method stays `NO_SIDE_EFFECTS`.
+- **Say whether it reaches outside the context.** A domain service often wraps a vendor behind an anti-corruption layer. One that writes to the vendor, for example to send a message or file a return, is a command, and always sets `open_world_hint: true`. One that only reads from a vendor, such as a geocoder, usually sets it too, since its answer comes from data the context does not own. It may set `false` when the answer is reference data the context could hold itself, such as codes from a published tariff schedule.
+- **It never changes an aggregate.** In DDD a domain service may also coordinate a change across aggregates, such as moving money between two accounts. In dedo an RPC is one aggregate's transaction, so that change is not a domain service. Put the command on the aggregate it changes and let the other follow through events, or make the process a resource of its own (`transfers/{transfer}`) whose service drives the steps.
+- **It lives in the module whose language it speaks**, beside the aggregates that use it. When several modules use it, it gets a module of its own, and they depend on it through its generated client or its `Port`, like any other module.
+
 ## Commands and queries
 
 - **Commands are named with the domain's verbs.** Use the standard methods (`Create`, `Update`, `Delete`) where they fit, and AIP-136 custom methods for transitions the business names: `CancelOrder` at `:cancel`, not `UpdateOrderStatus`. The RPC name becomes the MCP tool's name, so a model reads the same verb the business uses.
@@ -131,6 +163,7 @@ A reference that supports 3.2 shows context, module, aggregate and operation as 
 - A module reads another only through the provider's `Port`, its generated client or its events, and the modules stay acyclic.
 - One Postgres schema and one database role per module; no foreign keys or views across modules.
 - One service per aggregate, titled with the noun readers look for; every RPC acts on that aggregate.
+- An operation with no aggregate is a domain service: no resource, only custom methods, hung off the tenant in a multi-tenant service and off a collection noun otherwise. It changes no aggregate, and one that only answers is a `NO_SIDE_EFFECTS` query, over `GET` where the input fits in a URL.
 - References to other aggregates are resource names with `resource_reference`, never embedded messages.
 - Commands are named with the domain's verbs; queries are `NO_SIDE_EFFECTS`.
 - Vendor and other contexts' models stay behind an adapter, out of the proto.

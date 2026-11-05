@@ -18,7 +18,7 @@
 
 ## Packages and services follow the domain
 
-The `dedo:begin domains` block after this one, from [domains.md](https://github.com/raveesh-me/dedo/blob/main/guidance/domains.md), maps each building block of domain-driven design to a layer of the API: the repository is the bounded context, a proto package a module, a service an aggregate. It also lays the code and the database out by module: one Go package per proto module at `internal/<module>/`, one Postgres schema and role per module, and only `main` and `app/` importing several modules. Shape new packages, services and Go code by it, and check them against its checklist.
+The `dedo:begin domains` block after this one, from [domains.md](https://github.com/raveesh-me/dedo/blob/main/guidance/domains.md), maps each building block of domain-driven design to a layer of the API: the repository is the bounded context, a proto package a module, a service an aggregate, and a service that manages no resource a domain service. It also lays the code and the database out by module: one Go package per proto module at `internal/<module>/`, one Postgres schema and role per module, and only `main` and `app/` importing several modules. Shape new packages, services and Go code by it, and check them against its checklist.
 
 ## Lint classes and precedence
 
