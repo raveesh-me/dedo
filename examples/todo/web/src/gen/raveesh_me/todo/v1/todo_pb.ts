@@ -442,7 +442,7 @@ export const WatchTodosResponse_ChangeSchema: GenEnum<WatchTodosResponse_Change>
   enumDesc(file_raveesh_me_todo_v1_todo, 14, 0);
 
 /**
- * TodoService manages a to-do list.
+ * Manages a to-do list.
  *
  * @generated from service raveesh_me.todo.v1.TodoService
  */

@@ -1,0 +1,60 @@
+syntax = "proto3";
+
+// LibraryService keeps the library's books.
+package raveesh_me.library.v1; // want
+
+import "google/protobuf/empty.proto";
+import "dedo/v1/options.proto";
+
+// Its title names the code's structure.
+service BookService { // want
+  option (dedo.v1.service) = {title: "Book Service"};
+}
+
+// Without a title, the heading is the name without its Service suffix:
+// "Catalog Module".
+service CatalogModuleService {} // want
+
+// "Shelf Aggregates".
+service ShelfAggregatesService {} // want
+
+// ShelfService lends books.
+service LendingService {} // want
+
+service ReturnService {
+  // Calls PaymentService to refund the fee.
+  rpc Refund(google.protobuf.Empty) returns (google.protobuf.Empty); // want
+  rpc Renew(google.protobuf.Empty) returns (google.protobuf.Empty) { // want
+    option (dedo.v1.method) = {
+      tool: {
+        title: "Renew a loan"
+        description: "Renews a loan that LoanService keeps."
+      }
+    };
+  }
+}
+
+// Book is what OrderService sells.
+message Book { // want
+  // Set by InventoryService.
+  string name = 1; // want
+  // Checked by APIService, a name that ends in an acronym.
+  string isbn = 2; // want
+
+  // A nested message's comment is a schema description too: from
+  // ReviewService.
+  message Review { // want
+    string text = 1;
+  }
+}
+
+message Loan { // want
+  option (dedo.v1.message) = {description: "A loan, which LoanService keeps."};
+}
+
+// The states of a hold in HoldService.
+enum State { // want
+  STATE_UNSPECIFIED = 0;
+  // Set by HoldService.
+  STATE_HELD = 1; // want
+}

@@ -8,6 +8,10 @@ Version bumps, dependency updates and changes to benchmarks or examples alone ar
 
 ## [Unreleased]
 
+### Breaking
+
+- Lint rule `DEDO_DOCS_NO_CODE_STRUCTURE`: the reference speaks the domain's language, not the code's. A service's heading (its title, else its name without `Service`) says no *service*, *module*, *aggregate* or *microservice*, unless a resource it manages is named with the word; and no comment, tool text or message description names a proto service, such as `OrderService`. Comments in Go's style, `// OrderService reads orders.`, now fail: start with what the API does (`// Reads orders.`). Give a service a `title` rather than renaming it, which would change its Connect and gRPC paths. `dedo init`'s starter, the examples and `guidance/domains.md` follow it. PR_LINK
+
 ## [v0.32.3] - 2026-11-05
 
 ### Fixed

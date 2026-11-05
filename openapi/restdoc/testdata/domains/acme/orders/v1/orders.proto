@@ -6,8 +6,8 @@ package acme.orders.v1;
 import "dedo/v1/options.proto";
 import "google/api/annotations.proto";
 
-// OrderService reads orders. Its title is the package's title too: the
-// package's tag is named after the package, so the two cannot clash.
+// Reads orders. Its title is the package's title too: the package's tag is
+// named after the package, so the two cannot clash.
 service OrderService {
   option (dedo.v1.service) = {title: "Orders"};
 
@@ -17,7 +17,7 @@ service OrderService {
   }
 }
 
-// ReturnService reads returns.
+// Reads returns.
 service ReturnService {
   // GetReturn returns one return.
   rpc GetReturn(GetReturnRequest) returns (GetReturnResponse) {

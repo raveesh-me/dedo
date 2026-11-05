@@ -70,10 +70,10 @@ func TestGenerateNestsServicesUnderPackages(t *testing.T) {
 	}
 	wantTags := []Tag{
 		{Name: "acme.catalog.v1", Summary: "Catalog", Description: "Catalog is what the shop sells.", Kind: "nav"},
-		{Name: "Product", Description: "ProductService reads the products on sale.", Parent: "acme.catalog.v1"},
+		{Name: "Product", Description: "Reads the products on sale.", Parent: "acme.catalog.v1"},
 		{Name: "acme.orders.v1", Summary: "Orders", Description: "Orders is what buyers commit to buy, and what they send back.", Kind: "nav"},
-		{Name: "Orders", Description: "OrderService reads orders. Its title is the package's title too: the\npackage's tag is named after the package, so the two cannot clash.", Parent: "acme.orders.v1"},
-		{Name: "Return", Description: "ReturnService reads returns.", Parent: "acme.orders.v1"},
+		{Name: "Orders", Description: "Reads orders. Its title is the package's title too: the package's tag is\nnamed after the package, so the two cannot clash.", Parent: "acme.orders.v1"},
+		{Name: "Return", Description: "Reads returns.", Parent: "acme.orders.v1"},
 	}
 	if doc.OpenAPI != "3.2.0" {
 		t.Errorf("openapi = %q, want 3.2.0", doc.OpenAPI)

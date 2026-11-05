@@ -12,7 +12,7 @@
   "tags": [
     {
       "name": "Todo",
-      "description": "TodoService manages a to-do list.",
+      "description": "Manages a to-do list.",
       "x-audience": "AUDIENCE_EXTERNAL_PUBLIC",
       "x-owner-team": "todo-team"
     }

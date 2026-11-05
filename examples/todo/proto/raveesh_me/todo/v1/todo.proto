@@ -12,7 +12,7 @@ import "google/protobuf/field_mask.proto";
 import "google/protobuf/timestamp.proto";
 import "google/type/money.proto";
 
-// TodoService manages a to-do list.
+// Manages a to-do list.
 service TodoService {
   option (google.api.default_host) = "todo.raveesh.me";
   option (dedo.v1.service) = {

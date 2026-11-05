@@ -1,0 +1,56 @@
+syntax = "proto3";
+
+// The library: books on shelves, and the loans of them.
+package raveesh_me.library.v1;
+
+import "google/api/resource.proto";
+import "google/protobuf/empty.proto";
+import "dedo/v1/options.proto";
+
+// Lends books to members.
+service LoanService {
+  option (dedo.v1.service) = {title: "Loans"};
+
+  // Renews a loan. The words alone are English, not structure: members
+  // renew at the self-service desk, and the fee is the aggregate of the
+  // days late.
+  rpc Renew(google.protobuf.Empty) returns (google.protobuf.Empty) {
+    option (dedo.v1.method) = {
+      tool: {
+        title: "Renew a loan"
+        description: "Renews a loan, from the self-service desk."
+      }
+    };
+  }
+}
+
+// A title replaces the name in the reference, so the name may say what it
+// likes.
+service CatalogModuleService {
+  option (dedo.v1.service) = {title: "Catalog"};
+}
+
+// The services a location offers, such as a haircut: here service is the
+// domain's own noun, the resource the API manages.
+service ServiceService {
+  rpc GetService(GetServiceRequest) returns (Service);
+}
+
+message GetServiceRequest {
+  string name = 1;
+}
+
+// A service a location offers.
+message Service {
+  option (google.api.resource) = {
+    type: "library.raveesh.me/Service"
+    pattern: "services/{service}"
+  };
+  string name = 1;
+}
+
+// A FieldService visit: a message of that name is the domain's noun, not a
+// proto service.
+message FieldService {
+  string name = 1;
+}

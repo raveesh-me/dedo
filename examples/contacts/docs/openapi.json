@@ -12,13 +12,13 @@
   "tags": [
     {
       "name": "Contact",
-      "description": "ContactService keeps each location's contacts. Every location is a tenant:\na caller reaches only the locations it belongs to.",
+      "description": "Keeps each location's contacts. Every location is a tenant: a caller\nreaches only the locations it belongs to.",
       "x-audience": "AUDIENCE_EXTERNAL_PUBLIC",
       "x-owner-team": "contacts-team"
     },
     {
       "name": "Location",
-      "description": "LocationService describes the locations, the tenants of ContactService.",
+      "description": "Describes the locations, the tenants that own the contacts.",
       "x-audience": "AUDIENCE_EXTERNAL_PUBLIC",
       "x-owner-team": "contacts-team"
     }

@@ -8,8 +8,8 @@ import "google/api/field_behavior.proto";
 import "google/api/resource.proto";
 import "google/protobuf/field_mask.proto";
 
-// ContactService keeps each location's contacts. Every location is a tenant:
-// a caller reaches only the locations it belongs to.
+// Keeps each location's contacts. Every location is a tenant: a caller
+// reaches only the locations it belongs to.
 service ContactService {
   option (dedo.v1.service) = {
     audience: AUDIENCE_EXTERNAL_PUBLIC
@@ -131,7 +131,7 @@ service ContactService {
   }
 }
 
-// LocationService describes the locations, the tenants of ContactService.
+// Describes the locations, the tenants that own the contacts.
 service LocationService {
   option (dedo.v1.service) = {
     audience: AUDIENCE_EXTERNAL_PUBLIC
