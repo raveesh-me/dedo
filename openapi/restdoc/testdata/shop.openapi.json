@@ -13,7 +13,7 @@
     },
     {
       "name": "Product",
-      "description": "ProductService reads the products on sale.",
+      "description": "Reads the products on sale.",
       "parent": "acme.catalog.v1"
     },
     {
@@ -24,12 +24,12 @@
     },
     {
       "name": "Orders",
-      "description": "OrderService reads orders. Its title is the package's title too: the\npackage's tag is named after the package, so the two cannot clash.",
+      "description": "Reads orders. Its title is the package's title too: the package's tag is\nnamed after the package, so the two cannot clash.",
       "parent": "acme.orders.v1"
     },
     {
       "name": "Return",
-      "description": "ReturnService reads returns.",
+      "description": "Reads returns.",
       "parent": "acme.orders.v1"
     }
   ],

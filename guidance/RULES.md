@@ -276,6 +276,7 @@ A house rule that contradicts a DEDO, AIP or ZALANDO rule without overriding it 
 | [`DEDO_TOOL_ANNOTATIONS`](#dedo_tool_annotations) | RPCs declare the MCP ToolAnnotations hints, consistent with the proto |
 | [`DEDO_MESSAGE_DESCRIPTION_REQUIRED`](#dedo_message_description_required) | Messages declare a consumer-facing description |
 | [`DEDO_PACKAGE_SHARED_RESERVED`](#dedo_package_shared_reserved) | No package names its module `shared` |
+| [`DEDO_DOCS_NO_CODE_STRUCTURE`](#dedo_docs_no_code_structure) | Headings and descriptions in the reference name no code structure |
 | [`DEDO_EVENT_TYPES`](#dedo_event_types) | Declared event types belong to the package, name one of its resources, appear once, and only on RPCs that change state |
 | [`DEDO_EVENT_NOT_PUBLISHED_DECLARED`](#dedo_event_not_published_declared) | RPCs that emit events declare `EVENT_NOT_PUBLISHED` with `UNAVAILABLE` |
 
@@ -569,6 +570,43 @@ package acme.orders.v1;   // Passes.
 ```
 
 **Fix.** Name the module with the domain noun for what it is responsible for. Put value objects that several modules use in `<context>.type`, with no services and no version.
+
+### DEDO_DOCS_NO_CODE_STRUCTURE
+
+**Checks** the text a service publishes:
+
+- a service's heading in the reference, its `dedo.v1.service` title or else its name without the `Service` suffix, has no word *service*, *module*, *aggregate* or *microservice*, singular or plural, unless a resource the service manages is named with it;
+- no leading comment of a package, service, RPC, message, field, enum or enum value, and no tool title or description or message description, names a proto service: an identifier ending in `Service`, such as `OrderService`, unless a message or enum of that name is in the file or one it imports.
+
+**Why.** The reference is read by callers, who look for the domain's nouns and what they can do with them. *Service*, *module* and *aggregate* are how the code is built ([domains.md](domains.md#the-layers)), and a heading or description that says them shows the reader the code instead of the domain. They also tie the reference to the code's layout: two services that merge change the reader's navigation even when no REST path changes. The words alone are English, so prose may say them (a self-service desk, an aggregate amount); only a proto service's name, which no caller of the REST API ever sees, is flagged there.
+
+```protobuf
+// Fails: the heading is "Filing Calendar Service".
+service FilingCalendarService {
+  option (dedo.v1.service) = {title: "Filing Calendar Service"};
+}
+
+// Fails: the heading is "Catalog Module".
+service CatalogModuleService {}
+
+// Fails: the description names a proto service.
+// OrderService reads orders.
+service OrderService {}
+
+// Passes: the heading is "Orders", and the description says what it does.
+// Reads the orders buyers placed.
+service OrderService {
+  option (dedo.v1.service) = {title: "Orders"};
+}
+
+// Passes: service is the domain's noun, the resource the API manages.
+// The services a location offers, such as a haircut.
+service ServiceService {
+  rpc GetService(GetServiceRequest) returns (Service);
+}
+```
+
+**Fix.** Give the service a `title` with the noun readers look for. Renaming the proto service is not needed, and would change its Connect and gRPC paths. Rewrite a comment to say what the API does for its caller, not which service does it.
 
 ### DEDO_EVENT_TYPES
 

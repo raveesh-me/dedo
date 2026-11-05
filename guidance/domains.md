@@ -88,7 +88,7 @@ main.go
 
 An aggregate is a cluster of objects that changes as one, with one root that guards its rules. In dedo an aggregate is one service and the resource it manages.
 
-- **One service per aggregate root**, named after it: `OrderService` manages `Order`. Give the service the plural noun readers look for as its `title` (`Orders`); the reference uses it as the service's heading. dedo doesn't lint this, but a house rule on a service's `roots` can ([RULES.md](RULES.md#house-rules)).
+- **One service per aggregate root**, named after it: `OrderService` manages `Order`. Give the service the plural noun readers look for as its `title` (`Orders`); the reference uses it as the service's heading. dedo doesn't lint that the service is named after its root, but a house rule on a service's `roots` can ([RULES.md](RULES.md#house-rules)). It does lint that the heading says no *service*, *module* or *aggregate* ([`DEDO_DOCS_NO_CODE_STRUCTURE`](RULES.md#dedo_docs_no_code_structure)).
 - **Every RPC of the service acts on that aggregate.** An RPC is one transaction, so the aggregate is the consistency boundary: what must always hold true is enforced inside one RPC. A rule that spans two aggregates holds eventually, through a later call to the other aggregate, not inside one transaction: the caller's, or that of an orchestrator an event notified.
 - **Keep aggregates small.** Put only what must be consistent at once inside the boundary. Large aggregates make for large requests, conflicting writes and slow pages.
 - **Refer to another aggregate by its resource name, never by embedding its message.** Declare the field with `google.api.resource_reference`. Embedding couples two lifecycles and leaks the other aggregate's rules into this one. A multi-tenant service also checks the tenant of every referenced name.
@@ -168,12 +168,14 @@ A core service waits to be called. It never subscribes to a bus, polls another s
 "tags": [
   {"name": "acme.orders.v1", "summary": "Orders", "kind": "nav",
    "description": "Orders is what buyers commit to buy, and what they send back."},
-  {"name": "Orders", "parent": "acme.orders.v1", "description": "OrderService reads orders."},
-  {"name": "Returns", "parent": "acme.orders.v1", "description": "ReturnService reads returns."}
+  {"name": "Orders", "parent": "acme.orders.v1", "description": "Reads orders."},
+  {"name": "Returns", "parent": "acme.orders.v1", "description": "Reads returns."}
 ]
 ```
 
 Operations name their tag by name alone, so every tag name must be unique across the document: two services titled `Orders` in different packages fail generation, and one of them needs another title. A package's comment comes from the first of its files that has one. A service whose tag repeats its package's heading, so that the reference reads "Calculation › Calculation", draws a warning when it is not named after the one root it manages: it is probably named after its module. The warning names the root to call it after (`TaxQuoteService` titled "Tax quotes"). `OrderService` titled `Orders` in `acme.orders.v1` draws none: that is the layout this guide describes.
+
+The layers are how the code is built; the reader sees only the domain. Headings are domain nouns, and descriptions say what the API does for its caller, never which service, module or aggregate does it: `Reads orders.`, not `OrderService reads orders.` The proto names keep their `Service` suffix, which buf requires and the Connect and gRPC paths carry, but the reference never shows it. [`DEDO_DOCS_NO_CODE_STRUCTURE`](RULES.md#dedo_docs_no_code_structure) checks both.
 
 A reference that supports 3.2 shows context, module, aggregate and operation as four levels. The docs page that `dedo init` writes uses Scalar, which does. A viewer that ignores `parent` still lists every service, without the package level.
 
@@ -185,6 +187,7 @@ A reference that supports 3.2 shows context, module, aggregate and operation as 
 - A module reads another only through the provider's `Port` or its generated client, and the modules stay acyclic.
 - One Postgres schema and one database role per module; no foreign keys or views across modules.
 - One service per aggregate, titled with the noun readers look for; every RPC acts on that aggregate.
+- Headings and descriptions speak the domain's language: no *service*, *module* or *aggregate* in a heading, and no proto service name in a comment.
 - An operation with no aggregate is a domain service: no resource, only custom methods, hung off the tenant in a multi-tenant service and off a collection noun otherwise. It changes no aggregate, and one that only answers is a `NO_SIDE_EFFECTS` query, over `GET` where the input fits in a URL.
 - References to other aggregates are resource names with `resource_reference`, never embedded messages.
 - Commands are named with the domain's verbs; queries are `NO_SIDE_EFFECTS`.

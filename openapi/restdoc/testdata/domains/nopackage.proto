@@ -2,7 +2,7 @@ syntax = "proto3";
 
 import "google/api/annotations.proto";
 
-// PingService has no package to be grouped under.
+// Answers pings, from a file with no package to be grouped under.
 service PingService {
   // Ping answers.
   rpc Ping(PingRequest) returns (PingResponse) {

@@ -6,7 +6,7 @@ package acme.catalog.v1;
 import "acme/type/type.proto";
 import "google/api/annotations.proto";
 
-// ProductService reads the products on sale.
+// Reads the products on sale.
 service ProductService {
   // GetProduct returns one product.
   rpc GetProduct(GetProductRequest) returns (GetProductResponse) {

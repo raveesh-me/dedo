@@ -8,7 +8,7 @@ import "google/api/field_behavior.proto";
 import "google/api/resource.proto";
 import "google/type/money.proto";
 
-// LibraryService manages books on shelves.
+// Manages books on shelves.
 service LibraryService {
   option (dedo.v1.service) = {
     audience: AUDIENCE_EXTERNAL_PUBLIC

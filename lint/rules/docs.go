@@ -32,6 +32,7 @@ const (
 	idToolAnnotations            = "DEDO_TOOL_ANNOTATIONS"
 	idMessageDescriptionRequired = "DEDO_MESSAGE_DESCRIPTION_REQUIRED"
 	idPackageSharedReserved      = "DEDO_PACKAGE_SHARED_RESERVED"
+	idDocsNoCodeStructure        = "DEDO_DOCS_NO_CODE_STRUCTURE"
 	idEventTypes                 = "DEDO_EVENT_TYPES"
 	idEventNotPublishedDeclared  = "DEDO_EVENT_NOT_PUBLISHED_DECLARED"
 

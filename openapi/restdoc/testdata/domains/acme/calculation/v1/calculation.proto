@@ -6,9 +6,8 @@ package acme.calculation.v1;
 import "google/api/annotations.proto";
 import "google/api/resource.proto";
 
-// CalculationService keeps tax quotes. It is named after its module, not
-// the root it manages, so the reference would read "Calculation ›
-// Calculation".
+// Keeps tax quotes. The service is named after its module, not the root it
+// manages, so the reference would read "Calculation › Calculation".
 service CalculationService {
   // GetTaxQuote returns one tax quote.
   rpc GetTaxQuote(GetTaxQuoteRequest) returns (GetTaxQuoteResponse) {

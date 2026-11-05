@@ -7,7 +7,7 @@ package acme.billing.v1;
 import "dedo/v1/options.proto";
 import "google/api/annotations.proto";
 
-// InvoiceService reads invoices.
+// Reads invoices.
 service InvoiceService {
   option (dedo.v1.service) = {title: "Orders"};
 

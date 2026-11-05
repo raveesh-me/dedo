@@ -12,7 +12,7 @@
   "tags": [
     {
       "name": "Library",
-      "description": "LibraryService manages books on shelves.",
+      "description": "Manages books on shelves.",
       "x-audience": "AUDIENCE_EXTERNAL_PUBLIC",
       "x-owner-team": "library-team"
     }
