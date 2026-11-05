@@ -1,6 +1,6 @@
 # The rule sets this service runs, the tenancy rules among them; see
 # guidance/RULES.md.
-rules:
+lint:
   use:
     - AIP_NOLANG
     - ZALANDO

@@ -250,15 +250,3 @@ var sunsetNoEarlier = breakingRule(
 		return nil
 	}, checkutil.WithoutImports()),
 )
-
-// breakingSpecs returns dedo's breaking rules in the category buf.yaml's
-// breaking.use names.
-func breakingSpecs() []*check.RuleSpec {
-	out := make([]*check.RuleSpec, 0, len(Breaking))
-	for _, r := range Breaking {
-		c := *r
-		c.CategoryIDs = []string{CategoryBreaking}
-		out = append(out, &c)
-	}
-	return out
-}

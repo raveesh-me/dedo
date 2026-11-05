@@ -82,9 +82,31 @@ type Override struct {
 	Lapsed bool
 }
 
-// Consolidated is the rule set a lint runs: every rule, in the category
-// DEDO, with each rule that does not run reporting nothing.
+// kind is one kind of rules, which a section of dedo.yaml chooses.
+type kind struct {
+	// name is the section of dedo.yaml: lint or breaking.
+	name string
+	// category is the Buf category every rule of the kind is in, which
+	// buf.yaml lists: DEDO in lint.use, DEDO_BREAKING in breaking.use.
+	category string
+	// defaultUse runs when the section does not say use.
+	defaultUse []string
+	// sets names the kind's rule sets, for messages.
+	sets string
+}
+
+var (
+	lintKind     = kind{name: "lint", category: CategoryDedo, defaultUse: DefaultUse, sets: "AIP_NOLANG, ZALANDO, DEDO, HOUSE or DEDO_MULTI_TENANT"}
+	breakingKind = kind{name: "breaking", category: CategoryBreaking, defaultUse: DefaultBreakingUse, sets: "DEDO or HOUSE"}
+)
+
+// Consolidated is the rule set of one kind a run uses: every rule, in the
+// kind's category (DEDO for lint, DEDO_BREAKING for breaking), with each
+// rule that does not run reporting nothing.
 type Consolidated struct {
+	// Kind is the section of dedo.yaml the rules come from: lint or
+	// breaking.
+	Kind      string
 	Rules     []*check.RuleSpec
 	Overrides []Override
 	// Use are the rule sets and rules of dedo's that dedo.yaml uses.
@@ -141,6 +163,16 @@ func outranks(a, b candidate) bool {
 // houseRules no longer holds: an override of one has nothing left to
 // override.
 func Consolidate(builtin []*check.RuleSpec, houseRules []config.Rule, houseSpecs []*check.RuleSpec, use, disabled []string) (*Consolidated, error) {
+	return consolidate(lintKind, builtin, houseRules, houseSpecs, use, disabled)
+}
+
+// ConsolidateBreaking is Consolidate for breaking rules: dedo's (Breaking)
+// and the house breaking rules, chosen by dedo.yaml's breaking section.
+func ConsolidateBreaking(houseRules []config.Rule, houseSpecs []*check.RuleSpec, use, disabled []string) (*Consolidated, error) {
+	return consolidate(breakingKind, Breaking, houseRules, houseSpecs, use, disabled)
+}
+
+func consolidate(k kind, builtin []*check.RuleSpec, houseRules []config.Rule, houseSpecs []*check.RuleSpec, use, disabled []string) (*Consolidated, error) {
 	var all []candidate
 	byID := map[string]candidate{}
 	for _, s := range builtin {
@@ -153,11 +185,11 @@ func Consolidate(builtin []*check.RuleSpec, houseRules []config.Rule, houseSpecs
 		all = append(all, c)
 		byID[s.ID] = c
 	}
-	out := &Consolidated{House: len(houseSpecs), Use: use}
+	out := &Consolidated{Kind: k.name, House: len(houseSpecs), Use: use}
 	if use == nil {
-		out.Use, out.DefaultUse = DefaultUse, true
+		out.Use, out.DefaultUse = k.defaultUse, true
 	}
-	off, err := selection(all, byID, out.Use, disabled)
+	off, err := selection(k, all, byID, out.Use, disabled)
 	if err != nil {
 		return nil, err
 	}
@@ -166,7 +198,7 @@ func Consolidate(builtin []*check.RuleSpec, houseRules []config.Rule, houseSpecs
 			out.Disabled = append(out.Disabled, id)
 		}
 	}
-	if err := checkOverrides(all, byID, disabled); err != nil {
+	if err := checkOverrides(k, all, byID, disabled); err != nil {
 		return nil, err
 	}
 	// A rule runs unless it is off or a rule that runs overrides it.
@@ -209,7 +241,7 @@ func Consolidate(builtin []*check.RuleSpec, houseRules []config.Rule, houseSpecs
 			copied := *spec
 			spec = &copied
 		}
-		spec.CategoryIDs = []string{CategoryDedo}
+		spec.CategoryIDs = []string{k.category}
 		spec.Default = true
 		out.Rules = append(out.Rules, spec)
 		for _, id := range c.overrides {
@@ -227,7 +259,7 @@ func Consolidate(builtin []*check.RuleSpec, houseRules []config.Rule, houseSpecs
 
 // selection checks dedo.yaml's use and disable against the rules, and
 // returns why each rule that does not run is off.
-func selection(all []candidate, byID map[string]candidate, use, disabled []string) (map[string]string, error) {
+func selection(k kind, all []candidate, byID map[string]candidate, use, disabled []string) (map[string]string, error) {
 	sets := map[string]bool{house.Category: true}
 	for _, c := range all {
 		for _, set := range c.spec.CategoryIDs {
@@ -237,7 +269,7 @@ func selection(all []candidate, byID map[string]candidate, use, disabled []strin
 	var errs []error
 	for _, u := range use {
 		if _, ok := byID[u]; !ok && !sets[u] {
-			errs = append(errs, fmt.Errorf("dedo.yaml: use names %s, which is neither a rule set such as AIP_NOLANG, ZALANDO, DEDO, HOUSE or DEDO_MULTI_TENANT nor a rule", u))
+			errs = append(errs, fmt.Errorf("dedo.yaml: %s.use names %s, which is neither a rule set such as %s nor a %s rule", k.name, u, k.sets, k.name))
 		}
 	}
 	for _, id := range disabled {
@@ -245,9 +277,9 @@ func selection(all []candidate, byID map[string]candidate, use, disabled []strin
 		case config.IsHouse(id):
 			// Checked against the rules files already.
 		case byID[id].spec == nil:
-			errs = append(errs, fmt.Errorf("dedo.yaml: disable names %s, which no rule defines", id))
+			errs = append(errs, fmt.Errorf("dedo.yaml: %s.disable names %s, which no %s rule defines", k.name, id, k.name))
 		case Final[id] != "":
-			errs = append(errs, fmt.Errorf("dedo.yaml: disable names %s, which is final: %s. Keep it", id, Final[id]))
+			errs = append(errs, fmt.Errorf("dedo.yaml: %s.disable names %s, which is final: %s. Keep it", k.name, id, Final[id]))
 		}
 	}
 	if err := errors.Join(errs...); err != nil {
@@ -260,19 +292,19 @@ func selection(all []candidate, byID map[string]candidate, use, disabled []strin
 		case Final[id] != "" || c.house != nil && c.house.Final:
 			// Always runs.
 		case slices.Contains(disabled, id):
-			off[id] = "Disabled in dedo.yaml."
+			off[id] = fmt.Sprintf("Disabled in dedo.yaml's %s section.", k.name)
 		case slices.Contains(use, id):
 			// Named by ID, skipped or not.
 		case Skipped[id] != "":
 			off[id] = "Skipped by dedo: " + Skipped[id]
 		case !slices.ContainsFunc(c.spec.CategoryIDs, func(set string) bool { return slices.Contains(use, set) }):
-			off[id] = "Not in dedo.yaml's use."
+			off[id] = fmt.Sprintf("Not in dedo.yaml's %s.use.", k.name)
 		}
 	}
 	return off, nil
 }
 
-func checkOverrides(all []candidate, byID map[string]candidate, disabled []string) error {
+func checkOverrides(k kind, all []candidate, byID map[string]candidate, disabled []string) error {
 	var errs []error
 	for _, c := range all {
 		at := c.spec.ID
@@ -285,7 +317,7 @@ func checkOverrides(all []candidate, byID map[string]candidate, disabled []strin
 			case !ok && slices.Contains(disabled, id):
 				// Disabled already; the override changes nothing.
 			case !ok:
-				errs = append(errs, fmt.Errorf("%s overrides %s, which no rule defines", at, id))
+				errs = append(errs, fmt.Errorf("%s overrides %s, which no %s rule defines; a rule overrides only rules of its own kind", at, id, k.name))
 			case Final[id] != "":
 				errs = append(errs, fmt.Errorf("%s overrides %s, which is final: %s, so a contract without it would fail at startup instead of in lint. Keep %s and add your rule beside it", at, id, Final[id], id))
 			case target.house != nil && target.house.Final:
@@ -330,10 +362,10 @@ func silenced(spec *check.RuleSpec, why string) *check.RuleSpec {
 // rules, every override and the rules that run.
 func (c *Consolidated) Report() string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "%d rules, %d of them house rules; %d run, %d overridden, %d not used, skipped or disabled\n", len(c.Rules), c.House, len(c.Rules)-c.Overridden-c.Off, c.Overridden, c.Off)
+	fmt.Fprintf(&b, "%s: %d rules, %d of them house rules; %d run, %d overridden, %d not used, skipped or disabled\n", c.Kind, len(c.Rules), c.House, len(c.Rules)-c.Overridden-c.Off, c.Overridden, c.Off)
 	use := strings.Join(c.Use, ", ")
 	if c.DefaultUse {
-		use += " (the default; dedo.yaml does not say use)"
+		use += fmt.Sprintf(" (the default; dedo.yaml does not say %s.use)", c.Kind)
 	}
 	fmt.Fprintf(&b, "  use: %s\n", use)
 	for _, id := range c.Disabled {
@@ -360,16 +392,35 @@ func (c *Consolidated) Report() string {
 	return b.String()
 }
 
-// consolidateHouse compiles a dedo.yaml's house rules and consolidates
-// them with dedo's own.
-func consolidateHouse(cfg config.Config, builtin []*check.RuleSpec) (*Consolidated, error) {
-	specs, err := house.Specs(cfg.Rules)
+// Plugin is everything the plugin runs: its lint rules and its breaking
+// rules, each consolidated.
+type Plugin struct {
+	Lint, Breaking *Consolidated
+}
+
+// Report describes both rule sets for dedo tools.
+func (p *Plugin) Report() string {
+	return p.Lint.Report() + p.Breaking.Report()
+}
+
+// consolidateHouse compiles a dedo.yaml's house rules of both kinds and
+// consolidates each with dedo's own.
+func consolidateHouse(cfg config.Config, builtin []*check.RuleSpec) (*Plugin, error) {
+	lintSpecs, err := house.Specs(cfg.Lint.Rules)
 	if err != nil {
 		return nil, fmt.Errorf("house rules: %w", err)
 	}
-	c, err := Consolidate(builtin, cfg.Rules, specs, cfg.Use, cfg.Disabled)
+	lint, err := Consolidate(builtin, cfg.Lint.Rules, lintSpecs, cfg.Lint.Use, cfg.Lint.Disabled)
 	if err != nil {
 		return nil, fmt.Errorf("lint rules:\n%w", err)
 	}
-	return c, nil
+	breakingSpecs, err := house.Specs(cfg.Breaking.Rules)
+	if err != nil {
+		return nil, fmt.Errorf("house breaking rules: %w", err)
+	}
+	breaking, err := ConsolidateBreaking(cfg.Breaking.Rules, breakingSpecs, cfg.Breaking.Use, cfg.Breaking.Disabled)
+	if err != nil {
+		return nil, fmt.Errorf("breaking rules:\n%w", err)
+	}
+	return &Plugin{Lint: lint, Breaking: breaking}, nil
 }

@@ -4,19 +4,44 @@
 # dedo.yaml next to buf.yaml; dedo init writes a plain one.
 # guidance/RULES.md in the dedo repository explains each key.
 #
-# The rules section is what a shared rules file (rules.yml) holds. Its rules
-# rank in layers, and a rule may override only rules below it:
+# imports, lint and breaking are what a shared rules file (rules.yml) holds
+# too. lint chooses the rules buf lint runs, and breaking the rules buf
+# breaking runs; each holds house rules of its kind. Rules rank in layers,
+# and a rule may override only rules of its kind below it:
 #
 #   this file's rules      the service's own; may override any rule below
 #   imported house rules   a file outranks the files it imports
 #   DEDO                   dedo's conventions
-#   AIP                    Google's API Improvement Proposals
-#   ZALANDO                the Zalando guidelines dedo adopts
+#   AIP                    Google's API Improvement Proposals (lint only)
+#   ZALANDO                the Zalando guidelines dedo adopts (lint only)
 #
 # Run dedo tools (make tools) after every change: it fetches the git
 # imports, checks every name below, and lists the rules in force.
 
-rules:
+# House rules from elsewhere: each import brings its lint and breaking rules.
+# Each import's rules rank below this file's, and a shared file can import
+# others in turn.
+imports:
+  # The organisation's rules, for every service. A git import needs a ref,
+  # a tag or a commit, so every machine reads the same rules.
+  - git: https://github.com/acme/api-standards.git
+    ref: v3
+  # The commerce platform's rules, kept in a folder of another repository;
+  # path is from that repository's root (default: rules.yml).
+  - git: https://github.com/acme/commerce-platform.git
+    ref: 4f9c2a1
+    path: api/rules.yml
+  # Rules published over HTTPS, for machines that cannot read the
+  # repository: pinned by the file's SHA-256, which dedo tools checks (and
+  # prints, when it is missing). A relative doc on its rules is resolved
+  # against this URL.
+  # - url: https://acme.github.io/payments-rules/v2/rules.yml
+  #   sha256: 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
+  # Rules shared by this monorepo's services: a folder (its rules.yml) or
+  # a file, relative to this file's folder.
+  - path: ../shared-rules
+
+lint:
   # The rule sets that run. These are all five; leave out a set to turn it
   # off. Only this file, the repository's own, says use: imported files add
   # rules, and cannot choose which of dedo's run.
@@ -26,28 +51,6 @@ rules:
     - DEDO
     - HOUSE              # the rules below and every imported one
     - DEDO_MULTI_TENANT  # this service partitions its data by location
-
-  # House rules from elsewhere. Each import's rules rank below this file's,
-  # and a shared file can import others in turn.
-  imports:
-    # The organisation's rules, for every service. A git import needs a ref,
-    # a tag or a commit, so every machine reads the same rules.
-    - git: https://github.com/acme/api-standards.git
-      ref: v3
-    # The commerce platform's rules, kept in a folder of another repository;
-    # path is from that repository's root (default: rules.yml).
-    - git: https://github.com/acme/commerce-platform.git
-      ref: 4f9c2a1
-      path: api/rules.yml
-    # Rules published over HTTPS, for machines that cannot read the
-    # repository: pinned by the file's SHA-256, which dedo tools checks (and
-    # prints, when it is missing). A relative doc on its rules is resolved
-    # against this URL.
-    # - url: https://acme.github.io/payments-rules/v2/rules.yml
-    #   sha256: 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
-    # Rules shared by this monorepo's services: a folder (its rules.yml) or
-    # a file, relative to this file's folder.
-    - path: ../shared-rules
 
   # Rules this service opts out of, by ID: an imported house rule or one of
   # dedo's. Never a final rule; dedo tools refuses that, naming who made it
@@ -100,6 +103,45 @@ rules:
       on: enum
       check: size(values) <= 50
       message: An enum has at most 50 values; use a resource for longer lists.
+
+
+breaking:
+  # The breaking rule sets that run: DEDO, dedo's (an RPC keeps its scopes,
+  # its REST paths, its event types...), and HOUSE, the breaking rules
+  # below and every imported one. buf.yaml's breaking.use lists DEDO_BREAKING
+  # beside FILE, and this section chooses among those rules.
+  use:
+    - DEDO
+    - HOUSE
+
+  # Breaking rules this service opts out of, by ID, as for lint.
+  disable:
+    - DEDO_SUNSET_NO_EARLIER   # this service's sunsets follow the platform's calendar
+
+  # This service's own breaking rules: CEL checks of an element against
+  # against, the element of the same name in the version buf breaking
+  # compares with. A check passes when it is true.
+  rules:
+    # No method may move off the commerce REST root, even within a version.
+    - id: HOUSE_COMMERCE_ROOT_KEPT
+      on: method
+      check: "!against.http_path.startsWith('/commerce/') || http_path.startsWith('/commerce/')"
+      message: A method served under /commerce/ stays there.
+
+    # Overrides one of dedo's: a cart method may drop a scope only for the
+    # cart.admin scope that replaces every one.
+    - id: HOUSE_CART_SCOPES_KEPT
+      on: method
+      check: "'cart.admin' in scopes || against.scopes.all(s, s in scopes)"
+      message: A cart method keeps its scopes, unless cart.admin now grants it.
+      overrides: [DEDO_SCOPES_NO_DELETE]
+
+    # Final, as for lint: no file can override or disable it.
+    - id: HOUSE_ENUM_VALUES_KEPT
+      on: enum
+      check: against.values.all(v, v in values)
+      message: An enum keeps its values; clients store them.
+      final: true
 
 # The organisation's guidance for coding agents. dedo init adds each file to
 # CLAUDE.md and AGENTS.md after dedo's own guidance, and dedo upgrade rewrites

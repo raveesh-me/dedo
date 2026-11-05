@@ -78,7 +78,7 @@ func wasmPlugin(dir, out string, w io.Writer) error {
 			return err
 		}
 		ldflags += " -X " + rulesVar + "=" + embedded
-		fmt.Fprintf(w, "building %s, with %d house rules, into the WebAssembly plugin\n", filepath.Base(path), len(c.Rules))
+		fmt.Fprintf(w, "building %s, with %d house rules, into the WebAssembly plugin\n", filepath.Base(path), len(c.Lint.Rules)+len(c.Breaking.Rules))
 	}
 	// A throwaway module pins the release, so no go.mod of the
 	// repository's is needed or changed.
@@ -179,7 +179,7 @@ func consolidate(dir string, out io.Writer) error {
 	var exit *exec.ExitError
 	switch {
 	case err == nil:
-		fmt.Fprintf(out, "lint rules: %s", report)
+		fmt.Fprintf(out, "rules in force:\n%s", report)
 		return nil
 	case strings.Contains(string(report), "unknown shorthand flag"):
 		// A plugin from before overrides cannot report them.
@@ -188,5 +188,5 @@ func consolidate(dir string, out io.Writer) error {
 	case !errors.As(err, &exit):
 		return fmt.Errorf("running %s: %w", pluginPath(), err)
 	}
-	return fmt.Errorf("the lint rules do not consolidate:\n%s", strings.TrimSpace(string(report)))
+	return fmt.Errorf("the rules do not consolidate:\n%s", strings.TrimSpace(string(report)))
 }

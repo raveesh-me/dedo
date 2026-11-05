@@ -6,9 +6,20 @@
 #       ref: v3
 #
 # Here it is a folder next to the examples, which import it by path.
-rules:
-  - id: HOUSE_RESOURCE_TYPE_DOMAIN
-    on: resource
-    check: type.split('/')[0].endsWith('.raveesh.me')
-    message: Resource types live under raveesh.me, such as todo.raveesh.me/Todo.
-    doc: https://github.com/raveesh-me/dedo/blob/main/guidance/RULES.md#house-rules
+lint:
+  rules:
+    - id: HOUSE_RESOURCE_TYPE_DOMAIN
+      on: resource
+      check: type.split('/')[0].endsWith('.raveesh.me')
+      message: Resource types live under raveesh.me, such as todo.raveesh.me/Todo.
+      doc: https://github.com/raveesh-me/dedo/blob/main/guidance/RULES.md#house-rules
+
+# Breaking rules, which buf breaking runs against the version a service
+# compares with: against is the element as it was.
+breaking:
+  rules:
+    - id: HOUSE_ENUM_VALUES_KEPT
+      on: enum
+      check: against.values.all(v, v in values)
+      message: An enum keeps its values, which clients store; add new ones instead.
+      doc: https://github.com/raveesh-me/dedo/blob/main/guidance/RULES.md#house-rules

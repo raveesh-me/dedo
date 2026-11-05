@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package shop.v1;
+
+import "google/protobuf/empty.proto";
+import "dedo/v1/options.proto";
+
+service CartService {
+  rpc GetCart(google.protobuf.Empty) returns (google.protobuf.Empty) {
+    option (dedo.v1.method) = {scopes: ["cart.read", "cart.admin"]};
+  }
+  rpc ClearCart(google.protobuf.Empty) returns (google.protobuf.Empty) {
+    option (dedo.v1.method) = {scopes: "cart.write"};
+  }
+}
+
+enum Colour {
+  COLOUR_UNSPECIFIED = 0;
+  COLOUR_RED = 1;
+}

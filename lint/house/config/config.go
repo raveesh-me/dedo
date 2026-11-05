@@ -1,15 +1,14 @@
-// Package config reads a repository's dedo.yaml, next to buf.yaml. Its rules
-// section says which of dedo's rules run, and holds the house rules, its own
-// and those of the rules files it imports from folders, git repositories and
-// HTTPS URLs; its annexure section names the guidance for coding agents that
-// dedo adds to CLAUDE.md and AGENTS.md (see Annexure). It has no CEL in it,
-// so the dedo command can fetch imports with it too.
+// Package config reads a repository's dedo.yaml, next to buf.yaml. Its lint
+// and breaking sections say which of dedo's lint rules and breaking rules
+// run, and hold the house rules of each kind, its own and those of the rules
+// files it imports from folders, git repositories and HTTPS URLs; its
+// annexure section names the guidance for coding agents that dedo adds to
+// CLAUDE.md and AGENTS.md (see Annexure). It has no CEL in it, so the dedo
+// command can fetch imports with it too.
 //
-// The rules section is what a shared rules file (rules.yml) holds, and what
-// a repository's rules.yml held before dedo.yaml, which is still read where
+// A shared rules file (rules.yml) holds the same, without annexure, and so
+// did a repository's rules.yml before dedo.yaml, which is still read where
 // there is no dedo.yaml:
-//
-//	use: [AIP_NOLANG, ZALANDO, DEDO, DEDO_MULTI_TENANT] # dedo's rule sets, or rule IDs
 //
 //	imports:
 //	  - path: platform-rules            # a folder (its rules.yml) or a file
@@ -21,22 +20,35 @@
 //
 // Every path is relative to the root of the repository whose file names it:
 // this repository's (the folder of dedo.yaml), the git import's, or the
-// folder of the url import's URL.
+// folder of the url import's URL. An import brings both kinds of rules.
 //
-//	disable: [HOUSE_PLURAL_COLLECTIONS] # rules this repository opts out of
-//	rules:
-//	  - id: HOUSE_RESOURCE_TYPE_DOMAIN
-//	    on: resource
-//	    check: type.endsWith('.acme.com')
-//	    message: Resource types live under acme.com.
-//	    doc: https://wiki.acme.com/api/resources
-//	    overrides: [HOUSE_RESOURCE_TYPE]    # rules this one replaces
-//	    final: true                         # no rule may override or disable it
+//	lint:
+//	  use: [AIP_NOLANG, ZALANDO, DEDO, HOUSE] # dedo's rule sets, or rule IDs
+//	  disable: [HOUSE_PLURAL_COLLECTIONS]     # rules this repository opts out of
+//	  rules:
+//	    - id: HOUSE_RESOURCE_TYPE_DOMAIN
+//	      on: resource
+//	      check: type.endsWith('.acme.com')
+//	      message: Resource types live under acme.com.
+//	      doc: https://wiki.acme.com/api/resources
+//	      overrides: [HOUSE_RESOURCE_TYPE]    # rules this one replaces
+//	      final: true                         # no rule may override or disable it
+//	breaking:
+//	  use: [DEDO, HOUSE]
+//	  rules:
+//	    - id: HOUSE_SCOPES_KEEP_PREFIX
+//	      on: method
+//	      check: against.scopes.all(s, scopes.exists(n, n.startsWith(s.split('.')[0])))
+//	      message: An RPC keeps the apps its scopes name.
 //
-// Only the repository's own file says use. disable names house rules
-// or dedo's own. A rule may override DEDO, AIP and ZALANDO rules, and the
-// rules of the files its own file imports, unless they are final; package
-// rules checks that, and the names in use and disable, and applies them.
+// A breaking rule checks an element against the one of the same name in the
+// version buf breaking compares with, which its check reads as against.
+//
+// Only the repository's own file says use. disable names house rules or
+// dedo's own, of its section's kind. A rule may override dedo's rules of its
+// kind, and the rules of the files its own file imports, unless they are
+// final; package rules checks that, and the names in use and disable, and
+// applies them. Rule IDs are unique across both kinds.
 package config
 
 import (
@@ -81,11 +93,14 @@ var (
 
 // Rule is one house rule.
 type Rule struct {
-	ID      string `yaml:"id"`
-	On      string `yaml:"on"`
-	Check   string `yaml:"check"`
-	Message string `yaml:"message"`
-	Doc     string `yaml:"doc"`
+	// Breaking is set for a rule of a breaking section: buf breaking runs
+	// it, on each element paired with its earlier version.
+	Breaking bool   `yaml:"-" json:"breaking,omitempty"`
+	ID       string `yaml:"id"`
+	On       string `yaml:"on"`
+	Check    string `yaml:"check"`
+	Message  string `yaml:"message"`
+	Doc      string `yaml:"doc"`
 	// Overrides are the rules this one replaces: they no longer run.
 	Overrides []string `yaml:"overrides"`
 	// Final rules cannot be overridden or disabled, by any file.
@@ -109,16 +124,23 @@ type Import struct {
 	SHA256 string `yaml:"sha256"`
 }
 
-type file struct {
+// section is a file's lint or breaking section.
+type section struct {
 	Use     []string `yaml:"use"`
-	Imports []Import `yaml:"imports"`
 	Disable []string `yaml:"disable"`
 	Rules   []Rule   `yaml:"rules"`
 }
 
+// file is a shared rules file, and the rules of a dedo.yaml.
+type file struct {
+	Imports  []Import `yaml:"imports"`
+	Lint     section  `yaml:"lint"`
+	Breaking section  `yaml:"breaking"`
+}
+
 // project is a dedo.yaml.
 type project struct {
-	Rules    file       `yaml:"rules"`
+	file     `yaml:",inline"`
 	Annexure []Annexure `yaml:"annexure"`
 }
 
@@ -129,6 +151,9 @@ func IsProject(path string) bool {
 
 // decode reads a dedo.yaml or a rules file; strict rejects unknown keys.
 func decode(path string, b []byte, strict bool) (project, error) {
+	if err := oldLayout(path, b); err != nil {
+		return project{}, err
+	}
 	dec := yaml.NewDecoder(bytes.NewReader(b))
 	dec.KnownFields(strict)
 	var p project
@@ -136,13 +161,35 @@ func decode(path string, b []byte, strict bool) (project, error) {
 	if IsProject(path) {
 		err = dec.Decode(&p)
 	} else {
-		err = dec.Decode(&p.Rules)
+		err = dec.Decode(&p.file)
 	}
 	// An empty file decodes to io.EOF: it simply has no rules.
 	if err != nil && !errors.Is(err, io.EOF) {
 		return project{}, fmt.Errorf("%s: %w", path, err)
 	}
 	return p, nil
+}
+
+// oldLayout explains a file written for a dedo before v0.32.1, whose
+// dedo.yaml held one rules section, and whose rules files held its keys at
+// the top, instead of lint and breaking sections.
+func oldLayout(path string, b []byte) error {
+	var top map[string]yaml.Node
+	if err := yaml.Unmarshal(b, &top); err != nil {
+		return nil // decode reports it
+	}
+	if IsProject(path) {
+		if _, ok := top["rules"]; ok {
+			return fmt.Errorf("%s: its rules section is now lint, with imports at the top of the file and a breaking section beside it: run dedo upgrade", path)
+		}
+		return nil
+	}
+	for _, key := range []string{"rules", "use", "disable"} {
+		if _, ok := top[key]; ok {
+			return fmt.Errorf("%s: %s belongs in a lint section now (or breaking, for breaking rules), with imports at the top of the file", path, key)
+		}
+	}
+	return nil
 }
 
 // Find returns the file for a lint run started in dir: $DEDO_RULES, else
@@ -169,6 +216,12 @@ func Find(dir string) string {
 
 // Config is what a repository's rules say, imports included.
 type Config struct {
+	Lint     Selection `json:"lint"`
+	Breaking Selection `json:"breaking"`
+}
+
+// Selection is what one kind of rules says: lint or breaking.
+type Selection struct {
 	// Use lists the rule sets and rules of dedo's that run; nil means
 	// the rules do not say, so dedo's default runs.
 	Use []string `json:"use,omitempty"`
@@ -185,29 +238,62 @@ type Config struct {
 func Load(path string) (Config, error) {
 	root := filepath.Dir(path)
 	l := &loader{root: root, seen: map[string]bool{}, ids: map[string]string{}, imports: map[string][]string{}}
-	all, disabled, err := l.load(path, "", nil)
+	all, err := l.load(path, "", nil)
 	if err != nil {
 		return Config{}, err
 	}
 	importers := l.importers()
+	lint, err := l.selectKind(path, "lint", all.lint, all.lintDisabled, l.lintUse, importers)
+	if err != nil {
+		return Config{}, err
+	}
+	breaking, err := l.selectKind(path, "breaking", all.breaking, all.breakingDisabled, l.breakingUse, importers)
+	if err != nil {
+		return Config{}, err
+	}
+	return Config{Lint: lint, Breaking: breaking}, nil
+}
+
+// selectKind checks one kind's disable against its rules and returns what
+// runs of it.
+func (l *loader) selectKind(path, kind string, rules []Rule, disabled, use []string, importers map[string][]string) (Selection, error) {
 	for _, id := range disabled {
-		if _, ok := l.ids[id]; IsHouse(id) && !ok {
-			return Config{}, fmt.Errorf("%s: disable names %s, which no rules file defines", path, id)
+		if !IsHouse(id) {
+			continue
+		}
+		if !slices.ContainsFunc(rules, func(r Rule) bool { return r.ID == id }) {
+			if _, ok := l.ids[id]; ok {
+				return Selection{}, fmt.Errorf("%s: %s.disable names %s, which is not a %s rule", path, kind, id, kind)
+			}
+			return Selection{}, fmt.Errorf("%s: %s.disable names %s, which no rules file defines", path, kind, id)
 		}
 	}
-	for _, r := range all {
+	for _, r := range rules {
 		if r.Final && slices.Contains(disabled, r.ID) {
-			return Config{}, fmt.Errorf("%s: disable names %s, which %s marks final; keep it, or ask its owners to drop final", path, r.ID, r.Source)
+			return Selection{}, fmt.Errorf("%s: %s.disable names %s, which %s marks final; keep it, or ask its owners to drop final", path, kind, r.ID, r.Source)
 		}
 	}
-	c := Config{Use: l.use, Disabled: disabled}
-	for _, r := range all {
+	s := Selection{Use: use, Disabled: disabled}
+	for _, r := range rules {
 		if !slices.Contains(disabled, r.ID) {
 			r.Importers = importers[r.File]
-			c.Rules = append(c.Rules, r)
+			s.Rules = append(s.Rules, r)
 		}
 	}
-	return c, nil
+	return s, nil
+}
+
+// loaded is what a rules file and its imports hold, by kind.
+type loaded struct {
+	lint, breaking                 []Rule
+	lintDisabled, breakingDisabled []string
+}
+
+func (a *loaded) add(b loaded) {
+	a.lint = append(a.lint, b.lint...)
+	a.breaking = append(a.breaking, b.breaking...)
+	a.lintDisabled = append(a.lintDisabled, b.lintDisabled...)
+	a.breakingDisabled = append(a.breakingDisabled, b.breakingDisabled...)
 }
 
 // IsHouse reports whether id names a house rule rather than one of dedo's.
@@ -216,11 +302,12 @@ func IsHouse(id string) bool {
 }
 
 type loader struct {
-	use     []string // the use of the top file
-	root    string
-	seen    map[string]bool
-	ids     map[string]string   // rule ID → the file that defines it
-	imports map[string][]string // file → the files it imports
+	// lintUse and breakingUse are the use of the top file's sections.
+	lintUse, breakingUse []string
+	root                 string
+	seen                 map[string]bool
+	ids                  map[string]string   // rule ID → the file that defines it
+	imports              map[string][]string // file → the files it imports
 }
 
 // importers maps each file to every file that imports it, directly or
@@ -251,84 +338,99 @@ func (l *loader) importers() map[string][]string {
 // load reads one rules file; repo is the git checkout it lies in, or "" for
 // the service's own files, and stack holds the files importing it, to report
 // import cycles.
-func (l *loader) load(path, repo string, stack []string) (rules []Rule, disabled []string, err error) {
+func (l *loader) load(path, repo string, stack []string) (loaded, error) {
+	var out loaded
 	abs, err := filepath.Abs(path)
 	if err != nil {
-		return nil, nil, err
+		return out, err
 	}
 	if slices.Contains(stack, abs) {
-		return nil, nil, fmt.Errorf("rules files import each other: %s", strings.Join(append(stack, abs), " → "))
+		return out, fmt.Errorf("rules files import each other: %s", strings.Join(append(stack, abs), " → "))
 	}
 	if l.seen[abs] {
-		return nil, nil, nil // imported twice along different paths: once is enough
+		return out, nil // imported twice along different paths: once is enough
 	}
 	l.seen[abs] = true
 	b, err := os.ReadFile(abs)
 	if err != nil {
-		return nil, nil, err
+		return out, err
 	}
 	p, err := decode(path, b, true)
 	if err != nil {
-		return nil, nil, err
+		return out, err
 	}
-	f := p.Rules
-	if f.Use != nil {
-		if len(stack) > 0 {
-			return nil, nil, fmt.Errorf("%s: use belongs in the repository's own dedo.yaml, which chooses the rules it runs; imported files add rules", path)
+	f := p.file
+	for _, k := range []struct {
+		kind string
+		sec  section
+	}{{"lint", f.Lint}, {"breaking", f.Breaking}} {
+		kind, sec := k.kind, k.sec
+		if sec.Use != nil && len(stack) > 0 {
+			return out, fmt.Errorf("%s: %s.use belongs in the repository's own dedo.yaml, which chooses the rules it runs; imported files add rules", path, kind)
 		}
-		l.use = f.Use
+		for _, id := range sec.Disable {
+			if !anyID.MatchString(id) {
+				return out, fmt.Errorf("%s: %s.disable names %q, which is not a rule ID such as HOUSE_PLURAL_COLLECTIONS", path, kind, id)
+			}
+		}
 	}
-	for _, id := range f.Disable {
-		if !anyID.MatchString(id) {
-			return nil, nil, fmt.Errorf("%s: disable names %q, which is not a rule ID such as HOUSE_PLURAL_COLLECTIONS", path, id)
-		}
+	if len(stack) == 0 {
+		l.lintUse, l.breakingUse = f.Lint.Use, f.Breaking.Use
 	}
 	for _, imp := range f.Imports {
 		target, targetRepo, err := resolve(l.root, abs, repo, imp)
 		if err != nil {
-			return nil, nil, err
+			return out, err
 		}
 		if imp.Git != "" {
 			if _, err := os.Stat(targetRepo); err != nil {
-				return nil, nil, fmt.Errorf("%s: the import of %s@%s is not fetched yet: run dedo tools", abs, imp.Git, imp.Ref)
+				return out, fmt.Errorf("%s: the import of %s@%s is not fetched yet: run dedo tools", abs, imp.Git, imp.Ref)
 			}
 		}
 		if overHTTPS(imp, repo) {
 			if err := checkPin(abs, importName(imp), imp.SHA256); err != nil {
-				return nil, nil, err
+				return out, err
 			}
 			if _, err := os.Stat(target); err != nil {
-				return nil, nil, fmt.Errorf("%s: the import of %s is not fetched yet: run dedo tools", abs, importName(imp))
+				return out, fmt.Errorf("%s: the import of %s is not fetched yet: run dedo tools", abs, importName(imp))
 			}
 		}
 		targetAbs, err := filepath.Abs(target)
 		if err != nil {
-			return nil, nil, err
+			return out, err
 		}
 		// Recorded before load, which skips a file it has read already, so
 		// a file imported along two paths ranks below both importers.
 		l.imports[abs] = append(l.imports[abs], targetAbs)
-		r, d, err := l.load(target, targetRepo, append(stack, abs))
+		got, err := l.load(target, targetRepo, append(stack, abs))
 		if err != nil {
-			return nil, nil, err
+			return out, err
 		}
-		rules = append(rules, r...)
-		disabled = append(disabled, d...)
+		out.add(got)
 	}
-	for _, r := range f.Rules {
-		r.Source = path
-		r.File = abs
-		r.Doc = resolveDoc(r.Doc, repo, abs)
-		if err := validate(r); err != nil {
-			return nil, nil, fmt.Errorf("%s: %w", path, err)
+	for _, kind := range []struct {
+		breaking bool
+		rules    []Rule
+		into     *[]Rule
+	}{{false, f.Lint.Rules, &out.lint}, {true, f.Breaking.Rules, &out.breaking}} {
+		for _, r := range kind.rules {
+			r.Breaking = kind.breaking
+			r.Source = path
+			r.File = abs
+			r.Doc = resolveDoc(r.Doc, repo, abs)
+			if err := validate(r); err != nil {
+				return out, fmt.Errorf("%s: %w", path, err)
+			}
+			if prev, ok := l.ids[r.ID]; ok {
+				return out, fmt.Errorf("%s: %s is defined twice, also in %s", path, r.ID, prev)
+			}
+			l.ids[r.ID] = path
+			*kind.into = append(*kind.into, r)
 		}
-		if prev, ok := l.ids[r.ID]; ok {
-			return nil, nil, fmt.Errorf("%s: %s is defined twice, also in %s", path, r.ID, prev)
-		}
-		l.ids[r.ID] = path
-		rules = append(rules, r)
 	}
-	return rules, append(disabled, f.Disable...), nil
+	out.lintDisabled = append(out.lintDisabled, f.Lint.Disable...)
+	out.breakingDisabled = append(out.breakingDisabled, f.Breaking.Disable...)
+	return out, nil
 }
 
 // resolve returns the rules file an import names, and the git checkout or
@@ -480,7 +582,7 @@ func Fetch(path string) ([]string, error) {
 		if err != nil {
 			return err
 		}
-		for _, imp := range proj.Rules.Imports {
+		for _, imp := range proj.Imports {
 			if imp.URL != "" && imp.Git == "" {
 				dir := CacheDir(root, imp)
 				if _, err := os.Stat(dir); errors.Is(err, fs.ErrNotExist) {

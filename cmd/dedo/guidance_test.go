@@ -32,7 +32,7 @@ func writeFile(t *testing.T, dir, name, content string) {
 func TestGuidanceAnnexure(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, dir, "CLAUDE.md", "# Shop\n\nOur rules.\n")
-	writeFile(t, dir, "dedo.yaml", "rules: {}\nannexure:\n  - path: docs/agents.md\n")
+	writeFile(t, dir, "dedo.yaml", "lint: {}\nannexure:\n  - path: docs/agents.md\n")
 	writeFile(t, dir, "docs/agents.md", "# Acme\n\nSend a Version header.\n")
 	out, err := guidanceRun(t, dir, false)
 	if err != nil {
@@ -69,7 +69,7 @@ func TestGuidanceAnnexure(t *testing.T) {
 	}
 
 	// dedo.yaml drops it: so does CLAUDE.md.
-	writeFile(t, dir, "dedo.yaml", "rules: {}\n")
+	writeFile(t, dir, "dedo.yaml", "lint: {}\n")
 	out, err = guidanceRun(t, dir, false)
 	got = read(t, dir, "CLAUDE.md")
 	if err != nil || strings.Contains(got, beginPrefix+annexureKey) || !strings.Contains(out, "removed the annexure docs/agents.md") {
