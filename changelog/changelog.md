@@ -10,7 +10,7 @@ Version bumps, dependency updates and changes to benchmarks or examples alone ar
 
 ### Added
 
-- This changelog, covering every release since v0.1.0. #PR
+- This changelog, covering every release since v0.1.0. [#112](https://github.com/raveesh-me/dedo/pull/112)
 
 ## [v0.28.0] - 2026-11-04
 
