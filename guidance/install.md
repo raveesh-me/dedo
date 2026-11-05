@@ -3,7 +3,7 @@
 Each numbered section below adds one part of dedo to a repository. `dedo init` does all of them, editing what is already there:
 
 ```sh
-go install github.com/raveesh-me/dedo/cmd/dedo@v0.32.2
+go install github.com/raveesh-me/dedo/cmd/dedo@v0.32.3
 dedo init
 ```
 
@@ -22,7 +22,7 @@ version: v2
 deps:
   - buf.build/googleapis/googleapis
   - buf.build/bufbuild/protovalidate
-  - buf.build/r-a/dedo:v0.32.2   # the same release as the lint plugin and runtime
+  - buf.build/r-a/dedo:v0.32.3   # the same release as the lint plugin and runtime
 ```
 
 ```sh
@@ -48,7 +48,7 @@ dedo tools          # installs the plugin if needed, copies it into .tools/, and
 printf '.tools/\n' >> .gitignore
 ```
 
-Without the `dedo` command, `go install github.com/raveesh-me/dedo/lint/cmd/buf-plugin-dedo-lint@v0.32.2` and a copy into `.tools/` do the same. It runs natively because Buf starts the plugin about a dozen times per lint; through `go tool` each lint would take 2 s instead of 0.3 s. Run `dedo tools` again after a fresh clone, a version change, or any change to `dedo.yaml`'s rules or its imports.
+Without the `dedo` command, `go install github.com/raveesh-me/dedo/lint/cmd/buf-plugin-dedo-lint@v0.32.3` and a copy into `.tools/` do the same. It runs natively because Buf starts the plugin about a dozen times per lint; through `go tool` each lint would take 2 s instead of 0.3 s. Run `dedo tools` again after a fresh clone, a version change, or any change to `dedo.yaml`'s rules or its imports.
 
 List the plugin and its two categories in `buf.yaml`, `DEDO` for its lint rules and `DEDO_BREAKING` for its breaking rules, and choose its rules in the `lint` and `breaking` sections of `dedo.yaml` next to it ([templates/dedo.yaml](../templates/dedo.yaml); `dedo templates dedo.yaml` prints it). `buf.yaml` names no other rule of the plugin, in `use` or `except`: dedo reads only `dedo.yaml` ([RULES.md](RULES.md#choosing-the-rules) says how it chooses):
 
@@ -96,7 +96,7 @@ If your services partition their data between tenants, declare `tenancy` on each
 Repositories without a Go module, such as a TypeScript service or a schema repository, set the plugin up the same way. They need Go on the machine and in CI, to install it, but no `go.mod`. In CI:
 
 ```sh
-go install github.com/raveesh-me/dedo/cmd/dedo@v0.32.2
+go install github.com/raveesh-me/dedo/cmd/dedo@v0.32.3
 dedo tools          # installs the plugin at buf.yaml's release, copies it into .tools/, fetches the house rules
 buf lint
 ```
@@ -110,8 +110,8 @@ Pin the generators as Go tools:
 ```sh
 go get -tool google.golang.org/protobuf/cmd/protoc-gen-go
 go get -tool connectrpc.com/connect/v2/cmd/protoc-gen-connect-go@v2.0.1
-go get -tool github.com/raveesh-me/dedo/mcp/cmd/protoc-gen-dedo-mcp@v0.32.2
-go get -tool github.com/raveesh-me/dedo/openapi/cmd/protoc-gen-dedo-openapi@v0.32.2
+go get -tool github.com/raveesh-me/dedo/mcp/cmd/protoc-gen-dedo-mcp@v0.32.3
+go get -tool github.com/raveesh-me/dedo/openapi/cmd/protoc-gen-dedo-openapi@v0.32.3
 ```
 
 Add them to `buf.gen.yaml` ([templates/buf.gen.yaml](../templates/buf.gen.yaml) is a complete one):
@@ -163,7 +163,7 @@ make generate       # buf generate, then go mod tidy
 Add the runtime libraries. dedo is built on connect-go v2, where one `connect.Server` holds the interceptors and every transport mounts on it:
 
 ```sh
-go get github.com/raveesh-me/dedo@v0.32.2 github.com/raveesh-me/dedo/mcp@v0.32.2
+go get github.com/raveesh-me/dedo@v0.32.3 github.com/raveesh-me/dedo/mcp@v0.32.3
 go get connectrpc.com/connect/v2@v2.0.1 connectrpc.com/vanguard@v0.5.0 connectrpc.com/validate@v0.9.0
 ```
 
@@ -330,7 +330,7 @@ annexure:
 | Protos and `buf.yaml`, but no Go module (a schema repository) | Adds the options module, pinned to the release, and the lint plugin, as in any repository. It replaces the BSR plugin (`buf.build/r-a/dedo-lint`) that earlier releases listed here, which cannot read `dedo.yaml`. Nothing that needs Go is added; instead it appends [generators.md](generators.md) to `AGENTS.md`, which tells coding agents how to add dedo's generators and runtime to the repository's own tooling and server. For a new service, run `go mod init` and `dedo init` again. |
 | A Go module without protos | Writes a starter service that passes lint. |
 
-In `buf.yaml` it adds the deps, the `DEDO` and `DEDO_BREAKING` categories (keeping the breaking rules `breaking.use` already chose) and the plugin, and in `dedo.yaml` the rule sets that run. A `buf.yaml` from a release before v0.15.0 chose the plugin's rules itself: `dedo init` and `dedo upgrade` move that choice to `dedo.yaml`, its sets to `lint.use` and its exceptions to `lint.disable`, and drop the ones dedo now skips by itself. A repository set up before v0.20.0 kept these in `rules.yml`: `dedo init` and `dedo upgrade` move it into `dedo.yaml`, with your comments, and delete it. A `dedo.yaml` from before v0.32.2 kept them in one `rules` section: `dedo upgrade` renames it `lint` and moves its `imports` to the top of the file, where they bring breaking rules too. The header an earlier `dedo init` wrote at its top goes, since `dedo.yaml`'s own comment replaces it. Where there is no `dedo.yaml`, the lint plugin still reads `rules.yml`. It keeps your own deps, Buf's categories and exceptions, plugins, and comments, in both files. It needs `buf.yaml` version v2: run `buf config migrate` first if yours is v1.
+In `buf.yaml` it adds the deps, the `DEDO` and `DEDO_BREAKING` categories (keeping the breaking rules `breaking.use` already chose) and the plugin, and in `dedo.yaml` the rule sets that run. A `buf.yaml` from a release before v0.15.0 chose the plugin's rules itself: `dedo init` and `dedo upgrade` move that choice to `dedo.yaml`, its sets to `lint.use` and its exceptions to `lint.disable`, and drop the ones dedo now skips by itself. A repository set up before v0.20.0 kept these in `rules.yml`: `dedo init` and `dedo upgrade` move it into `dedo.yaml`, with your comments, and delete it. A `dedo.yaml` from before v0.32.1 kept them in one `rules` section: `dedo upgrade` renames it `lint` and moves its `imports` to the top of the file, where they bring breaking rules too. The header an earlier `dedo init` wrote at its top goes, since `dedo.yaml`'s own comment replaces it. Where there is no `dedo.yaml`, the lint plugin still reads `rules.yml`. It keeps your own deps, Buf's categories and exceptions, plugins, and comments, in both files. It needs `buf.yaml` version v2: run `buf config migrate` first if yours is v1.
 
 Your existing services declare nothing for dedo yet, and `dedo init` names them. Until they do, `buf lint` lists what each RPC needs, and the policy-table test and the server's startup fail on purpose, naming the first missing declaration. Declare one service at a time; [guideline.md](guideline.md#3-write-the-contract) shows a complete one.
 

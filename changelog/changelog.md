@@ -8,6 +8,8 @@ Version bumps, dependency updates and changes to benchmarks or examples alone ar
 
 ## [Unreleased]
 
+## [v0.32.3] - 2026-11-05
+
 ### Fixed
 
 - `dedo upgrade` keeps the commented-out `disable` and `rules` examples that `dedo init` wrote, when it moves a `dedo.yaml` from before v0.32.1 to the `lint` section. YAML kept them on the `imports` key, so they left with it. [#125](https://github.com/raveesh-me/dedo/pull/125)
@@ -443,7 +445,8 @@ The first release, as http-proto-lint (`github.com/raveesh-me/http-proto-lint`, 
 - MCP tools, served on the official MCP Go SDK under short snake_case names and through the same auth and policy as REST. [#1](https://github.com/raveesh-me/dedo/pull/1), [#2](https://github.com/raveesh-me/dedo/pull/2)
 - Templates for service repositories, `guideline.md`, and the `todo`, `bad-todo` and `library` examples. [#1](https://github.com/raveesh-me/dedo/pull/1), [#5](https://github.com/raveesh-me/dedo/pull/5)
 
-[Unreleased]: https://github.com/raveesh-me/dedo/compare/v0.32.2...HEAD
+[Unreleased]: https://github.com/raveesh-me/dedo/compare/v0.32.3...HEAD
+[v0.32.3]: https://github.com/raveesh-me/dedo/compare/v0.32.2...v0.32.3
 [v0.32.2]: https://github.com/raveesh-me/dedo/compare/v0.32.1...v0.32.2
 [v0.32.1]: https://github.com/raveesh-me/dedo/compare/v0.32.0...v0.32.1
 [v0.32.0]: https://github.com/raveesh-me/dedo/compare/v0.31.0...v0.32.0
