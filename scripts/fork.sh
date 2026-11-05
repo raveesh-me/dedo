@@ -34,8 +34,9 @@ upstream='raveesh-me/(dedo|go-sdk)|r-a/dedo'
 
 cd "$(git rev-parse --show-toplevel)"
 
-# This script and the forking guide name upstream on purpose.
-keep=(':!scripts/fork.sh' ':!guidance/forking.md')
+# This script and the forking guide name upstream on purpose, and so does
+# the changelog: its links are upstream's pull requests and releases.
+keep=(':!scripts/fork.sh' ':!guidance/forking.md' ':!changelog/changelog.md')
 
 # 1. Every name outside generated code. A .pb.go embeds go_package in a
 #    length-prefixed descriptor: editing it corrupts the descriptor, and the

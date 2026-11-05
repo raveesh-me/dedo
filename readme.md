@@ -22,7 +22,7 @@
 
 New here? Everything is in [`guidance/`](guidance): [install.md](guidance/install.md) adds dedo to a Go service, one part at a time or all at once with `dedo init`, [tutorial.md](guidance/tutorial.md) builds a new product from scratch, [guideline.md](guidance/guideline.md) explains the reasoning, [RULES.md](guidance/RULES.md) documents every lint rule, [domains.md](guidance/domains.md) maps domain-driven design onto packages and services, and [claude.md](guidance/claude.md) and domains.md are the guidance for coding agents that `dedo init` adds to your `AGENTS.md` or `CLAUDE.md`.
 
-**Latest release: [v0.28.0](https://github.com/raveesh-me/dedo/releases/tag/v0.28.0).** The options module is [`buf.build/r-a/dedo`](https://buf.build/r-a/dedo). The lint plugin's release is the options module's label in `buf.yaml`, and `dedo tools` installs it natively into any repository with protos; it also comes as native binaries on the GitHub release and as a Wasm plugin on the BSR. The Go modules are `github.com/raveesh-me/dedo/...@v0.28.0`.
+**Latest release: [v0.28.0](https://github.com/raveesh-me/dedo/releases/tag/v0.28.0).** The options module is [`buf.build/r-a/dedo`](https://buf.build/r-a/dedo). The lint plugin's release is the options module's label in `buf.yaml`, and `dedo tools` installs it natively into any repository with protos; it also comes as native binaries on the GitHub release and as a Wasm plugin on the BSR. The Go modules are `github.com/raveesh-me/dedo/...@v0.28.0`. [changelog.md](changelog/changelog.md) says what every release changed.
 
 Contract rules come from Google's AIPs. Operational rules (audience, ownership, scopes, caching, deprecation, error reasons) come from Zalando's guidelines. Both live in the schema.
 
@@ -215,7 +215,7 @@ Lint rule tests live in `lint/rules/testdata/<rule>/{pass,fail}`. A pass fixture
 
 ## Releasing
 
-Before every release, bring this readme and everything in `guidance/` up to date with what the release changes, and rerun [tutorial.md](guidance/tutorial.md) against it, since it promises that every step was run as written.
+Before every release, move [changelog.md](changelog/changelog.md)'s Unreleased entries under the new version, bring this readme and everything in `guidance/` up to date with what the release changes, and rerun [tutorial.md](guidance/tutorial.md) against it, since it promises that every step was run as written.
 
 A pull request that breaks the options module fails CI's `buf breaking` check. When the break is deliberate, label the PR `allow-breaking`, re-run the check, and release a new minor version.
 
