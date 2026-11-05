@@ -8,6 +8,8 @@ Version bumps, dependency updates and changes to benchmarks or examples alone ar
 
 ## [Unreleased]
 
+## [v0.33.0] - 2026-11-05
+
 ### Breaking
 
 - Lint rule `DEDO_DOCS_NO_CODE_STRUCTURE`: the reference speaks the domain's language, not the code's. A service's heading (its title, else its name without `Service`) says no *service*, *module*, *aggregate* or *microservice*, unless a resource it manages is named with the word; and no comment, tool text or message description names a proto service, such as `OrderService`. Comments in Go's style, `// OrderService reads orders.`, now fail: start with what the API does (`// Reads orders.`). Give a service a `title` rather than renaming it, which would change its Connect and gRPC paths. `dedo init`'s starter, the examples and `guidance/domains.md` follow it. [#127](https://github.com/raveesh-me/dedo/pull/127)
@@ -449,7 +451,8 @@ The first release, as http-proto-lint (`github.com/raveesh-me/http-proto-lint`, 
 - MCP tools, served on the official MCP Go SDK under short snake_case names and through the same auth and policy as REST. [#1](https://github.com/raveesh-me/dedo/pull/1), [#2](https://github.com/raveesh-me/dedo/pull/2)
 - Templates for service repositories, `guideline.md`, and the `todo`, `bad-todo` and `library` examples. [#1](https://github.com/raveesh-me/dedo/pull/1), [#5](https://github.com/raveesh-me/dedo/pull/5)
 
-[Unreleased]: https://github.com/raveesh-me/dedo/compare/v0.32.3...HEAD
+[Unreleased]: https://github.com/raveesh-me/dedo/compare/v0.33.0...HEAD
+[v0.33.0]: https://github.com/raveesh-me/dedo/compare/v0.32.3...v0.33.0
 [v0.32.3]: https://github.com/raveesh-me/dedo/compare/v0.32.2...v0.32.3
 [v0.32.2]: https://github.com/raveesh-me/dedo/compare/v0.32.1...v0.32.2
 [v0.32.1]: https://github.com/raveesh-me/dedo/compare/v0.32.0...v0.32.1
