@@ -22,6 +22,8 @@ lint:
 breaking:
   use:
     - FILE
+    # dedo's and the house breaking rules; dedo.yaml's breaking section chooses.
+    - DEDO_BREAKING
   ignore_unstable_packages: true
 plugins:
   - plugin: ../../dist/buf-plugin-dedo-lint

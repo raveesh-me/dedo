@@ -14,41 +14,51 @@ A fourth prefix, `HOUSE_*`, is reserved for your organisation's own rules, writt
 
 ## Choosing the rules
 
-**`dedo.yaml` chooses which rules run; `buf.yaml` does not.** In `buf.yaml`, every rule of the plugin is in one category, `DEDO`, and that is the only one of them `buf.yaml` names:
+**`dedo.yaml` chooses which rules run; `buf.yaml` does not.** In `buf.yaml`, every lint rule of the plugin is in one category, `DEDO`, and every breaking rule in another, `DEDO_BREAKING`; those are the only ones of them `buf.yaml` names:
 
 ```yaml
 lint:
   use:
-    - STANDARD   # Buf's own rules, which only buf.yaml can choose
+    - STANDARD        # Buf's own rules, which only buf.yaml can choose
     - COMMENTS
-    - DEDO       # every rule of buf-plugin-dedo-lint
+    - DEDO            # every lint rule of buf-plugin-dedo-lint
+breaking:
+  use:
+    - FILE            # Buf's own breaking rules
+    - DEDO_BREAKING   # every breaking rule of buf-plugin-dedo-lint
 ```
 
-The `rules` section of `dedo.yaml`, next to `buf.yaml`, chooses among them, so the whole order of the rules, from the sets that run to the last override, is in one file the plugin reads. A repository set up before v0.20.0 has these keys at the top of a `rules.yml` instead; the plugin reads it where there is no `dedo.yaml`, and `dedo upgrade` moves it into one. A shared rules file that services import keeps them at the top too, in a `rules.yml`.
+`dedo.yaml`, next to `buf.yaml`, chooses among them: its `lint` section the lint rules, and its `breaking` section the [breaking rules](#breaking-rules). The whole order of the rules, from the sets that run to the last override, is in one file the plugin reads. A shared rules file that services import, a `rules.yml`, has the same `imports`, `lint` and `breaking`, without `use`. A repository set up before v0.20.0 kept these in a `rules.yml` of its own; the plugin reads it where there is no `dedo.yaml`, and `dedo upgrade` moves it into one, as it moves a `dedo.yaml` from before v0.32.1, whose one `rules` section held what `imports` and `lint` hold now.
 
 ```yaml
-rules:
-  use:                   # the rule sets this repository runs
+imports: [...]           # shared house rules, lint and breaking, which build on the sets below
+lint:
+  use:                   # the lint rule sets this repository runs
     - AIP_NOLANG         # every AIP rule except the language-specific ones
     - ZALANDO
     - DEDO
-    - HOUSE              # the house rules: this file's and the imported ones
+    - HOUSE              # the house lint rules: this file's and the imported ones
     - DEDO_MULTI_TENANT  # when its services are multi-tenant
   disable: [DEDO_NO_JSON_NAME]   # rules this repository opts out of, by ID
-  imports: [...]         # shared house rules, which build on the sets above
   rules: [...]           # this repository's own, which outrank everything
+breaking:
+  use: [DEDO, HOUSE]     # dedo's breaking rules and the house ones; the default
+  disable: [DEDO_SUNSET_NO_EARLIER]
+  rules: [...]           # this repository's own breaking rules
 annexure: [...]          # the organisation's guidance for coding agents (install.md, section 5)
 ```
 
 [templates/dedo.example.yaml](../templates/dedo.example.yaml) (`dedo templates dedo.example.yaml`) uses every key: all five sets, three imports, `disable`, its own rules overriding an imported rule and one of dedo's, and two annexures.
 
-- **`use`** names rule sets, or single rules by ID. Without `use`, or without a `dedo.yaml`, `AIP_NOLANG`, `ZALANDO`, `DEDO` and `HOUSE` run; `DEDO_MULTI_TENANT` is opt-in, since it reports every service that declares no tenancy. `AIP_NOLANG` can be narrowed to `AIP_CORE` or widened to `AIP`, and single AIPs are sets too (`AIP_0131`).
-- **`imports` and `rules`** are the house rules, which `HOUSE` runs. They build on the sets in `use` and override their rules where they say so (see [Precedence](#precedence)).
+Each section takes the same keys, and the same rules apply to both, each to rules of its own kind: a lint rule never overrides or disables a breaking rule, nor the other way round, and every rule ID is unique across both.
+
+- **`use`** names rule sets, or single rules by ID. Without `lint.use`, or without a `dedo.yaml`, `AIP_NOLANG`, `ZALANDO`, `DEDO` and `HOUSE` run; without `breaking.use`, `DEDO` and `HOUSE`, the only breaking sets, run; `DEDO_MULTI_TENANT` is opt-in, since it reports every service that declares no tenancy. `AIP_NOLANG` can be narrowed to `AIP_CORE` or widened to `AIP`, and single AIPs are sets too (`AIP_0131`).
+- **`imports` and `rules`** are the house rules, which `HOUSE` runs: `imports`, at the top of the file, brings both kinds, and each section's `rules` adds its own. They build on the sets in `use` and override their rules where they say so (see [Precedence](#precedence)).
 - **`disable`** turns off rules by ID: dedo's, or an imported house rule. A rule that does not run overrides nothing, so the rules it overrode run again.
 - **Final rules** always run, whatever `use` and `disable` say (see [Final rules](#final-rules)).
 - **Skipped rules** run only when `use` names them by ID (see [Skipped rules](#skipped-rules)).
 
-`dedo init` writes `dedo.yaml`, and `dedo upgrade` moves a choice made in `buf.yaml` by an earlier release into it: the sets `lint.use` named become `use`, the rules `lint.except` named become `disable`. Keep every rule of the plugin out of `buf.yaml`'s `use` and `except`: dedo reads only `dedo.yaml`, so a rule turned off there is off without `dedo tools` knowing, final or not. One `dedo.yaml` serves every module of a Buf workspace.
+`dedo init` writes `dedo.yaml`, and `dedo upgrade` moves a choice made in `buf.yaml` by an earlier release into it: the sets `buf.yaml`'s `lint.use` named become `lint.use`, the rules its `lint.except` named become `lint.disable`. Both add `DEDO_BREAKING` to `buf.yaml`'s `breaking.use`, keeping the rules it chose. Keep every rule of the plugin out of `buf.yaml`'s `use` and `except`: dedo reads only `dedo.yaml`, so a rule turned off there is off without `dedo tools` knowing, final or not. One `dedo.yaml` serves every module of a Buf workspace.
 
 To pass an api-linter configuration file, add `options: {config: path/to/api-linter.yaml}` to the plugin entry.
 
@@ -65,6 +75,8 @@ Rules come in layers, and each layer outranks the ones below it:
 3. **DEDO**
 4. **AIP**
 5. **ZALANDO**
+
+Breaking rules rank the same way, in fewer layers: your repository's own house rules, then the imported ones, then DEDO's.
 
 The AIPs outrank Zalando because the contract is a protobuf API, which they were written for; Zalando's guidelines were written for hand-designed JSON-over-HTTP APIs, and dedo adopts the ones that still apply. DEDO outranks both because its rules are what make one proto serve every transport. House rules outrank DEDO because they are your organisation's decisions about its own APIs, and your repository outranks the rules it imports because it knows its own service best.
 
@@ -84,25 +96,28 @@ When you write a new rule that contradicts one of a lower layer, name that rule 
 
 ## Overrides
 
-Nothing detects a conflict between two rules for you. A rule that replaces others says so, by naming them: its `overrides`. An overridden rule reports nothing. It stays a rule, so `buf config ls-lint-rules` shows it as `Overridden by <rule>`, as it shows a rule `dedo.yaml` leaves out as `Not in dedo.yaml's use` or `Disabled in dedo.yaml`.
+Nothing detects a conflict between two rules for you. A rule that replaces others says so, by naming them: its `overrides`. An overridden rule reports nothing. It stays a rule, so `buf config ls-lint-rules` shows it as `Overridden by <rule>`, as it shows a rule `dedo.yaml` leaves out as `Not in dedo.yaml's lint.use` or `Disabled in dedo.yaml's lint section` (`breaking`, for a breaking rule).
 
 A rule may override only rules of a lower layer. Among house rules, that means the rules of the files its own rules file imports, directly or through others; two files imported side by side cannot override each other, and neither can two rules of one file. A repository can import as many house sources as it likes, and its own rules may override any of them. When an overridden rule overrides others itself, its overrides lapse with it, and those rules run again: a house rule that overrides `DEDO_HTTP_RESPONSE_BODY` brings back the AIP rules it overrode.
 
 The plugin consolidates the rules every time it starts: it reads `dedo.yaml`, gathers every rule and every override, checks `use`, `disable` and each override against this order, and runs what is left. Loading and checking the house rules takes well under a millisecond of a lint's 0.3 s, so `dedo.yaml` is never compiled into the plugin, and an edit takes effect on the next lint. **Run `dedo tools` (or `make tools`) every time `dedo.yaml`'s rules or an import changes.** It runs the same step and lists what runs and every override, so a mistake shows there, with the rule and file that made it, rather than as a failing lint in the editor; it also fetches a changed import's `ref`, which the lint never does:
 
 ```text
-lint rules: 364 rules, 3 of them house rules; 339 run, 8 overridden, 17 not used, skipped or disabled
+rules in force:
+lint: 366 rules, 3 of them house rules; 341 run, 8 overridden, 17 not used, skipped or disabled
   use: AIP_NOLANG, ZALANDO, DEDO, HOUSE
   DEDO_HTTP_RESPONSE_BODY overrides AIP_0131_RESPONSE_MESSAGE_NAME
   ...
   HOUSE_TODO_RESOURCE_TYPE (dedo.yaml) overrides HOUSE_RESOURCE_TYPE_DOMAIN
+breaking: 11 rules, 1 of them house rules; 11 run, 0 overridden, 0 not used, skipped or disabled
+  use: DEDO, HOUSE (the default; dedo.yaml does not say breaking.use)
 ```
 
 The consolidation fails, naming every mistake at once, when an override names a rule that does not exist, one that does not rank below it, or a final rule, and when `use` or `disable` names a rule or set that does not exist, or `disable` names a final rule. An override of a rule that `disable` already removed changes nothing.
 
 ## Final rules
 
-A final rule cannot be overridden, by any rule, or disabled, and it runs whatever `dedo.yaml`'s `use` says.
+A final rule cannot be overridden, by any rule, or disabled, and it runs whatever its section's `use` says. dedo's breaking rules are not final; a house breaking rule can be.
 
 Three of dedo's rules are final because they check what dedo's runtime itself requires. Without them a contract would lint clean and then fail when the service starts:
 
@@ -112,15 +127,16 @@ Three of dedo's rules are final because they check what dedo's runtime itself re
 | [`DEDO_METHOD_RULES_REQUIRED`](#dedo_method_rules_required) | `policy.Build` refuses a method without scopes |
 | [`DEDO_MULTI_TENANT_REQUEST_TENANT`](#dedo_multi_tenant_request_tenant) | `policy.Build` refuses a multi-tenant method whose tenant field it cannot find |
 
-A house rule is final when it says so:
+A house rule, lint or breaking, is final when it says so:
 
 ```yaml
-rules:
-  - id: HOUSE_RESOURCE_TYPE_DOMAIN
-    on: resource
-    check: type.split('/')[0].endsWith('.acme.com')
-    message: Resource types live under acme.com.
-    final: true    # no rule may override it, and no file may disable it
+lint:
+  rules:
+    - id: HOUSE_RESOURCE_TYPE_DOMAIN
+      on: resource
+      check: type.split('/')[0].endsWith('.acme.com')
+      message: Resource types live under acme.com.
+      final: true    # no rule may override it, and no file may disable it
 ```
 
 Use it for the conventions your organisation does not negotiate: the shared file that defines the rule locks it for every service that imports it, however many files sit in between. A final rule may still override rules below it.
@@ -138,7 +154,7 @@ Releases before v0.12.0 listed these rules in `buf.yaml`'s `lint.except` instead
 
 ## Skipped rules
 
-dedo turns these off on purpose. They are not conflicts, so no rule overrides them: they check things dedo has no use for. The plugin skips the AIP ones itself, unless `dedo.yaml`'s `use` names one by ID; releases before v0.15.0 listed them in `buf.yaml`'s `lint.except`, and `dedo upgrade` takes them out.
+dedo turns these off on purpose. They are not conflicts, so no rule overrides them: they check things dedo has no use for. The plugin skips the AIP ones itself, unless `dedo.yaml`'s `lint.use` names one by ID; releases before v0.15.0 listed them in `buf.yaml`'s `lint.except`, and `dedo upgrade` takes them out.
 
 **AIP**
 
@@ -165,18 +181,18 @@ dedo checks only the Zalando guidelines a proto can express. It does not follow 
 
 ## House rules
 
-`HOUSE_*` rules are your organisation's own, for conventions dedo has no business knowing: your domain names, your REST roots, your field naming. You write them in the `rules` section of `dedo.yaml` next to `buf.yaml`, as [CEL](https://cel.dev) checks, and `buf-plugin-dedo-lint` runs them with dedo's own rules. No plugin to write, build or release.
+`HOUSE_*` rules are your organisation's own, for conventions dedo has no business knowing: your domain names, your REST roots, your field naming. You write them in `dedo.yaml` next to `buf.yaml`, as [CEL](https://cel.dev) checks: lint rules in its `lint` section, which `buf lint` runs, and breaking rules in its `breaking` section, which `buf breaking` runs. `buf-plugin-dedo-lint` runs them with dedo's own rules. No plugin to write, build or release.
 
 ```yaml
 # dedo.yaml in a service repository
-rules:
-  imports:
-    - git: https://github.com/acme/api-standards.git   # the organisation's shared rules
-      ref: v3                                           # a tag or a commit
-      path: rules.yml                                   # from that repository's root; the default
-    - url: https://acme.github.io/api-standards/v3/rules.yml   # or a file published over HTTPS
-      sha256: 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
-    - path: platform-rules/rules.yml                    # a folder (its rules.yml) or a file
+imports:                                                # shared rules, lint and breaking
+  - git: https://github.com/acme/api-standards.git     # the organisation's shared rules
+    ref: v3                                             # a tag or a commit
+    path: rules.yml                                     # from that repository's root; the default
+  - url: https://acme.github.io/api-standards/v3/rules.yml   # or a file published over HTTPS
+    sha256: 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
+  - path: platform-rules/rules.yml                      # a folder (its rules.yml) or a file
+lint:
   disable: [HOUSE_MESSAGE_SIZE]                         # rules this service opts out of
   rules:
     - id: HOUSE_REST_ROOT                               # this service's own
@@ -190,17 +206,25 @@ rules:
       message: Cart resource types live under cart.acme.com.
       overrides: [HOUSE_RESOURCE_TYPE_DOMAIN]           # rules this one replaces
       final: true                                       # optional: no rule may override or disable it
+breaking:
+  rules:
+    - id: HOUSE_COMMERCE_ROOT_KEPT                      # checked against the earlier version
+      on: method
+      check: "!against.http_path.startsWith('/commerce/') || http_path.startsWith('/commerce/')"
+      message: A method served under /commerce/ stays there.
 ```
 
-House rules run while `dedo.yaml`'s `use` lists `HOUSE`, as it does by default; `buf.yaml` already lists `DEDO`, which holds every rule of the plugin. Each rule is a Buf rule of its own, so `// buf:lint:ignore HOUSE_REST_ROOT` suppresses one finding, `disable: [HOUSE_REST_ROOT]` in a service's `dedo.yaml` turns an imported rule off, and a finding shows the rule's `message` and `doc` link.
+House rules run while their section's `use` lists `HOUSE`, as it does by default; `buf.yaml` already lists `DEDO` and `DEDO_BREAKING`, which hold every rule of the plugin. Each rule is a Buf rule of its own, so `// buf:lint:ignore HOUSE_REST_ROOT` suppresses one lint finding (`// buf:breaking:ignore` a breaking one), `disable: [HOUSE_REST_ROOT]` in a service's `lint` section turns an imported rule off, and a finding shows the rule's `message` and `doc` link.
+
+**Breaking rules.** A rule of a `breaking` section runs in `buf breaking`, on each element that the version compared against also has: the same file, service, method, message, field (by number), enum or resource. Its check reads the current element's variables, below, and the earlier element's as `against`, a map of the same names: `against.scopes.all(s, s in scopes)` keeps every scope. An element that is new, or deleted, is not checked; Buf's `FILE` rules report a deletion. Imports, `disable`, `overrides` and `final` work as for lint rules, among breaking rules: a breaking house rule overrides dedo's [breaking rules](#breaking-rules) and the breaking rules of the files it imports.
 
 **Paths.** Every `path` is relative to the root of the repository whose file names it, wherever in that repository the file sits: `platform-rules/naming.yml` names the same file from `dedo.yaml` and from `platform-rules/rules.yml`. In your service the root is the folder of `dedo.yaml`, next to `buf.yaml`, and a path may lead outside it, such as `../platform-rules` in a monorepo.
 
-**Shared rules.** An organisation keeps its rules in one repository and tags it; each service imports it with `git` and `ref`. Imports nest: a shared file can import others, by paths from its own repository's root. Those paths must stay inside that repository, symlinks included: shared rules cannot make the lint read a service's files, or anything else on the machine. `dedo tools` (and `make tools`, `dedo init`, `dedo upgrade`) fetches git imports into `.tools/rules/`; the lint itself never touches the network, so it stays fast in the editor. A missing import fails the lint with "run dedo tools". Run `dedo tools` after every change to `dedo.yaml`'s rules or to an import's `ref`.
+**Shared rules.** An organisation keeps its rules in one repository and tags it; each service imports it with `git` and `ref`. Imports nest: a shared file can import others, by paths from its own repository's root. Those paths must stay inside that repository, symlinks included: shared rules cannot make the lint read a service's files, or anything else on the machine. `dedo tools` (and `make tools`, `dedo init`, `dedo upgrade`) fetches git imports into `.tools/rules/`; the lint itself never touches the network, so it stays fast in the editor. A missing import fails the lint with "run dedo tools". Run `dedo tools` after every change to `dedo.yaml`'s rules, of either kind, or to an import's `ref`.
 
-**Published rules.** A git import needs read access to the repository, which CI often lacks for a private one. Publish each release of the rules over HTTPS instead, such as to a static site at a path per version, and import it with `url` and the file's `sha256`; `dedo tools` downloads it, checks the hash, and fails on a mismatch. Without `sha256` it fails too, naming the file's hash to pin. The folder of the URL is the import's root: the file's own `path` imports are fetched from beside it, must stay inside that folder, and each carries a `sha256`, so every file read over the network is pinned. A relative `doc` on a rule of a url-imported file, such as `doc: RULES.html#house_rest_root`, is resolved against the file's URL, so a finding links to the documentation of the release that reported it; publish that page beside the rules. On GitHub Pages, which can serve a site publicly from a private repository, have the publishing workflow rebuild the site from every tag, since each deploy replaces the whole site: a published release then never changes or disappears. `disable` lets a service opt out of an imported rule, by ID. Only the service's own `dedo.yaml` says `use`; an imported file adds rules, and cannot choose which of dedo's run.
+**Published rules.** A git import needs read access to the repository, which CI often lacks for a private one. Publish each release of the rules over HTTPS instead, such as to a static site at a path per version, and import it with `url` and the file's `sha256`; `dedo tools` downloads it, checks the hash, and fails on a mismatch. Without `sha256` it fails too, naming the file's hash to pin. The folder of the URL is the import's root: the file's own `path` imports are fetched from beside it, must stay inside that folder, and each carries a `sha256`, so every file read over the network is pinned. A relative `doc` on a rule of a url-imported file, such as `doc: RULES.html#house_rest_root`, is resolved against the file's URL, so a finding links to the documentation of the release that reported it; publish that page beside the rules. On GitHub Pages, which can serve a site publicly from a private repository, have the publishing workflow rebuild the site from every tag, since each deploy replaces the whole site: a published release then never changes or disappears. `disable` lets a service opt out of an imported rule, by ID, in the section of the rule's kind. Only the service's own `dedo.yaml` says `use`; an imported file adds rules, and cannot choose which of dedo's run.
 
-**Overrides.** `overrides` lists the rules a rule replaces, which then report nothing. A house rule may override any DEDO, AIP or ZALANDO rule except the [final ones](#final-rules), and the rules of the files its rules file imports; your repository's `dedo.yaml` imports every other rules file, so its rules may override any imported house rule. Use `overrides` when your rule says something else; use `disable` when you simply do not want a rule. Neither works on a [final](#final-rules) rule. [Precedence](#precedence) has the order, and `dedo tools` lists every override in force.
+**Overrides.** `overrides` lists the rules a rule replaces, which then report nothing. A house lint rule may override any DEDO, AIP or ZALANDO lint rule except the [final ones](#final-rules), a house breaking rule any of dedo's breaking rules, and the rules of the files its rules file imports; your repository's `dedo.yaml` imports every other rules file, so its rules may override any imported house rule. Use `overrides` when your rule says something else; use `disable` when you simply do not want a rule. Neither works on a [final](#final-rules) rule. [Precedence](#precedence) has the order, and `dedo tools` lists every override in force.
 
 **Checks.** `check` is a CEL expression that is true when the element passes. `on` picks the element, and these are the names a check can use:
 
@@ -214,7 +238,7 @@ House rules run while `dedo.yaml`'s `use` lists `HOUSE`, as it does by default; 
 | `enum` | `name`, `full_name`, `file`, `proto_package`, `values` |
 | `resource` | `name`, `full_name`, `file`, `proto_package`, `type`, `patterns`, `singular`, `plural` |
 
-Lists are lists of strings (`'shop.cart.read' in scopes`, `fields.size() < 30`), except `http_bindings`, a list of maps (`http_bindings.all(b, !b.path.contains('_'))`, empty for a method without HTTP); booleans are booleans. CEL's string extensions are on (`split`, `lowerAscii`, `replace`, `trim`), and so is `cel.bind`, which names a value once instead of repeating the expression for it: `cel.bind(verb, http_path.substring(http_path.lastIndexOf(':') + 1), verb == '' || verb.matches('^[a-z][a-zA-Z0-9]*$'))`. A check that does not compile, or is not a bool, stops the lint and names the rule and its file.
+Lists are lists of strings (`'shop.cart.read' in scopes`, `fields.size() < 30`), except `http_bindings`, a list of maps (`http_bindings.all(b, !b.path.contains('_'))`, empty for a method without HTTP); booleans are booleans. CEL's string extensions are on (`split`, `lowerAscii`, `replace`, `trim`), and so is `cel.bind`, which names a value once instead of repeating the expression for it: `cel.bind(verb, http_path.substring(http_path.lastIndexOf(':') + 1), verb == '' || verb.matches('^[a-z][a-zA-Z0-9]*$'))`. A check that does not compile, or is not a bool, stops the lint and names the rule and its file; so does a lint rule that reads `against`, which only a breaking rule has.
 
 A service's `resources` and `roots` let an organisation lint the aggregate shape that [domains.md](domains.md#aggregates-one-service-each) asks for. A domain service has neither, so both rules pass it:
 
@@ -593,7 +617,7 @@ option (dedo.v1.method) = {
 
 ## Breaking rules
 
-`buf breaking` compares a contract with an earlier version of itself. Buf's own rules (`FILE`) check the descriptors but never the values of options, so they pass a change to a scope, an event type, a REST path or a resource pattern that breaks every caller who relied on it. dedo's breaking rules check those, in the same plugin: `buf.yaml`'s `breaking.use` lists `DEDO_BREAKING` beside `FILE` (`dedo init` and `dedo upgrade` add it), and `dedo.yaml`'s `breaking` section chooses which of them run, as its `lint` section does for lint rules. Your organisation's own breaking rules are house rules there ([House rules](#house-rules)).
+`buf breaking` compares a contract with an earlier version of itself. Buf's own rules (`FILE`) check the descriptors but never the values of options, so they pass a change to a scope, an event type, a REST path or a resource pattern that breaks every caller who relied on it. dedo's breaking rules check those, in the same plugin: `buf.yaml`'s `breaking.use` lists `DEDO_BREAKING` beside `FILE` (`dedo init` and `dedo upgrade` add it), and `dedo.yaml`'s `breaking` section chooses which of them run, as its `lint` section does for lint rules: `use`, `disable`, house rules with `overrides` and `final`, and the rules its imports bring. Your organisation's own breaking rules are house rules there ([House rules](#house-rules)).
 
 Each rule pairs an element with the one of the same name in the version compared against, so an element that was added, or deleted (which Buf's `FILE` rules report), is not checked.
 
@@ -713,11 +737,11 @@ option (google.api.http) = {
 
 ## Multi-tenant rules
 
-The `DEDO_MULTI_TENANT_*` rules are for services that partition their data between tenants: a SaaS's customers, a platform's sub-accounts or business locations. They are a rule set of their own, `DEDO_MULTI_TENANT`, which is not part of `DEDO`, so they run only where `dedo.yaml`'s `use` lists it. `dedo init` adds it when a service declares tenancy. `DEDO_MULTI_TENANT_REQUEST_TENANT` is final, so it runs either way.
+The `DEDO_MULTI_TENANT_*` rules are for services that partition their data between tenants: a SaaS's customers, a platform's sub-accounts or business locations. They are a rule set of their own, `DEDO_MULTI_TENANT`, which is not part of `DEDO`, so they run only where `dedo.yaml`'s `lint.use` lists it. `dedo init` adds it when a service declares tenancy. `DEDO_MULTI_TENANT_REQUEST_TENANT` is final, so it runs either way.
 
 ```yaml
 # dedo.yaml
-rules:
+lint:
   use:
     - AIP_NOLANG
     - ZALANDO

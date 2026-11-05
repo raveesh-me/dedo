@@ -50,7 +50,7 @@ printf '.tools/\n' >> .gitignore
 
 Without the `dedo` command, `go install github.com/raveesh-me/dedo/lint/cmd/buf-plugin-dedo-lint@v0.32.0` and a copy into `.tools/` do the same. It runs natively because Buf starts the plugin about a dozen times per lint; through `go tool` each lint would take 2 s instead of 0.3 s. Run `dedo tools` again after a fresh clone, a version change, or any change to `dedo.yaml`'s rules or its imports.
 
-List the plugin and its one category, `DEDO`, in `buf.yaml`, and choose its rules in the `rules` section of `dedo.yaml` next to it ([templates/dedo.yaml](../templates/dedo.yaml); `dedo templates dedo.yaml` prints it). `buf.yaml` names no other rule of the plugin, in `use` or `except`: dedo reads only `dedo.yaml` ([RULES.md](RULES.md#choosing-the-rules) says how it chooses):
+List the plugin and its two categories in `buf.yaml`, `DEDO` for its lint rules and `DEDO_BREAKING` for its breaking rules, and choose its rules in the `lint` and `breaking` sections of `dedo.yaml` next to it ([templates/dedo.yaml](../templates/dedo.yaml); `dedo templates dedo.yaml` prints it). `buf.yaml` names no other rule of the plugin, in `use` or `except`: dedo reads only `dedo.yaml` ([RULES.md](RULES.md#choosing-the-rules) says how it chooses):
 
 ```yaml
 # buf.yaml
@@ -59,18 +59,23 @@ lint:
     - STANDARD
     - COMMENTS
     - DEDO
+breaking:
+  use:
+    - FILE
+    - DEDO_BREAKING
 plugins:
   - plugin: .tools/buf-plugin-dedo-lint
 ```
 
 ```yaml
 # dedo.yaml
-rules:
+lint:
   use:
     - AIP_NOLANG
     - ZALANDO
     - DEDO
     - HOUSE
+# breaking: without use, DEDO and HOUSE run
 ```
 
 ```sh
@@ -78,15 +83,15 @@ dedo templates Makefile.api > Makefile.api && printf 'include Makefile.api\n' >>
 make check          # buf format, buf lint, buf breaking against main, dedo modules
 ```
 
-The breaking check compares with the `main` branch, and is skipped while `main` has no `.proto` files. Compare with another branch with `make check API_BASE=develop`. `make check` also runs `make modules`, which is `dedo modules` (below). The targets of `Makefile.api` are `run`, `generate`, `check`, `test`, `tools`, `modules`, `docs`, `docs-tunnel` and `docs-static`; where your `Makefile` already has one of those names, `dedo init` names dedo's `api-<name>` instead, and `api-check`, `api-generate` and `api-test` always exist, for CI.
+The breaking check compares with the `main` branch, and is skipped while `main` has no `.proto` files. It runs Buf's `FILE` rules and dedo's [breaking rules](RULES.md#breaking-rules), which catch what `FILE` cannot see: an RPC that drops a scope, a REST path or an event type, a field that becomes required, a resource pattern that goes. Compare with another branch with `make check API_BASE=develop`. `make check` also runs `make modules`, which is `dedo modules` (below). The targets of `Makefile.api` are `run`, `generate`, `check`, `test`, `tools`, `modules`, `docs`, `docs-tunnel` and `docs-static`; where your `Makefile` already has one of those names, `dedo init` names dedo's `api-<name>` instead, and `api-check`, `api-generate` and `api-test` always exist, for CI.
 
 `make docs` serves the REST reference, only `docs/index.html` and `docs/openapi.json`, on `127.0.0.1:8099` (`DOCS_ADDR` to change it). `make docs-tunnel` also shares it at a public `trycloudflare.com` URL until Ctrl-C, to show the API to someone off your machine; it needs [cloudflared](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/). It never shares the service itself: development tokens are often public.
 
 `make docs-static` writes the reference as one HTML file, `.tools/docs.html` (`DOCS_STATIC` to change it), that opens from disk with no network: to read on a plane, or to send to someone. It is `dedo docs -static FILE`. The OpenAPI document goes in place of the page's `url: '/openapi.json'`. Each script the page loads goes in too, as a `data:` URL, but only an `https` script with an `integrity` hash, and only once its bytes match that hash. dedo keeps each script it fetches in your user cache directory, under `dedo/scripts`, so after the first run new builds need no network either. The file holds the whole API reference, so share it only where you would share the API.
 
-Your organisation's own rules go in `dedo.yaml`'s `rules` section, as CEL checks that can import shared rules from git repositories, or from files published over HTTPS and pinned by their SHA-256, which CI fetches without access to a private repository ([RULES.md](RULES.md#house-rules), *Published rules*); `HOUSE` in `use` runs them. [templates/dedo.example.yaml](../templates/dedo.example.yaml) shows every key. A house rule can override a DEDO, AIP or ZALANDO rule by naming it in `overrides`, or lock itself with `final: true`; `dedo tools` lists every override and final rule in force. [RULES.md](RULES.md#house-rules) has the format, and [Precedence](RULES.md#precedence) the order.
+Your organisation's own rules go in `dedo.yaml`'s `lint` section, and its breaking rules in its `breaking` section, as CEL checks that can import shared rules from git repositories, or from files published over HTTPS and pinned by their SHA-256, which CI fetches without access to a private repository ([RULES.md](RULES.md#house-rules), *Published rules*); `HOUSE` in a section's `use` runs them, and runs by default. [templates/dedo.example.yaml](../templates/dedo.example.yaml) shows every key. A house rule can override one of dedo's rules of its kind by naming it in `overrides`, or lock itself with `final: true`; `dedo tools` lists every override and final rule in force. [RULES.md](RULES.md#house-rules) has the format, and [Precedence](RULES.md#precedence) the order.
 
-If your services partition their data between tenants, declare `tenancy` on each and add `DEDO_MULTI_TENANT` to `dedo.yaml`'s `use` (`dedo init` does when a service declares it); then pass `Tenants` to the interceptor in section 4. [RULES.md](RULES.md#multi-tenant-rules) explains the model.
+If your services partition their data between tenants, declare `tenancy` on each and add `DEDO_MULTI_TENANT` to `dedo.yaml`'s `lint.use` (`dedo init` does when a service declares it); then pass `Tenants` to the interceptor in section 4. [RULES.md](RULES.md#multi-tenant-rules) explains the model.
 
 Repositories without a Go module, such as a TypeScript service or a schema repository, set the plugin up the same way. They need Go on the machine and in CI, to install it, but no `go.mod`. In CI:
 
@@ -325,7 +330,7 @@ annexure:
 | Protos and `buf.yaml`, but no Go module (a schema repository) | Adds the options module, pinned to the release, and the lint plugin, as in any repository. It replaces the BSR plugin (`buf.build/r-a/dedo-lint`) that earlier releases listed here, which cannot read `dedo.yaml`. Nothing that needs Go is added; instead it appends [generators.md](generators.md) to `AGENTS.md`, which tells coding agents how to add dedo's generators and runtime to the repository's own tooling and server. For a new service, run `go mod init` and `dedo init` again. |
 | A Go module without protos | Writes a starter service that passes lint. |
 
-In `buf.yaml` it adds the deps, the `DEDO` category and the plugin, and in `dedo.yaml` the rule sets that run. A `buf.yaml` from a release before v0.15.0 chose the plugin's rules itself: `dedo init` and `dedo upgrade` move that choice to `dedo.yaml`, its sets to `use` and its exceptions to `disable`, and drop the ones dedo now skips by itself. A repository set up before v0.20.0 kept these in `rules.yml`: `dedo init` and `dedo upgrade` move it into `dedo.yaml`'s `rules` section, with your comments, and delete it. The header an earlier `dedo init` wrote at its top goes, since `dedo.yaml`'s own comment replaces it. Where there is no `dedo.yaml`, the lint plugin still reads `rules.yml`. It keeps your own deps, Buf's categories and exceptions, plugins, and comments, in both files. It needs `buf.yaml` version v2: run `buf config migrate` first if yours is v1.
+In `buf.yaml` it adds the deps, the `DEDO` and `DEDO_BREAKING` categories (keeping the breaking rules `breaking.use` already chose) and the plugin, and in `dedo.yaml` the rule sets that run. A `buf.yaml` from a release before v0.15.0 chose the plugin's rules itself: `dedo init` and `dedo upgrade` move that choice to `dedo.yaml`, its sets to `lint.use` and its exceptions to `lint.disable`, and drop the ones dedo now skips by itself. A repository set up before v0.20.0 kept these in `rules.yml`: `dedo init` and `dedo upgrade` move it into `dedo.yaml`, with your comments, and delete it. A `dedo.yaml` from before v0.32.1 kept them in one `rules` section: `dedo upgrade` renames it `lint` and moves its `imports` to the top of the file, where they bring breaking rules too. The header an earlier `dedo init` wrote at its top goes, since `dedo.yaml`'s own comment replaces it. Where there is no `dedo.yaml`, the lint plugin still reads `rules.yml`. It keeps your own deps, Buf's categories and exceptions, plugins, and comments, in both files. It needs `buf.yaml` version v2: run `buf config migrate` first if yours is v1.
 
 Your existing services declare nothing for dedo yet, and `dedo init` names them. Until they do, `buf lint` lists what each RPC needs, and the policy-table test and the server's startup fail on purpose, naming the first missing declaration. Declare one service at a time; [guideline.md](guideline.md#3-write-the-contract) shows a complete one.
 
