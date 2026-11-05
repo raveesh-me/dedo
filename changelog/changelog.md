@@ -8,6 +8,8 @@ Version bumps, dependency updates and changes to benchmarks or examples alone ar
 
 ## [Unreleased]
 
+## [v0.32.1] - 2026-11-05
+
 ### Breaking
 
 - `dedo.yaml` has a `lint` section in place of `rules`, a `breaking` section beside it, and `imports` at the top of the file, since an import brings both kinds of rules. A shared rules file (`rules.yml`) has the same `imports`, `lint` and `breaking`, with no rules at its top. `dedo upgrade` moves a repository's own `dedo.yaml`, keeping its comments; a shared rules file in the old layout fails to load, saying where its keys go, until its owners publish it anew. [#121](https://github.com/raveesh-me/dedo/pull/121)
@@ -429,7 +431,8 @@ The first release, as http-proto-lint (`github.com/raveesh-me/http-proto-lint`, 
 - MCP tools, served on the official MCP Go SDK under short snake_case names and through the same auth and policy as REST. [#1](https://github.com/raveesh-me/dedo/pull/1), [#2](https://github.com/raveesh-me/dedo/pull/2)
 - Templates for service repositories, `guideline.md`, and the `todo`, `bad-todo` and `library` examples. [#1](https://github.com/raveesh-me/dedo/pull/1), [#5](https://github.com/raveesh-me/dedo/pull/5)
 
-[Unreleased]: https://github.com/raveesh-me/dedo/compare/v0.32.0...HEAD
+[Unreleased]: https://github.com/raveesh-me/dedo/compare/v0.32.1...HEAD
+[v0.32.1]: https://github.com/raveesh-me/dedo/compare/v0.32.0...v0.32.1
 [v0.32.0]: https://github.com/raveesh-me/dedo/compare/v0.31.0...v0.32.0
 [v0.31.0]: https://github.com/raveesh-me/dedo/compare/v0.30.0...v0.31.0
 [v0.30.0]: https://github.com/raveesh-me/dedo/compare/v0.29.0...v0.30.0
