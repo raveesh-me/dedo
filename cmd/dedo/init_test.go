@@ -79,7 +79,7 @@ func read(t *testing.T, dir, name string) string {
 // rulesAt returns the rules section of the dedo.yaml in dir.
 func rulesAt(t *testing.T, dir string) *yaml.Node {
 	t.Helper()
-	return lookup(yamlAt(t, dir, "dedo.yaml"), "rules")
+	return lookup(yamlAt(t, dir, "dedo.yaml"), "lint")
 }
 
 func yamlAt(t *testing.T, dir, name string) *yaml.Node {
@@ -247,6 +247,9 @@ plugins:
 	}
 	if got := scalars(lookup(lookup(buf, "lint"), "use")); !slices.Equal(got, []string{"DEFAULT", "DEDO"}) {
 		t.Errorf("lint.use = %v", got)
+	}
+	if got := scalars(lookup(lookup(buf, "breaking"), "use")); !slices.Equal(got, []string{"FILE", breakingCategory}) {
+		t.Errorf("breaking.use = %v", got)
 	}
 	var plugins []string
 	for _, item := range lookup(buf, "plugins").Content {
@@ -928,7 +931,7 @@ func TestFetchRules(t *testing.T) {
 	remote := t.TempDir()
 	for _, args := range [][]string{{"init", "--quiet"}, {"add", "."}, {"commit", "--quiet", "-m", "v1"}, {"tag", "v1"}} {
 		if args[0] == "add" {
-			if err := os.WriteFile(filepath.Join(remote, "rules.yml"), []byte("rules:\n  - {id: HOUSE_SHARED, on: field, check: \"true\", message: Shared.}\n"), 0o644); err != nil {
+			if err := os.WriteFile(filepath.Join(remote, "rules.yml"), []byte("lint:\n  rules:\n  - {id: HOUSE_SHARED, on: field, check: \"true\", message: Shared.}\n"), 0o644); err != nil {
 				t.Fatal(err)
 			}
 		}
@@ -1076,5 +1079,85 @@ func TestInitNotesOutdatedTemplates(t *testing.T) {
 	}
 	if got := read(t, dir, "docs/index.html"); !strings.Contains(got, "stoplight") {
 		t.Error("the upgrade replaced docs/index.html")
+	}
+}
+
+// dedo init adds dedo's breaking rules to a breaking section of the
+// repository's own, keeping what it chose; buf's default, FILE, stays when
+// the section named no rules.
+func TestInitBreakingRules(t *testing.T) {
+	tests := []struct {
+		name, breaking string
+		want           []string
+	}{
+		{"own rules", "breaking:\n  use:\n    - WIRE_JSON\n", []string{"WIRE_JSON", breakingCategory}},
+		{"no use", "breaking:\n  ignore_unstable_packages: true\n", []string{"FILE", breakingCategory}},
+		{"already listed", "breaking:\n  use:\n    - FILE\n    - " + breakingCategory + "\n", []string{"FILE", breakingCategory}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dir := repo(t, map[string]string{
+				"go.mod":   "module example.com/shop\n",
+				"buf.yaml": "version: v2\nmodules:\n  - path: proto\n" + tt.breaking,
+			})
+			initOffline(t, dir)
+			breaking := lookup(yamlAt(t, dir, "buf.yaml"), "breaking")
+			if got := scalars(lookup(breaking, "use")); !slices.Equal(got, tt.want) {
+				t.Errorf("breaking.use = %v, want %v", got, tt.want)
+			}
+			if tt.name == "no use" && lookup(breaking, "ignore_unstable_packages") == nil {
+				t.Error("breaking lost ignore_unstable_packages")
+			}
+		})
+	}
+}
+
+// dedo upgrade moves a dedo.yaml from before v0.32.1, with one rules
+// section, to the lint section, its imports to the top of the file, keeping
+// the rules and comments.
+func TestInitMovesRulesSection(t *testing.T) {
+	dir := repo(t, map[string]string{
+		"go.mod":   "module example.com/shop\n",
+		"buf.yaml": "version: v2\nmodules:\n  - path: proto\n",
+		"dedo.yaml": `# Our rules.
+rules:
+  use: [AIP_NOLANG, DEDO, HOUSE]
+  imports:
+    - path: ../shared
+  disable: [DEDO_NO_JSON_NAME]
+  rules:
+    - id: HOUSE_OWN # ours
+      on: field
+      check: "true"
+      message: m
+`,
+	})
+	out := initOffline(t, dir)
+	doc := yamlAt(t, dir, "dedo.yaml")
+	if lookup(doc, "rules") != nil {
+		t.Fatalf("dedo.yaml still has a rules section:\n%s", read(t, dir, "dedo.yaml"))
+	}
+	lint := lookup(doc, "lint")
+	if got := scalars(lookup(lint, "use")); !slices.Equal(got, []string{"AIP_NOLANG", "DEDO", "HOUSE"}) {
+		t.Errorf("lint.use = %v", got)
+	}
+	if got := scalars(lookup(lint, "disable")); !slices.Equal(got, []string{"DEDO_NO_JSON_NAME"}) {
+		t.Errorf("lint.disable = %v", got)
+	}
+	if rules := lookup(lint, "rules"); rules == nil || len(rules.Content) != 1 {
+		t.Errorf("lint.rules = %v", rules)
+	}
+	if imports := lookup(doc, "imports"); imports == nil || len(imports.Content) != 1 || lookup(lint, "imports") != nil {
+		t.Errorf("imports did not move to the top:\n%s", read(t, dir, "dedo.yaml"))
+	}
+	text := read(t, dir, "dedo.yaml")
+	if !strings.Contains(text, "# Our rules.") || !strings.Contains(text, "# ours") {
+		t.Errorf("comments lost:\n%s", text)
+	}
+	if strings.Index(text, "imports:") > strings.Index(text, "lint:") {
+		t.Errorf("imports should come before lint:\n%s", text)
+	}
+	if !strings.Contains(out, "is now lint") {
+		t.Errorf("init did not say it moved the section:\n%s", out)
 	}
 }

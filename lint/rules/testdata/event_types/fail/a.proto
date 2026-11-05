@@ -4,6 +4,7 @@ package raveesh_me.library.v1;
 
 import "google/protobuf/empty.proto";
 import "dedo/v1/options.proto";
+import "google/api/resource.proto";
 
 service LibraryService {
   rpc OtherPackage(google.protobuf.Empty) returns (google.protobuf.Empty) { // want
@@ -23,8 +24,30 @@ service LibraryService {
       emits: ["raveesh_me.library.book.created", "raveesh_me.library.book.created"]
     };
   }
+  rpc NotAResource(google.protobuf.Empty) returns (google.protobuf.Empty) { // want
+    option (dedo.v1.method) = {emits: "raveesh_me.library.author.created"};
+  }
   rpc ReadOnly(google.protobuf.Empty) returns (google.protobuf.Empty) { // want
     option idempotency_level = NO_SIDE_EFFECTS;
     option (dedo.v1.method) = {emits: "raveesh_me.library.book.read"};
   }
+}
+
+// Book is a book.
+message Book {
+  option (google.api.resource) = {
+    type: "library.raveesh.me/Book"
+    pattern: "shelves/{shelf}/books/{book}"
+  };
+  string name = 1;
+}
+
+// ShelfSlot is a place on a shelf; its singular is set explicitly.
+message ShelfSlot {
+  option (google.api.resource) = {
+    type: "library.raveesh.me/ShelfSlot"
+    pattern: "shelves/{shelf}/slots/{slot}"
+    singular: "shelfSlot"
+  };
+  string name = 1;
 }

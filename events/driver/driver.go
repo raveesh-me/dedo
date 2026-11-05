@@ -21,7 +21,8 @@ import (
 type Event struct {
 	// ID identifies the event. It stays the same across the publisher's
 	// retries, so a consumer can recognise the bus redelivering it. A
-	// command the caller retries publishes a new event, with a new ID.
+	// command the caller retries publishes a new event, with a new ID;
+	// IdempotencyKey is what stays the same then.
 	ID string
 	// Type is the event type the RPC declares in emits, such as
 	// "acme.orders.order.cancelled".
@@ -34,6 +35,12 @@ type Event struct {
 	Subject string
 	// Time is when the event was published, in UTC.
 	Time time.Time
+	// IdempotencyKey, when set, is the same for every event a retried
+	// command publishes, such as the request's request_id, so a consumer
+	// can drop the events of a retry. A driver carries it as the
+	// CloudEvents extension idempotencykey, or the bus's own field for
+	// one, such as a Kafka record key.
+	IdempotencyKey string
 	// Extensions are further attributes, such as the flow ID of the
 	// request that caused the event. Names are CloudEvents extension
 	// names: lowercase letters and digits.

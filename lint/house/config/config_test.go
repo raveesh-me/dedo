@@ -22,7 +22,8 @@ func write(t *testing.T, dir string, files map[string]string) {
 	}
 }
 
-const domainRule = `rules:
+const domainRule = `lint:
+  rules:
   - id: HOUSE_RESOURCE_TYPE_DOMAIN
     on: resource
     check: type.endsWith('.acme.com')
@@ -61,12 +62,13 @@ func TestLoadImportsAndDisable(t *testing.T) {
     check: plural != ''
     message: Name the plural.
 `,
-		"svc/extra.yml": "rules:\n  - id: HOUSE_LOCAL\n    on: method\n    check: \"true\"\n    message: Local.\n",
+		"svc/extra.yml": "lint:\n  rules:\n  - id: HOUSE_LOCAL\n    on: method\n    check: \"true\"\n    message: Local.\n",
 		"svc/rules.yml": `imports:
   - path: ../standards
   - path: extra.yml
-disable: [HOUSE_PLURAL_COLLECTIONS]
-rules:
+lint:
+  disable: [HOUSE_PLURAL_COLLECTIONS]
+  rules:
   - id: HOUSE_OWN
     on: field
     check: "!name.endsWith('_id')"
@@ -93,10 +95,10 @@ func TestLoadRanksImporters(t *testing.T) {
 		return "  - {id: " + id + ", on: field, check: \"true\", message: x}\n"
 	}
 	write(t, dir, map[string]string{
-		"base.yml":  "rules:\n" + rule("HOUSE_BASE"),
-		"mid.yml":   "imports:\n  - path: base.yml\nrules:\n" + rule("HOUSE_MID"),
-		"other.yml": "imports:\n  - path: base.yml\nrules:\n" + rule("HOUSE_OTHER"),
-		RulesFileName: "imports:\n  - path: mid.yml\n  - path: other.yml\nrules:\n" +
+		"base.yml":  "lint:\n  rules:\n" + rule("HOUSE_BASE"),
+		"mid.yml":   "imports:\n  - path: base.yml\nlint:\n  rules:\n" + rule("HOUSE_MID"),
+		"other.yml": "imports:\n  - path: base.yml\nlint:\n  rules:\n" + rule("HOUSE_OTHER"),
+		RulesFileName: "imports:\n  - path: mid.yml\n  - path: other.yml\nlint:\n  rules:\n" +
 			"  - {id: HOUSE_TOP, on: field, check: \"true\", message: x, overrides: [HOUSE_MID, DEDO_HTTP_PATH_VERSION]}\n",
 	})
 	rules, err := loadRules(filepath.Join(dir, RulesFileName))
@@ -135,16 +137,16 @@ func TestLoadRejects(t *testing.T) {
 	}{
 		"cycle":         {map[string]string{RulesFileName: "imports:\n  - path: b.yml\n", "b.yml": "imports:\n  - path: rules.yml\n"}, "import each other"},
 		"duplicate":     {map[string]string{RulesFileName: "imports:\n  - path: b.yml\n" + domainRule, "b.yml": domainRule}, "defined twice"},
-		"bad id":        {map[string]string{RulesFileName: "rules:\n  - {id: NOPE, on: field, check: \"true\", message: x}\n"}, "must look like"},
-		"bad kind":      {map[string]string{RulesFileName: "rules:\n  - {id: HOUSE_X, on: rpc, check: \"true\", message: x}\n"}, "want one of"},
-		"no check":      {map[string]string{RulesFileName: "rules:\n  - {id: HOUSE_X, on: field, message: x}\n"}, "no check"},
-		"unknown key":   {map[string]string{RulesFileName: "rules:\n  - {id: HOUSE_X, on: field, check: \"true\", message: x, severity: high}\n"}, "severity"},
-		"disable":       {map[string]string{RulesFileName: "disable: [HOUSE_GONE]\n"}, "HOUSE_GONE"},
-		"disable id":    {map[string]string{RulesFileName: "disable: [aip-131]\n"}, "not a rule ID"},
-		"imported use":  {map[string]string{RulesFileName: "imports:\n  - path: b.yml\n", "b.yml": "use: [DEDO]\n"}, "use belongs in the repository's own dedo.yaml"},
-		"override id":   {map[string]string{RulesFileName: "rules:\n  - {id: HOUSE_X, on: field, check: \"true\", message: x, overrides: [aip-131]}\n"}, "not a rule ID"},
-		"disable final": {map[string]string{RulesFileName: "imports:\n  - path: b.yml\ndisable: [HOUSE_LOCKED]\n", "b.yml": "rules:\n  - {id: HOUSE_LOCKED, on: field, check: \"true\", message: x, final: true}\n"}, "b.yml marks final"},
-		"override self": {map[string]string{RulesFileName: "rules:\n  - {id: HOUSE_X, on: field, check: \"true\", message: x, overrides: [HOUSE_X]}\n"}, "overrides itself"},
+		"bad id":        {map[string]string{RulesFileName: "lint:\n  rules:\n  - {id: NOPE, on: field, check: \"true\", message: x}\n"}, "must look like"},
+		"bad kind":      {map[string]string{RulesFileName: "lint:\n  rules:\n  - {id: HOUSE_X, on: rpc, check: \"true\", message: x}\n"}, "want one of"},
+		"no check":      {map[string]string{RulesFileName: "lint:\n  rules:\n  - {id: HOUSE_X, on: field, message: x}\n"}, "no check"},
+		"unknown key":   {map[string]string{RulesFileName: "lint:\n  rules:\n  - {id: HOUSE_X, on: field, check: \"true\", message: x, severity: high}\n"}, "severity"},
+		"disable":       {map[string]string{RulesFileName: "lint:\n  disable: [HOUSE_GONE]\n"}, "HOUSE_GONE"},
+		"disable id":    {map[string]string{RulesFileName: "lint:\n  disable: [aip-131]\n"}, "not a rule ID"},
+		"imported use":  {map[string]string{RulesFileName: "imports:\n  - path: b.yml\n", "b.yml": "lint:\n  use: [DEDO]\n"}, "use belongs in the repository's own dedo.yaml"},
+		"override id":   {map[string]string{RulesFileName: "lint:\n  rules:\n  - {id: HOUSE_X, on: field, check: \"true\", message: x, overrides: [aip-131]}\n"}, "not a rule ID"},
+		"disable final": {map[string]string{RulesFileName: "imports:\n  - path: b.yml\nlint:\n  disable: [HOUSE_LOCKED]\n", "b.yml": "lint:\n  rules:\n  - {id: HOUSE_LOCKED, on: field, check: \"true\", message: x, final: true}\n"}, "b.yml marks final"},
+		"override self": {map[string]string{RulesFileName: "lint:\n  rules:\n  - {id: HOUSE_X, on: field, check: \"true\", message: x, overrides: [HOUSE_X]}\n"}, "overrides itself"},
 		"git ref":       {map[string]string{RulesFileName: "imports:\n  - git: https://example.com/r.git\n"}, "needs a ref"},
 		"git unfetched": {map[string]string{RulesFileName: "imports:\n  - git: https://example.com/r.git\n    ref: v1\n"}, "run dedo tools"},
 	} {
@@ -245,7 +247,7 @@ func TestLocalImportPathsFromRoot(t *testing.T) {
 	write(t, dir, map[string]string{
 		RulesFileName:               "imports:\n  - path: platform-rules/rules.yml\n",
 		"platform-rules/rules.yml":  "imports:\n  - path: platform-rules/naming.yml\n" + domainRule,
-		"platform-rules/naming.yml": "rules:\n  - {id: HOUSE_NAMING, on: field, check: \"true\", message: Naming.}\n",
+		"platform-rules/naming.yml": "lint:\n  rules:\n  - {id: HOUSE_NAMING, on: field, check: \"true\", message: Naming.}\n",
 	})
 	rules, err := loadRules(filepath.Join(dir, RulesFileName))
 	if err != nil {
@@ -261,9 +263,9 @@ func TestLocalImportPathsFromRoot(t *testing.T) {
 func TestGitImportPathsFromRepoRoot(t *testing.T) {
 	remote := remoteRepo(t, map[string]string{
 		"api/rules.yml":     "imports:\n  - path: shared/naming.yml\n  - path: shared\n" + domainRule,
-		"shared/naming.yml": "rules:\n  - {id: HOUSE_NAMING, on: field, check: \"true\", message: Naming.}\n",
-		"shared/rules.yml":  "rules:\n  - {id: HOUSE_SHARED, on: field, check: \"true\", message: Shared.}\n",
-		"api/shared/x.yml":  "rules:\n  - {id: HOUSE_WRONG, on: field, check: \"true\", message: Wrong.}\n",
+		"shared/naming.yml": "lint:\n  rules:\n  - {id: HOUSE_NAMING, on: field, check: \"true\", message: Naming.}\n",
+		"shared/rules.yml":  "lint:\n  rules:\n  - {id: HOUSE_SHARED, on: field, check: \"true\", message: Shared.}\n",
+		"api/shared/x.yml":  "lint:\n  rules:\n  - {id: HOUSE_WRONG, on: field, check: \"true\", message: Wrong.}\n",
 	}, nil)
 	rules, err := fetchAndLoad(t, remote, "api/rules.yml")
 	if err != nil {
@@ -301,20 +303,20 @@ func TestGitImportCannotLeaveRepo(t *testing.T) {
 
 func loadRules(path string) ([]Rule, error) {
 	c, err := Load(path)
-	return c.Rules, err
+	return c.Lint.Rules, err
 }
 
 // use and the disables of dedo's own rules pass through, for package rules
 // to check against the rules it has.
 func TestLoadUse(t *testing.T) {
 	dir := t.TempDir()
-	write(t, dir, map[string]string{RulesFileName: "use: [AIP_CORE, DEDO]\ndisable: [DEDO_NO_JSON_NAME]\n"})
+	write(t, dir, map[string]string{RulesFileName: "lint:\n  use: [AIP_CORE, DEDO]\n  disable: [DEDO_NO_JSON_NAME]\n"})
 	c, err := Load(filepath.Join(dir, RulesFileName))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !slices.Equal(c.Use, []string{"AIP_CORE", "DEDO"}) || !slices.Equal(c.Disabled, []string{"DEDO_NO_JSON_NAME"}) {
-		t.Errorf("use %v, disabled %v", c.Use, c.Disabled)
+	if !slices.Equal(c.Lint.Use, []string{"AIP_CORE", "DEDO"}) || !slices.Equal(c.Lint.Disabled, []string{"DEDO_NO_JSON_NAME"}) {
+		t.Errorf("use %v, disabled %v", c.Lint.Use, c.Lint.Disabled)
 	}
 }
 
@@ -324,8 +326,9 @@ func TestDedoYAML(t *testing.T) {
 	dir := t.TempDir()
 	write(t, dir, map[string]string{
 		"buf.yaml":    "version: v2\n",
-		RulesFileName: "rules: []\n",
-		"shared/rules.yml": `rules:
+		RulesFileName: "lint:\n  rules: []\n",
+		"shared/rules.yml": `lint:
+  rules:
   - id: HOUSE_SHARED
     on: file
     check: "true"
@@ -335,8 +338,8 @@ func TestDedoYAML(t *testing.T) {
 	if got := Find(dir); got != filepath.Join(dir, RulesFileName) {
 		t.Errorf("without dedo.yaml: Find = %q", got)
 	}
-	write(t, dir, map[string]string{FileName: "rules:\n  use: [DEDO, HOUSE]\n  imports:\n    - path: shared\n" +
-		"  " + strings.ReplaceAll(domainRule, "\n", "\n  ") + "\nannexure:\n  - path: docs/agents.md\n"})
+	write(t, dir, map[string]string{FileName: "imports:\n  - path: shared\n" +
+		strings.Replace(domainRule, "lint:\n", "lint:\n  use: [DEDO, HOUSE]\n", 1) + "annexure:\n  - path: docs/agents.md\n"})
 	path := Find(dir)
 	if path != filepath.Join(dir, FileName) {
 		t.Fatalf("Find = %q, want dedo.yaml", path)
@@ -345,22 +348,67 @@ func TestDedoYAML(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !slices.Equal(c.Use, []string{"DEDO", "HOUSE"}) || !slices.Equal(ids(c.Rules), []string{"HOUSE_SHARED", "HOUSE_RESOURCE_TYPE_DOMAIN"}) {
-		t.Errorf("use %v, rules %v", c.Use, ids(c.Rules))
+	if !slices.Equal(c.Lint.Use, []string{"DEDO", "HOUSE"}) || !slices.Equal(ids(c.Lint.Rules), []string{"HOUSE_SHARED", "HOUSE_RESOURCE_TYPE_DOMAIN"}) {
+		t.Errorf("use %v, rules %v", c.Lint.Use, ids(c.Lint.Rules))
 	}
 	fetched, err := Fetch(path)
 	if err != nil || len(fetched) != 0 {
 		t.Errorf("Fetch = %v, %v", fetched, err)
 	}
 
-	// A rules file in dedo.yaml's place is a mistake, not a rules file.
-	write(t, dir, map[string]string{FileName: domainRule})
-	if _, err := Load(path); err == nil {
-		t.Error("dedo.yaml without a rules section: no error")
+	// A dedo.yaml from before v0.32.1, with one rules section, says to
+	// run dedo upgrade.
+	write(t, dir, map[string]string{FileName: "rules:\n  use: [DEDO]\n"})
+	if _, err := Load(path); err == nil || !strings.Contains(err.Error(), "run dedo upgrade") {
+		t.Errorf("old dedo.yaml: err = %v", err)
 	}
 	// Unknown sections are rejected, as unknown keys in a rules file are.
 	write(t, dir, map[string]string{FileName: "rule:\n  use: [DEDO]\n"})
 	if _, err := Load(path); err == nil || !strings.Contains(err.Error(), "rule") {
 		t.Errorf("unknown section: err = %v", err)
+	}
+}
+
+// A file's breaking section holds breaking rules, which an import brings
+// as it brings lint rules; IDs are unique across both kinds, and each
+// section disables only rules of its own kind.
+func TestLoadBreaking(t *testing.T) {
+	keep := "  - {id: HOUSE_KEEP_SCOPES, on: method, check: \"against.scopes.all(s, s in scopes)\", message: k}\n"
+	dir := t.TempDir()
+	write(t, dir, map[string]string{
+		"shared.yml":  "breaking:\n  rules:\n" + keep,
+		RulesFileName: "imports:\n  - path: shared.yml\n" + domainRule + "breaking:\n  use: [DEDO, HOUSE]\n  rules:\n  - {id: HOUSE_OWN_BREAKING, on: field, check: \"true\", message: o}\n",
+	})
+	c, err := Load(filepath.Join(dir, RulesFileName))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := ids(c.Breaking.Rules); !slices.Equal(got, []string{"HOUSE_KEEP_SCOPES", "HOUSE_OWN_BREAKING"}) {
+		t.Errorf("breaking rules = %v", got)
+	}
+	for _, r := range c.Breaking.Rules {
+		if !r.Breaking {
+			t.Errorf("%s is not marked breaking", r.ID)
+		}
+	}
+	if got := ids(c.Lint.Rules); !slices.Equal(got, []string{"HOUSE_RESOURCE_TYPE_DOMAIN"}) || c.Lint.Rules[0].Breaking {
+		t.Errorf("lint rules = %v", got)
+	}
+	if !slices.Equal(c.Breaking.Use, []string{"DEDO", "HOUSE"}) || c.Lint.Use != nil {
+		t.Errorf("breaking.use %v, lint.use %v", c.Breaking.Use, c.Lint.Use)
+	}
+
+	for name, tc := range map[string]struct{ file, want string }{
+		"wrong kind":    {domainRule + "breaking:\n  disable: [HOUSE_RESOURCE_TYPE_DOMAIN]\n", "not a breaking rule"},
+		"id both kinds": {domainRule + "breaking:\n  rules:\n  - {id: HOUSE_RESOURCE_TYPE_DOMAIN, on: method, check: \"true\", message: x}\n", "defined twice"},
+		"old layout":    {"rules:\n  - {id: HOUSE_X, on: field, check: \"true\", message: x}\n", "belongs in a lint section"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			dir := t.TempDir()
+			write(t, dir, map[string]string{RulesFileName: tc.file})
+			if _, err := Load(filepath.Join(dir, RulesFileName)); err == nil || !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("err = %v, want one containing %q", err, tc.want)
+			}
+		})
 	}
 }

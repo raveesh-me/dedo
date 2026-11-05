@@ -20,13 +20,15 @@ func TestExampleRulesFile(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer f.Close()
+	type section struct {
+		Use     []string      `yaml:"use"`
+		Disable []string      `yaml:"disable"`
+		Rules   []config.Rule `yaml:"rules"`
+	}
 	var doc struct {
-		Rules struct {
-			Use     []string        `yaml:"use"`
-			Imports []config.Import `yaml:"imports"`
-			Disable []string        `yaml:"disable"`
-			Rules   []config.Rule   `yaml:"rules"`
-		} `yaml:"rules"`
+		Imports  []config.Import   `yaml:"imports"`
+		Lint     section           `yaml:"lint"`
+		Breaking section           `yaml:"breaking"`
 		Annexure []config.Annexure `yaml:"annexure"`
 	}
 	dec := yaml.NewDecoder(f)
@@ -34,7 +36,7 @@ func TestExampleRulesFile(t *testing.T) {
 	if err := dec.Decode(&doc); err != nil {
 		t.Fatal(err)
 	}
-	file := doc.Rules
+	file := doc.Lint
 	b, err := os.ReadFile("../../templates/dedo.example.yaml")
 	if err != nil {
 		t.Fatal(err)
@@ -49,10 +51,20 @@ func TestExampleRulesFile(t *testing.T) {
 	if strings.Join(file.Use, ",") != "AIP_NOLANG,ZALANDO,DEDO,HOUSE,DEDO_MULTI_TENANT" {
 		t.Errorf("use = %v, want all five rule sets", file.Use)
 	}
-	if len(file.Imports) < 3 || len(file.Disable) == 0 {
-		t.Errorf("imports %v, disable %v: the example should show each", file.Imports, file.Disable)
+	if len(doc.Imports) < 3 || len(file.Disable) == 0 || len(doc.Breaking.Disable) == 0 {
+		t.Errorf("imports %v, disable %v and %v: the example should show each", doc.Imports, file.Disable, doc.Breaking.Disable)
+	}
+	if strings.Join(doc.Breaking.Use, ",") != "DEDO,HOUSE" {
+		t.Errorf("breaking.use = %v, want both breaking rule sets", doc.Breaking.Use)
 	}
 	if _, err := house.Specs(file.Rules); err != nil {
 		t.Fatal(err)
+	}
+	breaking := doc.Breaking.Rules
+	for i := range breaking {
+		breaking[i].Breaking = true
+	}
+	if specs, err := house.Specs(breaking); err != nil || len(specs) == 0 {
+		t.Fatalf("breaking rules: %v, %v", specs, err)
 	}
 }

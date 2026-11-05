@@ -89,7 +89,7 @@ func TestToolsVendorsPlugin(t *testing.T) {
 	for _, gomod := range []bool{false, true} {
 		files := map[string]string{
 			"buf.yaml":  "version: v2\ndeps:\n  - buf.build/r-a/dedo:v0.14.0\n",
-			"rules.yml": "use: [DEDO]\n",
+			"rules.yml": "lint:\n  use: [DEDO]\n",
 		}
 		if gomod {
 			files["go.mod"] = "module example.com/shop\n"
@@ -99,7 +99,7 @@ func TestToolsVendorsPlugin(t *testing.T) {
 		if err := run([]string{"tools", "-dir", dir}, &out); err != nil {
 			t.Fatalf("go.mod %v: dedo tools: %v\n%s", gomod, err, out.String())
 		}
-		if v, _ := pluginVersion(filepath.Join(dir, pluginPath())); v != "v0.14.0" || !strings.Contains(out.String(), "lint rules: ok") {
+		if v, _ := pluginVersion(filepath.Join(dir, pluginPath())); v != "v0.14.0" || !strings.Contains(out.String(), "rules in force:\nok") {
 			t.Errorf("go.mod %v: vendored %q:\n%s", gomod, v, out.String())
 		}
 	}

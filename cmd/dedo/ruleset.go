@@ -27,6 +27,34 @@ var skippedRules = []string{
 // say use (lint/rules.DefaultUse), which a new dedo.yaml lists.
 var defaultUse = []string{"AIP_NOLANG", "ZALANDO", "DEDO", house}
 
+// breakingCategory holds buf-plugin-dedo-lint's breaking rules
+// (lint/rules.CategoryBreaking), which run only where buf.yaml's
+// breaking.use lists it.
+const breakingCategory = "DEDO_BREAKING"
+
+// breakingRules lists dedo's breaking rules in buf.yaml's breaking.use,
+// keeping the rules the repository chose. A section that names none
+// keeps Buf's default, FILE, which listing a category would otherwise
+// replace.
+func (in *initer) breakingRules(buf, tmpl *yaml.Node) bool {
+	breaking := lookup(buf, "breaking")
+	if breaking == nil {
+		set(buf, "breaking", lookup(tmpl, "breaking"))
+		in.say("buf.yaml: added the breaking section, with dedo's breaking rules (%s)", breakingCategory)
+		return true
+	}
+	use := lookup(breaking, "use")
+	if use == nil {
+		use = child(breaking, "use", yaml.SequenceNode)
+		addScalars(use, "FILE")
+	}
+	if len(addScalars(use, breakingCategory)) == 0 {
+		return false
+	}
+	in.say("buf.yaml: breaking.use lists %s, dedo's breaking rules", breakingCategory)
+	return true
+}
+
 // pluginRule reports whether a lint.use or lint.except entry names
 // buf-plugin-dedo-lint's rules rather than Buf's own.
 func pluginRule(id string) bool {
@@ -107,7 +135,13 @@ func (in *initer) ruleSet(sel selection) error {
 		}
 		changed = true
 	}
-	rules := child(root(doc), "rules", yaml.MappingNode)
+	if lookup(root(doc), "rules") != nil {
+		renameKey(root(doc), "rules", "lint")
+		intoLint(root(doc), lookup(root(doc), "lint"))
+		in.say("dedo.yaml: the rules section is now lint, with imports at the top of the file; a breaking section can sit beside it")
+		changed = true
+	}
+	rules := child(root(doc), "lint", yaml.MappingNode)
 	use := lookup(rules, "use")
 	if use == nil {
 		use = &yaml.Node{Kind: yaml.SequenceNode, Tag: "!!seq"}
@@ -163,9 +197,44 @@ func (in *initer) newDedoYAML() (*yaml.Node, bool, error) {
 		in.say("dedo.yaml: created, with dedo's default rule sets")
 		return doc, false, nil
 	}
-	set(root(doc), "rules", movedRules(old))
+	intoLint(root(doc), movedRules(old))
 	in.say("dedo.yaml: created, with the rules of rules.yml, which it replaces")
 	return doc, true, nil
+}
+
+// intoLint makes old, a rules section of the layout before v0.32.1 (use,
+// imports, disable and rules together), dedo.yaml's lint section, and
+// moves its imports to the top of the file, before lint, since an import
+// brings breaking rules too.
+func intoLint(doc, old *yaml.Node) {
+	imports := lookup(old, "imports")
+	if imports != nil {
+		remove(old, "imports")
+	}
+	set(doc, "lint", old)
+	if imports == nil {
+		return
+	}
+	remove(doc, "imports")
+	for i := 0; i+1 < len(doc.Content); i += 2 {
+		if doc.Content[i].Value == "lint" {
+			// The comment above the section now opens the file's imports.
+			key := scalar("imports")
+			key.HeadComment, doc.Content[i].HeadComment = doc.Content[i].HeadComment, ""
+			doc.Content = slices.Insert(doc.Content, i, key, imports)
+			return
+		}
+	}
+}
+
+// renameKey renames a mapping's key in place, keeping its comments.
+func renameKey(m *yaml.Node, from, to string) {
+	for i := 0; i+1 < len(m.Content); i += 2 {
+		if m.Content[i].Value == from {
+			m.Content[i].Value = to
+			return
+		}
+	}
 }
 
 // rulesYMLHeader is the header dedo init wrote at the top of rules.yml from

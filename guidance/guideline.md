@@ -257,7 +257,7 @@ When the data is partitioned between tenants (customers, sub-accounts, business 
 
 1. Put the tenant at the root of the resource hierarchy: `locations/{location}/products/{product}`, with paths such as `/commerce/pim/v1/{name=locations/*/products/*}`.
 2. Declare it on the service: `option (dedo.v1.service) = {... tenancy: {collection: "locations"}}`. Mark the few RPCs that span tenants, such as listing the caller's own locations, `cross_tenant: true`.
-3. Add `DEDO_MULTI_TENANT` to `use` in `dedo.yaml`'s `rules` (`dedo init` does), so the lint checks that every resource and every request names its tenant.
+3. Add `DEDO_MULTI_TENANT` to `use` in `dedo.yaml`'s `lint` section (`dedo init` does), so the lint checks that every resource and every request names its tenant.
 4. Pass `Tenants` to `interceptor.Config`: a function that says whether the caller may act in a tenant ID. Your auth interceptor puts what it needs in the context, as for scopes.
 
 The interceptor then reads the tenants of every request, on every transport, from the field the path binds and from every field with a `google.api.resource_reference`, and answers `PERMISSION_DENIED` for another tenant's data before your handler runs. The service will not start if an RPC names no tenant, or if `Tenants` is missing. [RULES.md](RULES.md#multi-tenant-rules) has the details, and [`examples/contacts`](../examples/contacts) a complete contract.

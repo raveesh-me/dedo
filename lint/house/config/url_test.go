@@ -42,7 +42,8 @@ func importURL(t *testing.T, url, pin string) string {
 	return filepath.Join(dir, RulesFileName)
 }
 
-const docRules = `rules:
+const docRules = `lint:
+  rules:
   - id: HOUSE_RELATIVE_DOC
     on: resource
     check: "true"

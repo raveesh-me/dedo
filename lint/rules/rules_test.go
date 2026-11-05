@@ -149,7 +149,7 @@ func TestRulesDocumented(t *testing.T) {
 			headings[id] = true
 		}
 	}
-	for _, rule := range rules.All {
+	for _, rule := range append(slices.Clone(rules.All), rules.Breaking...) {
 		if !headings[rule.ID] {
 			t.Errorf("RULES.md has no \"### %s\" heading", rule.ID)
 		}

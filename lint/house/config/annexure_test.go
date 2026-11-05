@@ -11,7 +11,7 @@ func TestAnnexures(t *testing.T) {
 	base := serve(t, map[string]string{"/v1/AGENTS.md": guide})
 	dir := t.TempDir()
 	write(t, dir, map[string]string{
-		FileName: "rules: {}\nannexure:\n  - url: " + base + "/v1/AGENTS.md\n    sha256: " + sum(guide) +
+		FileName: "lint: {}\nannexure:\n  - url: " + base + "/v1/AGENTS.md\n    sha256: " + sum(guide) +
 			"\n  - path: docs/agents.md\n",
 		"docs/agents.md": "# Local\n",
 	})
@@ -37,7 +37,7 @@ func TestAnnexures(t *testing.T) {
 	}
 
 	// A rules file has no annexures.
-	write(t, dir, map[string]string{RulesFileName: "rules: []\n"})
+	write(t, dir, map[string]string{RulesFileName: "lint:\n  rules: []\n"})
 	if got, err := Annexures(filepath.Join(dir, RulesFileName)); err != nil || got != nil {
 		t.Errorf("rules.yml: %v, %v", got, err)
 	}

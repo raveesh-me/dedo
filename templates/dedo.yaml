@@ -2,15 +2,21 @@
 # it; guidance/RULES.md in the dedo repository explains each key, and
 # dedo.example.yaml (dedo templates dedo.example.yaml) uses them all.
 
-# Which lint rules run. buf.yaml lists only DEDO of buf-plugin-dedo-lint's
-# rules; this section chooses among them. Run dedo tools (make tools) after
-# every change: it checks the rules and lists the ones in force.
+# Your organisation's shared rules, which bring lint and breaking rules.
+# imports:
+#   - git: https://github.com/acme/api-standards.git
+#     ref: v3
+
+# Which lint rules run. buf.yaml's lint.use lists only DEDO of
+# buf-plugin-dedo-lint's rules; this section chooses among them. Run dedo
+# tools (make tools) after every change: it checks the rules and lists the
+# ones in force.
 #
 # use names the rule sets this repository runs: AIP_NOLANG, ZALANDO, DEDO,
 # HOUSE (the house rules below and the ones imported), and
 # DEDO_MULTI_TENANT for services that declare tenancy. Rule IDs work too.
 # The imports and rules build on these, and override them where they say so.
-rules:
+lint:
   use:
     - AIP_NOLANG
     - ZALANDO
@@ -19,15 +25,25 @@ rules:
   # Rules this repository opts out of, by ID; never a final rule.
   # disable: [DEDO_NO_JSON_NAME]
   #
-  # Your organisation's shared rules, and this repository's own HOUSE_* rules.
-  # imports:
-  #   - git: https://github.com/acme/api-standards.git
-  #     ref: v3
+  # This repository's own HOUSE_* rules.
   # rules:
   #   - id: HOUSE_RESOURCE_TYPE_DOMAIN
   #     on: resource
   #     check: type.endsWith('.acme.com')
   #     message: Resource types live under acme.com.
+
+# Which breaking rules run. buf.yaml's breaking.use lists DEDO_BREAKING
+# beside FILE; this section chooses among them, as lint does: DEDO, dedo's
+# own, and HOUSE, the house breaking rules. A breaking rule's check reads
+# the element it compares with as against. Without use, both run.
+# breaking:
+#   use: [DEDO, HOUSE]
+#   disable: [DEDO_SUNSET_NO_EARLIER]
+#   rules:
+#     - id: HOUSE_ENUM_VALUES_KEPT
+#       on: enum
+#       check: against.values.all(v, v in values)
+#       message: An enum keeps its values; clients store them.
 
 # Your organisation's guidance for coding agents, which dedo adds to
 # CLAUDE.md and AGENTS.md after its own. Where the two conflict, the

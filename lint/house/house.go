@@ -2,6 +2,11 @@
 // dedo.yaml (see package config), as rules of buf-plugin-dedo-lint. Each
 // rule is a CEL check of one kind of element; Buf sees it as a rule of its
 // own, so lint.use, except and buf:lint:ignore work as for any other rule.
+//
+// A breaking rule, from a breaking section, runs in buf breaking on each
+// element that has one of the same name in the version compared against.
+// Its check reads that earlier element's variables as against, such as
+// against.scopes.
 package house
 
 import (
@@ -51,14 +56,18 @@ func Specs(rules []config.Rule) ([]*check.RuleSpec, error) {
 		if err != nil {
 			return nil, err
 		}
-		specs = append(specs, &check.RuleSpec{
+		spec := &check.RuleSpec{
 			ID:          r.ID,
 			CategoryIDs: []string{Category},
 			Default:     true,
 			Purpose:     purpose(r.Message),
 			Type:        check.RuleTypeLint,
 			Handler:     handler(r, prg),
-		})
+		}
+		if r.Breaking {
+			spec.Type, spec.Handler = check.RuleTypeBreaking, pairHandler(r, prg)
+		}
+		specs = append(specs, spec)
 	}
 	return specs, nil
 }
@@ -90,6 +99,11 @@ func compile(r config.Rule) (cel.Program, error) {
 		}
 		opts = append(opts, cel.Variable(v, t))
 	}
+	if r.Breaking {
+		// The earlier element has the same variables; their types are
+		// dynamic, so a check compares them with the current ones.
+		opts = append(opts, cel.Variable("against", cel.MapType(cel.StringType, cel.DynType)))
+	}
 	env, err := cel.NewEnv(opts...)
 	if err != nil {
 		return nil, err
@@ -104,18 +118,23 @@ func compile(r config.Rule) (cel.Program, error) {
 	return env.Program(ast)
 }
 
+// evaluate runs a compiled check and annotates where it fails.
+func evaluate(r config.Rule, prg cel.Program, w check.ResponseWriter, vars map[string]any, at ...check.AddAnnotationOption) {
+	out, _, err := prg.Eval(vars)
+	if err != nil {
+		w.AddAnnotation(append(at, check.WithMessage(fmt.Sprintf("%s: the check failed to run: %v", r.ID, err)))...)
+		return
+	}
+	if ok, isBool := out.Value().(bool); isBool && ok {
+		return
+	}
+	w.AddAnnotation(append(at, check.WithMessage(message(r)))...)
+}
+
 // handler evaluates the check on every element of the rule's kind.
 func handler(r config.Rule, prg cel.Program) check.RuleHandler {
 	eval := func(w check.ResponseWriter, d protoreflect.Descriptor, vars map[string]any) {
-		out, _, err := prg.Eval(vars)
-		if err != nil {
-			w.AddAnnotation(check.WithDescriptor(d), check.WithMessage(fmt.Sprintf("%s: the check failed to run: %v", r.ID, err)))
-			return
-		}
-		if ok, isBool := out.Value().(bool); isBool && ok {
-			return
-		}
-		w.AddAnnotation(check.WithDescriptor(d), check.WithMessage(message(r)))
+		evaluate(r, prg, w, vars, check.WithDescriptor(d))
 	}
 	opt := checkutil.WithoutImports()
 	switch r.On {
@@ -156,6 +175,61 @@ func handler(r config.Rule, prg cel.Program) check.RuleHandler {
 	case "enum":
 		return checkutil.NewEnumRuleHandler(func(_ context.Context, w check.ResponseWriter, _ check.Request, e protoreflect.EnumDescriptor) error {
 			eval(w, e, enumVars(e))
+			return nil
+		}, opt)
+	}
+	panic("house: unknown kind " + r.On) // config validates the kind
+}
+
+// pairHandler evaluates a breaking rule's check on every element of its
+// kind that the version compared against also has, with that element's
+// variables as against.
+func pairHandler(r config.Rule, prg cel.Program) check.RuleHandler {
+	eval := func(w check.ResponseWriter, d, against protoreflect.Descriptor, vars, before map[string]any) {
+		vars["against"] = before
+		evaluate(r, prg, w, vars, check.WithDescriptor(d), check.WithAgainstDescriptor(against))
+	}
+	opt := checkutil.WithoutImports()
+	switch r.On {
+	case "file":
+		return checkutil.NewFilePairRuleHandler(func(_ context.Context, w check.ResponseWriter, _ check.Request, f, a descriptor.FileDescriptor) error {
+			fd, ad := f.ProtoreflectFileDescriptor(), a.ProtoreflectFileDescriptor()
+			eval(w, fd, ad, fileVars(fd), fileVars(ad))
+			return nil
+		}, opt)
+	case "service":
+		return checkutil.NewServicePairRuleHandler(func(_ context.Context, w check.ResponseWriter, _ check.Request, s, a protoreflect.ServiceDescriptor) error {
+			eval(w, s, a, serviceVars(s), serviceVars(a))
+			return nil
+		}, opt)
+	case "method":
+		return checkutil.NewMethodPairRuleHandler(func(_ context.Context, w check.ResponseWriter, _ check.Request, m, a protoreflect.MethodDescriptor) error {
+			eval(w, m, a, methodVars(m), methodVars(a))
+			return nil
+		}, opt)
+	case "message", "resource":
+		return checkutil.NewMessagePairRuleHandler(func(_ context.Context, w check.ResponseWriter, _ check.Request, m, a protoreflect.MessageDescriptor) error {
+			if r.On == "message" {
+				eval(w, m, a, messageVars(m), messageVars(a))
+				return nil
+			}
+			// Both versions must be resources: a message that becomes one,
+			// or stops being one, is no resource to compare.
+			if res, before := resource(m), resource(a); res != nil && before != nil {
+				eval(w, m, a, resourceVars(m, res), resourceVars(a, before))
+			}
+			return nil
+		}, opt)
+	case "field":
+		return checkutil.NewFieldPairRuleHandler(func(_ context.Context, w check.ResponseWriter, _ check.Request, f, a protoreflect.FieldDescriptor) error {
+			if !f.IsExtension() {
+				eval(w, f, a, fieldVars(f), fieldVars(a))
+			}
+			return nil
+		}, opt)
+	case "enum":
+		return checkutil.NewEnumPairRuleHandler(func(_ context.Context, w check.ResponseWriter, _ check.Request, e, a protoreflect.EnumDescriptor) error {
+			eval(w, e, a, enumVars(e), enumVars(a))
 			return nil
 		}, opt)
 	}

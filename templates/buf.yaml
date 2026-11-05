@@ -23,6 +23,9 @@ lint:
 breaking:
   use:
     - FILE
+    # buf-plugin-dedo-lint's breaking rules: what Buf's cannot see in
+    # dedo's options, such as an RPC that stops declaring an event type.
+    - DEDO_BREAKING
   ignore_unstable_packages: true
 plugins:
   # At the options module's release above: `dedo tools` (or make tools)

@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package shop.v1;
+
+import "google/protobuf/empty.proto";
+import "dedo/v1/options.proto";
+
+service CartService {
+  // Dropped cart.admin: breaks the scope rule.
+  rpc GetCart(google.protobuf.Empty) returns (google.protobuf.Empty) {
+    option (dedo.v1.method) = {scopes: "cart.read"};
+  }
+  // Kept its scope and added one: passes.
+  rpc ClearCart(google.protobuf.Empty) returns (google.protobuf.Empty) {
+    option (dedo.v1.method) = {scopes: ["cart.write", "cart.admin"]};
+  }
+  // New: nothing to compare with.
+  rpc EmptyCart(google.protobuf.Empty) returns (google.protobuf.Empty) {}
+}
+
+enum Colour {
+  COLOUR_UNSPECIFIED = 0;
+  COLOUR_BLUE = 2;
+}

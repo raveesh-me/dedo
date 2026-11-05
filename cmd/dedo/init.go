@@ -303,6 +303,9 @@ func (in *initer) linter() error {
 		sel, moved = in.moveSelection(lint)
 		changed = changed || moved
 	}
+	if in.breakingRules(root(doc), root(tmpl)) {
+		changed = true
+	}
 	plugins := child(root(doc), "plugins", yaml.SequenceNode)
 	kept := plugins.Content[:0]
 	for _, item := range plugins.Content {

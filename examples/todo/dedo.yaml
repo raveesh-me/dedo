@@ -1,15 +1,17 @@
+# House rules: the organisation's shared ones, lint and breaking.
+imports:
+  - path: ../house-rules
+
 # The rule sets this service runs; see guidance/RULES.md.
-rules:
+lint:
   use:
     - AIP_NOLANG
     - ZALANDO
     - DEDO
     - HOUSE
 
-  # House rules: the organisation's shared ones, and this service's own. A
-  # rule here outranks the rules it imports, so it may override them.
-  imports:
-    - path: ../house-rules
+  # This service's own house rules. A rule here outranks the rules it
+  # imports, so it may override them.
   rules:
     - id: HOUSE_REST_ROOT
       on: method

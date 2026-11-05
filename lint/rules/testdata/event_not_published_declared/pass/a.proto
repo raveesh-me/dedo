@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package raveesh_me.library.v1;
+
+import "google/protobuf/empty.proto";
+import "dedo/v1/options.proto";
+
+service LibraryService {
+  rpc DeleteBook(google.protobuf.Empty) returns (google.protobuf.Empty) {
+    option (dedo.v1.method) = {
+      errors: {reason: "BOOK_NOT_FOUND", code: NOT_FOUND}
+      errors: {reason: "EVENT_NOT_PUBLISHED", code: UNAVAILABLE}
+      emits: "raveesh_me.library.book.deleted"
+    };
+  }
+  // Emits nothing, so declares nothing about events.
+  rpc ArchiveBook(google.protobuf.Empty) returns (google.protobuf.Empty) {
+    option (dedo.v1.method) = {errors: {reason: "BOOK_NOT_FOUND", code: NOT_FOUND}};
+  }
+}

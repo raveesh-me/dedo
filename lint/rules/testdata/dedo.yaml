@@ -1,3 +1,5 @@
 # Every rule of dedo's runs in the rule tests.
-rules:
+lint:
   use: [AIP, ZALANDO, DEDO, HOUSE, DEDO_MULTI_TENANT]
+breaking:
+  use: [DEDO, HOUSE]

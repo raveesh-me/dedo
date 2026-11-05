@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"buf.build/go/bufplugin/check"
@@ -70,6 +71,7 @@ var All = []*check.RuleSpec{
 	messageDescriptionRequired,
 	packageSharedReserved,
 	eventTypes,
+	eventNotPublishedDeclared,
 	multiTenantServiceTenancy,
 	multiTenantResourcePattern,
 	multiTenantRequestTenant,
@@ -86,9 +88,10 @@ func NewSpec() (*check.Spec, error) {
 		return nil, err
 	}
 	return &check.Spec{
-		Rules: c.Rules,
+		Rules: append(slices.Clone(c.Lint.Rules), c.Breaking.Rules...),
 		Categories: []*check.CategorySpec{
-			{ID: CategoryDedo, Purpose: "Checks every rule of buf-plugin-dedo-lint that dedo.yaml chooses: AIP, ZALANDO, DEDO and house rules."},
+			{ID: CategoryDedo, Purpose: "Checks every lint rule of buf-plugin-dedo-lint that dedo.yaml's lint section chooses: AIP, ZALANDO, DEDO and house rules."},
+			{ID: CategoryBreaking, Purpose: "Checks every breaking rule of buf-plugin-dedo-lint that dedo.yaml's breaking section chooses: dedo's and house rules."},
 		},
 		Before: before,
 	}, nil
@@ -96,7 +99,7 @@ func NewSpec() (*check.Spec, error) {
 
 // Load returns the consolidated rules of the repository the plugin runs
 // in, for dedo tools to report.
-func Load() (*Consolidated, error) {
+func Load() (*Plugin, error) {
 	c, _, err := load()
 	return c, err
 }
@@ -106,7 +109,7 @@ func Load() (*Consolidated, error) {
 // starts the plugin in the directory it runs in, and asks for the rules
 // before any lint request, so they come from there rather than from a
 // plugin option.
-func load() (*Consolidated, func(context.Context, check.Request) (context.Context, check.Request, error), error) {
+func load() (*Plugin, func(context.Context, check.Request) (context.Context, check.Request, error), error) {
 	aipRules, _, before, err := aip.Rules()
 	if err != nil {
 		return nil, nil, err

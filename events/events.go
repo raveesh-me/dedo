@@ -16,9 +16,9 @@
 //
 // An event's ID stays the same across the retries of one Publish, so a
 // consumer can recognise the bus redelivering it. A retried command runs
-// its handler again and publishes a new event with a new ID: consumers
-// treat every event as a prompt to fetch the resource's current state,
-// which is safe to repeat.
+// its handler again and publishes a new event with a new ID; give it the
+// IdempotencyKey option, such as the request's request_id, and the
+// events of every retry carry the same key.
 package events
 
 import (
@@ -30,6 +30,7 @@ import (
 	"log/slog"
 	"maps"
 	"math/rand/v2"
+	"regexp"
 	"slices"
 	"time"
 
@@ -58,7 +59,32 @@ var (
 	ErrUndeclared = errors.New("events: event type not declared")
 	// ErrNoSubject: the event names no resource.
 	ErrNoSubject = errors.New("events: no subject")
+	// ErrBadIdempotencyKey: the IdempotencyKey option is empty, longer
+	// than 128 characters, or holds a space or a character that is not
+	// printable ASCII.
+	ErrBadIdempotencyKey = errors.New("events: bad idempotency key")
 )
+
+// validKey is a key a consumer can store and compare as it is: printable
+// ASCII without spaces, such as a UUID.
+var validKey = regexp.MustCompile(`^[\x21-\x7e]{1,128}$`)
+
+// Option changes one event Publish sends.
+type Option func(*options)
+
+// options are what Options set on one Publish.
+type options struct {
+	key    string
+	keySet bool
+}
+
+// IdempotencyKey gives the event a key that stays the same when the
+// caller retries the command, such as the request's request_id (AIP-155).
+// The event's ID is new on every Publish; the key is what lets a consumer
+// recognise the event of a retried command as one it has handled.
+func IdempotencyKey(key string) Option {
+	return func(o *options) { o.key, o.keySet = key, true }
+}
 
 // flowIDExtension is the CloudEvents extension that carries the flow ID
 // of the request that caused the event.
@@ -177,16 +203,21 @@ func withDefaults(r Retry) (Retry, error) {
 // error with reason ReasonNotPublished, which the handler can return so
 // the caller retries the command. A refused event (outside an RPC, an
 // undeclared type, no subject) or a permanent driver error is INTERNAL.
-func (p *Publisher) Publish(ctx context.Context, eventType, subject string) (driver.Event, error) {
-	if err := declared(ctx, eventType, subject); err != nil {
-		return driver.Event{}, connect.NewError(connect.CodeInternal, "event refused").WithCause(err)
-	}
+func (p *Publisher) Publish(ctx context.Context, eventType, subject string, opts ...Option) (driver.Event, error) {
 	e := driver.Event{
 		ID:      newID(),
 		Type:    eventType,
 		Source:  p.source,
 		Subject: subject,
 		Time:    p.now().UTC().Round(0),
+	}
+	var o options
+	for _, opt := range opts {
+		opt(&o)
+	}
+	e.IdempotencyKey = o.key
+	if err := refused(ctx, e, o.keySet); err != nil {
+		return driver.Event{}, connect.NewError(connect.CodeInternal, "event refused").WithCause(err)
 	}
 	if id := flowid.From(ctx); id != "" {
 		e.Extensions = map[string]string{flowIDExtension: id}
@@ -204,6 +235,18 @@ func (p *Publisher) Publish(ctx context.Context, eventType, subject string) (dri
 		return driver.Event{}, connect.NewError(connect.CodeInternal, "event not published").WithCause(err)
 	}
 	return driver.Event{}, notPublished(err)
+}
+
+// refused says why Publish refuses e, or nil. keySet is set when the
+// IdempotencyKey option ran, so an empty key is a mistake, not an absence.
+func refused(ctx context.Context, e driver.Event, keySet bool) error {
+	if err := declared(ctx, e.Type, e.Subject); err != nil {
+		return err
+	}
+	if keySet && !validKey.MatchString(e.IdempotencyKey) {
+		return fmt.Errorf("%w: %q; use printable ASCII without spaces, at most 128 characters, such as the request's request_id", ErrBadIdempotencyKey, e.IdempotencyKey)
+	}
+	return nil
 }
 
 // declared checks that the RPC being served declares eventType.

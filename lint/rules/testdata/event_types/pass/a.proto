@@ -4,6 +4,7 @@ package raveesh_me.library.v1;
 
 import "google/protobuf/empty.proto";
 import "dedo/v1/options.proto";
+import "google/api/resource.proto";
 
 service LibraryService {
   rpc CreateBook(google.protobuf.Empty) returns (google.protobuf.Empty) {
@@ -22,4 +23,23 @@ service LibraryService {
     option idempotency_level = IDEMPOTENT;
     option (dedo.v1.method) = {emits: "raveesh_me.library.book.deleted"};
   }
+}
+
+// Book is a book.
+message Book {
+  option (google.api.resource) = {
+    type: "library.raveesh.me/Book"
+    pattern: "shelves/{shelf}/books/{book}"
+  };
+  string name = 1;
+}
+
+// ShelfSlot is a place on a shelf; its singular is set explicitly.
+message ShelfSlot {
+  option (google.api.resource) = {
+    type: "library.raveesh.me/ShelfSlot"
+    pattern: "shelves/{shelf}/slots/{slot}"
+    singular: "shelfSlot"
+  };
+  string name = 1;
 }
