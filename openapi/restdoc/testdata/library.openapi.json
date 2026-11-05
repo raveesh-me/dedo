@@ -107,7 +107,7 @@
       "delete": {
         "operationId": "LibraryService_DeleteBook",
         "summary": "Delete a book",
-        "description": "Removes a book from its shelf for good.\n\nRequires one of the token scopes: `library.book.write`.",
+        "description": "Removes a book from its shelf for good.\n\nRequires one of the token scopes: `library.book.write`.\n\nMay publish the events: `raveesh_me.library.book.deleted`. Each event carries only its type and the name of the resource it is about; consumers fetch the resource through this API.",
         "tags": [
           "Library"
         ],
@@ -169,6 +169,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "Service Unavailable. Reasons: `EVENT_NOT_PUBLISHED`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Status"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -181,7 +191,11 @@
         "x-destructive": true,
         "x-rpc-procedure": "/raveesh_me.library.v1.LibraryService/DeleteBook",
         "x-error-reasons": [
-          "BOOK_NOT_FOUND"
+          "BOOK_NOT_FOUND",
+          "EVENT_NOT_PUBLISHED"
+        ],
+        "x-emits": [
+          "raveesh_me.library.book.deleted"
         ]
       }
     }

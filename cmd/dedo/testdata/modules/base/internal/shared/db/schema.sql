@@ -1,2 +1,2 @@
 CREATE SCHEMA platform;
-CREATE TABLE platform.outbox (topic text);
+CREATE TABLE platform.audit (entry text);

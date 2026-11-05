@@ -78,10 +78,10 @@ func TestModules(t *testing.T) {
 			"pkg/billing: module billing lives in internal/billing, nowhere else",
 		}},
 		{name: "sql-violation", findings: 4, want: []string{
-			"internal/billing/migrations/0002_fk.sql: module billing's SQL names module orders's schema: read it through orders.Port, or keep a copy from its events",
-			"internal/orders/queries/report.sql: module orders's SQL names module billing's schema: read it through billing.Port, or keep a copy from its events",
+			"internal/billing/migrations/0002_fk.sql: module billing's SQL names module orders's schema: read it through orders.Port",
+			"internal/orders/queries/report.sql: module orders's SQL names module billing's schema: read it through billing.Port",
 			"internal/shared/db/report.sql: shared SQL names module billing's schema",
-			"internal/orders/store.go:3: module orders's SQL names module billing's schema: read it through billing.Port, or keep a copy from its events",
+			"internal/orders/store.go:3: module orders's SQL names module billing's schema: read it through billing.Port",
 		}},
 		{name: "v1-and-v2", want: []string{
 			"dedo modules: 2 modules in shop, no cycles; each depends on:",

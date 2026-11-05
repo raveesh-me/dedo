@@ -63,6 +63,7 @@ type Operation struct {
 	Destructive  bool                  `json:"x-destructive,omitempty"`
 	Procedure    string                `json:"x-rpc-procedure"`
 	ErrorReasons []string              `json:"x-error-reasons,omitempty"`
+	Emits        []string              `json:"x-emits,omitempty"`
 }
 
 // Parameter is a path or query parameter.

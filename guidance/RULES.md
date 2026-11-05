@@ -252,6 +252,7 @@ A house rule that contradicts a DEDO, AIP or ZALANDO rule without overriding it 
 | [`DEDO_TOOL_ANNOTATIONS`](#dedo_tool_annotations) | RPCs declare the MCP ToolAnnotations hints, consistent with the proto |
 | [`DEDO_MESSAGE_DESCRIPTION_REQUIRED`](#dedo_message_description_required) | Messages declare a consumer-facing description |
 | [`DEDO_PACKAGE_SHARED_RESERVED`](#dedo_package_shared_reserved) | No package names its module `shared` |
+| [`DEDO_EVENT_TYPES`](#dedo_event_types) | Declared event types belong to the package, appear once, and only on RPCs that change state |
 
 ---
 
@@ -533,7 +534,7 @@ message GetProductRequest {
 
 **Checks** that no proto package names its module `shared`. The module is the segment before the version, or the last segment of an unversioned package.
 
-**Why.** Each module's code lives at `internal/<module>/`, and its tables in a Postgres schema of the same name. `internal/shared/` and the `shared` schema hold what the service's modules share: helpers, the outbox, bookkeeping. A module called `shared` would collide with both (see [domains.md](domains.md#modules-one-package-each)). It is also a technical name, not a domain noun.
+**Why.** Each module's code lives at `internal/<module>/`, and its tables in a Postgres schema of the same name. `internal/shared/` and the `shared` schema hold what the service's modules share: helpers and bookkeeping. A module called `shared` would collide with both (see [domains.md](domains.md#modules-one-package-each)). It is also a technical name, not a domain noun.
 
 ```protobuf
 package acme.shared.v1;   // Fails.
@@ -543,6 +544,33 @@ package acme.orders.v1;   // Passes.
 ```
 
 **Fix.** Name the module with the domain noun for what it is responsible for. Put value objects that several modules use in `<context>.type`, with no services and no version.
+
+### DEDO_EVENT_TYPES
+
+**Checks** the event types an RPC declares in `emits`:
+
+- each is `<context>.<module>.<resource>.<past-tense verb>`: the RPC's package without its version, then the resource and the verb, in snake_case;
+- each appears once;
+- the RPC is not `NO_SIDE_EFFECTS`.
+
+**Why.** An event says that something happened to a resource, and nothing more: consumers fetch the resource through the API ([domains.md](domains.md#domain-events-outward-only)). The type is the whole of the event's contract, so it names the context and module that publish it, and the transition the business names (`cancelled`, not `updated`). It carries no payload, so it does not change with the package's major version. A query changes nothing, so it has nothing to announce.
+
+```protobuf
+package acme.orders.v1;
+
+rpc CancelOrder(CancelOrderRequest) returns (Order) {
+  option (dedo.v1.method) = {
+    emits: "acme.orders.order.cancelled"      // Passes.
+    // emits: "acme.orders.v1.order.cancelled"  Fails: no version.
+    // emits: "billing.invoice.voided"          Fails: another context's type.
+    // emits: "acme.orders.cancelled"           Fails: no resource.
+  };
+}
+```
+
+dedo does not check that the verb is in the past tense: a heuristic would reject `paid` and `sent`. A house rule can.
+
+**Fix.** Start the type with the package without its version, then name the resource and what happened to it. Declare events only on RPCs that change state.
 
 ## Multi-tenant rules
 

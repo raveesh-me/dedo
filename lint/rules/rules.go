@@ -69,6 +69,7 @@ var All = []*check.RuleSpec{
 	toolAnnotations,
 	messageDescriptionRequired,
 	packageSharedReserved,
+	eventTypes,
 	multiTenantServiceTenancy,
 	multiTenantResourcePattern,
 	multiTenantRequestTenant,

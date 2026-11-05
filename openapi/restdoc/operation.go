@@ -77,6 +77,7 @@ func (g *generator) operation(svc *protogen.Service, m *protogen.Method, b bindi
 		Tags:        []string{serviceTag(svc)},
 		Procedure:   fmt.Sprintf("/%s/%s", svc.Desc.FullName(), m.Desc.Name()),
 		Destructive: rules.GetTool().GetAnnotations().GetDestructiveHint(),
+		Emits:       rules.GetEmits(),
 		Responses:   map[string]*Response{},
 	}
 	if op.Summary == "" {
@@ -102,7 +103,8 @@ func (g *generator) operation(svc *protogen.Service, m *protogen.Method, b bindi
 }
 
 // operationDescription prefers the tool description and adds the scopes,
-// which some renderers do not show from the security requirement.
+// which some renderers do not show from the security requirement, and the
+// events the RPC may publish, which OpenAPI has no field for.
 func operationDescription(m *protogen.Method, rules *dedov1.MethodRules) string {
 	text := strings.TrimSpace(rules.GetTool().GetDescription())
 	if text == "" {
@@ -110,6 +112,9 @@ func operationDescription(m *protogen.Method, rules *dedov1.MethodRules) string 
 	}
 	if scopes := rules.GetScopes(); len(scopes) > 0 {
 		text += fmt.Sprintf("\n\nRequires one of the token scopes: `%s`.", strings.Join(scopes, "`, `"))
+	}
+	if emits := rules.GetEmits(); len(emits) > 0 {
+		text += fmt.Sprintf("\n\nMay publish the events: `%s`. Each event carries only its type and the name of the resource it is about; consumers fetch the resource through this API.", strings.Join(emits, "`, `"))
 	}
 	return strings.TrimSpace(text)
 }
