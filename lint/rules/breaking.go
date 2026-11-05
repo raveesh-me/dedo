@@ -58,7 +58,7 @@ func breakingAt(w check.ResponseWriter, d, against protoreflect.Descriptor, id, 
 
 var emitsNoDelete = breakingRule(
 	idEmitsNoDelete,
-	"Checks that an RPC still declares every event type it declared in emits, so no consumer of an event silently stops receiving it.",
+	"Checks that an RPC still declares every event type it declared in emits, so consumers of a type keep receiving it.",
 	checkutil.NewMethodPairRuleHandler(func(_ context.Context, w check.ResponseWriter, _ check.Request, m, against protoreflect.MethodDescriptor) error {
 		now := methodRules(m).GetEmits()
 		for _, t := range methodRules(against).GetEmits() {

@@ -70,14 +70,20 @@ var (
 var validKey = regexp.MustCompile(`^[\x21-\x7e]{1,128}$`)
 
 // Option changes one event Publish sends.
-type Option func(*driver.Event)
+type Option func(*options)
+
+// options are what Options set on one Publish.
+type options struct {
+	key    string
+	keySet bool
+}
 
 // IdempotencyKey gives the event a key that stays the same when the
 // caller retries the command, such as the request's request_id (AIP-155).
 // The event's ID is new on every Publish; the key is what lets a consumer
 // recognise the event of a retried command as one it has handled.
 func IdempotencyKey(key string) Option {
-	return func(e *driver.Event) { e.IdempotencyKey = key }
+	return func(o *options) { o.key, o.keySet = key, true }
 }
 
 // flowIDExtension is the CloudEvents extension that carries the flow ID
@@ -205,10 +211,12 @@ func (p *Publisher) Publish(ctx context.Context, eventType, subject string, opts
 		Subject: subject,
 		Time:    p.now().UTC().Round(0),
 	}
+	var o options
 	for _, opt := range opts {
-		opt(&e)
+		opt(&o)
 	}
-	if err := refused(ctx, e, len(opts) > 0); err != nil {
+	e.IdempotencyKey = o.key
+	if err := refused(ctx, e, o.keySet); err != nil {
 		return driver.Event{}, connect.NewError(connect.CodeInternal, "event refused").WithCause(err)
 	}
 	if id := flowid.From(ctx); id != "" {
@@ -229,13 +237,13 @@ func (p *Publisher) Publish(ctx context.Context, eventType, subject string, opts
 	return driver.Event{}, notPublished(err)
 }
 
-// refused says why Publish refuses e, or nil. optioned is set when an
-// option ran, so an empty IdempotencyKey is a mistake, not an absence.
-func refused(ctx context.Context, e driver.Event, optioned bool) error {
+// refused says why Publish refuses e, or nil. keySet is set when the
+// IdempotencyKey option ran, so an empty key is a mistake, not an absence.
+func refused(ctx context.Context, e driver.Event, keySet bool) error {
 	if err := declared(ctx, e.Type, e.Subject); err != nil {
 		return err
 	}
-	if (optioned || e.IdempotencyKey != "") && !validKey.MatchString(e.IdempotencyKey) {
+	if keySet && !validKey.MatchString(e.IdempotencyKey) {
 		return fmt.Errorf("%w: %q; use printable ASCII without spaces, at most 128 characters, such as the request's request_id", ErrBadIdempotencyKey, e.IdempotencyKey)
 	}
 	return nil

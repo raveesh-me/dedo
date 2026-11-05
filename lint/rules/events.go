@@ -133,17 +133,20 @@ func packageResources(req check.Request, pkg protoreflect.FullName) map[string]b
 	return out
 }
 
-// snakeCase turns orderLine or OrderLine into order_line.
+// snakeCase turns orderLine or OrderLine into order_line, keeping an
+// acronym whole: SKU is sku, APIKey api_key.
 func snakeCase(s string) string {
+	r := []rune(s)
 	var b strings.Builder
-	for i, r := range s {
-		if unicode.IsUpper(r) {
-			if i > 0 {
+	for i, c := range r {
+		if unicode.IsUpper(c) && i > 0 {
+			prev := r[i-1]
+			nextLower := i+1 < len(r) && unicode.IsLower(r[i+1])
+			if unicode.IsLower(prev) || unicode.IsDigit(prev) || (unicode.IsUpper(prev) && nextLower) {
 				b.WriteByte('_')
 			}
-			r = unicode.ToLower(r)
 		}
-		b.WriteRune(r)
+		b.WriteRune(unicode.ToLower(c))
 	}
 	return b.String()
 }
