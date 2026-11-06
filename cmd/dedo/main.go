@@ -33,6 +33,10 @@ func main() {
 
 const usage = `usage:
   dedo init [-dir DIR] [-offline]   set up the repository in DIR (default .)
+  dedo init -bff [-dir DIR] [-offline]
+                                    add a backend for frontend to the repository dedo init set up in DIR:
+                                    bff/ with its own go.mod, an unnamed buf module in bff/proto with no
+                                    breaking check, its buf.gen.yaml, a starter service and its server
   dedo upgrade [-dir DIR]           move the repository to this dedo's release: pins, templates, buf.lock, generated code
   dedo upgrade -lint [-dir DIR]     move only the options module, whose label is the lint plugin's release, then dedo tools
   dedo update [-version V]          install the latest dedo (or V); then run dedo upgrade
@@ -68,8 +72,12 @@ func run(args []string, out io.Writer) error {
 		dir := flags.String("dir", ".", "the repository to set up")
 		offline := flags.Bool("offline", false, "edit files only; print the go, buf and make commands instead of running them")
 		release := flags.String("version", version, "the dedo release to pin")
+		bff := flags.Bool("bff", false, "add a backend for frontend in bff/, a Go module of its own, to a repository dedo init set up")
 		if err := flags.Parse(args[1:]); err != nil {
 			return err
+		}
+		if *bff {
+			return initBFF(*dir, *release, *offline, out)
 		}
 		return initRepo(*dir, *release, *offline, out)
 	case "upgrade":
