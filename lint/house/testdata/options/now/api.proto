@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+package acme.shop.v1;
+
+import "acme/auth/v1/options.proto";
+import "dedo/v1/options.proto";
+
+option (acme.auth.v1.file) = {
+  permissions: {
+    id: "shop/carts.manage"
+    grants: ["shop/carts.read", "shop/carts.write"]
+  }
+};
+
+service CartService {
+  option (dedo.v1.service) = {audience: AUDIENCE_EXTERNAL_PUBLIC};
+  option (acme.auth.v1.service) = {tenant: TENANT_LOCATION};
+
+  rpc GetCart(GetCartRequest) returns (GetCartResponse) {
+    option (acme.auth.v1.method) = {
+      callers: ["ns/orders"]
+      limits: {key: "rps" value: 10}
+    };
+    option (acme.auth.v1.profile) = "auth";
+  }
+
+  rpc PeekCart(GetCartRequest) returns (GetCartResponse) {
+    option (acme.auth.v1.method) = {anonymous: true};
+  }
+
+  rpc ListCarts(GetCartRequest) returns (GetCartResponse);
+}
+
+message GetCartRequest {}
+
+message GetCartResponse {}

@@ -1,0 +1,45 @@
+syntax = "proto3";
+
+// Options the lint plugin is not built with: house rules read them from the
+// files buf passes.
+package acme.auth.v1;
+
+import "google/protobuf/descriptor.proto";
+
+enum Tenant {
+  TENANT_UNSPECIFIED = 0;
+  TENANT_LOCATION = 1;
+}
+
+message Permission {
+  string id = 1;
+  repeated string grants = 2;
+}
+
+message FileRules {
+  repeated Permission permissions = 1;
+}
+
+message ServiceRules {
+  Tenant tenant = 1;
+}
+
+message MethodRules {
+  bool anonymous = 1;
+  repeated string callers = 2;
+  Permission sample = 3;
+  map<string, int32> limits = 4;
+}
+
+extend google.protobuf.FileOptions {
+  FileRules file = 50900;
+}
+
+extend google.protobuf.ServiceOptions {
+  ServiceRules service = 50901;
+}
+
+extend google.protobuf.MethodOptions {
+  MethodRules method = 50902;
+  string profile = 50903;
+}

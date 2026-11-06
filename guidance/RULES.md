@@ -230,13 +230,31 @@ House rules run while their section's `use` lists `HOUSE`, as it does by default
 
 | `on` | Variables |
 | --- | --- |
-| `file` | `name` (the path), `proto_package`, `imports` |
-| `service` | `name`, `full_name`, `file`, `proto_package`, `methods`, `resources` (the `google.api.resource` types its methods take or return, at any depth, each once), `roots` (those of `resources` with no pattern nested under another's: `orders/{order}/lines/{line}` belongs to `orders/{order}`), `title` (of `dedo.v1.service`, empty when unset) |
-| `method` | `name`, `full_name`, `file`, `proto_package`, `service`, `input`, `output`, `client_streaming`, `server_streaming`, `idempotency` (`NO_SIDE_EFFECTS`, `IDEMPOTENT`, `UNKNOWN`), `http_verb` and `http_path` (of the `google.api.http` rule), `http_bindings` (the rule and each of its `additional_bindings`, as `{verb, path}` maps), `scopes`, `errors` (reasons), `deprecated` |
-| `message` | `name`, `full_name`, `file`, `proto_package`, `fields` |
-| `field` | `name`, `full_name`, `file`, `proto_package`, `message`, `type` (a scalar kind such as `string`, or a message or enum full name), `repeated`, `optional`, `behaviors` (such as `REQUIRED`), `json_name` |
-| `enum` | `name`, `full_name`, `file`, `proto_package`, `values` |
-| `resource` | `name`, `full_name`, `file`, `proto_package`, `type`, `patterns`, `singular`, `plural` |
+| `file` | `name` (the path), `proto_package`, `imports`, `options` |
+| `service` | `name`, `full_name`, `file`, `proto_package`, `methods`, `resources` (the `google.api.resource` types its methods take or return, at any depth, each once), `roots` (those of `resources` with no pattern nested under another's: `orders/{order}/lines/{line}` belongs to `orders/{order}`), `title` (of `dedo.v1.service`, empty when unset), `options` |
+| `method` | `name`, `full_name`, `file`, `proto_package`, `service`, `input`, `output`, `client_streaming`, `server_streaming`, `idempotency` (`NO_SIDE_EFFECTS`, `IDEMPOTENT`, `UNKNOWN`), `http_verb` and `http_path` (of the `google.api.http` rule), `http_bindings` (the rule and each of its `additional_bindings`, as `{verb, path}` maps), `scopes`, `errors` (reasons), `deprecated`, `options`, `service_options` (its service's `options`) |
+| `message` | `name`, `full_name`, `file`, `proto_package`, `fields`, `options` |
+| `field` | `name`, `full_name`, `file`, `proto_package`, `message`, `type` (a scalar kind such as `string`, or a message or enum full name), `repeated`, `optional`, `behaviors` (such as `REQUIRED`), `json_name`, `options` |
+| `enum` | `name`, `full_name`, `file`, `proto_package`, `values`, `options` |
+| `resource` | `name`, `full_name`, `file`, `proto_package`, `type`, `patterns`, `singular`, `plural`, `options` |
+
+`options` holds every extension set on the element's options, keyed by the extension's full name, whatever file declares it: dedo's own, such as `dedo.v1.method`, and your organisation's, which buf passes with the module's imports. A message value is a map of its fields by their names in the `.proto`, an enum is its value's name, a repeated field is a list and a map field a map with string keys. An unset scalar reads as its zero value and an unset repeated or map field as empty; an unset message field, and an unset member of a oneof (a proto3 `optional` field among them), are left out, so test them with `has()`. An extension that is not set is not a key, so test it with `in`. A method also reads its service's options as `service_options`. With `acme.auth.v1` options of your own:
+
+```yaml
+- id: HOUSE_TENANT_DECLARED
+  on: service
+  check: "'acme.auth.v1.service' in options && options['acme.auth.v1.service'].tenant != 'TENANT_UNSPECIFIED'"
+  message: Every service declares its tenant.
+- id: HOUSE_CALLERS_NOT_PUBLIC
+  on: method
+  check: >-
+    !('acme.auth.v1.method' in options) ||
+    options['acme.auth.v1.method'].callers.size() == 0 ||
+    service_options['dedo.v1.service'].audience != 'AUDIENCE_EXTERNAL_PUBLIC'
+  message: A public method takes no service-to-service callers.
+```
+
+A breaking rule reads the earlier element's as `against.options`: `against.options['acme.auth.v1.file'].permissions == options['acme.auth.v1.file'].permissions` keeps a file's permissions as they were.
 
 Lists are lists of strings (`'shop.cart.read' in scopes`, `fields.size() < 30`), except `http_bindings`, a list of maps (`http_bindings.all(b, !b.path.contains('_'))`, empty for a method without HTTP); booleans are booleans. CEL's string extensions are on (`split`, `lowerAscii`, `replace`, `trim`), and so is `cel.bind`, which names a value once instead of repeating the expression for it: `cel.bind(verb, http_path.substring(http_path.lastIndexOf(':') + 1), verb == '' || verb.matches('^[a-z][a-zA-Z0-9]*$'))`. A check that does not compile, or is not a bool, stops the lint and names the rule and its file; so does a lint rule that reads `against`, which only a breaking rule has.
 
