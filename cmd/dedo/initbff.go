@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/fs"
 	"os"
 	"path"
 	"path/filepath"
@@ -34,18 +33,24 @@ type bffNames struct {
 	Dedo       string // the dedo release bff/go.mod requires
 	Connect    string // the connect-go release bff/go.mod requires
 
+	// Starter is set when bff/proto has no protos yet, so dedo init -bff
+	// writes the starter service, Package's Service in ProtoDir.
+	Starter  bool
 	Package  string // shop.web.v1
 	Service  string // WebService
-	Type     string // webService, the handler's type
-	GoPkg    string // webv1
 	ProtoDir string // shop/web/v1, below bff/proto
-	// ProtoPath is the BFF's package directory, shop/web, which managed
-	// mode gives the BFF's Go prefix when the backend's module has no name.
-	ProtoPath string
-	Team      string // the owner team
-	Root      string // the REST root before /web/v1
-	Scope     string // a scope the backend's reads declare
-	Domain    string // the resource type domain
+	Team     string // the owner team
+	Root     string // the REST root before /web/v1
+	Scope    string // a scope the backend's reads declare
+	Domain   string // the resource type domain
+
+	// Services are the BFF's services, which main.go registers: the
+	// starter, or those bff/proto declares already.
+	Services []bffService
+	// ProtoDirs are the directories of the BFF's protos below bff/proto,
+	// which managed mode gives the BFF's Go prefix when the backend's
+	// module has no name.
+	ProtoDirs []string
 
 	// Backend is the backend's first service, whose client the starter
 	// handler builds, and BackendField the handler's field holding it.
@@ -92,6 +97,7 @@ func initBFF(dir, release string, offline bool, out io.Writer) error {
 		{"adding the BFF's Go module", in.bffModule},
 		{"adding the BFF's proto module", in.bffProto},
 		{"adding the BFF's code generators", in.bffGenerators},
+		{"checking that the backend's code generators leave the BFF out", in.bffRootInputs},
 		{"adding the BFF's server", in.bffServer},
 		{"leaving the frontend out of the backend's Go module", in.bffFrontend},
 	} {
@@ -120,7 +126,6 @@ func (in *initer) bffNames() (bffNames, error) {
 		Dedo:       in.release,
 		Connect:    connectRelease,
 		Service:    "WebService",
-		Type:       "webService",
 		Team:       starter.Team,
 		Root:       starter.Root,
 		Scope:      starter.App + ".item.read",
@@ -149,9 +154,17 @@ func (in *initer) bffNames() (bffNames, error) {
 		}
 	}
 
-	protos, err := findProtos(p.dir)
+	all, err := findProtos(p.dir)
 	if err != nil {
 		return n, err
+	}
+	// The BFF's own protos, also found while bff/ has no go.mod yet, are
+	// never the backend's.
+	var protos []string
+	for _, rel := range all {
+		if r := filepath.ToSlash(rel); r != bffDir && !strings.HasPrefix(r, bffDir+"/") {
+			protos = append(protos, rel)
+		}
 	}
 	// The first package names the context; the first of each declaration
 	// the others.
@@ -192,18 +205,32 @@ func (in *initer) bffNames() (bffNames, error) {
 			break
 		}
 	}
-	for _, m := range modules {
-		if m == "web" {
-			return n, fmt.Errorf("the backend has a module web in %s already, the package dedo init -bff would give the BFF: write the BFF's proto into %s/proto yourself, then run dedo init -bff again", context, bffDir)
-		}
-	}
 	n.Package = strings.TrimPrefix(context+".web.v1", ".")
-	n.GoPkg = goPackageName(n.Package)
 	n.ProtoDir = strings.ReplaceAll(n.Package, ".", "/")
-	n.ProtoPath = path.Dir(n.ProtoDir)
-	if p.service != nil {
-		n.Backend = p.service
-		n.BackendField = strings.ToLower(p.service.Name[:1]) + p.service.Name[1:]
+	existing, err := bffProtos(in.path(path.Join(bffDir, "proto")))
+	if err != nil {
+		return n, err
+	}
+	if len(existing) == 0 {
+		// Only the starter takes the package <context>.web.v1, so only
+		// it can collide with the backend's.
+		for _, m := range modules {
+			if m == "web" {
+				return n, fmt.Errorf("the backend has a module web in %s already, the package dedo init -bff would give the BFF: write the BFF's proto into %s/proto yourself, then run dedo init -bff again", context, bffDir)
+			}
+		}
+		n.Starter = true
+		existing = []bffProto{{Dir: n.ProtoDir, Package: n.Package, Services: []string{n.Service}}}
+	}
+	n.Services, n.ProtoDirs = bffServices(existing)
+	// The backend's first service, never one of the BFF's, which analyze
+	// counts while bff/ has no go.mod yet.
+	for i, svc := range p.services {
+		if !strings.HasPrefix(svc.File, bffDir+"/") {
+			n.Backend = &p.services[i]
+			n.BackendField = strings.ToLower(svc.Name[:1]) + svc.Name[1:]
+			break
+		}
 	}
 	mods, err := bufModules(p.dir)
 	if err != nil {
@@ -246,12 +273,16 @@ func (in *initer) bffProto(n bffNames) error {
 		}
 	}
 	protoDir := path.Join(bffDir, "proto")
-	existing, err := findProtos(in.path(protoDir))
-	if err != nil && !errors.Is(err, fs.ErrNotExist) {
-		return err
-	}
-	if len(existing) > 0 {
-		in.say("%s/: has protos already; no starter service", protoDir)
+	if !n.Starter {
+		var names []string
+		for _, s := range n.Services {
+			names = append(names, s.Name)
+		}
+		served := "no service yet"
+		if len(names) > 0 {
+			served = strings.Join(names, ", ")
+		}
+		in.say("%s/: has protos already; no starter service (it declares %s)", protoDir, served)
 		return nil
 	}
 	src, err := fillTemplate("templates/bff/web.proto.tmpl", n)
@@ -310,17 +341,33 @@ func (in *initer) bffGenerators(n bffNames) error {
 	return in.writeFile(path.Join(bffDir, "buf.gen.yaml"), src, false)
 }
 
-// bffServer writes the BFF's main.go and the starter service's handler.
+// bffServer writes the BFF's main.go, which registers each of its
+// services, and a handler for each. A main.go that exists is the BFF's
+// own, so it writes neither; nor does it while bff/proto declares no
+// service.
 func (in *initer) bffServer(n bffNames) error {
-	for _, f := range []struct{ tmpl, file string }{
-		{"templates/bff/main.go.tmpl", "main.go"},
-		{"templates/bff/service.go.tmpl", snakeCase(n.Service) + ".go"},
-	} {
-		src, err := in.renderGo(f.tmpl, n)
+	main := path.Join(bffDir, "main.go")
+	if _, err := os.Stat(in.path(main)); err == nil {
+		in.say("%s: exists; left as it is, and no handlers written beside it", main)
+		return nil
+	}
+	if len(n.Services) == 0 {
+		in.say("%s/proto/ declares no service, so there is no server to write: once it does, run dedo init -bff again", bffDir)
+		return nil
+	}
+	src, err := in.renderGo("templates/bff/main.go.tmpl", n)
+	if err != nil {
+		return err
+	}
+	if err := in.writeFile(main, src, false); err != nil {
+		return err
+	}
+	for _, s := range n.Services {
+		src, err := in.renderGo("templates/bff/service.go.tmpl", bffHandler{bffService: s, Module: n.Module, Backend: n.Backend, BackendField: n.BackendField})
 		if err != nil {
 			return err
 		}
-		if err := in.writeFile(path.Join(bffDir, f.file), src, false); err != nil {
+		if err := in.writeFile(path.Join(bffDir, s.File), src, false); err != nil {
 			return err
 		}
 	}
@@ -385,8 +432,10 @@ func (in *initer) bffNext(n bffNames, generated bool) {
 	if !generated {
 		steps = append(steps, fmt.Sprintf("once the backend's code is generated (make generate): buf generate --template %s/buf.gen.yaml, then go mod tidy in %s/", bffDir, bffDir))
 	}
+	for _, s := range n.Services {
+		steps = append(steps, fmt.Sprintf("implement %s's RPCs in %s/%s, reading the backend through its clients; until then they answer Unimplemented", s.Name, bffDir, s.File))
+	}
 	steps = append(steps,
-		fmt.Sprintf("implement %s's RPCs in %s/%s.go, reading the backend through its clients; until then they answer Unimplemented", n.Service, bffDir, snakeCase(n.Service)),
 		fmt.Sprintf("build it with its frontend's commit: cd %s && go build -ldflags \"-X main.buildSHA=$(git rev-parse HEAD | cut -c1-12)\" .", bffDir),
 		"run it with BACKEND_URL set to the backend's address; the frontend calls /bff/<sha>/ and reloads on BFF_VERSION_RETIRED",
 		fmt.Sprintf("for the frontend's client, uncomment protoc-gen-es in %s/buf.gen.yaml", bffDir),

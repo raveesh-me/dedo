@@ -22,11 +22,14 @@ managed:
     # backend's, which bff/go.mod reaches.
     - file_option: go_package_prefix
       value: {{.BackendGo}}
-    # The BFF's own protos. The last matching override wins, so this one
-    # must stay below the catch-all above.
+    # The BFF's own protos, by directory below bff/proto: add one for
+    # each new package. The last matching override wins, so these must
+    # stay below the catch-all above.
+{{- range .ProtoDirs}}
     - file_option: go_package_prefix
-      path: {{.ProtoPath}}
-      value: {{.Module}}/bff/gen/go
+      path: {{.}}
+      value: {{$.Module}}/bff/gen/go
+{{- end}}
 {{- end}}
     # The options module ships its generated Go code in its own Go module.
     - file_option: go_package_prefix

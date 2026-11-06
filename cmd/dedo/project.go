@@ -46,6 +46,8 @@ type service struct {
 	// Type is the handler's type in internal/<Module>: the service's name,
 	// with the version after it for any but v1 (CounterServiceV2).
 	Type string
+	// File is the proto that declares it, relative to the repository.
+	File string
 }
 
 // HandlerFile is the handler stub's path: internal/time_counter/counter_service.go.
@@ -184,6 +186,7 @@ func (p *project) read(rel string) error {
 	for _, s := range svcs {
 		svc := base
 		svc.Name = string(s[1])
+		svc.File = filepath.ToSlash(rel)
 		svc.Module, svc.Type = moduleOf(string(pkg[1]), svc.Name)
 		p.services = append(p.services, svc)
 	}
