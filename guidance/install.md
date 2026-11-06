@@ -137,7 +137,7 @@ plugins:
       - server=https://api.example.com
 ```
 
-Both dedo generators take `min_audience`: an `Audience` value, with or without its `AUDIENCE_` prefix. They leave out every service whose `audience` is narrower. Without it, they leave out only `AUDIENCE_COMPONENT_INTERNAL` services, which only a [backend for frontend](domains.md#backends-for-frontends) declares. A reference published to everyone sets `EXTERNAL_PUBLIC`, so internal services, such as the reads a BFF makes, stay out of it:
+Both dedo generators take `min_audience`: an `Audience` value, with or without its `AUDIENCE_` prefix, such as `EXTERNAL_PARTNER`; an unknown value fails the run. They leave out every service whose `audience` is narrower, and keep one that declares none, for lint to report. Without it, they leave out only `AUDIENCE_COMPONENT_INTERNAL` services, which only a [backend for frontend](domains.md#backends-for-frontends) declares. A reference published to everyone sets `EXTERNAL_PUBLIC`, so internal services, such as the reads a BFF makes, stay out of it:
 
 ```yaml
     opt:
@@ -302,10 +302,12 @@ In the handler, publish after the change commits, and return the error if the bu
 A [backend for frontend](domains.md#backends-for-frontends) (BFF) is a directory with its own `go.mod` that holds a module path of `buf.yaml`, such as `bff/` holding `bff/proto`. `dedo modules` finds it from that layout, with no setting in `dedo.yaml`, and also fails on:
 
 - a buf module inside a nested Go module that has a `name`, which `buf push` would publish;
-- an `AUDIENCE_COMPONENT_INTERNAL` service in a named module, and a service of any other audience in the BFF's module;
-- a database driver anywhere in the BFF's dependencies outside tests: `database/sql`, `pgx`, `lib/pq`, `go-sql-driver/mysql`, `gorm` and the like;
-- a BFF package that imports the backend's own packages: `internal/**`, `app/**`, `cmd/**` or the root's `main`;
+- an `AUDIENCE_COMPONENT_INTERNAL` service in a named module, and a service in the BFF's module that declares another audience or none;
+- a database driver anywhere in the BFF's dependencies outside tests, however it is reached: `database/sql` (but not `database/sql/driver`, which value types implement), `pgx`, `lib/pq`, `go-sql-driver/mysql`, `gorm.io`, `mattn/go-sqlite3`, `modernc.org/sqlite`, the MongoDB driver or `go-redis`; it names the BFF package the dependency enters through and the imports that lead to the driver;
+- a BFF package that imports any package of the backend's Go module other than those generated from its protos: `internal/**`, `app/**`, `cmd/**`, the root's `main` or any other;
 - a backend package that imports the BFF.
+
+On success it also prints each BFF after the module graph: `bff: bff (frontend; not a backend module)`.
 
 It finds generated packages by the `source:` line protoc plugins write at the top of each file, so it works wherever `buf.gen.yaml` writes them, and leaves tests out: a test may import the composition root or another module's fakes. On success it prints each module and the modules it depends on:
 
@@ -361,21 +363,29 @@ Your existing services declare nothing for dedo yet, and `dedo init` names them.
 
 ```text
 bff/
-  go.mod               # a Go module of its own: <module>/bff
-  buf.gen.yaml         # Go and Connect for the BFF; the frontend's generator as a commented example
-  proto/               # an unnamed buf module, with a starter AUDIENCE_COMPONENT_INTERNAL service
+  go.mod               # a Go module of its own, <module>/bff, requiring the backend's from ../
+  buf.gen.yaml         # Go and Connect for the BFF into bff/gen/go; the frontend's generator as a commented example
+  proto/               # an unnamed buf module
+    <context>/web/v1/web.proto  # a starter AUDIENCE_COMPONENT_INTERNAL service, WebService
   main.go              # serves it with github.com/raveesh-me/dedo/bff
+  web_service.go       # WebService's handler, holding a client of the backend's first service
 ```
 
-It adds `bff/proto` to `buf.yaml`'s modules with no `name` and a `breaking` section of its own that ignores it, so the repository's rules lint it, `buf push --exclude-unnamed` never publishes it, and `buf breaking` never checks it. Uncomment the frontend's generator in `bff/buf.gen.yaml`, such as `protoc-gen-es`, and point its `out` at the frontend's sources.
+It adds `bff/proto` to `buf.yaml`'s modules with no `name` and a `breaking` section of its own that ignores it, so the repository's rules lint it, `buf push --exclude-unnamed` never publishes it, and `buf breaking` never checks it. It writes the starter proto only when `bff/proto` has none, and keeps any of the other files that exist. When the repository has a `frontend/` directory, it adds `ignore ./frontend` to the backend's `go.mod`, so `./...` leaves the frontend out. It then runs `buf generate --template bff/buf.gen.yaml` from the repository root and `go mod tidy` in `bff/`; with `-offline` it prints them. Uncomment the frontend's generator in `bff/buf.gen.yaml`, such as `protoc-gen-es`, and point its `out` at the frontend's sources.
+
+Build the BFF with its frontend's commit, which `main.go` refuses to start without, and run it with `BACKEND_URL` set to the backend's address:
+
+```sh
+cd bff && go build -ldflags "-X main.buildSHA=$(git rev-parse --short=12 HEAD)" .
+```
 
 `main.go` uses the runtime package `github.com/raveesh-me/dedo/bff`:
 
-- **`bff.Pin`** serves the BFF only under `<prefix>/<sha>/`, its own short commit SHA, and answers any other SHA with `FAILED_PRECONDITION` and the reason `bff.ReasonVersionRetired` (`BFF_VERSION_RETIRED`), on which the frontend reloads.
-- **`bff.Forward`** is a Connect client interceptor for the clients the BFF calls the backend and other contexts with. It copies the caller's credentials onto every call: `Authorization`, `X-Flow-ID` and the headers it is given.
-- **`bff.Activity`** counts the BFF's requests, distinct callers and last request, and serves them as JSON, for the job that retires a previous version.
+- **`bff.Pin(sha, prefix, next)`** serves `next` only under `<prefix>/<sha>/`, its own commit SHA of `bff.SHALength` (12) lowercase hexadecimal characters (`bff.CheckSHA`), and answers any other SHA, or none, with `FAILED_PRECONDITION`, a `google.rpc.ErrorInfo` whose reason is `bff.ReasonVersionRetired` (`BFF_VERSION_RETIRED`) and `Cache-Control: no-store`, on which the frontend reloads. `main.go`'s prefix is `/bff`.
+- **`bff.Forward(headers...)`** is a Connect client interceptor for the clients the BFF calls the backend and other contexts with. It copies the caller's credentials onto every call: `Authorization`, `X-Flow-ID` and the headers it is given.
+- **`bff.Activity`** (`bff.NewActivity(sha)`) counts the requests its `Middleware` serves, distinct callers (by a hash of `Authorization`, never the token) and the first and last request, and its `Handler` serves them as JSON, for the job that retires a previous version. `main.go` serves it at `GET /activity`, beside `GET /healthz`, both outside the prefix.
 
-`make check`'s `dedo modules` then keeps the BFF to [its rules](#keeping-modules-apart-dedo-modules).
+`make check`'s `dedo modules` then keeps the BFF to [its rules](#keeping-modules-apart-dedo-modules). `dedo init -bff` refuses a repository with no `go.mod` or `buf.yaml`, a `buf.yaml` that is not v2, and a backend that has a module `web` already; for that one, write the BFF's protos into `bff/proto` first.
 
 ## Upgrading
 
