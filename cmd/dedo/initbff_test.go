@@ -29,7 +29,7 @@ service OrderService {
 
   // GetOrder returns an order.
   rpc GetOrder(GetOrderRequest) returns (GetOrderResponse) {
-    option (google.api.http) = {get: "/commerce/shop/v1/{name=orders/*}"};
+    option (google.api.http) = {get: "/acme/shop/v1/{name=orders/*}"};
     option (dedo.v1.method) = {scopes: "shop.order.read"};
   }
 }
@@ -124,7 +124,7 @@ func TestInitBFF(t *testing.T) {
 	contains(t, "web.proto", proto,
 		"package shop.web.v1;", "service WebService {", "audience: AUDIENCE_COMPONENT_INTERNAL",
 		`owner_team: "orders-team"`, `scopes: "shop.order.read"`, `type: "shop.acme.dev/Page"`,
-		`get: "/commerce/shop/web/v1/{name=pages/*}"`)
+		`get: "/acme/shop/web/v1/{name=pages/*}"`)
 	if got := serviceAudiences(proto); len(got) != 1 || got[0] != [2]string{"WebService", bffAudience} {
 		t.Errorf("dedo modules reads the starter's audiences as %v", got)
 	}
