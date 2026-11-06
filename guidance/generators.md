@@ -47,6 +47,8 @@ managed:
       - server=https://api.example.com
 ```
 
+Both generators take `min_audience`, an `Audience` value with or without its `AUDIENCE_` prefix, and leave out every service whose `audience` is narrower. Without it, they leave out only `AUDIENCE_COMPONENT_INTERNAL` services. A reference published to everyone adds `min_audience=EXTERNAL_PUBLIC` to `opt`, so internal services stay out of it. For a service it leaves out, `protoc-gen-dedo-mcp` still generates `<Service>MCPTools()`, returning no tools, so the server's code keeps compiling.
+
 ## Server
 
 Generated MCP tools do nothing until the server mounts dedo's runtime. In the Go module of the server:

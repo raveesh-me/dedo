@@ -117,7 +117,7 @@ What each option does:
 
 | Option | Read by | Effect |
 | --- | --- | --- |
-| `service.audience`, `service.owner_team` | Lint, docs | Who may call the API, and who owns it |
+| `service.audience`, `service.owner_team` | Lint, docs, generators, `dedo modules` | Who may call the API, and who owns it. The generators leave out services narrower than their `min_audience`, by default only `AUDIENCE_COMPONENT_INTERNAL` ones, which only a [backend for frontend](domains.md#backends-for-frontends)'s unnamed module may declare |
 | `service.title` | Docs | The heading the REST reference groups the service's operations under. Optional: without it, the service name without its `Service` suffix, split into words (`CatalogEntryService` reads "Catalog Entry") |
 | `method.scopes` | Runtime, docs | A caller needs one of them. The service will not start if an RPC has none. |
 | `method.errors` | Runtime, docs | Every error the RPC returns. Undeclared ones are logged. The docs list them per HTTP status. |
@@ -249,6 +249,8 @@ Two parts stay in code:
 - **Authentication.** Your token check, a `connect.ServerInterceptor` on the same `connect.Server`, verifies the token and puts the caller's scopes in the call's context; `interceptor.Config.Scopes` reads them from there. You write it once per platform. As an interceptor rather than HTTP middleware, it also covers MCP calls, which reach the server in-process. With `MCP_ACCESS=authenticated`, the same token check also answers `mcpserver.Guard`'s question of whether a request is authenticated at all.
 - **Resource-level checks.** A scope says a caller may read products. It does not say *which* products. Ownership of one resource (only the caller's own drafts) stays in handlers.
 
+An internal audience changes none of this. A service with `AUDIENCE_BUSINESS_UNIT_INTERNAL` checks the token and scopes like a public one, and never trusts a caller for being inside the network. A [backend for frontend](domains.md#backends-for-frontends) holds no credentials of its own for that reason: it forwards its caller's, and the services decide.
+
 A new service enforces scopes from the start, as the `main.go` `dedo init` writes does. To add dedo to a service that already has callers, roll out with `EnforceScopes: false` first: the runtime logs every call that would have been denied. Switch to `true` once the logs are clean.
 
 ### Multi-tenant services
@@ -280,6 +282,8 @@ The interceptor then reads the tenants of every request, on every transport, fro
 | `buf breaking --against '.git#branch=main'` | The change breaks clients |
 | `buf generate && git diff --exit-code gen/ docs/` | Generated code or docs are stale |
 | `go test ./...` | The policy table test or your tests fail |
+
+A repository with a [backend for frontend](domains.md#backends-for-frontends) also runs `go test ./...` in its directory, such as `bff/`, since the root's stops at the nested Go module, and checks the output of `bff/buf.gen.yaml` for staleness the same way.
 
 ## 10. Try the reference service
 

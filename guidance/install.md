@@ -137,6 +137,17 @@ plugins:
       - server=https://api.example.com
 ```
 
+Both dedo generators take `min_audience`: an `Audience` value, with or without its `AUDIENCE_` prefix. They leave out every service whose `audience` is narrower. Without it, they leave out only `AUDIENCE_COMPONENT_INTERNAL` services, which only a [backend for frontend](domains.md#backends-for-frontends) declares. A reference published to everyone sets `EXTERNAL_PUBLIC`, so internal services, such as the reads a BFF makes, stay out of it:
+
+```yaml
+    opt:
+      - title=Your API
+      - server=https://api.example.com
+      - min_audience=EXTERNAL_PUBLIC
+```
+
+A service `protoc-gen-dedo-mcp` leaves out still gets its `<Service>MCPTools()`, returning no tools, so `main.go` compiles unchanged.
+
 If `buf.gen.yaml` uses managed mode, keep dedo's Go package and the modules that ship their own Go code out of it:
 
 ```yaml
@@ -281,12 +292,20 @@ In the handler, publish after the change commits, and return the error if the bu
 
 ### Keeping modules apart: `dedo modules`
 
-`dedo modules`, run in the repository (`make modules`; `make check` runs it), checks the layout of [domains.md](domains.md#code-and-data-follow-the-modules). It takes the modules from the repository's versioned proto packages, `<context>.<m>.v<n>`, and the Go module path from `go.mod`, and loads the import graph with `go list`. It fails on:
+`dedo modules`, run in the repository (`make modules`; `make check` runs it), checks the layout of [domains.md](domains.md#code-and-data-follow-the-modules). It takes the modules from the repository's versioned proto packages, `<context>.<m>.v<n>`, leaving out the protos inside a nested Go module, and the Go module path from `go.mod`, and loads the import graph with `go list`. It fails on:
 
 - a cycle between modules, through an import of `internal/<m>/**` or of the code generated from `<m>`'s packages, messages or Connect clients, any version; it names the imports that close the cycle;
 - a shared package, `internal/shared/**` or the code generated from an unversioned package such as `<context>.type`, that imports a module;
 - a directory named after a module anywhere but `internal/<m>` and the trees that mirror the protos (`proto/`, `gen/`), and a directory in `internal/` that is neither a module nor `shared`;
 - SQL, in a module's or shared `.sql` files or in Go string literals outside generated code, that names another module's schema, quoted or not; shared SQL may name no module's schema.
+
+A [backend for frontend](domains.md#backends-for-frontends) (BFF) is a directory with its own `go.mod` that holds a module path of `buf.yaml`, such as `bff/` holding `bff/proto`. `dedo modules` finds it from that layout, with no setting in `dedo.yaml`, and also fails on:
+
+- a buf module inside a nested Go module that has a `name`, which `buf push` would publish;
+- an `AUDIENCE_COMPONENT_INTERNAL` service in a named module, and a service of any other audience in the BFF's module;
+- a database driver anywhere in the BFF's dependencies outside tests: `database/sql`, `pgx`, `lib/pq`, `go-sql-driver/mysql`, `gorm` and the like;
+- a BFF package that imports the backend's own packages: `internal/**`, `app/**`, `cmd/**` or the root's `main`;
+- a backend package that imports the BFF.
 
 It finds generated packages by the `source:` line protoc plugins write at the top of each file, so it works wherever `buf.gen.yaml` writes them, and leaves tests out: a test may import the composition root or another module's fakes. On success it prints each module and the modules it depends on:
 
@@ -335,6 +354,28 @@ In `buf.yaml` it adds the deps, the `DEDO` and `DEDO_BREAKING` categories (keepi
 Your existing services declare nothing for dedo yet, and `dedo init` names them. Until they do, `buf lint` lists what each RPC needs, and the policy-table test and the server's startup fail on purpose, naming the first missing declaration. Declare one service at a time; [guideline.md](guideline.md#3-write-the-contract) shows a complete one.
 
 `main.go`, `policy_table_test.go` and the handler stubs in `internal/<module>/` are written only where you have none, and only in a `package main` root. A library repository keeps its package. A repository that keeps its handlers in a root `server.go` (`newServer`, as `dedo init` wrote before v0.28.0), or whose `main.go` builds its services without dedo's stubs, gets no stubs; move the handlers into their modules as [domains.md](domains.md#code-and-data-follow-the-modules) lays out.
+
+## Adding a BFF: `dedo init -bff`
+
+`dedo init -bff`, run in a repository `dedo init` set up (or with `-dir`), adds a [backend for frontend](domains.md#backends-for-frontends):
+
+```text
+bff/
+  go.mod               # a Go module of its own: <module>/bff
+  buf.gen.yaml         # Go and Connect for the BFF; the frontend's generator as a commented example
+  proto/               # an unnamed buf module, with a starter AUDIENCE_COMPONENT_INTERNAL service
+  main.go              # serves it with github.com/raveesh-me/dedo/bff
+```
+
+It adds `bff/proto` to `buf.yaml`'s modules with no `name` and a `breaking` section of its own that ignores it, so the repository's rules lint it, `buf push --exclude-unnamed` never publishes it, and `buf breaking` never checks it. Uncomment the frontend's generator in `bff/buf.gen.yaml`, such as `protoc-gen-es`, and point its `out` at the frontend's sources.
+
+`main.go` uses the runtime package `github.com/raveesh-me/dedo/bff`:
+
+- **`bff.Pin`** serves the BFF only under `<prefix>/<sha>/`, its own short commit SHA, and answers any other SHA with `FAILED_PRECONDITION` and the reason `bff.ReasonVersionRetired` (`BFF_VERSION_RETIRED`), on which the frontend reloads.
+- **`bff.Forward`** is a Connect client interceptor for the clients the BFF calls the backend and other contexts with. It copies the caller's credentials onto every call: `Authorization`, `X-Flow-ID` and the headers it is given.
+- **`bff.Activity`** counts the BFF's requests, distinct callers and last request, and serves them as JSON, for the job that retires a previous version.
+
+`make check`'s `dedo modules` then keeps the BFF to [its rules](#keeping-modules-apart-dedo-modules).
 
 ## Upgrading
 
