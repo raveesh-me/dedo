@@ -38,13 +38,13 @@ var CategorySpec = &check.CategorySpec{ID: Category, Purpose: "Checks the organi
 
 // variables are the names a check can use, per kind of element.
 var variables = map[string][]string{
-	"file":     {"name", "proto_package", "imports"},
-	"service":  {"name", "full_name", "file", "proto_package", "methods", "resources", "roots", "title"},
-	"method":   {"name", "full_name", "file", "proto_package", "service", "input", "output", "client_streaming", "server_streaming", "idempotency", "http_verb", "http_path", "http_bindings", "scopes", "errors", "deprecated"},
-	"message":  {"name", "full_name", "file", "proto_package", "fields"},
-	"field":    {"name", "full_name", "file", "proto_package", "message", "type", "repeated", "optional", "behaviors", "json_name"},
-	"enum":     {"name", "full_name", "file", "proto_package", "values"},
-	"resource": {"name", "full_name", "file", "proto_package", "type", "patterns", "singular", "plural"},
+	"file":     {"name", "proto_package", "imports", "options"},
+	"service":  {"name", "full_name", "file", "proto_package", "methods", "resources", "roots", "title", "options"},
+	"method":   {"name", "full_name", "file", "proto_package", "service", "input", "output", "client_streaming", "server_streaming", "idempotency", "http_verb", "http_path", "http_bindings", "scopes", "errors", "deprecated", "options", "service_options"},
+	"message":  {"name", "full_name", "file", "proto_package", "fields", "options"},
+	"field":    {"name", "full_name", "file", "proto_package", "message", "type", "repeated", "optional", "behaviors", "json_name", "options"},
+	"enum":     {"name", "full_name", "file", "proto_package", "values", "options"},
+	"resource": {"name", "full_name", "file", "proto_package", "type", "patterns", "singular", "plural", "options"},
 }
 
 // Specs compiles house rules into rule specs. It fails on a check that does
@@ -80,6 +80,8 @@ var (
 	listVars = []string{"imports", "methods", "resources", "roots", "scopes", "errors", "fields", "behaviors", "values", "patterns"}
 	// bindingVars are lists of maps from string to string.
 	bindingVars = []string{"http_bindings"}
+	// optionVars map an extension's full name to its value, of any type.
+	optionVars = []string{"options", "service_options"}
 )
 
 func compile(r config.Rule) (cel.Program, error) {
@@ -96,6 +98,8 @@ func compile(r config.Rule) (cel.Program, error) {
 			t = cel.ListType(cel.StringType)
 		case slices.Contains(bindingVars, v):
 			t = cel.ListType(cel.MapType(cel.StringType, cel.StringType))
+		case slices.Contains(optionVars, v):
+			t = cel.MapType(cel.StringType, cel.DynType)
 		}
 		opts = append(opts, cel.Variable(v, t))
 	}
@@ -133,48 +137,52 @@ func evaluate(r config.Rule, prg cel.Program, w check.ResponseWriter, vars map[s
 
 // handler evaluates the check on every element of the rule's kind.
 func handler(r config.Rule, prg cel.Program) check.RuleHandler {
-	eval := func(w check.ResponseWriter, d protoreflect.Descriptor, vars map[string]any) {
+	eval := func(w check.ResponseWriter, req check.Request, d protoreflect.Descriptor, vars map[string]any) {
+		if err := addOptions(req, false, d, vars); err != nil {
+			w.AddAnnotation(check.WithDescriptor(d), check.WithMessage(fmt.Sprintf("%s: %v", r.ID, err)))
+			return
+		}
 		evaluate(r, prg, w, vars, check.WithDescriptor(d))
 	}
 	opt := checkutil.WithoutImports()
 	switch r.On {
 	case "file":
-		return checkutil.NewFileRuleHandler(func(_ context.Context, w check.ResponseWriter, _ check.Request, f descriptor.FileDescriptor) error {
+		return checkutil.NewFileRuleHandler(func(_ context.Context, w check.ResponseWriter, req check.Request, f descriptor.FileDescriptor) error {
 			fd := f.ProtoreflectFileDescriptor()
-			eval(w, fd, fileVars(fd))
+			eval(w, req, fd, fileVars(fd))
 			return nil
 		}, opt)
 	case "service":
-		return checkutil.NewServiceRuleHandler(func(_ context.Context, w check.ResponseWriter, _ check.Request, s protoreflect.ServiceDescriptor) error {
-			eval(w, s, serviceVars(s))
+		return checkutil.NewServiceRuleHandler(func(_ context.Context, w check.ResponseWriter, req check.Request, s protoreflect.ServiceDescriptor) error {
+			eval(w, req, s, serviceVars(s))
 			return nil
 		}, opt)
 	case "method":
-		return checkutil.NewMethodRuleHandler(func(_ context.Context, w check.ResponseWriter, _ check.Request, m protoreflect.MethodDescriptor) error {
-			eval(w, m, methodVars(m))
+		return checkutil.NewMethodRuleHandler(func(_ context.Context, w check.ResponseWriter, req check.Request, m protoreflect.MethodDescriptor) error {
+			eval(w, req, m, methodVars(m))
 			return nil
 		}, opt)
 	case "message", "resource":
-		return checkutil.NewMessageRuleHandler(func(_ context.Context, w check.ResponseWriter, _ check.Request, m protoreflect.MessageDescriptor) error {
+		return checkutil.NewMessageRuleHandler(func(_ context.Context, w check.ResponseWriter, req check.Request, m protoreflect.MessageDescriptor) error {
 			if r.On == "message" {
-				eval(w, m, messageVars(m))
+				eval(w, req, m, messageVars(m))
 				return nil
 			}
 			if res := resource(m); res != nil {
-				eval(w, m, resourceVars(m, res))
+				eval(w, req, m, resourceVars(m, res))
 			}
 			return nil
 		}, opt)
 	case "field":
-		return checkutil.NewFieldRuleHandler(func(_ context.Context, w check.ResponseWriter, _ check.Request, f protoreflect.FieldDescriptor) error {
+		return checkutil.NewFieldRuleHandler(func(_ context.Context, w check.ResponseWriter, req check.Request, f protoreflect.FieldDescriptor) error {
 			if !f.IsExtension() {
-				eval(w, f, fieldVars(f))
+				eval(w, req, f, fieldVars(f))
 			}
 			return nil
 		}, opt)
 	case "enum":
-		return checkutil.NewEnumRuleHandler(func(_ context.Context, w check.ResponseWriter, _ check.Request, e protoreflect.EnumDescriptor) error {
-			eval(w, e, enumVars(e))
+		return checkutil.NewEnumRuleHandler(func(_ context.Context, w check.ResponseWriter, req check.Request, e protoreflect.EnumDescriptor) error {
+			eval(w, req, e, enumVars(e))
 			return nil
 		}, opt)
 	}
@@ -185,51 +193,59 @@ func handler(r config.Rule, prg cel.Program) check.RuleHandler {
 // kind that the version compared against also has, with that element's
 // variables as against.
 func pairHandler(r config.Rule, prg cel.Program) check.RuleHandler {
-	eval := func(w check.ResponseWriter, d, against protoreflect.Descriptor, vars, before map[string]any) {
+	eval := func(w check.ResponseWriter, req check.Request, d, against protoreflect.Descriptor, vars, before map[string]any) {
+		err := addOptions(req, false, d, vars)
+		if err == nil {
+			err = addOptions(req, true, against, before)
+		}
+		if err != nil {
+			w.AddAnnotation(check.WithDescriptor(d), check.WithAgainstDescriptor(against), check.WithMessage(fmt.Sprintf("%s: %v", r.ID, err)))
+			return
+		}
 		vars["against"] = before
 		evaluate(r, prg, w, vars, check.WithDescriptor(d), check.WithAgainstDescriptor(against))
 	}
 	opt := checkutil.WithoutImports()
 	switch r.On {
 	case "file":
-		return checkutil.NewFilePairRuleHandler(func(_ context.Context, w check.ResponseWriter, _ check.Request, f, a descriptor.FileDescriptor) error {
+		return checkutil.NewFilePairRuleHandler(func(_ context.Context, w check.ResponseWriter, req check.Request, f, a descriptor.FileDescriptor) error {
 			fd, ad := f.ProtoreflectFileDescriptor(), a.ProtoreflectFileDescriptor()
-			eval(w, fd, ad, fileVars(fd), fileVars(ad))
+			eval(w, req, fd, ad, fileVars(fd), fileVars(ad))
 			return nil
 		}, opt)
 	case "service":
-		return checkutil.NewServicePairRuleHandler(func(_ context.Context, w check.ResponseWriter, _ check.Request, s, a protoreflect.ServiceDescriptor) error {
-			eval(w, s, a, serviceVars(s), serviceVars(a))
+		return checkutil.NewServicePairRuleHandler(func(_ context.Context, w check.ResponseWriter, req check.Request, s, a protoreflect.ServiceDescriptor) error {
+			eval(w, req, s, a, serviceVars(s), serviceVars(a))
 			return nil
 		}, opt)
 	case "method":
-		return checkutil.NewMethodPairRuleHandler(func(_ context.Context, w check.ResponseWriter, _ check.Request, m, a protoreflect.MethodDescriptor) error {
-			eval(w, m, a, methodVars(m), methodVars(a))
+		return checkutil.NewMethodPairRuleHandler(func(_ context.Context, w check.ResponseWriter, req check.Request, m, a protoreflect.MethodDescriptor) error {
+			eval(w, req, m, a, methodVars(m), methodVars(a))
 			return nil
 		}, opt)
 	case "message", "resource":
-		return checkutil.NewMessagePairRuleHandler(func(_ context.Context, w check.ResponseWriter, _ check.Request, m, a protoreflect.MessageDescriptor) error {
+		return checkutil.NewMessagePairRuleHandler(func(_ context.Context, w check.ResponseWriter, req check.Request, m, a protoreflect.MessageDescriptor) error {
 			if r.On == "message" {
-				eval(w, m, a, messageVars(m), messageVars(a))
+				eval(w, req, m, a, messageVars(m), messageVars(a))
 				return nil
 			}
 			// Both versions must be resources: a message that becomes one,
 			// or stops being one, is no resource to compare.
 			if res, before := resource(m), resource(a); res != nil && before != nil {
-				eval(w, m, a, resourceVars(m, res), resourceVars(a, before))
+				eval(w, req, m, a, resourceVars(m, res), resourceVars(a, before))
 			}
 			return nil
 		}, opt)
 	case "field":
-		return checkutil.NewFieldPairRuleHandler(func(_ context.Context, w check.ResponseWriter, _ check.Request, f, a protoreflect.FieldDescriptor) error {
+		return checkutil.NewFieldPairRuleHandler(func(_ context.Context, w check.ResponseWriter, req check.Request, f, a protoreflect.FieldDescriptor) error {
 			if !f.IsExtension() {
-				eval(w, f, a, fieldVars(f), fieldVars(a))
+				eval(w, req, f, a, fieldVars(f), fieldVars(a))
 			}
 			return nil
 		}, opt)
 	case "enum":
-		return checkutil.NewEnumPairRuleHandler(func(_ context.Context, w check.ResponseWriter, _ check.Request, e, a protoreflect.EnumDescriptor) error {
-			eval(w, e, a, enumVars(e), enumVars(a))
+		return checkutil.NewEnumPairRuleHandler(func(_ context.Context, w check.ResponseWriter, req check.Request, e, a protoreflect.EnumDescriptor) error {
+			eval(w, req, e, a, enumVars(e), enumVars(a))
 			return nil
 		}, opt)
 	}
@@ -406,4 +422,14 @@ func strs(s []string) []string {
 		return []string{}
 	}
 	return s
+}
+
+// addOptions adds the options variables of d, resolved with the extensions
+// of one side of the request.
+func addOptions(req check.Request, against bool, d protoreflect.Descriptor, vars map[string]any) error {
+	types, err := requestTypes(req, against)
+	if err != nil {
+		return fmt.Errorf("the request's extensions could not be read: %w", err)
+	}
+	return withOptions(vars, d, types)
 }

@@ -8,6 +8,10 @@ Version bumps, dependency updates and changes to benchmarks or examples alone ar
 
 ## [Unreleased]
 
+### Added
+
+- House rules read options: `options`, on every kind of element, holds each extension set on its options by full name, such as `options['dedo.v1.method'].scopes` or an organisation's own `options['acme.auth.v1.service'].tenant`, resolved from the files buf passes with the module's imports, so options the plugin is not built with read too. Messages are maps of their fields by `.proto` name and enums their value names; an unset message field or oneof member is left out for `has()`. A method also reads its service's options as `service_options`, such as `service_options['dedo.v1.service'].audience`, and a breaking rule reads the earlier element's as `against.options`.
+
 ## [v0.34.0] - 2026-11-06
 
 ### Breaking
