@@ -11,12 +11,12 @@ import (
 	"testing"
 )
 
-// overlay copies testdata/modules/base, then the case's files over it, into
-// a new directory: a service repository with one change.
-func overlay(t *testing.T, name string) string {
+// overlay copies testdata/modules/base, then each layer's files over it,
+// into a new directory: a service repository with one change.
+func overlay(t *testing.T, layers ...string) string {
 	t.Helper()
 	dir := t.TempDir()
-	for _, src := range []string{"base", name} {
+	for _, src := range append([]string{"base"}, layers...) {
 		root := filepath.Join("testdata", "modules", src)
 		err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 			if err != nil || d.IsDir() {
@@ -48,6 +48,9 @@ func TestModules(t *testing.T) {
 	t.Setenv("GOFLAGS", "-mod=mod")
 	for _, tt := range []struct {
 		name string
+		// over is a layer the case's files go over, such as bff, a clean
+		// backend for frontend.
+		over string
 		// want are lines of the output, in order; findings fail the run.
 		want     []string
 		findings int
@@ -93,9 +96,45 @@ func TestModules(t *testing.T) {
 			"    billing -> orders: internal/billing -> internal/orders",
 			"    orders -> billing: internal/orders -> gen/go/shop/billing/v2/billingv2connect",
 		}},
+		// A backend for frontend, a Go module of its own in bff/, is not a
+		// backend module: its protos add none, and it reads the backend
+		// through the generated client.
+		{name: "bff", want: []string{
+			"dedo modules: 2 modules in shop, no cycles; each depends on:",
+			"  billing  (nothing)",
+			"  orders   -> billing",
+			"bff: bff (frontend; not a backend module)",
+		}},
+		{name: "bff-named", over: "bff", findings: 1, want: []string{
+			"bff/proto: buf.yaml names the module buf.build/acme/shop-web, which serves the frontend of the Go module in bff: remove the name, so buf push --exclude-unnamed never publishes it",
+		}},
+		{name: "bff-published-internal", over: "bff", findings: 1, want: []string{
+			"proto/shop/orders/v1/orders.proto: service OrderService is AUDIENCE_COMPONENT_INTERNAL in buf.build/acme/shop, a published module: only a backend for frontend's services are; declare the audience of its callers",
+		}},
+		{name: "bff-audience", over: "bff", findings: 2, want: []string{
+			"bff/proto/shop/web/v1/web.proto: service WebService is AUDIENCE_EXTERNAL_PUBLIC, but serves the frontend of the Go module in bff: declare audience: AUDIENCE_COMPONENT_INTERNAL",
+			"bff/proto/shop/web/v1/web.proto: service CartService declares no audience, but serves the frontend of the Go module in bff: declare audience: AUDIENCE_COMPONENT_INTERNAL",
+		}},
+		// A driver counts however the BFF reaches it; database/sql/driver,
+		// which value types import, is not one.
+		{name: "bff-database", over: "bff", findings: 2, want: []string{
+			"bff/report: depends on the database driver database/sql through example.com/store/cache -> example.com/store/db: a backend for frontend owns no data; read it through the backend's Connect API",
+			"bff/web: depends on the database driver database/sql: a backend for frontend owns no data; read it through the backend's Connect API",
+		}},
+		{name: "bff-backend-import", over: "bff", findings: 2, want: []string{
+			"bff/web: imports docs, the backend's own code: read the backend only through its Connect API, with the clients generated from its protos",
+			"bff/web: imports internal/orders, the backend's own code: read the backend only through its Connect API, with the clients generated from its protos",
+		}},
+		{name: "bff-imported", over: "bff", findings: 1, want: []string{
+			"internal/billing: imports example.com/shop/bff/web, the backend for frontend in bff: the backend never imports its frontend's BFF; move what they share into the backend",
+		}},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			dir := overlay(t, tt.name)
+			layers := []string{tt.name}
+			if tt.over != "" {
+				layers = []string{tt.over, tt.name}
+			}
+			dir := overlay(t, layers...)
 			var out bytes.Buffer
 			err := run([]string{"modules", "-dir", dir}, &out)
 			switch {

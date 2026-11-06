@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package shop.web.v1;
+
+import "dedo/v1/options.proto";
+
+// WebService serves the shop's frontend.
+service WebService {
+  option (dedo.v1.service) = {
+    audience: AUDIENCE_EXTERNAL_PUBLIC
+    tenancy: {collection: "locations"}
+  };
+}
+
+// CartService keeps the frontend's cart.
+service CartService {
+  option (dedo.v1.service) = {owner_team: "shop-team"};
+}
+
+// PingService answers the frontend's health checks.
+service PingService {
+  option (dedo.v1.service).audience = AUDIENCE_COMPONENT_INTERNAL;
+}
