@@ -8,6 +8,22 @@ Version bumps, dependency updates and changes to benchmarks or examples alone ar
 
 ## [Unreleased]
 
+### Breaking
+
+- `protoc-gen-dedo-openapi` and `protoc-gen-dedo-mcp` leave out `AUDIENCE_COMPONENT_INTERNAL` services by default: they have no paths, tags or schemas in the reference, and their `<Service>MCPTools()` returns no tools, so `main.go` still compiles. A service that declares no audience is kept. To document such a service anyway, add `min_audience=COMPONENT_INTERNAL` to the generator's `opt`. The reference now names a schema by its short name whenever no other message the documented services reach has that name, so `examples/contacts` reads `Location` where it read `raveesh_me.contacts.v1.Location`; regenerate and update any link to the old name. [#PR](https://github.com/raveesh-me/dedo/pull/PR)
+
+### Added
+
+- `min_audience` for `protoc-gen-dedo-openapi` and `protoc-gen-dedo-mcp`: an `Audience` value, with or without its `AUDIENCE_` prefix, below which services are left out, such as `min_audience=EXTERNAL_PUBLIC` for a reference published to everyone. An unknown value fails the run. `templates/buf.gen.yaml` shows it commented out. [#PR](https://github.com/raveesh-me/dedo/pull/PR)
+- `dedo modules` finds a backend for frontend (BFF), a nested Go module that holds a `buf.yaml` module such as `bff/proto`, and fails on: a name on its buf module; a service in it that is not `AUDIENCE_COMPONENT_INTERNAL`, or one that is in a named module; a database driver anywhere in its dependencies; an import of the backend's own packages other than those generated from its protos; and a backend package importing it. It prints `bff: <dir> (frontend; not a backend module)` after the module graph. [#PR](https://github.com/raveesh-me/dedo/pull/PR)
+- `dedo init -bff` adds a BFF to a repository `dedo init` set up: `bff/go.mod`, an unnamed `bff/proto` module in `buf.yaml` that `buf breaking` ignores, `bff/buf.gen.yaml` for its Go and Connect code and, commented out, the frontend's `protoc-gen-es`, a starter `AUDIENCE_COMPONENT_INTERNAL` service, its handler and `main.go`, and `ignore ./frontend` in `go.mod` when there is a `frontend/`. [#PR](https://github.com/raveesh-me/dedo/pull/PR)
+- Package `bff` serves a BFF paired with its frontend by commit SHA: `Pin` answers only `<prefix>/<sha>/` and any other SHA with `FAILED_PRECONDITION` and the `google.rpc.ErrorInfo` reason `BFF_VERSION_RETIRED` (`ReasonVersionRetired`), on which the frontend reloads; `Forward` copies the caller's `Authorization`, flow ID and named headers onto the BFF's calls; `Activity` counts requests, distinct callers and the first and last request, and serves them as JSON for the job that retires a version. [#PR](https://github.com/raveesh-me/dedo/pull/PR)
+- Guidance on backends for frontends, in `guidance/domains.md` (with checklist items), `install.md`, `claude.md`, `guideline.md` and `generators.md`: a nested Go module with an unnamed buf module, linted with the repository's rules and never checked for breaking changes; owning no data and holding no credentials; reading its context through internal-audience services, which check tokens and scopes and change additively; paired with its frontend by commit and retired after a fixed window. [#PR](https://github.com/raveesh-me/dedo/pull/PR)
+
+### Fixed
+
+- `dedo init`, `dedo upgrade` and `dedo modules` leave out the protos of a Go module nested in the repository, such as a BFF's: they no longer count them as backend modules, write handler stubs or `main.go` registrations for their services, or take their directory as `buf.yaml`'s proto root. [#PR](https://github.com/raveesh-me/dedo/pull/PR)
+
 ## [v0.33.0] - 2026-11-05
 
 ### Breaking
