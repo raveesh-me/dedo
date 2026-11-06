@@ -57,6 +57,9 @@ const usage = `usage:
                                     no import cycle between them, shared code imports none, module code
                                     only in internal/<m>, SQL naming only its own schema; then print
                                     the module graph
+  dedo breaking [-dir DIR] [-against BRANCH]
+                                    run buf breaking for each module of buf.yaml against its own directory
+                                    on BRANCH (default main), skipping a module that has no protos there yet
   dedo templates [NAME]             list the bundled templates, or print one
   dedo version                      print the dedo release this command installs
 `
@@ -153,6 +156,15 @@ func run(args []string, out io.Writer) error {
 			return err
 		}
 		return modules(*dir, out)
+	case "breaking":
+		flags := flag.NewFlagSet("breaking", flag.ContinueOnError)
+		flags.SetOutput(out)
+		dir := flags.String("dir", ".", "the repository, at the root of its git working tree")
+		against := flags.String("against", "main", "the branch to compare with")
+		if err := flags.Parse(args[1:]); err != nil {
+			return err
+		}
+		return breaking(*dir, *against, out)
 	case "templates":
 		return templates(args[1:], out)
 	case "version":

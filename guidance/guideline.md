@@ -279,11 +279,14 @@ The interceptor then reads the tenants of every request, on every transport, fro
 | `make tools` | The lint plugin at `buf.yaml`'s release, or a house-rules import, cannot be installed or fetched, or a rule overrides one it may not |
 | `buf format --diff --exit-code` | A `.proto` file is not formatted |
 | `buf lint` | Any Buf, AIP, Zalando, dedo or house rule is broken |
-| `buf breaking --against '.git#branch=main'` | The change breaks clients |
+| `go tool dedo breaking -against main` | The change breaks clients. It runs `buf breaking` for each module of `buf.yaml` against its own directory on `main`, and skips a module with no protos there yet, so a pull request that adds a module, such as a BFF's, passes |
+| `go tool dedo modules` | The modules are not kept apart, or a [backend for frontend](domains.md#backends-for-frontends) breaks its rules (named, not `AUDIENCE_COMPONENT_INTERNAL`, a data-store client or the backend's own code in its dependencies) |
 | `buf generate && git diff --exit-code gen/ docs/` | Generated code or docs are stale |
 | `go test ./...` | The policy table test or your tests fail |
+| `if [ -f bff/buf.gen.yaml ]; then buf generate --template bff/buf.gen.yaml && test -z "$(git status --porcelain -- bff/gen frontend/src/gen)"; fi` | A BFF's generated code, or its frontend's client, is stale or missing |
+| `if [ -f bff/go.mod ]; then cd bff && go vet ./... && go test ./...; fi` | A BFF's tests fail. The root's `go test ./...` stops at its nested Go module |
 
-A repository with a [backend for frontend](domains.md#backends-for-frontends) also runs `go test ./...` in its directory, such as `bff/`, since the root's stops at the nested Go module, and checks the output of `bff/buf.gen.yaml` for staleness the same way.
+`make check` runs the same: `dedo modules`, `dedo breaking` against `API_BASE` and, when `bff/` exists, the BFF's staleness check, vet and tests. `make test` runs the BFF's tests too, and `make generate` generates its code.
 
 ## 10. Try the reference service
 
