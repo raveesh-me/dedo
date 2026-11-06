@@ -8,6 +8,8 @@ Version bumps, dependency updates and changes to benchmarks or examples alone ar
 
 ## [Unreleased]
 
+## [v0.35.0] - 2026-11-06
+
 ### Added
 
 - House rules read options: `options`, on every kind of element, holds each extension set on its options by full name, such as `options['dedo.v1.method'].scopes` or an organisation's own `options['acme.auth.v1.service'].tenant`, resolved from the files buf passes with the module's imports, so options the plugin is not built with read too. Messages are maps of their fields by `.proto` name and enums their value names; an unset message field or oneof member is left out for `has()`. A method also reads its service's options as `service_options`, such as `service_options['dedo.v1.service'].audience`, and a breaking rule reads the earlier element's as `against.options`. [#135](https://github.com/raveesh-me/dedo/pull/135)
@@ -479,7 +481,8 @@ The first release, as http-proto-lint (`github.com/raveesh-me/http-proto-lint`, 
 - MCP tools, served on the official MCP Go SDK under short snake_case names and through the same auth and policy as REST. [#1](https://github.com/raveesh-me/dedo/pull/1), [#2](https://github.com/raveesh-me/dedo/pull/2)
 - Templates for service repositories, `guideline.md`, and the `todo`, `bad-todo` and `library` examples. [#1](https://github.com/raveesh-me/dedo/pull/1), [#5](https://github.com/raveesh-me/dedo/pull/5)
 
-[Unreleased]: https://github.com/raveesh-me/dedo/compare/v0.34.0...HEAD
+[Unreleased]: https://github.com/raveesh-me/dedo/compare/v0.35.0...HEAD
+[v0.35.0]: https://github.com/raveesh-me/dedo/compare/v0.34.0...v0.35.0
 [v0.34.0]: https://github.com/raveesh-me/dedo/compare/v0.33.0...v0.34.0
 [v0.33.0]: https://github.com/raveesh-me/dedo/compare/v0.32.3...v0.33.0
 [v0.32.3]: https://github.com/raveesh-me/dedo/compare/v0.32.2...v0.32.3
