@@ -387,7 +387,7 @@ func (in *initer) bffNext(n bffNames, generated bool) {
 	}
 	steps = append(steps,
 		fmt.Sprintf("implement %s's RPCs in %s/%s.go, reading the backend through its clients; until then they answer Unimplemented", n.Service, bffDir, snakeCase(n.Service)),
-		fmt.Sprintf("build it with its frontend's commit: cd %s && go build -ldflags \"-X main.buildSHA=$(git rev-parse --short=12 HEAD)\" .", bffDir),
+		fmt.Sprintf("build it with its frontend's commit: cd %s && go build -ldflags \"-X main.buildSHA=$(git rev-parse HEAD | cut -c1-12)\" .", bffDir),
 		"run it with BACKEND_URL set to the backend's address; the frontend calls /bff/<sha>/ and reloads on BFF_VERSION_RETIRED",
 		fmt.Sprintf("for the frontend's client, uncomment protoc-gen-es in %s/buf.gen.yaml", bffDir),
 		"dedo modules checks that the BFF stays apart: unnamed, AUDIENCE_COMPONENT_INTERNAL, no database driver and none of the backend's own code",

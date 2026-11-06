@@ -29,15 +29,21 @@ const ReasonVersionRetired = "BFF_VERSION_RETIRED"
 const ErrorDomain = "dedo.raveesh.me"
 
 // SHALength is the length of the commit SHA that pairs a frontend with its
-// BFF: git rev-parse --short=12 HEAD. A fixed length keeps one commit one
-// version, however many objects the repository grows to.
+// BFF: the first 12 characters of the full SHA, as BuildSHACommand prints
+// them. A fixed length keeps one commit one version, however many objects
+// the repository grows to.
 const SHALength = 12
+
+// BuildSHACommand prints the SHA a frontend and its BFF are built with:
+// exactly SHALength characters. Never git rev-parse --short=12, which
+// prints more when 12 characters are ambiguous in the repository.
+const BuildSHACommand = "git rev-parse HEAD | cut -c1-12"
 
 // CheckSHA reports whether sha is a commit SHA as Pin takes it: SHALength
 // lowercase hexadecimal characters.
 func CheckSHA(sha string) error {
 	if len(sha) != SHALength {
-		return fmt.Errorf("bfftools: version %q is not a %d-character commit SHA (git rev-parse --short=%d HEAD)", sha, SHALength, SHALength)
+		return fmt.Errorf("bfftools: version %q is not a %d-character commit SHA (%s)", sha, SHALength, BuildSHACommand)
 	}
 	for _, c := range sha {
 		if (c < '0' || c > '9') && (c < 'a' || c > 'f') {

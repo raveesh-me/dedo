@@ -23,7 +23,7 @@ import (
 // buildSHA is the commit the BFF and its frontend were built from, which
 // pairs them. The build sets it:
 //
-//	go build -ldflags "-X main.buildSHA=$(git rev-parse --short=12 HEAD)"
+//	go build -ldflags "-X main.buildSHA=$(git rev-parse HEAD | cut -c1-12)"
 var buildSHA string
 
 // prefix is the path the frontend calls the BFF under, followed by

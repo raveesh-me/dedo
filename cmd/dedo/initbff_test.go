@@ -147,7 +147,7 @@ func TestInitBFF(t *testing.T) {
 		}
 	}
 	contains(t, "bff/main.go", read(t, dir, "bff/main.go"),
-		"var buildSHA string", "bfftools.CheckSHA(buildSHA)", "bfftools.Forward()", "bfftools.NewActivity(buildSHA)",
+		"var buildSHA string", "$(git rev-parse HEAD | cut -c1-12)", "bfftools.CheckSHA(buildSHA)", "bfftools.Forward()", "bfftools.NewActivity(buildSHA)",
 		"bfftools.Pin(buildSHA, prefix, activity.Middleware(api))", `"example.com/shop/bff/gen/go/shop/web/v1/webv1connect"`,
 		"webv1connect.RegisterWebServiceHandler(server, newWebService(backend))")
 	contains(t, "bff/web_service.go", read(t, dir, "bff/web_service.go"),
@@ -159,7 +159,17 @@ func TestInitBFF(t *testing.T) {
 	}
 	contains(t, "output", out,
 		"frontend/: none; once the frontend lives there, add `ignore ./frontend` to go.mod",
-		"buf generate --template bff/buf.gen.yaml", "go mod tidy")
+		"buf generate --template bff/buf.gen.yaml", "go mod tidy",
+		`go build -ldflags "-X main.buildSHA=$(git rev-parse HEAD | cut -c1-12)" .`)
+	for _, name := range []string{"bff/main.go", "output"} {
+		src := out
+		if name != "output" {
+			src = read(t, dir, name)
+		}
+		if strings.Contains(src, "--short") {
+			t.Errorf("%s builds with git rev-parse --short, which gives more than 12 characters when 12 are ambiguous:\n%s", name, src)
+		}
+	}
 
 	// The backend's own setup never takes the BFF for one of its modules.
 	p, err := analyze(dir)

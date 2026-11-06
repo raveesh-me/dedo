@@ -376,8 +376,10 @@ It adds `bff/proto` to `buf.yaml`'s modules with no `name` and a `breaking` sect
 Build the BFF with its frontend's commit, which `main.go` refuses to start without, and run it with `BACKEND_URL` set to the backend's address:
 
 ```sh
-cd bff && go build -ldflags "-X main.buildSHA=$(git rev-parse --short=12 HEAD)" .
+cd bff && go build -ldflags "-X main.buildSHA=$(git rev-parse HEAD | cut -c1-12)" .
 ```
+
+Build the frontend with the same command, `git rev-parse HEAD | cut -c1-12` (`bfftools.BuildSHACommand`), so both get exactly 12 characters. Never use `git rev-parse --short=12`: it prints more when 12 characters are ambiguous in the repository, and the BFF then refuses to start.
 
 `main.go` uses the runtime package `github.com/raveesh-me/dedo/bff-tools` (package `bfftools`):
 

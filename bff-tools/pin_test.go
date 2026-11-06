@@ -45,6 +45,15 @@ func TestCheckSHA(t *testing.T) {
 			t.Errorf("CheckSHA(%q) = %v, want ok %v", tt.sha, err, tt.want)
 		}
 	}
+	// The error names the build command that always gives SHALength
+	// characters: --short=12 gives more when 12 are ambiguous.
+	err := bfftools.CheckSHA("0123456789abc")
+	if err == nil || !strings.Contains(err.Error(), bfftools.BuildSHACommand) || strings.Contains(err.Error(), "--short") {
+		t.Errorf("CheckSHA error = %v, want it to name %s", err, bfftools.BuildSHACommand)
+	}
+	if bfftools.BuildSHACommand != "git rev-parse HEAD | cut -c1-12" {
+		t.Errorf("BuildSHACommand = %q", bfftools.BuildSHACommand)
+	}
 }
 
 func TestPinRejectsBadConstruction(t *testing.T) {
