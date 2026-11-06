@@ -22,7 +22,7 @@ import (
 
 // version is the dedo release this command installs. The release job checks
 // that it names the release being tagged.
-const version = "v0.33.0"
+const version = "v0.34.0"
 
 func main() {
 	if err := run(os.Args[1:], os.Stdout); err != nil {
