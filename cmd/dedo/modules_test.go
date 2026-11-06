@@ -125,6 +125,12 @@ func TestModules(t *testing.T) {
 			"bff/web: imports docs, the backend's own code: read the backend only through its Connect API, with the clients generated from its protos",
 			"bff/web: imports internal/orders, the backend's own code: read the backend only through its Connect API, with the clients generated from its protos",
 		}},
+		// The backend's own code counts however the BFF reaches it, such
+		// as through a module nested under the backend's path, which Go
+		// lets import its internal/.
+		{name: "bff-backend-indirect", over: "bff", findings: 1, want: []string{
+			"bff/web: depends on internal/orders, the backend's own code, through example.com/shop/lib/rates: read the backend only through its Connect API, with the clients generated from its protos",
+		}},
 		{name: "bff-imported", over: "bff", findings: 1, want: []string{
 			"internal/billing: imports example.com/shop/bff/web, the backend for frontend in bff: the backend never imports its frontend's BFF; move what they share into the backend",
 		}},

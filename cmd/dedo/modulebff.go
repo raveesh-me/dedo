@@ -28,30 +28,83 @@ type bff struct {
 // published module's.
 const bffAudience = "AUDIENCE_COMPONENT_INTERNAL"
 
-// databaseDrivers are the database drivers a BFF never depends on: each
-// import path and every package below it. database/sql/driver is not one:
-// it holds only the interfaces that value types, such as UUIDs and
-// decimals, implement to be stored, and opens nothing.
-var databaseDrivers = []string{
-	"database/sql",
-	"github.com/jackc/pgx",
-	"github.com/lib/pq",
-	"github.com/go-sql-driver/mysql",
-	"gorm.io",
-	"github.com/mattn/go-sqlite3",
-	"modernc.org/sqlite",
-	"go.mongodb.org/mongo-driver",
-	"github.com/redis/go-redis",
+// dataStoreClient is a family of data-store client libraries a BFF never
+// depends on: the import path of a package or module, and every package
+// below it, and the store it reaches.
+type dataStoreClient struct {
+	Prefix, Store string
 }
 
-// isDatabaseDriver reports whether the package at importPath is one of the
-// databaseDrivers.
+// dataStoreClients are every data-store client a BFF never depends on, in
+// one table: SQL and its drivers and ORMs, then document, key-value,
+// wide-column, search and graph stores, and the cloud databases. A prefix
+// without a major version, such as github.com/go-redis/redis, covers every
+// one (/v7, /v8). database/sql/driver is not one: it holds only the
+// interfaces that value types, such as UUIDs and decimals, implement to be
+// stored, and opens nothing. guidance/install.md lists the families.
+var dataStoreClients = []dataStoreClient{
+	// SQL: the standard library, drivers, ORMs and query builders.
+	{"database/sql", "SQL"},
+	{"github.com/jackc/pgx", "PostgreSQL"},
+	{"github.com/jackc/pgconn", "PostgreSQL"},
+	{"github.com/lib/pq", "PostgreSQL"},
+	{"github.com/go-pg/pg", "PostgreSQL"},
+	{"github.com/go-sql-driver/mysql", "MySQL"},
+	{"github.com/mattn/go-sqlite3", "SQLite"},
+	{"modernc.org/sqlite", "SQLite"},
+	{"github.com/microsoft/go-mssqldb", "SQL Server"},
+	{"github.com/denisenkom/go-mssqldb", "SQL Server"},
+	{"github.com/ClickHouse/clickhouse-go", "ClickHouse"},
+	{"gorm.io", "SQL"},
+	{"github.com/jinzhu/gorm", "SQL"},
+	{"github.com/jmoiron/sqlx", "SQL"},
+	{"github.com/uptrace/bun", "SQL"},
+	{"entgo.io/ent", "SQL"},
+	{"xorm.io", "SQL"},
+	{"cloud.google.com/go/cloudsqlconn", "Cloud SQL"},
+	{"cloud.google.com/go/alloydbconn", "AlloyDB"},
+	// Document stores.
+	{"go.mongodb.org/mongo-driver", "MongoDB"},
+	{"gopkg.in/mgo.v2", "MongoDB"},
+	{"github.com/globalsign/mgo", "MongoDB"},
+	{"github.com/couchbase/gocb", "Couchbase"},
+	{"cloud.google.com/go/firestore", "Firestore"},
+	{"cloud.google.com/go/datastore", "Datastore"},
+	// Key-value stores and caches.
+	{"github.com/redis/go-redis", "Redis"},
+	{"github.com/go-redis/redis", "Redis"},
+	{"gopkg.in/redis.v5", "Redis"},
+	{"github.com/gomodule/redigo", "Redis"},
+	{"github.com/garyburd/redigo", "Redis"},
+	{"github.com/redis/rueidis", "Redis"},
+	{"github.com/valkey-io/valkey-go", "Valkey"},
+	{"github.com/bradfitz/gomemcache", "Memcached"},
+	{"github.com/aws/aws-sdk-go-v2/service/dynamodb", "DynamoDB"},
+	{"github.com/aws/aws-sdk-go-v2/feature/dynamodb", "DynamoDB"},
+	{"github.com/aws/aws-sdk-go/service/dynamodb", "DynamoDB"},
+	{"github.com/guregu/dynamo", "DynamoDB"},
+	// Wide-column stores and warehouses.
+	{"github.com/gocql/gocql", "Cassandra"},
+	{"github.com/apache/cassandra-gocql-driver", "Cassandra"},
+	{"github.com/scylladb/gocqlx", "Cassandra"},
+	{"cloud.google.com/go/bigtable", "Bigtable"},
+	{"cloud.google.com/go/spanner", "Spanner"},
+	{"cloud.google.com/go/bigquery", "BigQuery"},
+	// Search and graph stores.
+	{"github.com/elastic/go-elasticsearch", "Elasticsearch"},
+	{"github.com/olivere/elastic", "Elasticsearch"},
+	{"github.com/opensearch-project/opensearch-go", "OpenSearch"},
+	{"github.com/neo4j/neo4j-go-driver", "Neo4j"},
+}
+
+// isDatabaseDriver reports whether the package at importPath is a
+// data-store client, one of dataStoreClients.
 func isDatabaseDriver(importPath string) bool {
 	if importPath == "database/sql/driver" {
 		return false
 	}
-	for _, d := range databaseDrivers {
-		if inPath(importPath, d) {
+	for _, c := range dataStoreClients {
+		if inPath(importPath, c.Prefix) {
 			return true
 		}
 	}
@@ -209,14 +262,16 @@ func serviceAudiences(src string) [][2]string {
 }
 
 // check lists the BFF's packages and returns its findings: each of its
-// packages that depends on a database driver, and each that imports the
+// packages that depends on a database driver, and each that depends on the
 // backend's own code, which is everything of the backend's Go module but
 // the packages generated from its protos.
 //
-// A driver counts when any package the BFF imports reaches it, not only
-// when the BFF imports it itself: a driver in the BFF's binary is either
+// Both count when any package the BFF imports reaches them, not only when
+// the BFF imports them itself. A driver in the BFF's binary is either
 // unused or a way around the rule, such as a library or SDK that opens a
-// database for it, and a BFF holds no database credentials to use one.
+// database for it, and a BFF holds no database credentials to use one. The
+// backend's code is reachable through another Go module nested under the
+// backend's path, which Go lets import the backend's internal/.
 // Value types that store themselves import database/sql/driver only, which
 // is not a driver, so a UUID or decimal library does not count. Each
 // finding names the BFF package where the dependency enters, and the
@@ -237,33 +292,35 @@ func (b bff) check(dir string, l Layout) ([]string, error) {
 			if inPath(imp, b.Module) {
 				continue
 			}
-			if chain := b.driverChain(imp, byPath); chain != nil {
-				via := ""
-				if len(chain) > 1 {
-					via = " through " + strings.Join(chain[:len(chain)-1], " -> ")
-				}
-				out = append(out, fmt.Sprintf("%s: depends on the database driver %s%s: a backend for frontend owns no data; read it through the backend's Connect API", rel, chain[len(chain)-1], via))
+			if chain := b.chain(imp, byPath, isDatabaseDriver); chain != nil {
+				out = append(out, fmt.Sprintf("%s: depends on the database driver %s%s: a backend for frontend owns no data; read it through the backend's Connect API", rel, chain[len(chain)-1], through(chain)))
 			}
-			if q, ok := byPath[imp]; ok && q.Module != nil && q.Module.Path == l.Module {
-				if _, generated := l.Generated[imp]; !generated {
-					out = append(out, fmt.Sprintf("%s: imports %s, the backend's own code: read the backend only through its Connect API, with the clients generated from its protos", rel, l.rel(imp)))
-				}
+			backend := func(p string) bool {
+				q, ok := byPath[p]
+				_, generated := l.Generated[p]
+				return ok && q.Module != nil && q.Module.Path == l.Module && !generated
+			}
+			switch chain := b.chain(imp, byPath, backend); {
+			case len(chain) == 1:
+				out = append(out, fmt.Sprintf("%s: imports %s, the backend's own code: read the backend only through its Connect API, with the clients generated from its protos", rel, l.rel(imp)))
+			case chain != nil:
+				out = append(out, fmt.Sprintf("%s: depends on %s, the backend's own code,%s: read the backend only through its Connect API, with the clients generated from its protos", rel, l.rel(chain[len(chain)-1]), through(chain)))
 			}
 		}
 	}
 	return out, nil
 }
 
-// driverChain returns the shortest chain of imports from the package at
-// start to a database driver, start first and the driver last, through
+// chain returns the shortest chain of imports from the package at start to
+// one that match reports, start first and that package last, through
 // packages outside the BFF, or nil when there is none.
-func (b bff) driverChain(start string, byPath map[string]listedPackage) []string {
+func (b bff) chain(start string, byPath map[string]listedPackage, match func(string) bool) []string {
 	from := map[string]string{start: ""}
 	queue := []string{start}
 	for len(queue) > 0 {
 		p := queue[0]
 		queue = queue[1:]
-		if isDatabaseDriver(p) {
+		if match(p) {
 			var chain []string
 			for q := p; q != ""; q = from[q] {
 				chain = append([]string{q}, chain...)
@@ -279,6 +336,15 @@ func (b bff) driverChain(start string, byPath map[string]listedPackage) []string
 		}
 	}
 	return nil
+}
+
+// through names the packages of a chain between its start and its end:
+// " through a -> b", or "" when the start is the end.
+func through(chain []string) string {
+	if len(chain) < 2 {
+		return ""
+	}
+	return " through " + strings.Join(chain[:len(chain)-1], " -> ")
 }
 
 // relDir is path relative to the repository at dir, slash-separated, or

@@ -10,24 +10,65 @@ import (
 
 func TestIsDatabaseDriver(t *testing.T) {
 	for p, want := range map[string]bool{
-		"database/sql":                           true,
-		"database/sql/driver":                    false,
-		"github.com/jackc/pgx":                   true,
-		"github.com/jackc/pgx/v5":                true,
-		"github.com/jackc/pgx/v5/pgxpool":        true,
-		"github.com/jackc/pgxlisten":             false,
-		"github.com/lib/pq":                      true,
-		"gorm.io/gorm":                           true,
-		"gorm.io/driver/postgres":                true,
-		"go.mongodb.org/mongo-driver/v2/mongo":   true,
-		"github.com/redis/go-redis/v9":           true,
-		"modernc.org/sqlite":                     true,
-		"github.com/google/uuid":                 false,
-		"connectrpc.com/connect":                 false,
-		"github.com/go-sql-driver/mysql":         true,
-		"github.com/mattn/go-sqlite3":            true,
-		"example.com/shop/internal/shared/db":    false,
-		"example.com/shop/gen/go/shop/orders/v1": false,
+		"database/sql":                         true,
+		"database/sql/driver":                  false,
+		"github.com/jackc/pgx":                 true,
+		"github.com/jackc/pgx/v5":              true,
+		"github.com/jackc/pgx/v5/pgxpool":      true,
+		"github.com/jackc/pgxlisten":           false,
+		"github.com/lib/pq":                    true,
+		"gorm.io/gorm":                         true,
+		"gorm.io/driver/postgres":              true,
+		"go.mongodb.org/mongo-driver/v2/mongo": true,
+		"github.com/redis/go-redis/v9":         true,
+		"modernc.org/sqlite":                   true,
+		"github.com/google/uuid":               false,
+		"connectrpc.com/connect":               false,
+		"github.com/go-sql-driver/mysql":       true,
+		"github.com/mattn/go-sqlite3":          true,
+		"example.com/shop/internal/shared/db":  false,
+		// Every data-store family, by its module's import path, older
+		// major versions included.
+		"github.com/go-redis/redis":                                    true,
+		"github.com/go-redis/redis/v7":                                 true,
+		"github.com/go-redis/redis/v8":                                 true,
+		"github.com/redis/go-redis/v9/internal/pool":                   true,
+		"github.com/gomodule/redigo/redis":                             true,
+		"github.com/garyburd/redigo/redis":                             true,
+		"github.com/redis/rueidis":                                     true,
+		"cloud.google.com/go/firestore":                                true,
+		"cloud.google.com/go/firestore/apiv1":                          true,
+		"cloud.google.com/go/spanner":                                  true,
+		"cloud.google.com/go/bigtable":                                 true,
+		"cloud.google.com/go/bigquery":                                 true,
+		"cloud.google.com/go/bigquery/storage/apiv1":                   true,
+		"cloud.google.com/go/datastore":                                true,
+		"cloud.google.com/go/cloudsqlconn":                             true,
+		"github.com/aws/aws-sdk-go-v2/service/dynamodb":                true,
+		"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue": true,
+		"github.com/aws/aws-sdk-go/service/dynamodb":                   true,
+		"github.com/elastic/go-elasticsearch/v8":                       true,
+		"github.com/olivere/elastic/v7":                                true,
+		"github.com/opensearch-project/opensearch-go/v4":               true,
+		"github.com/gocql/gocql":                                       true,
+		"github.com/apache/cassandra-gocql-driver/v2":                  true,
+		"go.mongodb.org/mongo-driver/v2/bson":                          true,
+		"github.com/jmoiron/sqlx":                                      true,
+		"github.com/uptrace/bun":                                       true,
+		"entgo.io/ent":                                                 true,
+		"github.com/ClickHouse/clickhouse-go/v2":                       true,
+		"github.com/microsoft/go-mssqldb":                              true,
+		"github.com/couchbase/gocb/v2":                                 true,
+		"github.com/neo4j/neo4j-go-driver/v5/neo4j":                    true,
+		"github.com/bradfitz/gomemcache/memcache":                      true,
+		// Neighbours that store nothing, or only the prefix's name.
+		"cloud.google.com/go/pubsub":               false,
+		"cloud.google.com/go/compute/metadata":     false,
+		"cloud.google.com/go/firestorex":           false,
+		"github.com/aws/aws-sdk-go-v2/service/sqs": false,
+		"github.com/go-redis/redismock":            false,
+		"github.com/elastic/go-sysinfo":            false,
+		"example.com/shop/gen/go/shop/orders/v1":   false,
 	} {
 		if got := isDatabaseDriver(p); got != want {
 			t.Errorf("isDatabaseDriver(%s) = %v", p, got)
@@ -92,5 +133,20 @@ func TestInitLeavesOutBFF(t *testing.T) {
 	}
 	if main := read(t, dir, "main.go"); strings.Contains(main, "WebService") || !strings.Contains(main, "OrderService") {
 		t.Errorf("main.go:\n%s", main)
+	}
+}
+
+// Every entry of the table names its store and is no prefix of another,
+// which would make it unreachable.
+func TestDataStoreClientsTable(t *testing.T) {
+	for i, c := range dataStoreClients {
+		if c.Prefix == "" || c.Store == "" {
+			t.Errorf("entry %d: %+v", i, c)
+		}
+		for j, d := range dataStoreClients {
+			if i != j && inPath(d.Prefix, c.Prefix) {
+				t.Errorf("%s is below %s already", d.Prefix, c.Prefix)
+			}
+		}
 	}
 }
