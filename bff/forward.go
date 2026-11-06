@@ -14,11 +14,11 @@ import (
 // credentials.
 const Authorization = "Authorization"
 
-// Forward returns a client interceptor that copies the named request headers
-// of the call the BFF is serving onto each call it makes with that call's
-// context, replacing any value the outbound call set. Without names, it
-// copies Authorization and flowid.Header: the flow ID as flowid.Interceptor
-// kept or replaced it, when the server runs it.
+// Forward returns a client interceptor that copies the caller's credentials,
+// the request headers Authorization and flowid.Header, and the named
+// headers of the call the BFF is serving onto each call it makes with that
+// call's context, replacing any value the outbound call set. The flow ID is
+// the one flowid.Interceptor kept or replaced, when the server runs it.
 //
 // A BFF holds no identity or credentials of its own. It reaches the services
 // it reads as its caller, so each of them checks the caller's token and
@@ -26,9 +26,13 @@ const Authorization = "Authorization"
 // call made outside a served call, or for a caller who sent none, goes
 // without it.
 func Forward(headers ...string) connect.ClientInterceptor {
-	names := slices.Clone(headers)
-	if len(names) == 0 {
-		names = []string{Authorization, flowid.Header}
+	names := []string{Authorization, flowid.Header}
+	for _, h := range headers {
+		if !slices.ContainsFunc(names, func(n string) bool {
+			return textproto.CanonicalMIMEHeaderKey(n) == textproto.CanonicalMIMEHeaderKey(h)
+		}) {
+			names = append(names, h)
+		}
 	}
 	return func(next connect.ClientFunc) connect.ClientFunc {
 		return func(ctx context.Context, spec connect.Spec) (connect.ClientStream, error) {

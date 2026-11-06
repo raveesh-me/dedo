@@ -102,10 +102,10 @@ func TestForward(t *testing.T) {
 			want:    map[string]string{"Authorization": "Bearer user", flowid.Header: "replaced"},
 		},
 		{
-			name:    "named headers only",
+			name:    "named headers on top of credentials and flow ID",
 			headers: []string{"authorization", "X-Tenant"},
-			inbound: map[string]string{"Authorization": "Bearer user", "X-Tenant": "t1", flowid.Header: "flow-1"},
-			want:    map[string]string{"Authorization": "Bearer user", "X-Tenant": "t1", flowid.Header: ""},
+			inbound: map[string]string{"Authorization": "Bearer user", "X-Tenant": "t1", flowid.Header: "flow-1", "X-Other": "x"},
+			want:    map[string]string{"Authorization": "Bearer user", "X-Tenant": "t1", flowid.Header: "flow-1", "X-Other": ""},
 		},
 		{
 			name:     "the caller's credentials replace the handler's",
