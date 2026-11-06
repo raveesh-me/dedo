@@ -74,17 +74,24 @@ release-binaries: $(LINT_SRC)
 			-o ../../$(DIST)/release/dedo_$${os}_$${arch} .) || exit 1; \
 	done
 
-## starter: the starter service dedo init writes passes every rule, so no two
-## rules contradict each other on it (with the todo example and the library)
+## starter: the starter service dedo init writes, and the one dedo init -bff
+## writes for a backend for frontend, pass every rule, so no two rules
+## contradict each other on them (with the todo example and the library)
 STARTER := $(DIST)/_starter
 
 starter: plugins
-	rm -rf $(STARTER) && mkdir -p $(STARTER)/svc $(STARTER)/lint
+	rm -rf $(STARTER) && mkdir -p $(STARTER)/svc $(STARTER)/lint $(STARTER)/lint-bff/bff
 	printf 'module example.com/starter\n' > $(STARTER)/svc/go.mod
 	cd cmd/dedo && go run . init -offline -dir $(CURDIR)/$(STARTER)/svc > /dev/null
+	cd cmd/dedo && go run . init -bff -offline -dir $(CURDIR)/$(STARTER)/svc > /dev/null
 	cp -R examples/todo/buf.yaml examples/todo/buf.lock examples/todo/third_party $(STARTER)/svc/proto $(STARTER)/svc/dedo.yaml $(STARTER)/lint/
 	sed -i.bak -e 's#\.\./\.\./dist/buf-plugin-dedo-lint#$(CURDIR)/$(DIST)/buf-plugin-dedo-lint#' $(STARTER)/lint/buf.yaml
 	cd $(STARTER)/lint && buf lint proto
+	cp -R examples/todo/buf.lock examples/todo/third_party $(STARTER)/svc/dedo.yaml $(STARTER)/lint-bff/
+	cp -R $(STARTER)/svc/bff/proto $(STARTER)/lint-bff/bff/
+	sed -e 's#\.\./\.\./dist/buf-plugin-dedo-lint#$(CURDIR)/$(DIST)/buf-plugin-dedo-lint#' \
+		-e 's#^  - path: proto$$#  - path: bff/proto#' examples/todo/buf.yaml > $(STARTER)/lint-bff/buf.yaml
+	cd $(STARTER)/lint-bff && buf lint bff/proto
 
 ## examples: run the example services as consumer repositories
 examples: vendored-options example-todo example-bad-todo example-contacts

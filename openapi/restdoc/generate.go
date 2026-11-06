@@ -24,6 +24,11 @@ type Config struct {
 	Servers  []string // base URLs
 	Filename string   // output file; defaults to openapi.json
 
+	// MinAudience is the narrowest audience documented: services for a
+	// narrower one are left out. Unset, only AUDIENCE_COMPONENT_INTERNAL
+	// services are left out.
+	MinAudience dedov1.Audience
+
 	// Warn, when set, receives each warning: a problem worth fixing that
 	// does not stop generation. It is not a plugin parameter.
 	Warn func(msg string)
@@ -40,6 +45,12 @@ func (c *Config) Set(name, value string) error {
 		c.Servers = append(c.Servers, value)
 	case "filename":
 		c.Filename = value
+	case "min_audience":
+		a, err := parseAudience(value)
+		if err != nil {
+			return err
+		}
+		c.MinAudience = a
 	default:
 		return fmt.Errorf("unknown parameter %q", name)
 	}
@@ -52,9 +63,18 @@ type generator struct {
 }
 
 // Generate writes one OpenAPI document for every service in the files to
-// generate. Run the plugin with strategy: all so it sees them together.
+// generate whose audience is at least cfg.MinAudience. Run the plugin with
+// strategy: all so it sees them together. When no service is documented,
+// the document still exists, with no operations, so whatever serves or
+// embeds it keeps working.
 func Generate(plugin *protogen.Plugin, cfg Config) error {
-	g := &generator{schemas: newSchemas(plugin.Files), resources: resourceIndex(plugin.Files)}
+	services, mods, version, left := documented(plugin, cfg)
+	if cfg.Warn != nil && len(services) == 0 && left > 0 {
+		cfg.Warn(fmt.Sprintf("every service (%d) is for an audience narrower than min_audience, so the document has no operations", left))
+	}
+	// Schemas are named over the documented services' messages only, so a
+	// left-out message never changes, or shows, a documented one's name.
+	g := &generator{schemas: newSchemas(plugin.Files, services), resources: resourceIndex(plugin.Files)}
 	doc := &Document{
 		OpenAPI: "3.2.0",
 		Paths:   map[string]*PathItem{},
@@ -68,22 +88,10 @@ func Generate(plugin *protogen.Plugin, cfg Config) error {
 		doc.Servers = append(doc.Servers, Server{URL: s})
 	}
 	var names []string
-	var services []*protogen.Service
-	mods := modules{}
-	for _, f := range plugin.Files {
-		if !f.Generate {
-			continue
-		}
-		for _, svc := range f.Services {
-			names = append(names, string(svc.Desc.Name()))
-			services = append(services, svc)
-			mods = mods.with(f, tag(svc))
-			if doc.Info.Version == "" {
-				doc.Info.Version = string(f.Desc.Package().Name())
-			}
-			if err := g.addService(doc, svc); err != nil {
-				return err
-			}
+	for _, svc := range services {
+		names = append(names, string(svc.Desc.Name()))
+		if err := g.addService(doc, svc); err != nil {
+			return err
 		}
 	}
 	tags, err := mods.tags()
@@ -93,7 +101,7 @@ func Generate(plugin *protogen.Plugin, cfg Config) error {
 	doc.Tags = tags
 	warnTitles(cfg, services, mods)
 	doc.Info.Title = firstNonEmpty(cfg.Title, strings.Join(names, ", "), "API")
-	doc.Info.Version = firstNonEmpty(cfg.Version, doc.Info.Version, "v1")
+	doc.Info.Version = firstNonEmpty(cfg.Version, version, "v1")
 	g.schemas.built[statusSchema] = statusSchemaDef()
 	doc.Components.Schemas = g.schemas.built
 
@@ -104,6 +112,29 @@ func Generate(plugin *protogen.Plugin, cfg Config) error {
 	file := plugin.NewGeneratedFile(firstNonEmpty(cfg.Filename, "openapi.json"), "")
 	_, err = file.Write(append(out, '\n'))
 	return err
+}
+
+// documented returns the services of the files to generate that the
+// document includes, their modules, the version of the first one's package,
+// and how many services it leaves out.
+func documented(plugin *protogen.Plugin, cfg Config) (services []*protogen.Service, mods modules, version string, left int) {
+	for _, f := range plugin.Files {
+		if !f.Generate {
+			continue
+		}
+		for _, svc := range f.Services {
+			if !cfg.documents(svc) {
+				left++
+				continue
+			}
+			services = append(services, svc)
+			mods = mods.with(f, tag(svc))
+			if version == "" {
+				version = string(f.Desc.Package().Name())
+			}
+		}
+	}
+	return services, mods, version, left
 }
 
 func (g *generator) addService(doc *Document, svc *protogen.Service) error {

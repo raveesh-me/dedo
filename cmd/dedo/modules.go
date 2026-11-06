@@ -54,10 +54,15 @@ func modules(dir string, out io.Writer) error {
 	if err != nil {
 		return err
 	}
+	bffs, bffFindings, err := checkBFFs(dir, l, pkgs)
+	if err != nil {
+		return err
+	}
 	graph, findings := l.Build(imports(pkgs))
 	findings = append(findings, l.Dirs(dirs)...)
 	findings = append(findings, graph.Cycles()...)
 	findings = append(findings, l.SQL(append(sql, literals...))...)
+	findings = append(findings, bffFindings...)
 	if len(findings) > 0 {
 		for _, f := range findings {
 			fmt.Fprintln(out, f)
@@ -73,11 +78,15 @@ func modules(dir string, out io.Writer) error {
 		count = "1 module"
 	}
 	fmt.Fprintf(out, "dedo modules: %s%s, no cycles; each depends on:\n%s", count, in, graph)
+	for _, b := range bffs {
+		fmt.Fprintf(out, "bff: %s (frontend; not a backend module)\n", b.Dir)
+	}
 	return nil
 }
 
 // loadLayout reads the Go module path from go.mod and the modules from the
-// repository's proto packages, wherever buf.yaml's modules keep them.
+// repository's proto packages, wherever buf.yaml's modules keep them, but
+// for a backend for frontend's (protoFiles leaves them out).
 func loadLayout(dir string, protos []protoFile) (Layout, error) {
 	gomod, err := os.ReadFile(filepath.Join(dir, "go.mod"))
 	if err != nil {
@@ -102,7 +111,8 @@ type protoFile struct {
 }
 
 // protoFiles lists the repository's own .proto files with their packages,
-// leaving out vendored ones (third_party/) and generated trees.
+// leaving out vendored ones (third_party/), generated trees and the protos
+// of Go modules nested inside it, such as a backend for frontend's.
 func protoFiles(dir string) []protoFile {
 	rels, err := findProtos(dir)
 	if err != nil {
@@ -136,6 +146,27 @@ type listedPackage struct {
 // listPackages lists the Go module's packages with their non-test imports,
 // through go list -deps, which loads the whole import graph.
 func listPackages(dir, module string) ([]listedPackage, error) {
+	all, err := listDeps(dir)
+	if err != nil {
+		return nil, err
+	}
+	return ownPackages(all, module), nil
+}
+
+// ownPackages returns the packages of the Go module among pkgs.
+func ownPackages(pkgs []listedPackage, module string) []listedPackage {
+	var out []listedPackage
+	for _, p := range pkgs {
+		if p.Module != nil && p.Module.Path == module {
+			out = append(out, p)
+		}
+	}
+	return out
+}
+
+// listDeps lists the packages of the Go module in dir and every package
+// they depend on outside their tests, standard library included.
+func listDeps(dir string) ([]listedPackage, error) {
 	cmd := exec.Command("go", "list", "-deps", "-json=ImportPath,Name,Dir,GoFiles,Imports,Module", "./...")
 	cmd.Dir = dir
 	var stderr bytes.Buffer
@@ -153,9 +184,7 @@ func listPackages(dir, module string) ([]listedPackage, error) {
 		} else if err != nil {
 			return nil, fmt.Errorf("go list: %w", err)
 		}
-		if p.Module != nil && p.Module.Path == module {
-			pkgs = append(pkgs, p)
-		}
+		pkgs = append(pkgs, p)
 	}
 	return pkgs, nil
 }
@@ -259,7 +288,7 @@ func walkRepo(dir string, l Layout) (dirs []string, sql []SQLFile, err error) {
 			if strings.HasPrefix(d.Name(), ".") || walkSkip[d.Name()] {
 				return filepath.SkipDir
 			}
-			if _, err := os.Stat(filepath.Join(p, "go.mod")); err == nil {
+			if hasGoMod(p) {
 				return filepath.SkipDir
 			}
 			dirs = append(dirs, rel)

@@ -117,7 +117,7 @@ What each option does:
 
 | Option | Read by | Effect |
 | --- | --- | --- |
-| `service.audience`, `service.owner_team` | Lint, docs | Who may call the API, and who owns it |
+| `service.audience`, `service.owner_team` | Lint, docs, generators, `dedo modules` | Who may call the API, and who owns it. The generators leave out services narrower than their `min_audience`, by default only `AUDIENCE_COMPONENT_INTERNAL` ones, which only a [backend for frontend](domains.md#backends-for-frontends)'s unnamed module may declare |
 | `service.title` | Docs | The heading the REST reference groups the service's operations under. Optional: without it, the service name without its `Service` suffix, split into words (`CatalogEntryService` reads "Catalog Entry") |
 | `method.scopes` | Runtime, docs | A caller needs one of them. The service will not start if an RPC has none. |
 | `method.errors` | Runtime, docs | Every error the RPC returns. Undeclared ones are logged. The docs list them per HTTP status. |
@@ -249,6 +249,8 @@ Two parts stay in code:
 - **Authentication.** Your token check, a `connect.ServerInterceptor` on the same `connect.Server`, verifies the token and puts the caller's scopes in the call's context; `interceptor.Config.Scopes` reads them from there. You write it once per platform. As an interceptor rather than HTTP middleware, it also covers MCP calls, which reach the server in-process. With `MCP_ACCESS=authenticated`, the same token check also answers `mcpserver.Guard`'s question of whether a request is authenticated at all.
 - **Resource-level checks.** A scope says a caller may read products. It does not say *which* products. Ownership of one resource (only the caller's own drafts) stays in handlers.
 
+An internal audience changes none of this. A service with `AUDIENCE_BUSINESS_UNIT_INTERNAL` checks the token and scopes like a public one, and never trusts a caller for being inside the network. A [backend for frontend](domains.md#backends-for-frontends) holds no credentials of its own for that reason: it forwards its caller's, and the services decide.
+
 A new service enforces scopes from the start, as the `main.go` `dedo init` writes does. To add dedo to a service that already has callers, roll out with `EnforceScopes: false` first: the runtime logs every call that would have been denied. Switch to `true` once the logs are clean.
 
 ### Multi-tenant services
@@ -277,9 +279,14 @@ The interceptor then reads the tenants of every request, on every transport, fro
 | `make tools` | The lint plugin at `buf.yaml`'s release, or a house-rules import, cannot be installed or fetched, or a rule overrides one it may not |
 | `buf format --diff --exit-code` | A `.proto` file is not formatted |
 | `buf lint` | Any Buf, AIP, Zalando, dedo or house rule is broken |
-| `buf breaking --against '.git#branch=main'` | The change breaks clients |
+| `go tool dedo breaking -against main` | The change breaks clients. It runs `buf breaking` for each module of `buf.yaml` against its own directory on `main`, and skips a module with no protos there yet, so a pull request that adds a module, such as a BFF's, passes |
+| `go tool dedo modules` | The modules are not kept apart, or a [backend for frontend](domains.md#backends-for-frontends) breaks its rules (named, not `AUDIENCE_COMPONENT_INTERNAL`, a data-store client or the backend's own code in its dependencies) |
 | `buf generate && git diff --exit-code gen/ docs/` | Generated code or docs are stale |
 | `go test ./...` | The policy table test or your tests fail |
+| `if [ -f bff/buf.gen.yaml ]; then buf generate --template bff/buf.gen.yaml && test -z "$(git status --porcelain -- bff/gen frontend/src/gen)"; fi` | A BFF's generated code, or its frontend's client, is stale or missing |
+| `if [ -f bff/go.mod ]; then cd bff && go vet ./... && go test ./...; fi` | A BFF's tests fail. The root's `go test ./...` stops at its nested Go module |
+
+`make check` runs the same: `dedo modules`, `dedo breaking` against `API_BASE` and, when `bff/` exists, the BFF's staleness check, vet and tests. `make test` runs the BFF's tests too, and `make generate` generates its code.
 
 ## 10. Try the reference service
 

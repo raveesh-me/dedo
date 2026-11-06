@@ -1,0 +1,68 @@
+# The backend for frontend's code, from bff/proto: the BFF's Go server and
+# the frontend's client. Nothing in it is published, so it generates no
+# OpenAPI document and no MCP tools. Run it from the repository root, where
+# buf.yaml and the go.mod that pins the generators are:
+#   buf generate --template bff/buf.gen.yaml
+# Set up by dedo init -bff.
+version: v2
+managed:
+  enabled: true
+  override:
+{{- if .BackendName}}
+    # The BFF's own protos.
+    - file_option: go_package_prefix
+      value: {{.Module}}/bff/gen/go
+    # The backend's API module, which the BFF's protos may import: its Go
+    # code is the backend's, which bff/go.mod reaches.
+    - file_option: go_package_prefix
+      module: {{.BackendName}}
+      value: {{.BackendGo}}
+{{- else}}
+    # The backend's protos, which the BFF's may import: their Go code is the
+    # backend's, which bff/go.mod reaches.
+    - file_option: go_package_prefix
+      value: {{.BackendGo}}
+    # The BFF's own protos, by directory below bff/proto: add one for
+    # each new package. The last matching override wins, so these must
+    # stay below the catch-all above.
+{{- range .ProtoDirs}}
+    - file_option: go_package_prefix
+      path: {{.}}
+      value: {{$.Module}}/bff/gen/go
+{{- end}}
+{{- end}}
+    # The options module ships its generated Go code in its own Go module.
+    - file_option: go_package_prefix
+      module: buf.build/r-a/dedo
+      value: github.com/raveesh-me/dedo/gen/go
+  disable:
+    # These modules set go_package themselves and ship their own Go code.
+    - module: buf.build/googleapis/googleapis
+    - module: buf.build/bufbuild/protovalidate
+plugins:
+  # Through `go tool`, pinned in the repository's go.mod, as in buf.gen.yaml.
+  - local: ["go", "tool", "protoc-gen-go"]
+    out: bff/gen/go
+    opt: paths=source_relative
+  - local: ["go", "tool", "protoc-gen-connect-go"]
+    out: bff/gen/go
+    opt: paths=source_relative
+  # The frontend's client, with protoc-gen-es pinned in its package.json.
+  # It can run in a Node container, so the host needs no Node:
+  # - local:
+  #     - podman
+  #     - run
+  #     - --rm
+  #     - -i
+  #     - -v
+  #     - ./frontend:/frontend:ro
+  #     - -w
+  #     - /frontend
+  #     - docker.io/library/node:24-alpine
+  #     - node
+  #     - node_modules/@bufbuild/protoc-gen-es/bin/protoc-gen-es
+  #   out: frontend/src/gen
+  #   include_imports: true
+  #   opt: target=ts
+inputs:
+  - directory: bff/proto

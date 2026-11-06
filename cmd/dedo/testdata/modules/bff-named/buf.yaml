@@ -1,0 +1,6 @@
+version: v2
+modules:
+  - path: bff/proto
+    name: buf.build/acme/shop-web
+  - path: proto
+  - path: third_party/vendored

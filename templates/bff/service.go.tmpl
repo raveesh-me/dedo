@@ -1,0 +1,36 @@
+package main
+
+import (
+	"connectrpc.com/connect/v2"
+
+	"{{.Module}}/bff/gen/go/{{.ProtoDir}}/{{.GoPkg}}connect"
+{{- if .Backend}}
+	"{{.Backend.GoImport}}/{{.Backend.GoPkg}}connect"
+{{- end}}
+)
+
+// {{.Type}} implements {{.Name}}. Until you write a method, it answers
+// Unimplemented: add the methods of {{.GoPkg}}connect.{{.Name}}Handler,
+// each reading what its page shows from the backend's API, never from a
+// database.
+type {{.Type}} struct {
+	{{.GoPkg}}connect.Unimplemented{{.Name}}Handler
+{{- if .Backend}}
+	{{.BackendField}} {{.Backend.GoPkg}}connect.{{.Backend.Name}}Client
+{{- else}}
+	backend *connect.Client
+{{- end}}
+}
+
+// {{.New}} returns the handler main.go registers. backend calls the
+// backend's API as the caller: build a client of each service the pages
+// read from it.
+func {{.New}}(backend *connect.Client) *{{.Type}} {
+	return &{{.Type}}{
+{{- if .Backend}}
+		{{.BackendField}}: {{.Backend.GoPkg}}connect.New{{.Backend.Name}}Client(backend),
+{{- else}}
+		backend: backend,
+{{- end}}
+	}
+}

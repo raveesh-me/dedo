@@ -11,7 +11,7 @@ The terms come from Eric Evans' *Domain-Driven Design* (bounded context, module,
 | DDD | dedo | Where it shows |
 | --- | --- | --- |
 | Domain | The organisation's business as a whole | The shared house rules and the root every path starts with (`/shop`) |
-| Bounded context | One repository: one API module on the BSR | One REST root (`/shop/v1`), one OpenAPI document, one MCP server |
+| Bounded context | One repository: one API module on the BSR, and at most one unnamed module beside it for a [backend for frontend](#backends-for-frontends) | One REST root (`/shop/v1`), one OpenAPI document, one MCP server |
 | Module | One proto package: `acme.orders.v1` | A navigation tag in the reference, holding the package's services; in the service, one Go package (`internal/orders/`) and one Postgres schema |
 | Aggregate | One service: `OrderService` | A tag in the reference, nested under its package's |
 | Aggregate root | The resource the service manages: a message with `google.api.resource` | Its resource name (`orders/{order}`) is its identity and its REST path |
@@ -27,7 +27,7 @@ The terms come from Eric Evans' *Domain-Driven Design* (bounded context, module,
 
 A bounded context is the boundary inside which every term has one meaning. In dedo it is one repository.
 
-- One repository holds one context: one API module on the BSR, one REST root (`/<root>/v1/...`), one OpenAPI document and one MCP server. Two contexts that share a repository share a module and a lint configuration, and their terms start to leak into each other.
+- One repository holds one context: one API module on the BSR, one REST root (`/<root>/v1/...`), one OpenAPI document and one MCP server. Beside it, the repository may hold one unnamed module, which is never published: the contract of a [backend for frontend](#backends-for-frontends). Two contexts that share a repository share a module and a lint configuration, and their terms start to leak into each other.
 - The context owns its storage. No other context reads its tables; they call its API.
 - Within the context, every name means one thing. `Order` cannot mean a basket in one package and a binding sale in another. Keep the glossary where the product decisions live, and use exactly those words in the proto.
 
@@ -160,6 +160,40 @@ A core service waits to be called. It never subscribes to a bus, polls another s
 - **Anti-corruption layer.** When the context calls a vendor or another context with a model of its own, an adapter inside the service translates between the two models. The vendor's model never appears in the proto: the contract speaks only this context's language.
 - **Shared kernel.** dedo's options module and the `google.type` messages are shared by every context. Keep what contexts share this small: anything else shared between them belongs to one context, and the others refer to it.
 
+## Backends for frontends
+
+A backend for frontend (BFF) serves exactly one frontend. It shapes what the frontend's pages need from the context's API, and its contract changes with those pages, not with the domain. In dedo a BFF lives in the service's repository, as a Go module and a binary of its own, above the domain:
+
+```text
+go.mod                 # the backend: module example.com/shop
+buf.yaml               # modules: proto (named), bff/proto (no name)
+proto/                 # the published API
+internal/
+app/
+main.go
+bff/
+  go.mod               # the BFF: module example.com/shop/bff
+  buf.gen.yaml         # the BFF's Go and Connect code, the frontend's client
+  proto/shop/web/v1/   # the frontend's contract
+  main.go
+```
+
+- **A BFF is a nested Go module.** It is a directory with its own `go.mod`, such as `bff/`, that holds a module path of `buf.yaml`, such as `bff/proto`. `dedo modules` finds it from that layout, with no setting, and leaves its protos out of the backend's modules. `dedo init -bff` writes one ([install.md](install.md#adding-a-bff-dedo-init--bff)). The backend's `go test ./...` stops at the nested module, so `make check`, `make test` and the CI stage run the tests in `bff/` too, and check that its generated code is current ([guideline.md](guideline.md#9-ci)).
+- **Nothing about it is published.** Its buf module has no `name`, so `buf push --exclude-unnamed` never pushes it. Its own `buf.gen.yaml` generates only the BFF's Go and Connect code and the frontend's client, such as `protoc-gen-es`: never an OpenAPI document or MCP tools. Its services declare `AUDIENCE_COMPONENT_INTERNAL`, and the services of a named module never do; `dedo modules` checks both.
+- **One rule set, no breaking check.** The repository's `dedo.yaml` lints the BFF's protos as it lints the published API, so there is no second rule set to maintain. Its entry in `buf.yaml` ignores the module for `buf breaking`: the frontend and the BFF are built from one commit and paired exactly, so no other version of the frontend ever calls it.
+- **It owns no data.** No data-store client anywhere in its dependencies (SQL, MongoDB, Redis, Firestore, Spanner, BigQuery, DynamoDB, Elasticsearch and the rest [install.md](install.md#keeping-modules-apart-dedo-modules) lists), no database credentials, no schema. It never depends on the backend's own packages, anything of its Go module but the code generated from its protos (`internal/`, `app/`, `cmd/`, the root's `main`), directly or through another module: a Go module nested under the backend's path may import its `internal/`, so `dedo modules` follows every import. It reads this context only through its Connect API, and other contexts only through their published SDKs. The backend never imports the BFF.
+- **What only the frontend reads becomes an internal service of the backend.** A read the pages need and no other caller does, such as the choices a form offers, is a service in the backend's API with an internal audience, such as `AUDIENCE_BUSINESS_UNIT_INTERNAL`. It keeps its breaking check, since several BFF versions call it at once while one retires: change it additively. A public reference leaves it out with the generators' `min_audience` ([install.md](install.md#3-code-generators)).
+- **It holds no authority.** A BFF has no identity or credentials of its own. It forwards the caller's credentials on every call it makes, the `Authorization` header, the flow ID and the headers it is configured with, through `bfftools.Forward`. Every access decision stays in the services it calls, and they check the token and scopes on internal APIs too, never trusting a caller for being inside the network.
+- **It changes no dependency direction.** A BFF may read several contexts, each through its own API. They still never depend on it, nor, through it, on each other: if the `shop` context must never depend on `payments`, a BFF that reads both is fine.
+- **The frontend and its BFF are paired by commit.** Both are built from the same commit, and the first 12 characters of its SHA pair them, printed by `git rev-parse HEAD | cut -c1-12` (never `--short=12`, which prints more when 12 are ambiguous): the frontend calls `<prefix>/<sha>/...`, such as `/shop/bff/3f2a9c1d7e4b/shop.web.v1.CartService/GetCart`, and a BFF answers only its own SHA (`bfftools.Pin`). Any other SHA gets `FAILED_PRECONDITION` with a `google.rpc.ErrorInfo` whose reason is `BFF_VERSION_RETIRED` (`bfftools.ReasonVersionRetired`), and the frontend reloads the whole page, which loads the current frontend. There is no `latest` route, so a frontend never reaches a BFF built from another commit.
+- **Release the BFF first, and retire the previous one after a window.** Each release runs in this order:
+  1. Deploy the new BFF, routed at `<prefix>/<sha>/` under a name that carries its SHA, such as `shop-bff-<sha>`, so two versions run side by side. It must answer before its frontend is published, or that frontend reloads into itself.
+  2. Publish the frontend, then purge the frontend's entry file (the HTML or remote entry that names the versioned assets) from every cache in front of it, or serve that file with `Cache-Control: no-cache`. A cached entry file keeps loading the previous frontend: once the previous BFF retires, every reload gets `BFF_VERSION_RETIRED` and loads the same stale file again, in a loop. Hashed assets can stay cached for good.
+  3. Keep the previous BFF serving its frontend for a fixed retention window, at its smallest size: 7 days is the recommended window, so a tab left open over a weekend still works. It logs its activity per SHA through `bfftools.Activity`: one structured line per request with its SHA, procedure and a caller key, which the consumer derives from the verified token or tenancy headers, such as user and location. The log is the durable record; `GET /activity` only counts what one process has seen since it started.
+  4. At the end of the window, a scheduled job writes a final summary of that SHA's log lines (requests, distinct callers, last request), then deletes the deployment. A request for a SHA with no BFF goes to the current one, which answers `BFF_VERSION_RETIRED`.
+
+  As a guard, the frontend reloads on `BFF_VERSION_RETIRED` at most once per SHA in a session, and shows an error after that.
+
 ## How the reference shows it
 
 `protoc-gen-dedo-openapi` turns the layers into OpenAPI 3.2 tags. When the documented services span several packages, each package becomes a navigation tag (`kind: nav`) named after the package. Its `summary` is the package's last segment before the version, in sentence case (`acme.orders.v1` reads "Orders", `shop.tax_profile.v1` "Tax profile"), and its description is the package comment. Each service's tag names its package as its `parent`:
@@ -193,3 +227,6 @@ A reference that supports 3.2 shows context, module, aggregate and operation as 
 - Commands are named with the domain's verbs; queries are `NO_SIDE_EFFECTS`.
 - A command that announces what it did declares each event type in `emits` and publishes it after the commit, outward only; events carry no payload, and the service never subscribes.
 - Vendor and other contexts' models stay behind an adapter, out of the proto.
+- A BFF is a nested Go module whose buf module has no name: linted with the repository's rules, never checked for breaking changes, and generated only for its own Go and Connect code and its frontend's client. Its services are `AUDIENCE_COMPONENT_INTERNAL`; no published service is.
+- A BFF owns no data and holds no credentials: no data-store client, no dependency on the backend's packages, and the caller's credentials forwarded on every call. It reads its context through internal-audience services, which check tokens and scopes and change additively; the backend never imports it.
+- A frontend and its BFF are built from one commit and paired by its first 12 characters (`git rev-parse HEAD | cut -c1-12`); any other SHA gets `BFF_VERSION_RETIRED`. Each release deploys the BFF first, purges the frontend's entry file (or serves it `no-cache`), and retires the previous BFF after a fixed window, 7 days recommended, from its per-SHA activity log.

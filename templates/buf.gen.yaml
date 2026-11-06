@@ -32,9 +32,12 @@ plugins:
     opt: paths=source_relative
   # MCP tool input and output schemas, with field descriptions and
   # field_behavior, and <Service>MCPTools() for mcpserver.AddTools.
+  # Services for an audience narrower than min_audience get no tools; unset,
+  # only AUDIENCE_COMPONENT_INTERNAL ones are left out.
   - local: ["go", "tool", "protoc-gen-dedo-mcp"]
     out: gen/go
     opt: paths=source_relative
+    # opt: [paths=source_relative, min_audience=EXTERNAL_PARTNER]
   # REST reference: one OpenAPI 3.2 document from the google.api.http bindings.
   - local: ["go", "tool", "protoc-gen-dedo-openapi"]
     out: docs
@@ -42,5 +45,8 @@ plugins:
     opt:
       - title=YOUR_API_TITLE
       - server=https://YOUR_HOST
+      # Leave out services for an audience narrower than this; unset, only
+      # AUDIENCE_COMPONENT_INTERNAL ones are left out.
+      # - min_audience=EXTERNAL_PARTNER
 inputs:
   - directory: proto

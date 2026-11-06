@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package shop.orders.v1;
+
+import "dedo/v1/options.proto";
+
+// OrderService takes the shop's orders.
+service OrderService {
+  option (dedo.v1.service) = {audience: AUDIENCE_COMPONENT_INTERNAL};
+}
+
+// RefundService refunds them.
+service RefundService {
+  // audience: AUDIENCE_COMPONENT_INTERNAL is the BFF's only.
+  option (dedo.v1.service) = {audience: AUDIENCE_BUSINESS_UNIT_INTERNAL};
+}

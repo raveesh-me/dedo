@@ -46,6 +46,8 @@ type service struct {
 	// Type is the handler's type in internal/<Module>: the service's name,
 	// with the version after it for any but v1 (CounterServiceV2).
 	Type string
+	// File is the proto that declares it, relative to the repository.
+	File string
 }
 
 // HandlerFile is the handler stub's path: internal/time_counter/counter_service.go.
@@ -184,6 +186,7 @@ func (p *project) read(rel string) error {
 	for _, s := range svcs {
 		svc := base
 		svc.Name = string(s[1])
+		svc.File = filepath.ToSlash(rel)
 		svc.Module, svc.Type = moduleOf(string(pkg[1]), svc.Name)
 		p.services = append(p.services, svc)
 	}
@@ -221,13 +224,17 @@ func goPackageName(pkg string) string {
 	return parts[0]
 }
 
+// findProtos lists the .proto files below dir, relative to it, leaving out
+// vendored and generated trees and other Go modules nested inside it: a
+// backend for frontend's protos (bff/proto, in bff/go.mod's module) are
+// the frontend's, never the backend's modules or services.
 func findProtos(dir string) ([]string, error) {
 	var out []string
 	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
-		if d.IsDir() && path != dir && slices.Contains(skipDirs, d.Name()) {
+		if d.IsDir() && path != dir && (slices.Contains(skipDirs, d.Name()) || hasGoMod(path)) {
 			return filepath.SkipDir
 		}
 		if !d.IsDir() && strings.HasSuffix(path, ".proto") {
@@ -242,18 +249,18 @@ func findProtos(dir string) ([]string, error) {
 	return out, err
 }
 
-// bufModuleRoot returns the first module path of an existing buf.yaml.
+// bufModuleRoot returns the path of an existing buf.yaml's first module
+// that is not inside a nested Go module, such as a backend for frontend's.
 func bufModuleRoot(dir string) string {
-	doc, ok, err := loadYAML(filepath.Join(dir, "buf.yaml"))
-	if err != nil || !ok {
+	mods, err := bufModules(dir)
+	if err != nil {
 		return ""
 	}
-	modules := lookup(root(doc), "modules")
-	if modules == nil || len(modules.Content) == 0 {
-		return ""
-	}
-	if path := lookup(modules.Content[0], "path"); path != nil {
-		return path.Value
+	nested := nestedGoModules(dir)
+	for _, m := range mods {
+		if _, ok := insideModule(m.Path, nested); !ok {
+			return m.Path
+		}
 	}
 	return ""
 }

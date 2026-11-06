@@ -80,10 +80,10 @@ lint:
 
 ```sh
 dedo templates Makefile.api > Makefile.api && printf 'include Makefile.api\n' >> Makefile
-make check          # buf format, buf lint, buf breaking against main, dedo modules
+make check          # buf format, buf lint, dedo breaking against main, dedo modules
 ```
 
-The breaking check compares with the `main` branch, and is skipped while `main` has no `.proto` files. It runs Buf's `FILE` rules and dedo's [breaking rules](RULES.md#breaking-rules), which catch what `FILE` cannot see: an RPC that drops a scope, a REST path or an event type, a field that becomes required, a resource pattern that goes. Compare with another branch with `make check API_BASE=develop`. `make check` also runs `make modules`, which is `dedo modules` (below). The targets of `Makefile.api` are `run`, `generate`, `check`, `test`, `tools`, `modules`, `docs`, `docs-tunnel` and `docs-static`; where your `Makefile` already has one of those names, `dedo init` names dedo's `api-<name>` instead, and `api-check`, `api-generate` and `api-test` always exist, for CI.
+The breaking check, `dedo breaking`, runs `buf breaking` for each module of `buf.yaml` against its own directory on the `main` branch, and skips a module while `main` has no `.proto` files in it, such as one the branch adds: `buf breaking` over the whole workspace fails when a pull request adds a module with a `breaking` section of its own, such as a BFF's. It is skipped when there is no `main` branch. It runs Buf's `FILE` rules and dedo's [breaking rules](RULES.md#breaking-rules), which catch what `FILE` cannot see: an RPC that drops a scope, a REST path or an event type, a field that becomes required, a resource pattern that goes. Compare with another branch with `make check API_BASE=develop`. `make check` also runs `make modules`, which is `dedo modules` (below). The targets of `Makefile.api` are `run`, `generate`, `check`, `test`, `tools`, `modules`, `docs`, `docs-tunnel` and `docs-static`; where your `Makefile` already has one of those names, `dedo init` names dedo's `api-<name>` instead, and `api-check`, `api-generate` and `api-test` always exist, for CI.
 
 `make docs` serves the REST reference, only `docs/index.html` and `docs/openapi.json`, on `127.0.0.1:8099` (`DOCS_ADDR` to change it). `make docs-tunnel` also shares it at a public `trycloudflare.com` URL until Ctrl-C, to show the API to someone off your machine; it needs [cloudflared](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/). It never shares the service itself: development tokens are often public.
 
@@ -136,6 +136,17 @@ plugins:
       - title=Your API
       - server=https://api.example.com
 ```
+
+Both dedo generators take `min_audience`: an `Audience` value, with or without its `AUDIENCE_` prefix, such as `EXTERNAL_PARTNER`; an unknown value fails the run. They leave out every service whose `audience` is narrower, and keep one that declares none, for lint to report. Without it, they leave out only `AUDIENCE_COMPONENT_INTERNAL` services, which only a [backend for frontend](domains.md#backends-for-frontends) declares. A reference published to everyone sets `EXTERNAL_PUBLIC`, so internal services, such as the reads a BFF makes, stay out of it:
+
+```yaml
+    opt:
+      - title=Your API
+      - server=https://api.example.com
+      - min_audience=EXTERNAL_PUBLIC
+```
+
+A service `protoc-gen-dedo-mcp` leaves out still gets its `<Service>MCPTools()`, returning no tools, so `main.go` compiles unchanged.
 
 If `buf.gen.yaml` uses managed mode, keep dedo's Go package and the modules that ship their own Go code out of it:
 
@@ -281,12 +292,22 @@ In the handler, publish after the change commits, and return the error if the bu
 
 ### Keeping modules apart: `dedo modules`
 
-`dedo modules`, run in the repository (`make modules`; `make check` runs it), checks the layout of [domains.md](domains.md#code-and-data-follow-the-modules). It takes the modules from the repository's versioned proto packages, `<context>.<m>.v<n>`, and the Go module path from `go.mod`, and loads the import graph with `go list`. It fails on:
+`dedo modules`, run in the repository (`make modules`; `make check` runs it), checks the layout of [domains.md](domains.md#code-and-data-follow-the-modules). It takes the modules from the repository's versioned proto packages, `<context>.<m>.v<n>`, leaving out the protos inside a nested Go module, and the Go module path from `go.mod`, and loads the import graph with `go list`. It fails on:
 
 - a cycle between modules, through an import of `internal/<m>/**` or of the code generated from `<m>`'s packages, messages or Connect clients, any version; it names the imports that close the cycle;
 - a shared package, `internal/shared/**` or the code generated from an unversioned package such as `<context>.type`, that imports a module;
 - a directory named after a module anywhere but `internal/<m>` and the trees that mirror the protos (`proto/`, `gen/`), and a directory in `internal/` that is neither a module nor `shared`;
 - SQL, in a module's or shared `.sql` files or in Go string literals outside generated code, that names another module's schema, quoted or not; shared SQL may name no module's schema.
+
+A [backend for frontend](domains.md#backends-for-frontends) (BFF) is a directory with its own `go.mod` that holds a module path of `buf.yaml`, such as `bff/` holding `bff/proto`. `dedo modules` finds it from that layout, with no setting in `dedo.yaml`, and also fails on:
+
+- a buf module inside a nested Go module that has a `name`, which `buf push` would publish;
+- an `AUDIENCE_COMPONENT_INTERNAL` service in a named module, and a service in the BFF's module that declares another audience or none;
+- a data-store client anywhere in the BFF's dependencies outside tests, however it is reached; it names the BFF package the dependency enters through and the imports that lead to the client. One table in `cmd/dedo/modulebff.go` (`dataStoreClients`) lists them by import path, each with every package below it and every major version: `database/sql` (but not `database/sql/driver`, which value types implement), the SQL drivers (`pgx`, `lib/pq`, `go-pg`, `go-sql-driver/mysql`, SQLite, SQL Server, ClickHouse), ORMs and query builders (GORM, `sqlx`, `bun`, `ent`, `xorm`), Cloud SQL and AlloyDB connectors, MongoDB, Couchbase, Firestore, Datastore, Redis (`redis/go-redis`, `go-redis/redis` v6 to v8, `redigo`, `rueidis`), Valkey, Memcached, DynamoDB (both AWS SDKs), Cassandra (`gocql`, `gocqlx`), Bigtable, Spanner, BigQuery, Elasticsearch, OpenSearch and Neo4j;
+- a BFF package that depends on any package of the backend's Go module other than those generated from its protos, `internal/**`, `app/**`, `cmd/**`, the root's `main` or any other, directly or through another module, such as one nested under the backend's path, which Go lets import its `internal/`; it names the imports that lead there;
+- a backend package that imports the BFF.
+
+On success it also prints each BFF after the module graph: `bff: bff (frontend; not a backend module)`.
 
 It finds generated packages by the `source:` line protoc plugins write at the top of each file, so it works wherever `buf.gen.yaml` writes them, and leaves tests out: a test may import the composition root or another module's fakes. On success it prints each module and the modules it depends on:
 
@@ -335,6 +356,38 @@ In `buf.yaml` it adds the deps, the `DEDO` and `DEDO_BREAKING` categories (keepi
 Your existing services declare nothing for dedo yet, and `dedo init` names them. Until they do, `buf lint` lists what each RPC needs, and the policy-table test and the server's startup fail on purpose, naming the first missing declaration. Declare one service at a time; [guideline.md](guideline.md#3-write-the-contract) shows a complete one.
 
 `main.go`, `policy_table_test.go` and the handler stubs in `internal/<module>/` are written only where you have none, and only in a `package main` root. A library repository keeps its package. A repository that keeps its handlers in a root `server.go` (`newServer`, as `dedo init` wrote before v0.28.0), or whose `main.go` builds its services without dedo's stubs, gets no stubs; move the handlers into their modules as [domains.md](domains.md#code-and-data-follow-the-modules) lays out.
+
+## Adding a BFF: `dedo init -bff`
+
+`dedo init -bff`, run in a repository `dedo init` set up (or with `-dir`), adds a [backend for frontend](domains.md#backends-for-frontends):
+
+```text
+bff/
+  go.mod               # a Go module of its own, <module>/bff, requiring the backend's from ../
+  buf.gen.yaml         # Go and Connect for the BFF into bff/gen/go; the frontend's generator as a commented example
+  proto/               # an unnamed buf module
+    <context>/web/v1/web.proto  # a starter AUDIENCE_COMPONENT_INTERNAL service, WebService
+  main.go              # serves it with github.com/raveesh-me/dedo/bff-tools
+  web_service.go       # WebService's handler, holding a client of the backend's first service
+```
+
+It adds `bff/proto` to `buf.yaml`'s modules with no `name` and a `breaking` section of its own that ignores it, so the repository's rules lint it, `buf push --exclude-unnamed` never publishes it, and `buf breaking` never checks it. It writes the starter proto only when `bff/proto` has none. When it has protos already, `main.go` registers the services they declare instead, each with a handler named after it, and `bff/buf.gen.yaml` gives each of their directories the BFF's Go prefix; while they declare no service, it writes no server. It keeps every file that exists, and with a `main.go` already in place it writes no handlers. It warns when the root `buf.gen.yaml` has no `inputs`, or inputs that hold `bff/proto`: `buf generate` would then run the backend's generators, OpenAPI and MCP among them, over the BFF's protos; set `inputs` to the backend's proto root, as `dedo init`'s template does. When the repository has a `frontend/` directory, it adds `ignore ./frontend` to the backend's `go.mod`, so `./...` leaves the frontend out. It then runs `buf generate --template bff/buf.gen.yaml` from the repository root and `go mod tidy` in `bff/`; with `-offline` it prints them. Uncomment the frontend's generator in `bff/buf.gen.yaml`, such as `protoc-gen-es`, and point its `out` at the frontend's sources.
+
+Build the BFF with its frontend's commit, which `main.go` refuses to start without, and run it with `BACKEND_URL` set to the backend's address:
+
+```sh
+cd bff && go build -ldflags "-X main.buildSHA=$(git rev-parse HEAD | cut -c1-12)" .
+```
+
+Build the frontend with the same command, `git rev-parse HEAD | cut -c1-12` (`bfftools.BuildSHACommand`), so both get exactly 12 characters. Never use `git rev-parse --short=12`: it prints more when 12 characters are ambiguous in the repository, and the BFF then refuses to start.
+
+`main.go` uses the runtime package `github.com/raveesh-me/dedo/bff-tools` (package `bfftools`):
+
+- **`bfftools.Pin(sha, prefix, next)`** serves `next` only under `<prefix>/<sha>/`, its own commit SHA of `bfftools.SHALength` (12) lowercase hexadecimal characters (`bfftools.CheckSHA`), and answers any other SHA, or none, with `FAILED_PRECONDITION`, a `google.rpc.ErrorInfo` whose reason is `bfftools.ReasonVersionRetired` (`BFF_VERSION_RETIRED`) and `Cache-Control: no-store`, on which the frontend reloads. `main.go`'s prefix is `/bff`.
+- **`bfftools.Forward(headers...)`** is a Connect client interceptor for the clients the BFF calls the backend and other contexts with. It copies the caller's credentials onto every call: `Authorization`, `X-Flow-ID` and the headers it is given.
+- **`bfftools.Activity`** (`bfftools.NewActivity(sha, bfftools.ActivityOptions{Log: log})`) writes one structured log line per request its `Middleware` serves, `bff request` at level INFO with `sha`, `procedure` and, for a request with `Authorization`, `caller`: the durable record the job that retires a previous version aggregates per SHA. `ActivityOptions.CallerKey` derives the caller key, such as the user and location from the verified token's claims or the tenancy headers; the default, `bfftools.AuthorizationHash`, is a hash of `Authorization`, never the token, so a refreshed token counts as a new caller. A request without `Authorization` is counted and logged with no caller. `Report` and `Handler` count requests, distinct callers (at most `bfftools.MaxCallers`, 8 bytes each) and the first and last request in memory: per process, and reset when it restarts. `main.go` serves them at `GET /activity`, beside `GET /healthz`, both outside the prefix.
+
+`make check`'s `dedo modules` then keeps the BFF to [its rules](#keeping-modules-apart-dedo-modules), and `make check`, `make test` and `make generate` cover `bff/` too ([guideline.md](guideline.md#9-ci)). `dedo init -bff` refuses a repository with no `go.mod` or `buf.yaml`, a `buf.yaml` that is not v2, and, while `bff/proto` has no protos, a backend that has a module `web` already, the starter's package; for that one, write the BFF's protos into `bff/proto` first, then run `dedo init -bff` again.
 
 ## Upgrading
 

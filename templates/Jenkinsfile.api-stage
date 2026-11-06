@@ -1,13 +1,20 @@
 stage('API contract') {
   steps {
-    // buf breaking needs main; Jenkins clones are often shallow.
+    // dedo breaking needs main; Jenkins clones are often shallow.
     sh 'git fetch --no-tags origin +refs/heads/main:refs/heads/main'
     sh 'make tools'
     sh 'buf format --diff --exit-code'
     sh 'buf lint --error-format=junit > buf-lint.xml || (cat buf-lint.xml; exit 1)'
-    sh "buf breaking --against '.git#branch=main'"
+    // Each module against its own directory on main; a module new on this
+    // branch is skipped.
+    sh 'go tool dedo breaking -against main'
+    sh 'go tool dedo modules'
     sh 'buf generate && git diff --exit-code gen/ docs/'
     sh 'go test ./...'
+    // A backend for frontend in bff/: its generated code current, and its
+    // tests, which the root's ./... leaves out.
+    sh 'if [ -f bff/buf.gen.yaml ]; then buf generate --template bff/buf.gen.yaml && test -z "$(git status --porcelain -- bff/gen frontend/src/gen)"; fi'
+    sh 'if [ -f bff/go.mod ]; then cd bff && go vet ./... && go test ./...; fi'
   }
   post {
     always { junit allowEmptyResults: true, testResults: 'buf-lint.xml' }

@@ -315,7 +315,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/raveesh_me.contacts.v1.Location"
+                  "$ref": "#/components/schemas/Location"
                 }
               }
             }
@@ -594,12 +594,26 @@
             "type": "array",
             "description": "The locations on this page.",
             "items": {
-              "$ref": "#/components/schemas/raveesh_me.contacts.v1.Location"
+              "$ref": "#/components/schemas/Location"
             }
           },
           "nextPageToken": {
             "type": "string",
             "description": "The token of the next page, empty on the last."
+          }
+        }
+      },
+      "Location": {
+        "type": "object",
+        "description": "A business location. Contacts belong to one location.",
+        "properties": {
+          "displayName": {
+            "type": "string",
+            "description": "The name shown to people."
+          },
+          "name": {
+            "type": "string",
+            "description": "The resource name, such as locations/1."
           }
         }
       },
@@ -633,20 +647,6 @@
           "code",
           "message"
         ]
-      },
-      "raveesh_me.contacts.v1.Location": {
-        "type": "object",
-        "description": "A business location. Contacts belong to one location.",
-        "properties": {
-          "displayName": {
-            "type": "string",
-            "description": "The name shown to people."
-          },
-          "name": {
-            "type": "string",
-            "description": "The resource name, such as locations/1."
-          }
-        }
       }
     },
     "securitySchemes": {

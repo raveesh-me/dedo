@@ -511,7 +511,8 @@ func TestTemplatesCommand(t *testing.T) {
 	if err := run([]string{"templates"}, &list); err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"buf.yaml", "buf.gen.yaml", "Makefile.api", "main.go.tmpl", "docs/docs.go.tmpl", "claude.md", "generators.md"} {
+	for _, want := range []string{"buf.yaml", "buf.gen.yaml", "Makefile.api", "main.go.tmpl", "docs/docs.go.tmpl", "claude.md", "generators.md",
+		"bff/go.mod.tmpl", "bff/buf.gen.yaml.tmpl", "bff/main.go.tmpl", "bff/service.go.tmpl", "bff/web.proto.tmpl"} {
 		if !slices.Contains(strings.Split(strings.TrimSpace(list.String()), "\n"), want) {
 			t.Errorf("dedo templates lacks %s:\n%s", want, list.String())
 		}
@@ -987,7 +988,8 @@ func TestInitKeepsAServiceItsOwnServer(t *testing.T) {
 // dedo's module (scripts/fork.sh) keeps the templates gofmt-formatted.
 func TestTemplateImportsGroupDedo(t *testing.T) {
 	module := `"` + strings.TrimSuffix(cliPkg, "/cmd/dedo")
-	for _, name := range []string{"templates/main.go.tmpl", "templates/policy_table_test.go.tmpl", "templates/server.go.tmpl", "templates/docs/docs.go.tmpl"} {
+	for _, name := range []string{"templates/main.go.tmpl", "templates/policy_table_test.go.tmpl", "templates/server.go.tmpl", "templates/docs/docs.go.tmpl",
+		"templates/bff/main.go.tmpl", "templates/bff/service.go.tmpl"} {
 		src := string(asset(name))
 		start := strings.Index(src, "import (\n")
 		if start < 0 {

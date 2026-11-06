@@ -1,6 +1,7 @@
 package main
 
 import (
+	"os"
 	"strings"
 	"testing"
 )
@@ -141,5 +142,53 @@ func TestMakefileAPIChecksModules(t *testing.T) {
 	if s := string(got); names["modules"] != "api-modules" || !strings.Contains(s, "\ncheck: tools api-modules\n") ||
 		!strings.Contains(s, "\napi-modules:\n\tgo tool dedo modules\n") {
 		t.Errorf("names = %v, Makefile.api:\n%s", names, s)
+	}
+}
+
+// CI runs every check make check does: dedo modules, buf breaking per
+// module, and, in a repository with a backend for frontend, the BFF's tests
+// and a staleness check of bff/buf.gen.yaml's output. guideline.md's CI
+// table lists each step of the Jenkins stage.
+func TestCITemplatesRunEveryCheck(t *testing.T) {
+	mk := string(asset("templates/Makefile.api"))
+	jenkins := string(asset("templates/Jenkinsfile.api-stage"))
+	guideline, err := os.ReadFile("../../guidance/guideline.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	contains(t, "Makefile.api", mk,
+		"\ncheck: tools modules\n",
+		"go tool dedo breaking -against $(API_BASE)",
+		"buf generate --template bff/buf.gen.yaml",
+		"git status --porcelain -- $(BFF_GEN)",
+		"cd bff && go vet ./... && go test ./...",
+	)
+	contains(t, "Jenkinsfile.api-stage", jenkins,
+		"sh 'go tool dedo modules'",
+		"sh 'go tool dedo breaking -against main'",
+		"buf generate --template bff/buf.gen.yaml",
+		"cd bff && go vet ./... && go test ./...",
+	)
+	for name, src := range map[string]string{"Makefile.api": mk, "Jenkinsfile.api-stage": jenkins} {
+		if strings.Contains(src, "buf breaking --against") {
+			t.Errorf("%s compares the whole workspace, which fails when a PR adds a module:\n%s", name, src)
+		}
+	}
+	for _, line := range strings.Split(jenkins, "\n") {
+		line = strings.TrimSpace(line)
+		cmd, ok := strings.CutPrefix(line, "sh ")
+		if !ok {
+			continue
+		}
+		cmd = strings.Trim(cmd, `'"`)
+		if cmd == "git fetch --no-tags origin +refs/heads/main:refs/heads/main" {
+			continue
+		}
+		if i := strings.Index(cmd, " --error-format"); i > 0 {
+			cmd = cmd[:i]
+		}
+		if !strings.Contains(string(guideline), "`"+cmd+"`") {
+			t.Errorf("guideline.md's CI table does not list %q", cmd)
+		}
 	}
 }

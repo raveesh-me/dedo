@@ -33,6 +33,10 @@ func main() {
 
 const usage = `usage:
   dedo init [-dir DIR] [-offline]   set up the repository in DIR (default .)
+  dedo init -bff [-dir DIR] [-offline]
+                                    add a backend for frontend to the repository dedo init set up in DIR:
+                                    bff/ with its own go.mod, an unnamed buf module in bff/proto with no
+                                    breaking check, its buf.gen.yaml, a starter service and its server
   dedo upgrade [-dir DIR]           move the repository to this dedo's release: pins, templates, buf.lock, generated code
   dedo upgrade -lint [-dir DIR]     move only the options module, whose label is the lint plugin's release, then dedo tools
   dedo update [-version V]          install the latest dedo (or V); then run dedo upgrade
@@ -53,6 +57,9 @@ const usage = `usage:
                                     no import cycle between them, shared code imports none, module code
                                     only in internal/<m>, SQL naming only its own schema; then print
                                     the module graph
+  dedo breaking [-dir DIR] [-against BRANCH]
+                                    run buf breaking for each module of buf.yaml against its own directory
+                                    on BRANCH (default main), skipping a module that has no protos there yet
   dedo templates [NAME]             list the bundled templates, or print one
   dedo version                      print the dedo release this command installs
 `
@@ -68,8 +75,12 @@ func run(args []string, out io.Writer) error {
 		dir := flags.String("dir", ".", "the repository to set up")
 		offline := flags.Bool("offline", false, "edit files only; print the go, buf and make commands instead of running them")
 		release := flags.String("version", version, "the dedo release to pin")
+		bff := flags.Bool("bff", false, "add a backend for frontend in bff/, a Go module of its own, to a repository dedo init set up")
 		if err := flags.Parse(args[1:]); err != nil {
 			return err
+		}
+		if *bff {
+			return initBFF(*dir, *release, *offline, out)
 		}
 		return initRepo(*dir, *release, *offline, out)
 	case "upgrade":
@@ -145,6 +156,15 @@ func run(args []string, out io.Writer) error {
 			return err
 		}
 		return modules(*dir, out)
+	case "breaking":
+		flags := flag.NewFlagSet("breaking", flag.ContinueOnError)
+		flags.SetOutput(out)
+		dir := flags.String("dir", ".", "the repository, at the root of its git working tree")
+		against := flags.String("against", "main", "the branch to compare with")
+		if err := flags.Parse(args[1:]); err != nil {
+			return err
+		}
+		return breaking(*dir, *against, out)
 	case "templates":
 		return templates(args[1:], out)
 	case "version":

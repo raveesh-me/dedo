@@ -1,0 +1,88 @@
+// Command bff serves the backend for frontend of {{.Module}}: the
+// API of the one frontend built from the same commit. It owns no data and holds no credentials. It reads the backend
+// through its Connect API as the caller, and the backend checks the
+// caller's token.
+package main
+
+import (
+	"errors"
+	"log/slog"
+	"net/http"
+	"os"
+
+	"connectrpc.com/connect/v2"
+	"connectrpc.com/connect/v2/connecthttp"
+
+	bfftools "github.com/raveesh-me/dedo/bff-tools"
+	"github.com/raveesh-me/dedo/flowid"
+
+{{- range .Imports}}
+	"{{.}}"
+{{- end}}
+)
+
+// buildSHA is the commit the BFF and its frontend were built from, which
+// pairs them. The build sets it:
+//
+//	go build -ldflags "-X main.buildSHA=$(git rev-parse HEAD | cut -c1-12)"
+var buildSHA string
+
+// prefix is the path the frontend calls the BFF under, followed by
+// buildSHA: /bff/<sha>/.
+const prefix = "/bff"
+
+func main() {
+	log := slog.New(slog.NewJSONHandler(os.Stderr, nil))
+	handler, err := newHandler(log, os.Getenv("BACKEND_URL"))
+	if err != nil {
+		log.Error("startup failed", "error", err)
+		os.Exit(1)
+	}
+	addr := os.Getenv("ADDR")
+	if addr == "" {
+		addr = ":8080"
+	}
+	log.Info("listening", "addr", addr, "version", buildSHA)
+	server := &http.Server{Addr: addr, Handler: handler}
+	if err := server.ListenAndServe(); err != nil {
+		log.Error("server stopped", "error", err)
+		os.Exit(1)
+	}
+}
+
+func newHandler(log *slog.Logger, backendURL string) (http.Handler, error) {
+	if err := bfftools.CheckSHA(buildSHA); err != nil {
+		return nil, err
+	}
+	if backendURL == "" {
+		return nil, errors.New("BACKEND_URL is not set: the backend's address, such as http://localhost:8080")
+	}
+	// The backend's API, called as the caller: Forward hands on its
+	// Authorization and flow ID, and adds no credentials of its own.
+	backend := connect.NewClient(connecthttp.NewTransport(http.DefaultClient, backendURL), bfftools.Forward())
+
+	server := connect.NewServer(flowid.Interceptor())
+{{- range .Services}}
+	{{.GoPkg}}connect.Register{{.Name}}Handler(server, {{.New}}(backend))
+{{- end}}
+	api := http.NewServeMux()
+	connecthttp.Mount(api, server)
+
+	// Activity logs one line per request, with this SHA, the procedure and
+	// a caller key: the record the job that retires this version reads.
+	// Set CallerKey to tell callers apart by user and location, from the
+	// verified token's claims or the tenancy headers, rather than by a
+	// hash of the token.
+	activity := bfftools.NewActivity(buildSHA, bfftools.ActivityOptions{Log: log})
+	// Only the frontend built from buildSHA is served. Any other gets
+	// BFF_VERSION_RETIRED and reloads, which loads the current one.
+	mux := http.NewServeMux()
+	mux.Handle(prefix+"/", bfftools.Pin(buildSHA, prefix, activity.Middleware(api)))
+	// Outside prefix, so neither counts as the frontend's activity: this
+	// process's counts since it started, and the health probe.
+	mux.Handle("GET /activity", activity.Handler())
+	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	})
+	return mux, nil
+}

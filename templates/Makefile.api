@@ -15,31 +15,55 @@ run:
 	go run .
 
 ## generate: generate Go, Connect, MCP tools and the REST docs from the
-## protos, then tidy go.mod; run it after every change to a .proto
+## protos, then tidy go.mod; run it after every change to a .proto. With a
+## backend for frontend in bff/, also generate its code from bff/buf.gen.yaml
 generate:
 	buf generate
 	go mod tidy
+	@if [ -f bff/buf.gen.yaml ]; then \
+		echo "buf generate --template bff/buf.gen.yaml"; \
+		buf generate --template bff/buf.gen.yaml || exit 1; \
+		echo "cd bff && go mod tidy"; \
+		cd bff && go mod tidy; \
+	fi
 
-## check: format, lint, breaking changes against API_BASE, and the modules
-## kept apart; CI runs it
-# The branch breaking changes are checked against. A new repository, or a
-# base without protos yet, has nothing to break, so that check is skipped.
+## check: format, lint, breaking changes against API_BASE, the modules kept
+## apart and, with a backend for frontend in bff/, its generated code current
+## and its tests; CI runs it
+# The branch breaking changes are checked against. dedo breaking compares
+# each module of buf.yaml with its own directory there, and skips one that
+# has no protos there yet, such as a module this branch adds.
 API_BASE ?= main
+# What bff/buf.gen.yaml writes: the BFF's Go code and the frontend's client.
+BFF_GEN ?= bff/gen frontend/src/gen
 
 check: tools modules
 	buf format --diff --exit-code
 	buf lint
-	@if git rev-parse --verify --quiet 'refs/heads/$(API_BASE)' >/dev/null && \
-		git ls-tree -r --name-only '$(API_BASE)' | grep -q '\.proto$$'; then \
-		echo "buf breaking --against '.git#branch=$(API_BASE)'"; \
-		buf breaking --against '.git#branch=$(API_BASE)'; \
-	else \
-		echo "buf breaking: skipped; branch $(API_BASE) has no .proto files yet (set API_BASE to compare with another branch)"; \
+	go tool dedo breaking -against $(API_BASE)
+	@if [ -f bff/buf.gen.yaml ]; then \
+		echo "buf generate --template bff/buf.gen.yaml"; \
+		buf generate --template bff/buf.gen.yaml || exit 1; \
+		stale=$$(git status --porcelain -- $(BFF_GEN)); \
+		if [ -n "$$stale" ]; then \
+			echo "$$stale"; \
+			echo "the BFF's generated code is stale: run make generate and commit it"; \
+			exit 1; \
+		fi; \
+	fi
+	@if [ -f bff/go.mod ]; then \
+		echo "cd bff && go vet ./... && go test ./..."; \
+		cd bff && go vet ./... && go test ./...; \
 	fi
 
-## test: run the service's tests, the policy-table test among them
+## test: run the service's tests, the policy-table test among them, and
+## those of a backend for frontend in bff/, which ./... leaves out
 test:
 	go test ./...
+	@if [ -f bff/go.mod ]; then \
+		echo "cd bff && go test ./..."; \
+		cd bff && go test ./...; \
+	fi
 
 ## tools: copy the lint plugin at buf.yaml's release into .tools/, fetch the house
 ## rules dedo.yaml imports, and check their overrides; run it after a clone, an

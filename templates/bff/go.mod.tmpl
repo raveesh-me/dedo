@@ -1,0 +1,15 @@
+// The backend for frontend: a Go module of its own, so the backend's
+// ./... leaves it out and it never shares the backend's dependencies.
+module {{.Module}}/bff
+
+go {{.Go}}
+
+require (
+	{{.Module}} v0.0.0
+	connectrpc.com/connect/v2 {{.Connect}}
+	{{.DedoModule}} {{.Dedo}}
+)
+
+// The backend's generated clients, from this repository's working tree:
+// the frontend, this BFF and the backend they call build from one commit.
+replace {{.Module}} => ../
