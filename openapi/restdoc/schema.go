@@ -20,23 +20,28 @@ type schemas struct {
 	built    map[string]*Schema
 }
 
-func newSchemas(files []*protogen.File) *schemas {
+// newSchemas indexes the messages of files and names those the services
+// reach. Only reached messages can become component schemas, so only they
+// decide whether a short name is unique: a message of a service left out of
+// the document neither shows nor lengthens a documented one's name.
+func newSchemas(files []*protogen.File, services []*protogen.Service) *schemas {
 	s := &schemas{
 		messages: map[protoreflect.FullName]*protogen.Message{},
 		names:    map[protoreflect.FullName]string{},
 		built:    map[string]*Schema{},
 	}
-	var all []*protogen.Message
 	for _, f := range files {
-		all = append(all, collectMessages(f.Messages)...)
+		for _, m := range collectMessages(f.Messages) {
+			s.messages[m.Desc.FullName()] = m
+		}
 	}
+	reached := reachable(services)
 	short := map[string]int{}
-	for _, m := range all {
-		s.messages[m.Desc.FullName()] = m
+	for _, m := range reached {
 		short[string(m.Desc.Name())]++
 	}
 	// Short names read better in docs; full names keep them unique.
-	for _, m := range all {
+	for _, m := range reached {
 		name := string(m.Desc.Name())
 		if short[name] > 1 {
 			name = string(m.Desc.FullName())
@@ -44,6 +49,36 @@ func newSchemas(files []*protogen.File) *schemas {
 		s.names[m.Desc.FullName()] = name
 	}
 	return s
+}
+
+// reachable returns the messages the services' RPCs reach through their
+// requests, responses and fields, each once. Map entries are not messages
+// of the API, only their values are.
+func reachable(services []*protogen.Service) []*protogen.Message {
+	seen := map[protoreflect.FullName]bool{}
+	var out []*protogen.Message
+	var visit func(m *protogen.Message)
+	visit = func(m *protogen.Message) {
+		if seen[m.Desc.FullName()] {
+			return
+		}
+		seen[m.Desc.FullName()] = true
+		if !m.Desc.IsMapEntry() {
+			out = append(out, m)
+		}
+		for _, f := range m.Fields {
+			if f.Message != nil {
+				visit(f.Message)
+			}
+		}
+	}
+	for _, svc := range services {
+		for _, m := range svc.Methods {
+			visit(m.Input)
+			visit(m.Output)
+		}
+	}
+	return out
 }
 
 func collectMessages(msgs []*protogen.Message) []*protogen.Message {
@@ -64,7 +99,11 @@ func (s *schemas) ref(md protoreflect.MessageDescriptor) *Schema {
 	if wkt := wellKnown(md); wkt != nil {
 		return wkt
 	}
-	name := s.names[md.FullName()]
+	name, ok := s.names[md.FullName()]
+	if !ok {
+		// Not reached from a documented service; the full name is unique.
+		name = string(md.FullName())
+	}
 	if _, ok := s.built[name]; !ok {
 		s.built[name] = &Schema{} // placeholder breaks recursion
 		s.built[name] = s.object(s.messages[md.FullName()], nil)

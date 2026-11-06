@@ -1,6 +1,10 @@
 // Command protoc-gen-dedo-openapi generates an OpenAPI 3.2 document from the
 // google.api.http bindings and dedo.v1 options of
 // protobuf services. Run it with strategy: all.
+//
+// The option min_audience (an Audience, AUDIENCE_ prefix optional) leaves out
+// the services for a narrower audience; unset, it leaves out the
+// AUDIENCE_COMPONENT_INTERNAL ones.
 package main
 
 import (

@@ -1,0 +1,67 @@
+syntax = "proto3";
+
+// Storefront is what the shop's web pages show.
+package acme.storefront.v1;
+
+import "dedo/v1/options.proto";
+import "google/api/annotations.proto";
+
+// Reads the product pages. Only the shop's web frontend calls it, through
+// its backend for frontend, so no reference documents it by default.
+service ProductPageService {
+  option (dedo.v1.service) = {
+    audience: AUDIENCE_COMPONENT_INTERNAL
+    owner_team: "storefront"
+    title: "Product pages"
+  };
+
+  // GetProductPage returns one product page.
+  rpc GetProductPage(GetProductPageRequest) returns (GetProductPageResponse) {
+    option (google.api.http) = {get: "/shop/v1/{name=productPages/*}"};
+  }
+}
+
+// Reads the stock the shop's own teams plan with.
+service StockService {
+  option (dedo.v1.service) = {
+    audience: AUDIENCE_BUSINESS_UNIT_INTERNAL
+    owner_team: "storefront"
+    title: "Stock"
+  };
+
+  // GetStock returns the stock of one product.
+  rpc GetStock(GetStockRequest) returns (GetStockResponse) {
+    option (google.api.http) = {get: "/shop/v1/{name=stock/*}"};
+  }
+}
+
+// The request of GetProductPage.
+message GetProductPageRequest {
+  // The product page, productPages/{product_page}.
+  string name = 1;
+}
+
+// The response of GetProductPage.
+message GetProductPageResponse {
+  // The variant the page shows first.
+  Sku sku = 1;
+}
+
+// Sku is a variant as the page shows it. Its short name is also
+// acme.type.Sku's, so only a document with both spells them in full.
+message Sku {
+  // The label shown on the page.
+  string label = 1;
+}
+
+// The request of GetStock.
+message GetStockRequest {
+  // The stock, stock/{stock}.
+  string name = 1;
+}
+
+// The response of GetStock.
+message GetStockResponse {
+  // How many are on hand.
+  int32 on_hand = 1;
+}
