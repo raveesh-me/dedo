@@ -14,7 +14,7 @@ import (
 	"connectrpc.com/connect/v2"
 	"connectrpc.com/connect/v2/connecthttp"
 
-	"github.com/raveesh-me/dedo/bff"
+	bfftools "github.com/raveesh-me/dedo/bff-tools"
 	"github.com/raveesh-me/dedo/flowid"
 
 	"{{.Module}}/bff/gen/go/{{.ProtoDir}}/{{.GoPkg}}connect"
@@ -50,7 +50,7 @@ func main() {
 }
 
 func newHandler(backendURL string) (http.Handler, error) {
-	if err := bff.CheckSHA(buildSHA); err != nil {
+	if err := bfftools.CheckSHA(buildSHA); err != nil {
 		return nil, err
 	}
 	if backendURL == "" {
@@ -58,7 +58,7 @@ func newHandler(backendURL string) (http.Handler, error) {
 	}
 	// The backend's API, called as the caller: Forward hands on its
 	// Authorization and flow ID, and adds no credentials of its own.
-	backend := connect.NewClient(connecthttp.NewTransport(http.DefaultClient, backendURL), bff.Forward())
+	backend := connect.NewClient(connecthttp.NewTransport(http.DefaultClient, backendURL), bfftools.Forward())
 
 	server := connect.NewServer(flowid.Interceptor())
 	{{.GoPkg}}connect.Register{{.Service}}Handler(server, new{{.Service}}(backend))
@@ -67,9 +67,9 @@ func newHandler(backendURL string) (http.Handler, error) {
 
 	// Only the frontend built from buildSHA is served. Any other gets
 	// BFF_VERSION_RETIRED and reloads, which loads the current one.
-	activity := bff.NewActivity(buildSHA)
+	activity := bfftools.NewActivity(buildSHA)
 	mux := http.NewServeMux()
-	mux.Handle(prefix+"/", bff.Pin(buildSHA, prefix, activity.Middleware(api)))
+	mux.Handle(prefix+"/", bfftools.Pin(buildSHA, prefix, activity.Middleware(api)))
 	// Outside prefix, so neither counts as the frontend's activity: what
 	// the job that retires this version reads, and the health probe.
 	mux.Handle("GET /activity", activity.Handler())

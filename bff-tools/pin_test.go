@@ -1,4 +1,4 @@
-package bff_test
+package bfftools_test
 
 import (
 	"context"
@@ -16,7 +16,7 @@ import (
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/protobuf/types/known/emptypb"
 
-	"github.com/raveesh-me/dedo/bff"
+	bfftools "github.com/raveesh-me/dedo/bff-tools"
 )
 
 const (
@@ -41,7 +41,7 @@ func TestCheckSHA(t *testing.T) {
 		{"0123456789abcdef0123456789abcdef01234567", false}, // full SHA
 	}
 	for _, tt := range tests {
-		if err := bff.CheckSHA(tt.sha); (err == nil) != tt.want {
+		if err := bfftools.CheckSHA(tt.sha); (err == nil) != tt.want {
 			t.Errorf("CheckSHA(%q) = %v, want ok %v", tt.sha, err, tt.want)
 		}
 	}
@@ -62,7 +62,7 @@ func TestPinRejectsBadConstruction(t *testing.T) {
 					t.Error("Pin did not panic")
 				}
 			}()
-			bff.Pin(tt.sha, tt.prefix, http.NotFoundHandler())
+			bfftools.Pin(tt.sha, tt.prefix, http.NotFoundHandler())
 		})
 	}
 }
@@ -99,7 +99,7 @@ func TestPinRoutes(t *testing.T) {
 			req.Header.Set("Content-Type", "application/json")
 			path := req.URL.Path
 			rec := httptest.NewRecorder()
-			bff.Pin(sha, tt.prefix, echo).ServeHTTP(rec, req)
+			bfftools.Pin(sha, tt.prefix, echo).ServeHTTP(rec, req)
 			if rec.Code != tt.status {
 				t.Fatalf("status = %d, want %d (%s)", rec.Code, tt.status, rec.Body)
 			}
@@ -125,7 +125,7 @@ func TestPinRetiredWireFormat(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Connect-Protocol-Version", "1")
 	rec := httptest.NewRecorder()
-	bff.Pin(sha, prefix, echo).ServeHTTP(rec, req)
+	bfftools.Pin(sha, prefix, echo).ServeHTTP(rec, req)
 	if rec.Code != http.StatusBadRequest {
 		t.Fatalf("status = %d, want 400, Connect's for failed_precondition", rec.Code)
 	}
@@ -166,7 +166,7 @@ func server(t *testing.T) string {
 	})
 	mux := http.NewServeMux()
 	connecthttp.Mount(mux, srv)
-	ts := httptest.NewServer(bff.Pin(sha, prefix, mux))
+	ts := httptest.NewServer(bfftools.Pin(sha, prefix, mux))
 	t.Cleanup(ts.Close)
 	return ts.URL
 }
@@ -199,8 +199,8 @@ func TestPinRealClient(t *testing.T) {
 			if connect.CodeOf(err) != connect.CodeFailedPrecondition {
 				t.Fatalf("other version: err = %v, want failed_precondition", err)
 			}
-			if info := errorInfo(t, err); info.GetReason() != bff.ReasonVersionRetired || info.GetDomain() != bff.ErrorDomain {
-				t.Errorf("ErrorInfo = %v, want reason %s in %s", info, bff.ReasonVersionRetired, bff.ErrorDomain)
+			if info := errorInfo(t, err); info.GetReason() != bfftools.ReasonVersionRetired || info.GetDomain() != bfftools.ErrorDomain {
+				t.Errorf("ErrorInfo = %v, want reason %s in %s", info, bfftools.ReasonVersionRetired, bfftools.ErrorDomain)
 			}
 		})
 	}

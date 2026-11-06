@@ -367,7 +367,7 @@ bff/
   buf.gen.yaml         # Go and Connect for the BFF into bff/gen/go; the frontend's generator as a commented example
   proto/               # an unnamed buf module
     <context>/web/v1/web.proto  # a starter AUDIENCE_COMPONENT_INTERNAL service, WebService
-  main.go              # serves it with github.com/raveesh-me/dedo/bff
+  main.go              # serves it with github.com/raveesh-me/dedo/bff-tools
   web_service.go       # WebService's handler, holding a client of the backend's first service
 ```
 
@@ -379,11 +379,11 @@ Build the BFF with its frontend's commit, which `main.go` refuses to start witho
 cd bff && go build -ldflags "-X main.buildSHA=$(git rev-parse --short=12 HEAD)" .
 ```
 
-`main.go` uses the runtime package `github.com/raveesh-me/dedo/bff`:
+`main.go` uses the runtime package `github.com/raveesh-me/dedo/bff-tools` (package `bfftools`):
 
-- **`bff.Pin(sha, prefix, next)`** serves `next` only under `<prefix>/<sha>/`, its own commit SHA of `bff.SHALength` (12) lowercase hexadecimal characters (`bff.CheckSHA`), and answers any other SHA, or none, with `FAILED_PRECONDITION`, a `google.rpc.ErrorInfo` whose reason is `bff.ReasonVersionRetired` (`BFF_VERSION_RETIRED`) and `Cache-Control: no-store`, on which the frontend reloads. `main.go`'s prefix is `/bff`.
-- **`bff.Forward(headers...)`** is a Connect client interceptor for the clients the BFF calls the backend and other contexts with. It copies the caller's credentials onto every call: `Authorization`, `X-Flow-ID` and the headers it is given.
-- **`bff.Activity`** (`bff.NewActivity(sha)`) counts the requests its `Middleware` serves, distinct callers (by a hash of `Authorization`, never the token) and the first and last request, and its `Handler` serves them as JSON, for the job that retires a previous version. `main.go` serves it at `GET /activity`, beside `GET /healthz`, both outside the prefix.
+- **`bfftools.Pin(sha, prefix, next)`** serves `next` only under `<prefix>/<sha>/`, its own commit SHA of `bfftools.SHALength` (12) lowercase hexadecimal characters (`bfftools.CheckSHA`), and answers any other SHA, or none, with `FAILED_PRECONDITION`, a `google.rpc.ErrorInfo` whose reason is `bfftools.ReasonVersionRetired` (`BFF_VERSION_RETIRED`) and `Cache-Control: no-store`, on which the frontend reloads. `main.go`'s prefix is `/bff`.
+- **`bfftools.Forward(headers...)`** is a Connect client interceptor for the clients the BFF calls the backend and other contexts with. It copies the caller's credentials onto every call: `Authorization`, `X-Flow-ID` and the headers it is given.
+- **`bfftools.Activity`** (`bfftools.NewActivity(sha)`) counts the requests its `Middleware` serves, distinct callers (by a hash of `Authorization`, never the token) and the first and last request, and its `Handler` serves them as JSON, for the job that retires a previous version. `main.go` serves it at `GET /activity`, beside `GET /healthz`, both outside the prefix.
 
 `make check`'s `dedo modules` then keeps the BFF to [its rules](#keeping-modules-apart-dedo-modules). `dedo init -bff` refuses a repository with no `go.mod` or `buf.yaml`, a `buf.yaml` that is not v2, and a backend that has a module `web` already; for that one, write the BFF's protos into `bff/proto` first.
 

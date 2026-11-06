@@ -1,4 +1,4 @@
-package bff
+package bfftools
 
 import (
 	"crypto/sha256"

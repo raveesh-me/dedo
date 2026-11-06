@@ -147,8 +147,8 @@ func TestInitBFF(t *testing.T) {
 		}
 	}
 	contains(t, "bff/main.go", read(t, dir, "bff/main.go"),
-		"var buildSHA string", "bff.CheckSHA(buildSHA)", "bff.Forward()", "bff.NewActivity(buildSHA)",
-		"bff.Pin(buildSHA, prefix, activity.Middleware(api))", `"example.com/shop/bff/gen/go/shop/web/v1/webv1connect"`,
+		"var buildSHA string", "bfftools.CheckSHA(buildSHA)", "bfftools.Forward()", "bfftools.NewActivity(buildSHA)",
+		"bfftools.Pin(buildSHA, prefix, activity.Middleware(api))", `"example.com/shop/bff/gen/go/shop/web/v1/webv1connect"`,
 		"webv1connect.RegisterWebServiceHandler(server, newWebService(backend))")
 	contains(t, "bff/web_service.go", read(t, dir, "bff/web_service.go"),
 		`"example.com/shop/gen/go/shop/orders/v1/ordersv1connect"`,

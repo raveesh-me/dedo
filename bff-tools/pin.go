@@ -1,11 +1,11 @@
-// Package bff serves a backend for frontend: the API of exactly one
+// Package bfftools (directory bff-tools) serves a backend for frontend: the API of exactly one
 // frontend, built from the same commit and paired with it by that commit's
 // SHA. The frontend calls <prefix>/<sha>/...; Pin answers only its own SHA
 // and tells any other frontend to reload. Forward hands the caller's
 // credentials to the services the BFF calls, which decide every access, and
 // Activity records who still calls a version, so a scheduled job can retire
 // it.
-package bff
+package bfftools
 
 import (
 	"errors"
@@ -37,11 +37,11 @@ const SHALength = 12
 // lowercase hexadecimal characters.
 func CheckSHA(sha string) error {
 	if len(sha) != SHALength {
-		return fmt.Errorf("bff: version %q is not a %d-character commit SHA (git rev-parse --short=%d HEAD)", sha, SHALength, SHALength)
+		return fmt.Errorf("bfftools: version %q is not a %d-character commit SHA (git rev-parse --short=%d HEAD)", sha, SHALength, SHALength)
 	}
 	for _, c := range sha {
 		if (c < '0' || c > '9') && (c < 'a' || c > 'f') {
-			return fmt.Errorf("bff: version %q is not lowercase hexadecimal", sha)
+			return fmt.Errorf("bfftools: version %q is not lowercase hexadecimal", sha)
 		}
 	}
 	return nil
@@ -51,7 +51,7 @@ func CheckSHA(sha string) error {
 // or starting with a slash and ending without one.
 func checkPrefix(prefix string) error {
 	if prefix != "" && (!strings.HasPrefix(prefix, "/") || strings.HasSuffix(prefix, "/")) {
-		return fmt.Errorf("bff: prefix %q must start with / and not end with one, such as /shop/bff", prefix)
+		return fmt.Errorf("bfftools: prefix %q must start with / and not end with one, such as /shop/bff", prefix)
 	}
 	return nil
 }

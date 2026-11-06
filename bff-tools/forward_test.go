@@ -1,4 +1,4 @@
-package bff_test
+package bfftools_test
 
 import (
 	"context"
@@ -11,7 +11,7 @@ import (
 	"connectrpc.com/connect/v2/connecthttp"
 	"google.golang.org/protobuf/types/known/emptypb"
 
-	"github.com/raveesh-me/dedo/bff"
+	bfftools "github.com/raveesh-me/dedo/bff-tools"
 	"github.com/raveesh-me/dedo/flowid"
 )
 
@@ -122,7 +122,7 @@ func TestForward(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var seen http.Header
-			url := bffServer(t, backend(t, &seen), bff.Forward(tt.headers...), tt.outbound)
+			url := bffServer(t, backend(t, &seen), bfftools.Forward(tt.headers...), tt.outbound)
 			client := connect.NewClient(connecthttp.NewTransport(http.DefaultClient, url))
 			ctx, info := connect.NewClientContext(t.Context())
 			for k, v := range tt.inbound {
@@ -148,7 +148,7 @@ func TestForward(t *testing.T) {
 // Forward adds nothing.
 func TestForwardValuesAndOutsideCall(t *testing.T) {
 	var seen http.Header
-	url := bffServer(t, backend(t, &seen), bff.Forward("X-Many"), nil)
+	url := bffServer(t, backend(t, &seen), bfftools.Forward("X-Many"), nil)
 	client := connect.NewClient(connecthttp.NewTransport(http.DefaultClient, url))
 	ctx, info := connect.NewClientContext(t.Context())
 	info.RequestHeader().Add("X-Many", "a")
@@ -160,7 +160,7 @@ func TestForwardValuesAndOutsideCall(t *testing.T) {
 		t.Errorf("X-Many = %q, want [a b]", got)
 	}
 
-	direct := connect.NewClient(connecthttp.NewTransport(http.DefaultClient, backend(t, &seen)), bff.Forward())
+	direct := connect.NewClient(connecthttp.NewTransport(http.DefaultClient, backend(t, &seen)), bfftools.Forward())
 	if err := direct.CallUnary(t.Context(), unarySpec(backendMethod), &emptypb.Empty{}, &emptypb.Empty{}); err != nil {
 		t.Fatal(err)
 	}

@@ -1,4 +1,4 @@
-package bff
+package bfftools
 
 import (
 	"strconv"

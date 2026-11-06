@@ -1,4 +1,4 @@
-package bff_test
+package bfftools_test
 
 import (
 	"encoding/json"
@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/raveesh-me/dedo/bff"
+	bfftools "github.com/raveesh-me/dedo/bff-tools"
 )
 
 func TestActivity(t *testing.T) {
@@ -26,7 +26,7 @@ func TestActivity(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			a := bff.NewActivity(sha)
+			a := bfftools.NewActivity(sha)
 			h := a.Middleware(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusNoContent) }))
 			before := time.Now().UTC()
 			for _, token := range tt.tokens {
@@ -59,7 +59,7 @@ func TestActivity(t *testing.T) {
 }
 
 func TestActivityConcurrent(t *testing.T) {
-	a := bff.NewActivity(sha)
+	a := bfftools.NewActivity(sha)
 	h := a.Middleware(http.NotFoundHandler())
 	var wg sync.WaitGroup
 	for i := range 50 {
@@ -76,7 +76,7 @@ func TestActivityConcurrent(t *testing.T) {
 }
 
 func TestActivityHandler(t *testing.T) {
-	a := bff.NewActivity(sha)
+	a := bfftools.NewActivity(sha)
 	token := "Bearer secret-token"
 	req := httptest.NewRequest(http.MethodPost, "/", nil)
 	req.Header.Set("Authorization", token)
@@ -104,7 +104,7 @@ func TestActivityHandler(t *testing.T) {
 	}
 
 	empty := httptest.NewRecorder()
-	bff.NewActivity(sha).Handler().ServeHTTP(empty, httptest.NewRequest(http.MethodGet, "/activity", nil))
+	bfftools.NewActivity(sha).Handler().ServeHTTP(empty, httptest.NewRequest(http.MethodGet, "/activity", nil))
 	if strings.Contains(empty.Body.String(), "Request") {
 		t.Errorf("an empty report has request times: %s", empty.Body)
 	}
