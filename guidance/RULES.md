@@ -297,6 +297,7 @@ A house rule that contradicts a DEDO, AIP or ZALANDO rule without overriding it 
 | [`DEDO_DOCS_NO_CODE_STRUCTURE`](#dedo_docs_no_code_structure) | Headings and descriptions in the reference name no code structure |
 | [`DEDO_EVENT_TYPES`](#dedo_event_types) | Declared event types belong to the package, name one of its resources, appear once, and only on RPCs that change state |
 | [`DEDO_EVENT_NOT_PUBLISHED_DECLARED`](#dedo_event_not_published_declared) | RPCs that emit events declare `EVENT_NOT_PUBLISHED` with `UNAVAILABLE` |
+| [`DEDO_NO_HEALTH_RPC`](#dedo_no_health_rpc) | No health check in the contract: the server serves `GET /healthz` |
 
 ---
 
@@ -670,6 +671,44 @@ option (dedo.v1.method) = {
 ```
 
 **Fix.** Add the error. A handler that logs a failed publish and succeeds instead still declares it, since the RPC's contract allows either.
+
+### DEDO_NO_HEALTH_RPC
+
+**Checks** that the contract declares no health check:
+
+- no file imports `grpc/health/v1/health.proto`;
+- no service is named `Health`, `HealthCheck`, `Healthz`, `Ping`, `Liveness` or `Readiness`, with or without the `Service` suffix, and on one that is, no RPC is named `Check`, `Watch` or `List`, gRPC's health methods;
+- no RPC, on any service, is named one of those six names;
+- no message is named one of them, with or without a `Request` or `Response` suffix (`HealthCheckResponse`, `PingRequest`), or starts with `HealthCheck` (`HealthCheckComponent`).
+
+A domain's own words pass: `HealthRecord`, `HealthInsurancePlan`, `GetHealthRecord`, `PingPatient`.
+
+**Why.** Health belongs to the process, not to the API. Every server dedo scaffolds serves `GET /healthz` beside the API, outside the interceptors, so a probe needs no token and a scope never gates it. In the contract, a health RPC becomes a REST path, an MCP tool and a reference entry that callers would think is part of the domain; it needs a scope, which a probe does not carry; and every service declares the same messages again, or imports them from a shared package that every service then depends on.
+
+```protobuf
+import "grpc/health/v1/health.proto";            // Fails.
+
+service HealthService {                           // Fails.
+  rpc Check(HealthCheckRequest) returns (HealthCheckResponse);  // Fails.
+}
+
+service OrderService {
+  rpc Ping(PingRequest) returns (PingResponse);   // Fails, and so do both messages.
+  rpc GetOrder(GetOrderRequest) returns (Order);  // Passes.
+}
+```
+
+Buf's check plugins cannot report a warning: every finding fails `buf lint`. A service that must keep a health RPC for now disables the rule in `dedo.yaml`, with a comment saying when it goes.
+
+**Fix.** Remove the health service, RPCs and messages, and let the server answer probes: `dedo init` writes `GET /healthz` into `main.go`. A server written before that adds the route itself, next to `/docs`:
+
+```go
+mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
+	w.WriteHeader(http.StatusNoContent)
+})
+```
+
+A readiness probe that checks the server's dependencies, such as its database, is the server's too: serve it beside `/healthz`, never in the contract.
 
 ## Breaking rules
 

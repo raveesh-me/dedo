@@ -263,3 +263,24 @@ func TestMCPAccessAuthenticated(t *testing.T) {
 		t.Fatalf("Loc1Reader: tools/list: %v, %+v", err, tools)
 	}
 }
+
+// The health probe answers without a token, even with scopes enforced and
+// MCP closed: health is the server's, not the API's.
+func TestHealthz(t *testing.T) {
+	handler, err := app.NewHandler(app.Config{
+		Log: slog.New(slog.NewTextHandler(io.Discard, nil)), EnforceScopes: true, MCPAccess: mcpserver.AccessAuthenticated,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	srv := httptest.NewServer(handler)
+	t.Cleanup(srv.Close)
+	res, err := http.Get(srv.URL + "/healthz")
+	if err != nil {
+		t.Fatal(err)
+	}
+	res.Body.Close()
+	if res.StatusCode != http.StatusNoContent {
+		t.Fatalf("GET /healthz: status %d, want 204", res.StatusCode)
+	}
+}

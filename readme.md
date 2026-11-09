@@ -126,6 +126,7 @@ The classes rank in layers: your repository's own `dedo.yaml`, then the house ru
 | `DEDO_PACKAGE_SHARED_RESERVED` | No package names its module `shared`, such as `acme.shared.v1`: the name is reserved for the service's shared code |
 | `DEDO_EVENT_TYPES` | Event types in `emits` are `<context>.<module>.<resource>.<verb>` of the RPC's package, naming one of its resources, each listed once, on an RPC that changes state |
 | `DEDO_EVENT_NOT_PUBLISHED_DECLARED` | An RPC with `emits` declares `EVENT_NOT_PUBLISHED` with `UNAVAILABLE` |
+| `DEDO_NO_HEALTH_RPC` | No health check in the contract (service, RPC, message or `grpc/health/v1` import): the server serves `GET /healthz` |
 
 **Breaking rules.** `buf breaking` compares descriptors, never option values, so it passes a change that drops a scope, moves a REST path or renames an event type. The plugin's ten breaking rules (`DEDO_BREAKING` in `buf.yaml`'s `breaking.use`, which `dedo init` adds) catch those: an RPC keeps its scopes, event types, error codes, REST bindings and cross-tenant flag; a service keeps its audience and tenancy; no field becomes required; a resource keeps its type and patterns; a sunset never moves earlier. House breaking rules check the same way, reading the earlier version as `against`. [RULES.md](guidance/RULES.md#breaking-rules) has each.
 

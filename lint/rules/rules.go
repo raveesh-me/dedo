@@ -73,6 +73,7 @@ var All = []*check.RuleSpec{
 	docsNoCodeStructure,
 	eventTypes,
 	eventNotPublishedDeclared,
+	noHealthRPC,
 	multiTenantServiceTenancy,
 	multiTenantResourcePattern,
 	multiTenantRequestTenant,
