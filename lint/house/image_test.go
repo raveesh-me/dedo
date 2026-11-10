@@ -22,15 +22,21 @@ func TestImageShape(t *testing.T) {
 			"image.files['api.proto'].options['acme.auth.v1.file'].permissions.size() == 4"),
 		rule("HOUSE_EVERY_KIND", "message", "size(image.methods) == 6"),
 		rule("HOUSE_NOT_IN_IMAGE", "method", "!('acme.pay.v1.PaymentService.Void' in image.methods)"),
+		// A control: it reports on each of the four methods, so the rules run.
+		rule("HOUSE_CONTROL", "method", "!(full_name in image.methods)"),
 	)
-	assertFindings(t, got, map[string]int{})
+	assertFindings(t, got, map[string]int{"HOUSE_CONTROL": 4})
 }
 
-// A breaking rule reads the current version's image; against has none.
+// A breaking rule reads the current version's image; against has none. The
+// file's permission grants two scopes now and one in the earlier version, so
+// a rule reading the earlier version's image would report.
 func TestImageBreaking(t *testing.T) {
-	r := rule("HOUSE_ONE_SERVICE", "service", "image.services.exists(s, !image.services[s].imported) && !('image' in against)")
-	r.Breaking = true
-	assertFindings(t, optionFindings(t, true, r), map[string]int{})
+	const grants = "image.files['api.proto'].options['acme.auth.v1.file'].permissions[0].grants.size()"
+	now := rule("HOUSE_IMAGE_IS_NOW", "file", grants+" == 2 && against.options['acme.auth.v1.file'].permissions[0].grants.size() == 1 && !('image' in against)")
+	before := rule("HOUSE_IMAGE_IS_AGAINST", "file", grants+" == 1")
+	now.Breaking, before.Breaking = true, true
+	assertFindings(t, optionFindings(t, true, now, before), map[string]int{"HOUSE_IMAGE_IS_AGAINST": 1})
 }
 
 // image lets a rule check across files: here, that permissions grant only
