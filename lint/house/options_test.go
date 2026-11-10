@@ -15,6 +15,13 @@ import (
 // from acme/auth/v1/options.proto, an extension the plugin is not built with.
 func optionFindings(t *testing.T, breaking bool, rules ...config.Rule) map[string]int {
 	t.Helper()
+	return fixtureFindings(t, "testdata/options", breaking, rules...)
+}
+
+// fixtureFindings runs house rules over dir/now/api.proto and, for breaking
+// rules, against dir/against/api.proto.
+func fixtureFindings(t *testing.T, dir string, breaking bool, rules ...config.Rule) map[string]int {
+	t.Helper()
 	specs, err := house.Specs(rules)
 	if err != nil {
 		t.Fatal(err)
@@ -24,9 +31,9 @@ func optionFindings(t *testing.T, breaking bool, rules ...config.Rule) map[strin
 	files := func(dir string) *checktest.ProtoFileSpec {
 		return &checktest.ProtoFileSpec{DirPaths: []string{dir, "../rules/testdata/deps", "../../proto"}, FilePaths: []string{"api.proto"}}
 	}
-	reqSpec := &checktest.RequestSpec{Files: files("testdata/options/now")}
+	reqSpec := &checktest.RequestSpec{Files: files(dir + "/now")}
 	if breaking {
-		reqSpec.AgainstFiles = files("testdata/options/against")
+		reqSpec.AgainstFiles = files(dir + "/against")
 	}
 	request, err := reqSpec.ToRequest(t.Context())
 	if err != nil {

@@ -256,6 +256,26 @@ House rules run while their section's `use` lists `HOUSE`, as it does by default
 
 A breaking rule reads the earlier element's as `against.options`: `against.options['acme.auth.v1.file'].permissions == options['acme.auth.v1.file'].permissions` keeps a file's permissions as they were.
 
+**Across files.** Every check also reads `image`: each file, service and method buf passes, your module's and its imports', so a rule on one element can look at the others. `image.files` is keyed by path, `image.services` and `image.methods` by full name, and each entry holds the variables a rule on that element reads, `options` included (and `service_options` for a method), plus `imported`, true for an element of an imported file. A breaking rule reads the current version's `image`; `against` has none. A rule that never reads `image` costs nothing; the first that does builds it once per run. With `calls`, an `acme.auth.v1.method` option naming the methods one calls with the caller's token:
+
+```yaml
+- id: HOUSE_CALLS_RESOLVED
+  on: method
+  check: >-
+    !('acme.auth.v1.method' in options) ||
+    options['acme.auth.v1.method'].calls.all(c, c in image.methods && image.methods[c].scopes.size() == 1)
+  message: Each call names a method in the module or its dependencies, with one scope.
+- id: HOUSE_GRANTS_DECLARED
+  on: file
+  check: >-
+    !('acme.auth.v1.file' in options) ||
+    options['acme.auth.v1.file'].permissions.all(p, p.grants.all(g,
+      image.methods.exists(k, cel.bind(m, image.methods[k], !m.imported && g in m.scopes))))
+  message: A permission grants only scopes the module's methods declare.
+```
+
+A finding is reported on the element the rule is `on`, so put a rule where the fix goes: on the method whose call is wrong, on the file whose permission is.
+
 Lists are lists of strings (`'shop.cart.read' in scopes`, `fields.size() < 30`), except `http_bindings`, a list of maps (`http_bindings.all(b, !b.path.contains('_'))`, empty for a method without HTTP); booleans are booleans. CEL's string extensions are on (`split`, `lowerAscii`, `replace`, `trim`), and so is `cel.bind`, which names a value once instead of repeating the expression for it: `cel.bind(verb, http_path.substring(http_path.lastIndexOf(':') + 1), verb == '' || verb.matches('^[a-z][a-zA-Z0-9]*$'))`. A check that does not compile, or is not a bool, stops the lint and names the rule and its file; so does a lint rule that reads `against`, which only a breaking rule has.
 
 A service's `resources` and `roots` let an organisation lint the aggregate shape that [domains.md](domains.md#aggregates-one-service-each) asks for. A domain service has neither, so both rules pass it:

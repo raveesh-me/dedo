@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+// Options the lint plugin is not built with, read from the files buf passes.
+package acme.auth.v1;
+
+import "google/protobuf/descriptor.proto";
+
+message Permission {
+  string id = 1;
+  repeated string grants = 2;
+}
+
+message FileRules {
+  repeated Permission permissions = 1;
+}
+
+message ServiceRules {
+  string root = 1;
+}
+
+message MethodRules {
+  // Methods this one calls with the caller's token, by full name.
+  repeated string calls = 1;
+}
+
+extend google.protobuf.FileOptions {
+  FileRules file = 50900;
+}
+
+extend google.protobuf.ServiceOptions {
+  ServiceRules service = 50901;
+}
+
+extend google.protobuf.MethodOptions {
+  MethodRules method = 50902;
+}

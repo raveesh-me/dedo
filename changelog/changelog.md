@@ -8,6 +8,10 @@ Version bumps, dependency updates and changes to benchmarks or examples alone ar
 
 ## [Unreleased]
 
+### Added
+
+- House rules look across files: `image`, on every kind of element, holds each file, service and method buf passes, the module's own and its imports', keyed by path or full name, each with the variables a rule on it reads, `options` included, and `imported`. A rule can check that every method a call names exists and has one scope, or that a permission grants only scopes some method declares. It is built once per run, and only when a check reads it. A breaking rule reads the current version's.
+
 ## [v0.35.0] - 2026-11-06
 
 ### Added
