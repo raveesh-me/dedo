@@ -35,6 +35,7 @@ const (
 	idDocsNoCodeStructure        = "DEDO_DOCS_NO_CODE_STRUCTURE"
 	idEventTypes                 = "DEDO_EVENT_TYPES"
 	idEventNotPublishedDeclared  = "DEDO_EVENT_NOT_PUBLISHED_DECLARED"
+	idNoHealthRPC                = "DEDO_NO_HEALTH_RPC"
 
 	idEmitsNoDelete       = "DEDO_EMITS_NO_DELETE"
 	idScopesNoDelete      = "DEDO_SCOPES_NO_DELETE"

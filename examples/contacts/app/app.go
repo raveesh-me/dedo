@@ -40,6 +40,7 @@ type Config struct {
 // Routes:
 //
 //	/docs, /openapi.json  the REST reference
+//	/healthz              the health probe, outside the API
 //	/mcp                  the MCP server; tool calls go to the server below
 //	everything else       the server over Connect, gRPC and REST
 func NewHandler(cfg Config) (http.Handler, error) {
@@ -63,6 +64,11 @@ func NewHandler(cfg Config) (http.Handler, error) {
 	}
 	mux.Handle("GET /openapi.json", docs.Spec())
 	mux.Handle("GET /docs", docs.Page())
+	// Health is the server's, never the API's: outside the interceptors, so a
+	// probe needs no token (DEDO_NO_HEALTH_RPC).
+	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	})
 	endpoint, err := mcpserver.Guard(tools, cfg.MCPAccess, Authenticated)
 	if err != nil {
 		return nil, err

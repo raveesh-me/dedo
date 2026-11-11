@@ -8,6 +8,14 @@ Version bumps, dependency updates and changes to benchmarks or examples alone ar
 
 ## [Unreleased]
 
+### Breaking
+
+- `DEDO_NO_HEALTH_RPC`, in `DEDO`: the contract declares no health check. It flags a service, RPC or message named `Health`, `HealthCheck`, `Healthz`, `Ping`, `Liveness` or `Readiness` (a message also with a `Request` or `Response` suffix, or starting with the word `HealthCheck`, but not a domain's `HealthCheckup`), `Check`, `Watch` and `List` on a health service, and any import of `grpc/health/v1/health.proto`. Health is the server's: buf's check plugins cannot warn, so a contract with a health check now fails lint; a service keeping one for now disables the rule in `dedo.yaml`. [#137](https://github.com/raveesh-me/dedo/pull/137)
+
+### Added
+
+- `dedo init`'s `main.go` serves `GET /healthz` (204) beside `/docs`, outside the interceptors, as the BFF's already did. A server written before this release adds the route itself. [#137](https://github.com/raveesh-me/dedo/pull/137)
+
 ## [v0.36.0] - 2026-11-11
 
 ### Added

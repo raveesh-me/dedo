@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+package raveesh_me.clinic.v1;
+
+// A domain's own health words are not health checks.
+service HealthRecordService {
+  rpc Check(HealthRecord) returns (HealthRecord);
+  rpc GetHealthRecord(HealthRecord) returns (HealthRecord);
+  rpc CheckEligibility(HealthRecord) returns (HealthRecord);
+}
+
+service AppointmentService {
+  rpc Watch(HealthRecord) returns (HealthRecord);
+  rpc PingPatient(HealthRecord) returns (HealthRecord);
+}
+
+message HealthRecord {
+  string health_status = 1;
+}
+
+message HealthInsurancePlan {}
+
+message PingPong {}
+
+// A clinic's checkup is not a health check.
+message HealthCheckup {}
+
+message HealthChecklist {}

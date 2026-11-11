@@ -1,0 +1,18 @@
+// A minimal stand-in for gRPC's health checking protocol
+// (https://github.com/grpc/grpc-proto/blob/master/grpc/health/v1/health.proto),
+// so a fixture can import it.
+syntax = "proto3";
+
+package grpc.health.v1;
+
+message HealthCheckRequest {
+  string service = 1;
+}
+
+message HealthCheckResponse {
+  int32 status = 1;
+}
+
+service Health {
+  rpc Check(HealthCheckRequest) returns (HealthCheckResponse);
+}

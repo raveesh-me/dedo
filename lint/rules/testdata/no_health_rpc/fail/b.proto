@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package raveesh_me.shop.v1;
+
+service Health { // want
+  rpc Check(Probe) returns (Probe); // want
+  rpc List(Probe) returns (Probe); // want
+}
+
+message Probe {
+  message HealthRequest {} // want
+}
