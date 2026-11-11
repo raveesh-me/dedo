@@ -38,8 +38,7 @@ func modules(dir string, out io.Writer) error {
 		return err
 	}
 	if len(l.Modules) == 0 {
-		fmt.Fprintln(out, "dedo modules: no modules; a module is a versioned proto package, <context>.<m>.v<n>")
-		return nil
+		return withoutModules(dir, l, protos, out)
 	}
 	pkgs, err := listPackages(dir, l.Module)
 	if err != nil {
@@ -64,10 +63,7 @@ func modules(dir string, out io.Writer) error {
 	findings = append(findings, l.SQL(append(sql, literals...))...)
 	findings = append(findings, bffFindings...)
 	if len(findings) > 0 {
-		for _, f := range findings {
-			fmt.Fprintln(out, f)
-		}
-		return fmt.Errorf("modules: %d finding(s); guidance/domains.md (dedo templates domains.md) says where each module's code lives", len(findings))
+		return report(out, findings)
 	}
 	in := ""
 	if c := strings.Join(l.Contexts, ", "); c != "" {
@@ -78,10 +74,55 @@ func modules(dir string, out io.Writer) error {
 		count = "1 module"
 	}
 	fmt.Fprintf(out, "dedo modules: %s%s, no cycles; each depends on:\n%s", count, in, graph)
+	printBFFs(out, bffs)
+	return nil
+}
+
+// noModules is what dedo modules prints for a repository without modules.
+const noModules = "dedo modules: no modules; a module is a versioned proto package, <context>.<m>.v<n>"
+
+// withoutModules checks a repository with no versioned proto packages, such
+// as a new one. It has no module graph to check, but its BFFs are checked
+// all the same; without one, it only says there are no modules.
+func withoutModules(dir string, l Layout, protos []protoFile, out io.Writer) error {
+	dirs, err := bffDirs(dir)
+	if err != nil {
+		return err
+	}
+	if len(dirs) == 0 {
+		fmt.Fprintln(out, noModules)
+		return nil
+	}
+	pkgs, err := listPackages(dir, l.Module)
+	if err != nil {
+		return err
+	}
+	l.Generated, l.Mains = generatedPackages(pkgs, protos)
+	bffs, findings, err := checkBFFs(dir, l, pkgs)
+	if err != nil {
+		return err
+	}
+	if len(findings) > 0 {
+		return report(out, findings)
+	}
+	fmt.Fprintln(out, noModules)
+	printBFFs(out, bffs)
+	return nil
+}
+
+// report prints the findings, one a line, and fails with their count.
+func report(out io.Writer, findings []string) error {
+	for _, f := range findings {
+		fmt.Fprintln(out, f)
+	}
+	return fmt.Errorf("modules: %d finding(s); guidance/domains.md (dedo templates domains.md) says where each module's code lives", len(findings))
+}
+
+// printBFFs prints a line for each BFF, which is no backend module.
+func printBFFs(out io.Writer, bffs []bff) {
 	for _, b := range bffs {
 		fmt.Fprintf(out, "bff: %s (frontend; not a backend module)\n", b.Dir)
 	}
-	return nil
 }
 
 // loadLayout reads the Go module path from go.mod and the modules from the
