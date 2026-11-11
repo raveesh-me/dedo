@@ -1,0 +1,21 @@
+# Everything the service needs in a local kind cluster: make kind-apply
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+- dev-namespace-limits.yaml
+- service
+# The namespace is the service's boundary: dev-namespace-limits.yaml bounds
+# it, and Pod Security Admission enforces the "restricted" profile on it, so
+# a pod that runs as root, escalates privileges, keeps capabilities or skips
+# the RuntimeDefault seccomp profile is rejected.
+patches:
+- target:
+    kind: Namespace
+    name: {{.Name}}
+  patch: |-
+    - op: add
+      path: /metadata/labels
+      value:
+        pod-security.kubernetes.io/enforce: restricted
+        pod-security.kubernetes.io/warn: restricted
+        pod-security.kubernetes.io/audit: restricted

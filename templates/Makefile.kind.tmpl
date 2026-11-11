@@ -1,0 +1,112 @@
+# Include from a service Makefile: `include Makefile.kind`.
+# dedo init writes it and dedo upgrade keeps it current; zarf/ is yours.
+#
+# Runs the service in a local kind cluster, the way it runs everywhere else:
+# the image from zarf/docker, the kustomize base in zarf/k8s/base and the dev
+# overlay in zarf/k8s/dev. Needs podman (or docker), kind and kubectl.
+#
+#   make kind-up          cluster + build + load + deploy
+#   make kind-update      rebuild, load and roll the service after a change
+#   make kind-claude      add the cluster's /mcp to Claude Desktop
+#   make kind-down        delete the cluster
+#
+# Set KIND_CLUSTER or KIND_NAMESPACE before the include to change them.
+
+KIND_CLUSTER   ?= {{.Name}}
+KIND_NAMESPACE ?= {{.Name}}
+KIND_IMAGE     ?= localhost/{{.Name}}
+KIND_CONTEXT   := kind-$(KIND_CLUSTER)
+KIND_KUBECTL   := kubectl --context $(KIND_CONTEXT)
+# The host port kind maps to the NodePort 30080, from the port mapping in
+# zarf/k8s/dev/kind-config.yaml that names it, as dedo local-mcp-claude reads it.
+KIND_PORT      := $(shell awk '/^[[:space:]]*-/ { c = ""; h = "" } /containerPort:/ { c = $$NF } /hostPort:/ { h = $$NF } c == 30080 && h != "" { print h; exit }' zarf/k8s/dev/kind-config.yaml 2>/dev/null)
+# A fresh tag per build, so each kind-update rolls the deployment.
+ifndef KIND_TAG
+KIND_TAG := $(shell date +%Y%m%d%H%M%S)
+endif
+KIND_BUILD     := .build
+# An empty credentials file keeps podman from sending stale stored registry
+# credentials when it pulls the public base images.
+KIND_NO_AUTH   := $(KIND_BUILD)/no-auth.json
+
+CONTAINER ?= $(shell command -v podman >/dev/null 2>&1 && echo podman || echo docker)
+ifeq ($(CONTAINER),podman)
+export KIND_EXPERIMENTAL_PROVIDER ?= podman
+KIND_AUTH_FLAG := --authfile $(KIND_NO_AUTH)
+endif
+
+.PHONY: kind-up kind-down kind-cluster kind-build kind-load kind-apply kind-update kind-status kind-logs kind-smoke kind-claude
+
+## kind-up: create the kind cluster if needed, then build, load and deploy the service
+kind-up: kind-cluster
+	$(MAKE) kind-update KIND_TAG=$(KIND_TAG)
+	@echo
+	@echo "Docs  http://localhost:$(KIND_PORT)/docs"
+	@echo "MCP   http://localhost:$(KIND_PORT)/mcp  (header: Authorization: Bearer reader or writer)"
+	@echo "Claude Desktop: make kind-claude, then restart it"
+
+## kind-down: delete the kind cluster
+kind-down:
+	kind delete cluster --name $(KIND_CLUSTER)
+
+kind-cluster:
+	@kind get clusters 2>/dev/null | grep -qx $(KIND_CLUSTER) || \
+		kind create cluster --name $(KIND_CLUSTER) --config zarf/k8s/dev/kind-config.yaml
+
+$(KIND_NO_AUTH):
+	mkdir -p $(KIND_BUILD)
+	echo '{}' > $@
+
+## kind-build: build the service image
+kind-build: $(KIND_NO_AUTH)
+	$(CONTAINER) build $(KIND_AUTH_FLAG) -f zarf/docker/dockerfile.service \
+		--build-arg BUILD_REF=$$(git rev-parse --short HEAD 2>/dev/null || echo dev) \
+		--build-arg BUILD_DATE=$$(date -u +%Y-%m-%dT%H:%M:%SZ) \
+		-t $(KIND_IMAGE):$(KIND_TAG) .
+
+# kind load docker-image needs Docker; an image archive works with either.
+kind-load:
+	mkdir -p $(KIND_BUILD)
+	$(CONTAINER) save -o $(KIND_BUILD)/service.tar $(KIND_IMAGE):$(KIND_TAG)
+	kind load image-archive $(KIND_BUILD)/service.tar --name $(KIND_CLUSTER)
+	rm -f $(KIND_BUILD)/service.tar
+
+## kind-apply: deploy the dev overlay at KIND_TAG and wait for the rollout
+# The overlay pins tag "dev"; this build's tag is swapped in at render time,
+# so a deploy never changes a tracked file.
+kind-apply:
+	mkdir -p $(KIND_BUILD)
+	$(KIND_KUBECTL) kustomize zarf/k8s/dev | sed 's|$(KIND_IMAGE):dev|$(KIND_IMAGE):$(KIND_TAG)|' > $(KIND_BUILD)/dev.yaml
+	$(KIND_KUBECTL) apply -f $(KIND_BUILD)/dev.yaml
+	$(KIND_KUBECTL) -n $(KIND_NAMESPACE) rollout status deployment/{{.Name}} --timeout=120s
+
+## kind-update: rebuild the image with a new tag, load it and roll the service
+# One at a time, in order: build, then load, then apply, at one tag.
+kind-update:
+	$(MAKE) -j1 kind-build kind-load kind-apply KIND_TAG=$(KIND_TAG)
+
+## kind-status: show everything in the service's namespace
+kind-status:
+	$(KIND_KUBECTL) -n $(KIND_NAMESPACE) get all
+
+## kind-logs: tail the service's logs
+kind-logs:
+	$(KIND_KUBECTL) -n $(KIND_NAMESPACE) logs deployment/{{.Name}} -f --tail=100
+
+## kind-smoke: check the deployed service answers health, docs and MCP
+kind-smoke:
+	@base=http://localhost:$(KIND_PORT); \
+	check() { code=$$(curl -s -o /dev/null -w '%{http_code}' "$$@"); echo "$$code $$*" | sed "s|$$base||"; \
+		case $$code in 2??) ;; *) exit 1;; esac; }; \
+	check $$base/healthz && \
+	check $$base/docs && \
+	check -X POST -H 'Authorization: Bearer reader' -H 'Content-Type: application/json' \
+		-H 'Accept: application/json, text/event-stream' \
+		-d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' $$base/mcp
+
+## kind-claude: add the cluster's /mcp to Claude Desktop, bridged by mcp-remote
+## in a container, with KIND_CLAUDE_TOKEN (default reader); restart Claude
+## Desktop after
+KIND_CLAUDE_TOKEN ?= reader
+kind-claude:
+	go tool dedo local-mcp-claude -token $(KIND_CLAUDE_TOKEN)

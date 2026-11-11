@@ -1,0 +1,33 @@
+# Bounds for namespace {{.Name}} (declared in zarf/k8s/base/service). The
+# service's container sets its own requests and limits; the LimitRange
+# defaults only catch a container that forgets to.
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: {{.Name}}
+  namespace: {{.Name}}
+spec:
+  limits:
+  - type: Container
+    default:
+      cpu: 500m
+      memory: 128Mi
+    defaultRequest:
+      cpu: 50m
+      memory: 32Mi
+    max:
+      cpu: "1"
+      memory: 512Mi
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: {{.Name}}
+  namespace: {{.Name}}
+spec:
+  hard:
+    requests.cpu: 500m
+    requests.memory: 256Mi
+    limits.cpu: "2"
+    limits.memory: 512Mi
+    pods: "5"

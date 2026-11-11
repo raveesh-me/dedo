@@ -1,0 +1,13 @@
+# Local cluster for {{.Name}}: make kind-up
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+nodes:
+- role: control-plane
+  extraPortMappings:
+  # Connect, gRPC, REST, /docs and /mcp: the dev overlay's NodePort 30080.
+  # dedo init picked hostPort from the service's name, so it runs beside
+  # make run (8080) and, mostly, other services' clusters; change it here if
+  # it clashes. Makefile.kind and dedo local-mcp-claude read it from here.
+  - containerPort: 30080
+    hostPort: {{.Port}}
+    listenAddress: "127.0.0.1"

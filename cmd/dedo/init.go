@@ -82,6 +82,7 @@ func initRepo(dir, release string, offline bool, out io.Writer) error {
 		{"linter", in.linter},
 		{"code generators", in.generators},
 		{"server package", in.server},
+		{"local cluster (zarf/, kind)", in.kind},
 		{"agent guidance", in.guidance},
 	}...)
 	for _, s := range steps {
@@ -947,6 +948,9 @@ func (in *initer) printNext(src []byte, wrote, generated bool) {
 		steps = append(steps, "make "+in.target("generate"))
 	}
 	steps = append(steps, "make "+in.target("run"))
+	if mk, err := os.ReadFile(in.path("Makefile.kind")); err == nil && bytes.Contains(mk, []byte(kindMarker)) {
+		steps = append(steps, "make kind-up runs it in a local kind cluster; make kind-claude then adds its /mcp to Claude Desktop")
+	}
 	if stubs := in.stubFiles(); len(stubs) > 0 {
 		steps = append(steps, "implement the RPCs in "+strings.Join(stubs, ", ")+"; until then they answer Unimplemented")
 	} else if hasNewServer(in.p.dir) {

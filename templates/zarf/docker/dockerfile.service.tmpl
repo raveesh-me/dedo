@@ -1,0 +1,32 @@
+# Image for {{.Name}}. The build context is the repository root:
+#   make kind-build            (podman or docker, picked by Makefile.kind)
+#
+# No GOARCH is pinned: the binary is built for the platform of the image being
+# built, so a native build on an arm64 laptop runs natively in kind.
+
+# ---------- build ----------
+FROM docker.io/library/golang:{{.GoVersion}}-alpine AS build
+WORKDIR /src
+ENV CGO_ENABLED=0 GOMODCACHE=/go/pkg/mod GOCACHE=/root/.cache/go-build
+
+COPY go.mod go.sum ./
+RUN --mount=type=cache,target=/go/pkg/mod \
+    go mod download
+
+COPY . .
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    go build -trimpath -ldflags="-s -w" -o /out/service .
+
+# ---------- runtime ----------
+# distroless static: no shell, no package manager, runs as UID 65532.
+FROM gcr.io/distroless/static-debian13:nonroot
+ARG BUILD_REF=dev
+ARG BUILD_DATE
+LABEL org.opencontainers.image.title="{{.Name}}" \
+      org.opencontainers.image.revision="${BUILD_REF}" \
+      org.opencontainers.image.created="${BUILD_DATE}"
+COPY --from=build /out/service /service
+EXPOSE 8080
+USER 65532:65532
+ENTRYPOINT ["/service"]
