@@ -6,6 +6,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 )
 
@@ -188,20 +189,21 @@ func checkBFFs(dir string, l Layout, pkgs []listedPackage) ([]bff, []string, err
 	return bffs, findings, nil
 }
 
-// hasBFF reports whether the repository has a BFF: a nested Go module that
-// holds one of buf.yaml's modules.
-func hasBFF(dir string) (bool, error) {
+// bffDirs returns the directories of the repository's BFFs, the nested Go
+// modules that hold a buf.yaml module, relative and slash-separated: bff.
+func bffDirs(dir string) ([]string, error) {
 	mods, err := bufModules(dir)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 	nested := nestedGoModules(dir)
+	var dirs []string
 	for _, m := range mods {
-		if _, inside := insideModule(m.Path, nested); inside {
-			return true, nil
+		if d, ok := insideModule(m.Path, nested); ok && !slices.Contains(dirs, d) {
+			dirs = append(dirs, d)
 		}
 	}
-	return false, nil
+	return dirs, nil
 }
 
 // bffAt returns the BFF in the nested Go module at rel, or nil when bffs

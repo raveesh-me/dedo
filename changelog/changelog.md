@@ -18,6 +18,8 @@ Version bumps, dependency updates and changes to benchmarks or examples alone ar
 
 ### Fixed
 
+- `dedo breaking` works where `buf.yaml` sits below the git root, such as in `api/`: it compares each module with its path from the git root, through the root's `.git`, where it took `-dir` to be the root and compared the wrong directories. [#142](https://github.com/raveesh-me/dedo/pull/142)
+- A backend for frontend builds against dedo's build of the MCP Go SDK, as its backend does: `dedo init -bff` and `dedo upgrade` write and maintain the `replace` of `github.com/modelcontextprotocol/go-sdk` in its `go.mod`, such as `bff/go.mod`, and remove it with the backend's once upstream has the fix. Go reads a `replace` only from the `go.mod` of the module it builds, so a BFF, which links the backend's generated `*.mcp.pb.go`, built against the upstream release unless the line was copied by hand. After `dedo upgrade` adds the line, run `go mod tidy` in the BFF. [#144](https://github.com/raveesh-me/dedo/pull/144)
 - `dedo modules` checks a BFF in a repository with no versioned proto packages yet, such as a new one, where it stopped at `no modules` before the BFF's checks. Without findings it prints `bff: <dir> (frontend; not a backend module)` after `no modules`; a repository without a BFF still only prints `no modules`. [#143](https://github.com/raveesh-me/dedo/pull/143)
 
 ## [v0.36.0] - 2026-11-11

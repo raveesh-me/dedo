@@ -245,7 +245,8 @@ func (in *initer) bffNames() (bffNames, error) {
 }
 
 // bffModule writes bff/go.mod: a Go module of its own that requires the
-// backend's, from the working tree, for the backend's generated clients.
+// backend's, from the working tree, for the backend's generated clients,
+// with the backend's replace of the MCP Go SDK, which they link.
 func (in *initer) bffModule(n bffNames) error {
 	if err := os.MkdirAll(in.path(bffDir), 0o755); err != nil {
 		return err
@@ -254,7 +255,12 @@ func (in *initer) bffModule(n bffNames) error {
 	if err != nil {
 		return err
 	}
-	return in.writeFile(path.Join(bffDir, "go.mod"), src, false)
+	gomod := path.Join(bffDir, "go.mod")
+	if err := in.writeFile(gomod, src, false); err != nil {
+		return err
+	}
+	_, err = in.replaceSDK(gomod)
+	return err
 }
 
 // bffProto lists bff/proto in buf.yaml, with no name and no breaking check,

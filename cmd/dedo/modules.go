@@ -85,11 +85,11 @@ const noModules = "dedo modules: no modules; a module is a versioned proto packa
 // as a new one. It has no module graph to check, but its BFFs are checked
 // all the same; without one, it only says there are no modules.
 func withoutModules(dir string, l Layout, protos []protoFile, out io.Writer) error {
-	has, err := hasBFF(dir)
+	dirs, err := bffDirs(dir)
 	if err != nil {
 		return err
 	}
-	if !has {
+	if len(dirs) == 0 {
 		fmt.Fprintln(out, noModules)
 		return nil
 	}

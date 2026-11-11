@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -72,6 +74,41 @@ func TestInitKeepsOwnSDKReplace(t *testing.T) {
 	if !strings.Contains(out, "keeps your replace of "+sdkModule) {
 		t.Errorf("output: %s", out)
 	}
+}
+
+// A BFF links the backend's generated MCP code, and Go reads replaces only
+// from the main module's go.mod, so dedo init -bff gives bff/go.mod the
+// replace too, beside its replace of the backend.
+func TestInitBFFReplacesSDK(t *testing.T) {
+	dir := bffRepo(t, nil)
+	initBFFOffline(t, dir)
+	got := sdkReplaces(t, filepath.Join(dir, bffDir))
+	if len(got) != 1 || got[0].Old.Version != sdkRelease || got[0].New.Path != sdkFork || got[0].New.Version != sdkForkRelease {
+		t.Fatalf("bff/go.mod replaces = %+v", got)
+	}
+	contains(t, "bff/go.mod", read(t, dir, "bff/go.mod"), sdkForkComment, "replace example.com/shop => ../")
+}
+
+// dedo upgrade moves the replace in a BFF's go.mod along with the root's,
+// keeps the BFF's replace of the backend, and says to tidy the BFF.
+func TestUpgradeMovesBFFSDKReplace(t *testing.T) {
+	dir := bffRepo(t, map[string]string{
+		"buf.yaml": "version: v2\nmodules:\n  - path: proto\n  - path: bff/proto\ndeps:\n  - buf.build/r-a/dedo:v0.30.0\n",
+		"bff/go.mod": "module example.com/shop/bff\n\ngo 1.26.1\n\nreplace example.com/shop => ../\n\n" +
+			"replace github.com/modelcontextprotocol/go-sdk v1.7.0 => github.com/raveesh-me/go-sdk v1.7.0-dedo.1\n",
+	})
+	var out bytes.Buffer
+	if err := run([]string{"upgrade", "-offline", "-dir", dir}, &out); err != nil {
+		t.Fatalf("dedo upgrade: %v\n%s", err, out.String())
+	}
+	got := sdkReplaces(t, filepath.Join(dir, bffDir))
+	if len(got) != 1 || got[0].Old.Version != sdkRelease || got[0].New.Version != sdkForkRelease {
+		t.Fatalf("bff/go.mod replaces = %+v", got)
+	}
+	contains(t, "bff/go.mod", read(t, dir, "bff/go.mod"), sdkForkComment, "replace example.com/shop => ../")
+	contains(t, "output", out.String(),
+		"bff/go.mod: removed the replace of "+sdkModule+" by "+sdkFork+"@v1.7.0-dedo.1",
+		"bff/go.mod: replaces "+sdkModule, "run go mod tidy in bff/")
 }
 
 // -wasm refuses a lint plugin release that cannot read built-in house
