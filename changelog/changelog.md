@@ -18,7 +18,7 @@ Version bumps, dependency updates and changes to benchmarks or examples alone ar
 
 ### Fixed
 
-- `dedo modules` checks a BFF in a repository with no versioned proto packages yet, such as a new one, where it stopped at `no modules` before the BFF's checks. Without findings it prints `bff: <dir> (frontend; not a backend module)` after `no modules`; a repository without a BFF still only prints `no modules`.
+- `dedo modules` checks a BFF in a repository with no versioned proto packages yet, such as a new one, where it stopped at `no modules` before the BFF's checks. Without findings it prints `bff: <dir> (frontend; not a backend module)` after `no modules`; a repository without a BFF still only prints `no modules`. [#143](https://github.com/raveesh-me/dedo/pull/143)
 
 ## [v0.36.0] - 2026-11-11
 
