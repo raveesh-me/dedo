@@ -8,9 +8,11 @@ Version bumps, dependency updates and changes to benchmarks or examples alone ar
 
 ## [Unreleased]
 
+## [v0.36.0] - 2026-11-11
+
 ### Added
 
-- House rules look across files: `image`, on every kind of element, holds each file, service and method buf passes, the module's own and its imports', keyed by path or full name, each with the variables a rule on it reads, `options` included, and `imported`. A rule can check that every method a call names exists and has one scope, or that a permission grants only scopes some method declares. It is built once per run, and only when a check reads it. A breaking rule reads the current version's.
+- House rules look across files: `image`, on every kind of element, holds each file, service and method buf passes, the module's own and its imports', keyed by path or full name, each with the variables a rule on it reads, `options` included, and `imported`. A rule can check that every method a call names exists and has one scope, or that a permission grants only scopes some method declares. It is built once per run, and only when a check reads it. A breaking rule reads the current version's. [#139](https://github.com/raveesh-me/dedo/pull/139)
 
 ## [v0.35.0] - 2026-11-06
 
@@ -485,7 +487,8 @@ The first release, as http-proto-lint (`github.com/raveesh-me/http-proto-lint`, 
 - MCP tools, served on the official MCP Go SDK under short snake_case names and through the same auth and policy as REST. [#1](https://github.com/raveesh-me/dedo/pull/1), [#2](https://github.com/raveesh-me/dedo/pull/2)
 - Templates for service repositories, `guideline.md`, and the `todo`, `bad-todo` and `library` examples. [#1](https://github.com/raveesh-me/dedo/pull/1), [#5](https://github.com/raveesh-me/dedo/pull/5)
 
-[Unreleased]: https://github.com/raveesh-me/dedo/compare/v0.35.0...HEAD
+[Unreleased]: https://github.com/raveesh-me/dedo/compare/v0.36.0...HEAD
+[v0.36.0]: https://github.com/raveesh-me/dedo/compare/v0.35.0...v0.36.0
 [v0.35.0]: https://github.com/raveesh-me/dedo/compare/v0.34.0...v0.35.0
 [v0.34.0]: https://github.com/raveesh-me/dedo/compare/v0.33.0...v0.34.0
 [v0.33.0]: https://github.com/raveesh-me/dedo/compare/v0.32.3...v0.33.0
