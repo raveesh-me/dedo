@@ -103,6 +103,8 @@ func compile(r config.Rule) (cel.Program, error) {
 		}
 		opts = append(opts, cel.Variable(v, t))
 	}
+	// Every kind reads the image, to look across files (see image.go).
+	opts = append(opts, cel.Variable("image", cel.MapType(cel.StringType, cel.DynType)))
 	if r.Breaking {
 		// The earlier element has the same variables; their types are
 		// dynamic, so a check compares them with the current ones.
@@ -142,6 +144,7 @@ func handler(r config.Rule, prg cel.Program) check.RuleHandler {
 			w.AddAnnotation(check.WithDescriptor(d), check.WithMessage(fmt.Sprintf("%s: %v", r.ID, err)))
 			return
 		}
+		vars["image"] = lazyImage(req)
 		evaluate(r, prg, w, vars, check.WithDescriptor(d))
 	}
 	opt := checkutil.WithoutImports()
@@ -202,7 +205,7 @@ func pairHandler(r config.Rule, prg cel.Program) check.RuleHandler {
 			w.AddAnnotation(check.WithDescriptor(d), check.WithAgainstDescriptor(against), check.WithMessage(fmt.Sprintf("%s: %v", r.ID, err)))
 			return
 		}
-		vars["against"] = before
+		vars["against"], vars["image"] = before, lazyImage(req)
 		evaluate(r, prg, w, vars, check.WithDescriptor(d), check.WithAgainstDescriptor(against))
 	}
 	opt := checkutil.WithoutImports()
