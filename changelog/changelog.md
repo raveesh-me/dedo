@@ -16,6 +16,10 @@ Version bumps, dependency updates and changes to benchmarks or examples alone ar
 
 - `dedo init`'s `main.go` serves `GET /healthz` (204) beside `/docs`, outside the interceptors, as the BFF's already did. A server written before this release adds the route itself. [#137](https://github.com/raveesh-me/dedo/pull/137)
 
+### Fixed
+
+- `dedo modules` checks a BFF in a repository with no versioned proto packages yet, such as a new one, where it stopped at `no modules` before the BFF's checks. Without findings it prints `bff: <dir> (frontend; not a backend module)` after `no modules`; a repository without a BFF still only prints `no modules`.
+
 ## [v0.36.0] - 2026-11-11
 
 ### Added

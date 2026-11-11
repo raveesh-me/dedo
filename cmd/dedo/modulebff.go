@@ -188,6 +188,22 @@ func checkBFFs(dir string, l Layout, pkgs []listedPackage) ([]bff, []string, err
 	return bffs, findings, nil
 }
 
+// hasBFF reports whether the repository has a BFF: a nested Go module that
+// holds one of buf.yaml's modules.
+func hasBFF(dir string) (bool, error) {
+	mods, err := bufModules(dir)
+	if err != nil {
+		return false, err
+	}
+	nested := nestedGoModules(dir)
+	for _, m := range mods {
+		if _, inside := insideModule(m.Path, nested); inside {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
 // bffAt returns the BFF in the nested Go module at rel, or nil when bffs
 // has it already.
 func bffAt(dir, rel string, bffs []bff) (*bff, error) {

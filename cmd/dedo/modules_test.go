@@ -169,6 +169,53 @@ func TestModulesWithoutModules(t *testing.T) {
 	}
 }
 
+// A backend for frontend is checked whatever the backend's state, such as
+// in a new repository with no versioned proto packages yet.
+func TestModulesBFFWithoutModules(t *testing.T) {
+	t.Setenv("GOWORK", "off")
+	t.Setenv("GOFLAGS", "-mod=mod")
+	web := func(audience string) string {
+		return "syntax = \"proto3\";\npackage notes.web.v1;\nservice WebService {\n  option (dedo.v1.service).audience = " + audience + ";\n}\n"
+	}
+	for _, tt := range []struct {
+		name, audience, main string
+		want                 []string
+		findings             int
+	}{
+		{name: "clean", audience: bffAudience, main: "package main\n\nfunc main() {}\n", want: []string{
+			"dedo modules: no modules; a module is a versioned proto package, <context>.<m>.v<n>",
+			"bff: bff (frontend; not a backend module)",
+		}},
+		{name: "violations", audience: "AUDIENCE_EXTERNAL_PUBLIC", main: "package main\n\nimport _ \"database/sql\"\n\nfunc main() {}\n", findings: 2, want: []string{
+			"bff/proto/notes/web/v1/web.proto: service WebService is AUDIENCE_EXTERNAL_PUBLIC, but serves the frontend of the Go module in bff: declare audience: AUDIENCE_COMPONENT_INTERNAL",
+			"bff: depends on the database driver database/sql: a backend for frontend owns no data; read it through the backend's Connect API",
+		}},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			dir := repo(t, map[string]string{
+				"go.mod":                           "module example.com/notes\n\ngo 1.26\n",
+				"buf.yaml":                         "version: v2\nmodules:\n  - path: bff/proto\n  - path: proto\n",
+				"proto/notes/type.proto":           "syntax = \"proto3\";\npackage notes;\n",
+				"bff/go.mod":                       "module example.com/notes/bff\n\ngo 1.26\n",
+				"bff/main.go":                      tt.main,
+				"bff/proto/notes/web/v1/web.proto": web(tt.audience),
+			})
+			var out bytes.Buffer
+			err := run([]string{"modules", "-dir", dir}, &out)
+			switch {
+			case tt.findings == 0 && err != nil:
+				t.Fatalf("dedo modules: %v\n%s", err, out.String())
+			case tt.findings > 0 && (err == nil || !strings.Contains(err.Error(), strconv.Itoa(tt.findings)+" finding(s)")):
+				t.Fatalf("err = %v, want %d finding(s)\n%s", err, tt.findings, out.String())
+			}
+			lines := strings.Split(strings.TrimSuffix(out.String(), "\n"), "\n")
+			if !slices.Equal(lines, tt.want) {
+				t.Errorf("output:\n%s\nwant:\n%s", out.String(), strings.Join(tt.want, "\n"))
+			}
+		})
+	}
+}
+
 func TestProtoModule(t *testing.T) {
 	for _, tt := range []struct {
 		pkg, context, module, version string
