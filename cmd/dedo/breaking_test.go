@@ -138,3 +138,42 @@ func TestBreakingRootModule(t *testing.T) {
 	}
 	contains(t, "output", out, "buf breaking . --against .git#branch=main\n")
 }
+
+// A buf.yaml below the git root, in api/, is compared with its modules'
+// directories on the base branch relative to the git root, through the
+// root's .git.
+func TestBreakingBelowGitRoot(t *testing.T) {
+	root := gitRepo(t, map[string]string{
+		"readme.md":                   "x\n",
+		"api/buf.yaml":                "version: v2\nmodules:\n  - path: proto\nbreaking:\n  use:\n    - FILE\n",
+		"api/proto/shop/a/v1/a.proto": "syntax = \"proto3\";\npackage shop.a.v1;\nmessage A {\n  string x = 1;\n  string y = 2;\n}\n",
+	})
+	dir := filepath.Join(root, "api")
+	out, err := runBreaking(dir, "main")
+	if err != nil {
+		t.Fatalf("dedo breaking: %v\n%s", err, out)
+	}
+	contains(t, "output", out, "buf breaking proto --against ../.git#branch=main,subdir=api/proto\n")
+
+	writeFile(t, dir, "proto/shop/a/v1/a.proto", "syntax = \"proto3\";\npackage shop.a.v1;\nmessage A {\n  string x = 1;\n}\n")
+	out, err = runBreaking(dir, "main")
+	if err == nil || !strings.Contains(err.Error(), "proto") {
+		t.Fatalf("err = %v, want a failure in proto\n%s", err, out)
+	}
+	contains(t, "output", out, `Previously present field "2" with name "y" on message "A" was deleted.`)
+}
+
+// A buf.yaml without modules below the git root is one module at its own
+// directory.
+func TestBreakingRootModuleBelowGitRoot(t *testing.T) {
+	root := gitRepo(t, map[string]string{
+		"readme.md":             "x\n",
+		"api/buf.yaml":          "version: v2\nbreaking:\n  use:\n    - FILE\n",
+		"api/shop/a/v1/a.proto": "syntax = \"proto3\";\npackage shop.a.v1;\nmessage A {\n  string x = 1;\n}\n",
+	})
+	out, err := runBreaking(filepath.Join(root, "api"), "main")
+	if err != nil {
+		t.Fatalf("dedo breaking: %v\n%s", err, out)
+	}
+	contains(t, "output", out, "buf breaking . --against ../.git#branch=main,subdir=api\n")
+}
