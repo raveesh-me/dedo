@@ -60,6 +60,13 @@ const usage = `usage:
   dedo breaking [-dir DIR] [-against BRANCH]
                                     run buf breaking for each module of buf.yaml against its own directory
                                     on BRANCH (default main), skipping a module that has no protos there yet
+  dedo local-mcp-claude [-dir DIR] [-token T] [-url U] [-name N] [-runtime R] [-config F] [-print] [-remove]
+                                    add the service's MCP endpoint to Claude Desktop: an mcpServers entry that
+                                    runs mcp-remote in a podman (or docker) container, bridging stdio to the
+                                    running service's stateless /mcp with Authorization: Bearer T (default
+                                    reader). The URL defaults to the kind cluster's port from
+                                    zarf/k8s/dev/kind-config.yaml, or make run's 8080; the name to the Go
+                                    module's last element. -print prints the entry; -remove removes it
   dedo templates [NAME]             list the bundled templates, or print one
   dedo version                      print the dedo release this command installs
 `
@@ -165,6 +172,8 @@ func run(args []string, out io.Writer) error {
 			return err
 		}
 		return breaking(*dir, *against, out)
+	case "local-mcp-claude":
+		return localMCPClaude(args[1:], out)
 	case "templates":
 		return templates(args[1:], out)
 	case "version":

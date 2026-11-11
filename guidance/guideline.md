@@ -305,6 +305,22 @@ curl -i -H 'Authorization: Bearer reader' localhost:8080/commerce/todo/v1/todos/
 
 Point an MCP client at `http://localhost:8080/mcp`, with the header `Authorization: Bearer reader` or `Bearer writer`.
 
+### Run your service in kind, and use it from Claude Desktop
+
+`dedo init` also writes `zarf/` and `Makefile.kind`, which run the service in a local [kind](https://kind.sigs.k8s.io) cluster the way it runs everywhere else: the image (`zarf/docker/dockerfile.service`, distroless, non-root), a kustomize base (`zarf/k8s/base`) and the dev overlay (`zarf/k8s/dev`: a NodePort, namespace limits and Pod Security "restricted"). It needs podman (or docker), kind and kubectl.
+
+```sh
+make kind-up       # cluster + build + load + deploy; prints the docs and MCP URLs
+make kind-smoke    # /healthz, /docs and MCP tools/list answer
+make kind-update   # rebuild, load and roll after a change
+make kind-claude   # add the cluster's /mcp to Claude Desktop (KIND_CLAUDE_TOKEN=writer to write)
+make kind-down     # delete the cluster
+```
+
+The host port is `hostPort` in `zarf/k8s/dev/kind-config.yaml`, picked from the service's name so it runs beside `make run` and, mostly, other services' clusters. `zarf/` is yours once written: `dedo init` and `dedo upgrade` leave an existing `zarf/` alone, and keep `Makefile.kind` current only while it is dedo's.
+
+`make kind-claude` runs `dedo local-mcp-claude`, which adds an `mcpServers` entry to Claude Desktop's config: podman runs `mcp-remote` in a container, bridging Claude Desktop's stdio to the service's stateless `/mcp` over HTTP. Restart Claude Desktop to load it. For `make run` instead, run `dedo local-mcp-claude -url http://localhost:8080/mcp`.
+
 ## Questions
 
 **Why is the version in the path, when Zalando advises against URL versioning?** The contract follows the AIPs, and the proto package already carries the major version. A breaking change becomes a new package and a new path, with no media-type negotiation.

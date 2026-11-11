@@ -37,7 +37,13 @@ To remove it: `claude mcp remove todo`.
 
 Claude Desktop's custom connectors need a public HTTPS URL with OAuth. For a local server with a bearer token, bridge it over stdio with [`mcp-remote`](https://www.npmjs.com/package/mcp-remote), run in a container so Node isn't needed on the host.
 
-Add this to `claude_desktop_config.json` (Settings → Developer → Edit Config), then restart Claude Desktop:
+From the repository root, `dedo local-mcp-claude` adds it to `claude_desktop_config.json` and keeps everything else there; restart Claude Desktop after:
+
+```sh
+dedo local-mcp-claude -name todo -url http://localhost:8090/mcp -token writer
+```
+
+Or add this by hand (Settings → Developer → Edit Config), then restart Claude Desktop:
 
 ```json
 {
@@ -46,7 +52,7 @@ Add this to `claude_desktop_config.json` (Settings → Developer → Edit Config
       "command": "podman",
       "args": [
         "run", "-i", "--rm", "docker.io/library/node:24-alpine",
-        "npx", "-y", "mcp-remote",
+        "npx", "-y", "mcp-remote@0.15.2",
         "http://host.containers.internal:8090/mcp",
         "--header", "Authorization: Bearer writer",
         "--allow-http"

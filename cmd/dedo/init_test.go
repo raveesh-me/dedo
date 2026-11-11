@@ -133,7 +133,7 @@ func TestInitFreshRepository(t *testing.T) {
 			t.Errorf("buf.gen.yaml lacks %q", want)
 		}
 	}
-	if got := read(t, dir, "Makefile"); got != "include Makefile.api\n" {
+	if got := read(t, dir, "Makefile"); got != "include Makefile.api\ninclude Makefile.kind\n" {
 		t.Errorf("Makefile = %q", got)
 	}
 	if !strings.Contains(read(t, dir, "Makefile.api"), "go tool dedo tools") {
@@ -275,7 +275,7 @@ plugins:
 		t.Errorf("protoc-gen-go is listed more than once:\n%s", gen)
 	}
 
-	if got := read(t, dir, "Makefile"); got != "build:\n\tgo build ./...\ninclude Makefile.api\n" {
+	if got := read(t, dir, "Makefile"); got != "build:\n\tgo build ./...\ninclude Makefile.api\ninclude Makefile.kind\n" {
 		t.Errorf("Makefile = %q", got)
 	}
 	if got := read(t, dir, "CLAUDE.md"); !strings.HasPrefix(got, "# Shop\n\nOur rules.\n\n"+beginPrefix+"guidance ") {

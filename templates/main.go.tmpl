@@ -124,6 +124,11 @@ func newHandler(log *slog.Logger) (http.Handler, error) {
 		w.WriteHeader(http.StatusNoContent)
 	})
 	// Cross-origin protection: the MCP transport requires an Origin check.
+	// Inside it, a bridge in a container (Claude Desktop's, from dedo
+	// local-mcp-claude) reaches a service on localhost as
+	// host.containers.internal: AllowHosts lets that name through the SDK's
+	// DNS rebinding protection, and MCP_ALLOWED_HOSTS replaces the list.
+	endpoint = mcpserver.AllowHosts(endpoint, mcpserver.AllowedHosts(os.Getenv("MCP_ALLOWED_HOSTS")))
 	mux.Handle("/mcp", flowid.Middleware(http.NewCrossOriginProtection().Handler(endpoint)))
 	return mux, nil
 }
