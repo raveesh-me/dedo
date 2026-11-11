@@ -16,6 +16,10 @@ Version bumps, dependency updates and changes to benchmarks or examples alone ar
 
 - `dedo init`'s `main.go` serves `GET /healthz` (204) beside `/docs`, outside the interceptors, as the BFF's already did. A server written before this release adds the route itself. [#137](https://github.com/raveesh-me/dedo/pull/137)
 
+### Fixed
+
+- A backend for frontend builds against dedo's build of the MCP Go SDK, as its backend does: `dedo init -bff` and `dedo upgrade` write and maintain the `replace` of `github.com/modelcontextprotocol/go-sdk` in its `go.mod`, such as `bff/go.mod`, and remove it with the backend's once upstream has the fix. Go reads a `replace` only from the `go.mod` of the module it builds, so a BFF, which links the backend's generated `*.mcp.pb.go`, built against the upstream release unless the line was copied by hand. After `dedo upgrade` adds the line, run `go mod tidy` in the BFF.
+
 ## [v0.36.0] - 2026-11-11
 
 ### Added
