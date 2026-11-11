@@ -1,0 +1,59 @@
+syntax = "proto3";
+
+package acme.shop.v1;
+
+import "acme/auth/v1/options.proto";
+import "acme/pay/v1/pay.proto";
+import "dedo/v1/options.proto";
+
+option (acme.auth.v1.file) = {
+  // Grants GetCart's scope.
+  permissions: {
+    id: "shop/carts.view"
+    grants: ["shop/carts.read"]
+  }
+  // Grants Checkout's scope and the scope of the Charge it calls.
+  permissions: {
+    id: "shop/carts.manage"
+    grants: ["shop/carts.write", "pay/charges.write"]
+  }
+  // Grants Checkout's scope but not Charge's.
+  permissions: {
+    id: "shop/carts.edit"
+    grants: ["shop/carts.write"]
+  }
+  // Grants a scope no method declares or calls.
+  permissions: {
+    id: "shop/carts.legacy"
+    grants: ["shop/carts.read", "shop/baskets.read"]
+  }
+};
+
+service CartService {
+  option (acme.auth.v1.service) = {root: "shop"};
+
+  rpc GetCart(CartRequest) returns (CartResponse) {
+    option (dedo.v1.method) = {scopes: ["shop/carts.read"]};
+  }
+
+  rpc Checkout(CartRequest) returns (CartResponse) {
+    option (dedo.v1.method) = {scopes: ["shop/carts.write"]};
+    option (acme.auth.v1.method) = {calls: ["acme.pay.v1.PaymentService.Charge"]};
+  }
+
+  // Calls a method that is not in the image.
+  rpc Abandon(CartRequest) returns (CartResponse) {
+    option (dedo.v1.method) = {scopes: ["shop/carts.write"]};
+    option (acme.auth.v1.method) = {calls: ["acme.pay.v1.PaymentService.Void"]};
+  }
+
+  // Calls a method with two scopes.
+  rpc Reconcile(CartRequest) returns (CartResponse) {
+    option (dedo.v1.method) = {scopes: ["shop/carts.write"]};
+    option (acme.auth.v1.method) = {calls: ["acme.pay.v1.PaymentService.Audit"]};
+  }
+}
+
+message CartRequest {}
+
+message CartResponse {}

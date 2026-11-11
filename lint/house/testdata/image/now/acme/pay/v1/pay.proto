@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+// A dependency: its methods are in the image, marked imported.
+package acme.pay.v1;
+
+import "acme/auth/v1/options.proto";
+import "dedo/v1/options.proto";
+
+option (acme.auth.v1.file) = {
+  permissions: {
+    id: "pay/charges.manage"
+    grants: ["pay/charges.write"]
+  }
+};
+
+service PaymentService {
+  option (acme.auth.v1.service) = {root: "pay"};
+
+  rpc Charge(ChargeRequest) returns (ChargeResponse) {
+    option (dedo.v1.method) = {scopes: ["pay/charges.write"]};
+  }
+
+  rpc Audit(ChargeRequest) returns (ChargeResponse) {
+    option (dedo.v1.method) = {scopes: ["pay/audits.read", "pay/audits.write"]};
+  }
+}
+
+message ChargeRequest {}
+
+message ChargeResponse {}
