@@ -3,6 +3,7 @@ package rules
 import (
 	"context"
 	"strings"
+	"unicode"
 
 	"buf.build/go/bufplugin/check"
 	"buf.build/go/bufplugin/check/checkutil"
@@ -95,9 +96,9 @@ func checkHealthMessages(w check.ResponseWriter, messages protoreflect.MessageDe
 // a health name with an optional Request or Response suffix, such as
 // HealthCheckResponse or PingRequest, or a part of one, such as
 // HealthCheckComponent. A domain's own Health* messages, such as
-// HealthRecord, pass.
+// HealthRecord or HealthCheckup, pass.
 func isHealthMessage(name string) bool {
-	if strings.HasPrefix(name, "HealthCheck") {
+	if rest, ok := strings.CutPrefix(name, "HealthCheck"); ok && (rest == "" || unicode.IsUpper(rune(rest[0]))) {
 		return true
 	}
 	for _, suffix := range []string{"Request", "Response"} {

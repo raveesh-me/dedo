@@ -699,9 +699,9 @@ option (dedo.v1.method) = {
 - no file imports `grpc/health/v1/health.proto`;
 - no service is named `Health`, `HealthCheck`, `Healthz`, `Ping`, `Liveness` or `Readiness`, with or without the `Service` suffix, and on one that is, no RPC is named `Check`, `Watch` or `List`, gRPC's health methods;
 - no RPC, on any service, is named one of those six names;
-- no message is named one of them, with or without a `Request` or `Response` suffix (`HealthCheckResponse`, `PingRequest`), or starts with `HealthCheck` (`HealthCheckComponent`).
+- no message is named one of them, with or without a `Request` or `Response` suffix (`HealthCheckResponse`, `PingRequest`), or starts with the word `HealthCheck` (`HealthCheckComponent`).
 
-A domain's own words pass: `HealthRecord`, `HealthInsurancePlan`, `GetHealthRecord`, `PingPatient`.
+A domain's own words pass: `HealthRecord`, `HealthInsurancePlan`, `HealthCheckup`, `GetHealthRecord`, `PingPatient`.
 
 **Why.** Health belongs to the process, not to the API. Every server dedo scaffolds serves `GET /healthz` beside the API, outside the interceptors, so a probe needs no token and a scope never gates it. In the contract, a health RPC becomes a REST path, an MCP tool and a reference entry that callers would think is part of the domain; it needs a scope, which a probe does not carry; and every service declares the same messages again, or imports them from a shared package that every service then depends on.
 

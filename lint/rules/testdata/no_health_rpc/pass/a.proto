@@ -21,3 +21,8 @@ message HealthRecord {
 message HealthInsurancePlan {}
 
 message PingPong {}
+
+// A clinic's checkup is not a health check.
+message HealthCheckup {}
+
+message HealthChecklist {}
