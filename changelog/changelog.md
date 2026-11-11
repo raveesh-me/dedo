@@ -16,6 +16,10 @@ Version bumps, dependency updates and changes to benchmarks or examples alone ar
 
 - `dedo init`'s `main.go` serves `GET /healthz` (204) beside `/docs`, outside the interceptors, as the BFF's already did. A server written before this release adds the route itself. [#137](https://github.com/raveesh-me/dedo/pull/137)
 
+### Fixed
+
+- `dedo breaking` works where `buf.yaml` sits below the git root, such as in `api/`: it compares each module with its path from the git root, through the root's `.git`, where it took `-dir` to be the root and compared the wrong directories.
+
 ## [v0.36.0] - 2026-11-11
 
 ### Added
