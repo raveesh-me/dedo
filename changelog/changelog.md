@@ -8,6 +8,8 @@ Version bumps, dependency updates and changes to benchmarks or examples alone ar
 
 ## [Unreleased]
 
+## [v0.37.0] - 2026-11-11
+
 ### Breaking
 
 - `DEDO_NO_HEALTH_RPC`, in `DEDO`: the contract declares no health check. It flags a service, RPC or message named `Health`, `HealthCheck`, `Healthz`, `Ping`, `Liveness` or `Readiness` (a message also with a `Request` or `Response` suffix, or starting with the word `HealthCheck`, but not a domain's `HealthCheckup`), `Check`, `Watch` and `List` on a health service, and any import of `grpc/health/v1/health.proto`. Health is the server's: buf's check plugins cannot warn, so a contract with a health check now fails lint; a service keeping one for now disables the rule in `dedo.yaml`. [#137](https://github.com/raveesh-me/dedo/pull/137)
@@ -504,7 +506,8 @@ The first release, as http-proto-lint (`github.com/raveesh-me/http-proto-lint`, 
 - MCP tools, served on the official MCP Go SDK under short snake_case names and through the same auth and policy as REST. [#1](https://github.com/raveesh-me/dedo/pull/1), [#2](https://github.com/raveesh-me/dedo/pull/2)
 - Templates for service repositories, `guideline.md`, and the `todo`, `bad-todo` and `library` examples. [#1](https://github.com/raveesh-me/dedo/pull/1), [#5](https://github.com/raveesh-me/dedo/pull/5)
 
-[Unreleased]: https://github.com/raveesh-me/dedo/compare/v0.36.0...HEAD
+[Unreleased]: https://github.com/raveesh-me/dedo/compare/v0.37.0...HEAD
+[v0.37.0]: https://github.com/raveesh-me/dedo/compare/v0.36.0...v0.37.0
 [v0.36.0]: https://github.com/raveesh-me/dedo/compare/v0.35.0...v0.36.0
 [v0.35.0]: https://github.com/raveesh-me/dedo/compare/v0.34.0...v0.35.0
 [v0.34.0]: https://github.com/raveesh-me/dedo/compare/v0.33.0...v0.34.0
