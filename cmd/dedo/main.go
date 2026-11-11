@@ -159,7 +159,7 @@ func run(args []string, out io.Writer) error {
 	case "breaking":
 		flags := flag.NewFlagSet("breaking", flag.ContinueOnError)
 		flags.SetOutput(out)
-		dir := flags.String("dir", ".", "the repository, at the root of its git working tree")
+		dir := flags.String("dir", ".", "the directory that holds buf.yaml, at or below the root of its git working tree")
 		against := flags.String("against", "main", "the branch to compare with")
 		if err := flags.Parse(args[1:]); err != nil {
 			return err
