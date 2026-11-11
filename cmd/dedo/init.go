@@ -642,7 +642,10 @@ func (in *initer) server() error {
 		"connectrpc.com/validate@" + validateRelease,
 	})
 	in.say("go.mod: will add github.com/raveesh-me/dedo and its mcp module at %s", in.release)
-	if err := in.replaceSDK(); err != nil {
+	if _, err := in.replaceSDK("go.mod"); err != nil {
+		return err
+	}
+	if err := in.replaceBFFSDKs(); err != nil {
 		return err
 	}
 	if err := os.MkdirAll(in.path("docs"), 0o755); err != nil {

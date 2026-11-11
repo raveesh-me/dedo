@@ -104,8 +104,8 @@ func TestInitBFF(t *testing.T) {
 			t.Errorf("bff/go.mod requires %s %q, want %s", mod, requires[mod], v)
 		}
 	}
-	if len(gomod.Replace) != 1 || gomod.Replace[0].Old.Path != "example.com/shop" || gomod.Replace[0].New.Path != "../" {
-		t.Errorf("bff/go.mod replaces %v, want example.com/shop => ../", gomod.Replace)
+	if len(gomod.Replace) == 0 || gomod.Replace[0].Old.Path != "example.com/shop" || gomod.Replace[0].New.Path != "../" {
+		t.Errorf("bff/go.mod replaces %v, want example.com/shop => ../ first", gomod.Replace)
 	}
 
 	mods, err := bufModules(dir)
@@ -239,8 +239,10 @@ func TestInitBFFKeepsWhatIsThere(t *testing.T) {
 			t.Errorf("%s was written for a starter service the BFF does not have", name)
 		}
 	}
-	if got := read(t, dir, "bff/go.mod"); got != "module example.com/shop/bff\n" {
-		t.Errorf("bff/go.mod was changed: %q", got)
+	// dedo maintains only its replace of the MCP Go SDK there.
+	want := "module example.com/shop/bff\n\n" + sdkForkComment + "\nreplace " + sdkModule + " " + sdkRelease + " => " + sdkFork + " " + sdkForkRelease + "\n"
+	if got := read(t, dir, "bff/go.mod"); got != want {
+		t.Errorf("bff/go.mod = %q, want %q", got, want)
 	}
 	contains(t, "output", out,
 		"buf.yaml: WARNING bff/proto is named buf.build/acme/shop-web",
