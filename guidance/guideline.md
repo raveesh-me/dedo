@@ -329,12 +329,13 @@ Point an MCP client at `http://localhost:8080/mcp`, with the header `Authorizati
 
 ### Run your service in kind, and use it from Claude Desktop
 
-`dedo init` also writes `zarf/` and `Makefile.kind`, which run the service in a local [kind](https://kind.sigs.k8s.io) cluster the way it runs everywhere else: the image (`zarf/docker/dockerfile.service`, distroless, non-root), a kustomize base (`zarf/k8s/base`) and the dev overlay (`zarf/k8s/dev`: a NodePort, namespace limits and Pod Security "restricted"). It needs podman (or docker), kind and kubectl.
+`dedo init` also writes `zarf/` and `Makefile.kind`, which run the service in a local [kind](https://kind.sigs.k8s.io) cluster the way it runs everywhere else: the image (`zarf/docker/dockerfile.service`, distroless, non-root), a kustomize base (`zarf/k8s/base`) and the dev overlay (`zarf/k8s/dev`: a NodePort, namespace limits, Pod Security "restricted" and an OpenTelemetry Collector). It needs podman (or docker), kind and kubectl.
 
 ```sh
 make kind-up       # cluster + build + load + deploy; prints the docs and MCP URLs
 make kind-smoke    # /healthz, /docs and MCP tools/list answer
 make kind-update   # rebuild, load and roll after a change
+make kind-otel     # tail the spans and metrics the dev collector receives
 make kind-claude   # add the cluster's /mcp to Claude Desktop (KIND_CLAUDE_TOKEN=writer to write)
 make kind-down     # delete the cluster
 ```
@@ -342,6 +343,32 @@ make kind-down     # delete the cluster
 The host port is `hostPort` in `zarf/k8s/dev/kind-config.yaml`, picked from the service's name so it runs beside `make run` and, mostly, other services' clusters. `zarf/` is yours once written: `dedo init` and `dedo upgrade` leave an existing `zarf/` alone, and keep `Makefile.kind` current only while it is dedo's.
 
 `make kind-claude` runs `dedo local-mcp-claude`, which adds an `mcpServers` entry to Claude Desktop's config: podman runs `mcp-remote` in a container, bridging Claude Desktop's stdio to the service's stateless `/mcp` over HTTP. Restart Claude Desktop to load it. For `make run` instead, run `dedo local-mcp-claude -url http://localhost:8080/mcp`.
+
+### Telemetry in kind
+
+The dev overlay deploys an [OpenTelemetry Collector](https://opentelemetry.io/docs/collector/) beside the service, in `zarf/k8s/dev/otel-collector`: the upstream core image (`otel/opentelemetry-collector`, pinned by digest), an OTLP receiver on 4318 (HTTP) and 4317 (gRPC), and the `debug` exporter for traces, metrics and logs. The dev patch of the service's deployment sets the standard variables that `setupTelemetry` in `main.go` reads:
+
+```yaml
+- name: OTEL_EXPORTER_OTLP_ENDPOINT
+  value: http://otel-collector:4318
+- name: OTEL_SERVICE_NAME
+  value: <service>
+- name: OTEL_RESOURCE_ATTRIBUTES
+  value: deployment.environment.name=dev
+```
+
+`make kind-otel` tails the collector's log (`kubectl logs deployment/otel-collector -f`). At `basic` verbosity the `debug` exporter logs one line per batch, with its count of spans, data points or log records; the service exports metrics every 60 seconds (`OTEL_METRIC_EXPORT_INTERVAL`, in milliseconds, changes it). Set `verbosity: detailed` in `zarf/k8s/dev/otel-collector/config.yaml` to log each span and data point with its attributes; `make kind-apply` rolls the collector when the file changes.
+
+The collector is the dev cluster's only. Every other environment sets the same `OTEL_*` variables in its own overlay or deployment, pointing at the collector or backend the organisation runs there; the service's code does not change.
+
+A `zarf/` written by an earlier dedo lacks the collector, and `dedo upgrade` leaves `zarf/` alone. To add it, write the three files from the templates, replacing `{{.Name}}` with the service's namespace, add `- otel-collector` to `resources` in `zarf/k8s/dev/kustomization.yaml`, and add the three variables above to the `service` container in `zarf/k8s/dev/service/dev-service-patch-deploy.yaml`:
+
+```sh
+mkdir -p zarf/k8s/dev/otel-collector
+for f in kustomization.yaml otel-collector.yaml config.yaml; do
+  dedo templates zarf/k8s/dev/otel-collector/$f.tmpl | sed 's/{{.Name}}/<namespace>/' > zarf/k8s/dev/otel-collector/$f
+done
+```
 
 ## Questions
 

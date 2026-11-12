@@ -7,6 +7,7 @@
 #
 #   make kind-up          cluster + build + load + deploy
 #   make kind-update      rebuild, load and roll the service after a change
+#   make kind-otel        tail the telemetry the dev collector receives
 #   make kind-claude      add the cluster's /mcp to Claude Desktop
 #   make kind-down        delete the cluster
 #
@@ -35,7 +36,7 @@ export KIND_EXPERIMENTAL_PROVIDER ?= podman
 KIND_AUTH_FLAG := --authfile $(KIND_NO_AUTH)
 endif
 
-.PHONY: kind-up kind-down kind-cluster kind-build kind-load kind-apply kind-update kind-status kind-logs kind-smoke kind-claude
+.PHONY: kind-up kind-down kind-cluster kind-build kind-load kind-apply kind-update kind-status kind-logs kind-otel kind-smoke kind-claude
 
 ## kind-up: create the kind cluster if needed, then build, load and deploy the service
 kind-up: kind-cluster
@@ -92,6 +93,13 @@ kind-status:
 ## kind-logs: tail the service's logs
 kind-logs:
 	$(KIND_KUBECTL) -n $(KIND_NAMESPACE) logs deployment/{{.Name}} -f --tail=100
+
+## kind-otel: tail the dev OpenTelemetry Collector, which logs the spans,
+## metrics and logs the service exports (zarf/k8s/dev/otel-collector)
+kind-otel:
+	@$(KIND_KUBECTL) -n $(KIND_NAMESPACE) get deployment/otel-collector >/dev/null || \
+		{ echo "no otel-collector in $(KIND_NAMESPACE): add zarf/k8s/dev/otel-collector from dedo templates (dedo's guideline.md, Telemetry in kind)"; exit 1; }
+	$(KIND_KUBECTL) -n $(KIND_NAMESPACE) logs deployment/otel-collector -f --tail=100
 
 ## kind-smoke: check the deployed service answers health, docs and MCP
 kind-smoke:

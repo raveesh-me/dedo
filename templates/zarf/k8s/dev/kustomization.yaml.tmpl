@@ -4,6 +4,7 @@ kind: Kustomization
 resources:
 - dev-namespace-limits.yaml
 - service
+- otel-collector
 # The namespace is the service's boundary: dev-namespace-limits.yaml bounds
 # it, and Pod Security Admission enforces the "restricted" profile on it, so
 # a pod that runs as root, escalates privileges, keeps capabilities or skips

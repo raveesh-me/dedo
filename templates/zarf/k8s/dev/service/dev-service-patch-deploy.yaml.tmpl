@@ -15,3 +15,13 @@ spec:
       - name: service
         # Images are loaded into kind, never pulled.
         imagePullPolicy: Never
+        # Telemetry goes to the dev collector, zarf/k8s/dev/otel-collector:
+        # make kind-otel tails it. Other environments set the same standard
+        # variables to their own collector.
+        env:
+        - name: OTEL_EXPORTER_OTLP_ENDPOINT
+          value: http://otel-collector:4318
+        - name: OTEL_SERVICE_NAME
+          value: {{.Name}}
+        - name: OTEL_RESOURCE_ATTRIBUTES
+          value: deployment.environment.name=dev

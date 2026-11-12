@@ -29,7 +29,7 @@ const (
 
 // kindTargets are the targets Makefile.kind defines.
 var kindTargets = []string{"kind-up", "kind-down", "kind-cluster", "kind-build", "kind-load", "kind-apply",
-	"kind-update", "kind-status", "kind-logs", "kind-smoke", "kind-claude"}
+	"kind-update", "kind-status", "kind-logs", "kind-otel", "kind-smoke", "kind-claude"}
 
 // kindUses are the files of zarf/ that Makefile.kind builds and deploys
 // from.
