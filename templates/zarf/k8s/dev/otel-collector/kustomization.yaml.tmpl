@@ -1,0 +1,13 @@
+# The dev telemetry sink: an OpenTelemetry Collector that takes OTLP and
+# writes what it receives to its log, so make kind-otel shows it. Other
+# environments point the same OTEL_* variables at their own collector.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: {{.Name}}
+resources:
+- otel-collector.yaml
+# A change to config.yaml renames the ConfigMap, which rolls the collector.
+configMapGenerator:
+- name: otel-collector
+  files:
+  - config.yaml
