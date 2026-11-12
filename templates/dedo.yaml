@@ -45,6 +45,17 @@ lint:
 #       check: against.values.all(v, v in values)
 #       message: An enum keeps its values; clients store them.
 
+# Which Go rules dedo vet runs (make vet; make check runs it): DEDO, dedo's
+# own, and HOUSE, the house Go rules, as lint does. Without use, both run.
+# go:
+#   use: [DEDO, HOUSE]
+#   disable: [DEDO_GO_EVENT_DECLARED]
+#   rules:
+#     - id: HOUSE_GO_NO_PLATFORM_SDK
+#       forbid_import: example.com/platform-sdk/...
+#       allow_in: [internal/legacy/**]
+#       message: Call the platform services directly.
+
 # Your organisation's guidance for coding agents, which dedo adds to
 # CLAUDE.md and AGENTS.md after its own. Where the two conflict, the
 # annexure wins. dedo upgrade rewrites the copies from these sources, so

@@ -143,6 +143,31 @@ breaking:
       message: An enum keeps its values; clients store them.
       final: true
 
+go:
+  # The Go rules dedo vet runs on the code that serves the contract: DEDO,
+  # dedo's (servers have dedo's interceptors, handlers return declared
+  # reasons and publish declared events), and HOUSE, the Go rules below and
+  # every imported one.
+  use:
+    - DEDO
+    - HOUSE
+
+  # Go rules this service opts out of, by ID, as for lint.
+  disable:
+    - DEDO_GO_EVENT_DECLARED   # this service publishes through its own outbox library for now
+
+  # This service's own Go rules. IDs start with HOUSE_GO_.
+  rules:
+    # No file may import the old cart SDK, except the adapter being retired.
+    # A path ending in /... forbids every package under it too; allow_in
+    # globs are relative to this file's folder, ** matching any folders.
+    - id: HOUSE_GO_NO_CART_SDK
+      forbid_import: example.com/cart-sdk/...
+      allow_in: [internal/legacy/**]
+      message: Call the cart service's API directly, through its generated client.
+      doc: https://wiki.acme.com/go/cart-sdk
+      final: true
+
 # The organisation's guidance for coding agents. dedo init adds each file to
 # CLAUDE.md and AGENTS.md after dedo's own guidance, and dedo upgrade rewrites
 # the copies from here, so they stay current. Where an annexure and dedo's

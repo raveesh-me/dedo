@@ -8,7 +8,7 @@
 # dedo init names a target api-<name> instead when the service's Makefile
 # already has one of these names.
 
-.PHONY: run generate check test tools modules docs docs-tunnel docs-static api-update
+.PHONY: run generate check test tools modules vet docs docs-tunnel docs-static api-update
 
 ## run: serve the API on Connect, gRPC, REST, /docs and /mcp
 run:
@@ -30,8 +30,8 @@ generate:
 	fi
 
 ## check: format, lint, breaking changes against API_BASE, the modules kept
-## apart and, with a backend for frontend in bff/, its generated code current
-## and its tests; CI runs it
+## apart, the Go rules (dedo vet) and, with a backend for frontend in bff/,
+## its generated code current and its tests; CI runs it
 # The branch breaking changes are checked against. dedo breaking compares
 # each module of buf.yaml with its own directory there, and skips one that
 # has no protos there yet, such as a module this branch adds.
@@ -39,7 +39,7 @@ API_BASE ?= main
 # What bff/buf.gen.yaml writes: the BFF's Go code and the frontend's client.
 BFF_GEN ?= bff/gen frontend/src/gen
 
-check: tools modules
+check: tools modules vet
 	buf format --diff --exit-code
 	buf lint
 	go tool dedo breaking -against $(API_BASE)
@@ -79,6 +79,13 @@ tools:
 ## module graph
 modules:
 	go tool dedo modules
+
+## vet: the Go rules, dedo's DEDO_GO_* and dedo.yaml's HOUSE_GO_*, on the
+## service and a backend for frontend in bff/: servers have dedo's
+## interceptors, handlers return declared error reasons and publish
+## declared events, and no file imports what the house rules forbid
+vet:
+	go tool dedo vet
 
 ## docs: serve the REST reference (docs/index.html and openapi.json only) on
 ## DOCS_ADDR until Ctrl-C

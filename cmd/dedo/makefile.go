@@ -8,7 +8,7 @@ import (
 
 // makeTargets are the targets of Makefile.api a service's own Makefile may
 // already have.
-var makeTargets = []string{"run", "generate", "check", "test", "tools", "modules", "docs", "docs-tunnel", "docs-static"}
+var makeTargets = []string{"run", "generate", "check", "test", "tools", "modules", "vet", "docs", "docs-tunnel", "docs-static"}
 
 // makeRule matches a rule's target and prerequisites, and not a variable
 // assignment such as NAME := value.

@@ -22,7 +22,7 @@ func TestMakefileAPIRenamesCollisions(t *testing.T) {
 	mk := []byte("VERSION := 1\nrun: build\n\t./bin/app\n\ntools:\n\techo mine\n")
 	got, names = makefileAPI(tmpl, mk)
 	s := string(got)
-	for _, want := range []string{"\napi-run:\n\tgo run .", "\napi-tools:\n\tgo tool dedo tools", "\ncheck: api-tools modules\n", "\ngenerate:\n", "\napi-check: check\n", "\napi-generate: generate\n", "## api-run: serve the API"} {
+	for _, want := range []string{"\napi-run:\n\tgo run .", "\napi-tools:\n\tgo tool dedo tools", "\ncheck: api-tools modules vet\n", "\ngenerate:\n", "\napi-check: check\n", "\napi-generate: generate\n", "## api-run: serve the API"} {
 		if !strings.Contains(s, want) {
 			t.Errorf("Makefile.api lacks %q:\n%s", want, s)
 		}
@@ -46,7 +46,7 @@ func TestMakefileAPIRenamesCollisions(t *testing.T) {
 func TestMakefileAPIRenamedCheckReplacesAlias(t *testing.T) {
 	got, _ := makefileAPI(asset("templates/Makefile.api"), []byte("check:\n\tgo vet ./...\n"))
 	s := string(got)
-	if strings.Count(s, "\napi-check:") != 1 || strings.Contains(s, "api-check: check") || !strings.Contains(s, "\napi-check: tools modules\n") {
+	if strings.Count(s, "\napi-check:") != 1 || strings.Contains(s, "api-check: check") || !strings.Contains(s, "\napi-check: tools modules vet\n") {
 		t.Errorf("Makefile.api:\n%s", s)
 	}
 	if !strings.Contains(s, ".PHONY: api-generate") || strings.Contains(s, ".PHONY: api-check api-generate") {
@@ -114,7 +114,7 @@ func TestMakefileAPIKeepsExtendedTargets(t *testing.T) {
 	if names["tools"] != "api-tools" {
 		t.Errorf("tools with an inline recipe kept its name: %v", names)
 	}
-	if s := string(got); !strings.Contains(s, "\ncheck: api-tools modules\n") || !strings.Contains(s, "\ntest:\n\tgo test") {
+	if s := string(got); !strings.Contains(s, "\ncheck: api-tools modules vet\n") || !strings.Contains(s, "\ntest:\n\tgo test") {
 		t.Errorf("Makefile.api:\n%s", s)
 	}
 }
@@ -134,12 +134,12 @@ func TestMakefileAPIDocsStatic(t *testing.T) {
 // leaves it.
 func TestMakefileAPIChecksModules(t *testing.T) {
 	got, names := makefileAPI(asset("templates/Makefile.api"), nil)
-	if s := string(got); names["modules"] != "modules" || !strings.Contains(s, "\ncheck: tools modules\n") ||
+	if s := string(got); names["modules"] != "modules" || !strings.Contains(s, "\ncheck: tools modules vet\n") ||
 		!strings.Contains(s, "\nmodules:\n\tgo tool dedo modules\n") {
 		t.Errorf("names = %v, Makefile.api:\n%s", names, s)
 	}
 	got, names = makefileAPI(asset("templates/Makefile.api"), []byte("modules:\n\tgo run ./scripts/modulecheck\n"))
-	if s := string(got); names["modules"] != "api-modules" || !strings.Contains(s, "\ncheck: tools api-modules\n") ||
+	if s := string(got); names["modules"] != "api-modules" || !strings.Contains(s, "\ncheck: tools api-modules vet\n") ||
 		!strings.Contains(s, "\napi-modules:\n\tgo tool dedo modules\n") {
 		t.Errorf("names = %v, Makefile.api:\n%s", names, s)
 	}
@@ -157,7 +157,8 @@ func TestCITemplatesRunEveryCheck(t *testing.T) {
 		t.Fatal(err)
 	}
 	contains(t, "Makefile.api", mk,
-		"\ncheck: tools modules\n",
+		"\ncheck: tools modules vet\n",
+		"\nvet:\n\tgo tool dedo vet\n",
 		"go tool dedo breaking -against $(API_BASE)",
 		"buf generate --template bff/buf.gen.yaml",
 		"git status --porcelain -- $(BFF_GEN)",
@@ -165,6 +166,7 @@ func TestCITemplatesRunEveryCheck(t *testing.T) {
 	)
 	contains(t, "Jenkinsfile.api-stage", jenkins,
 		"sh 'go tool dedo modules'",
+		"sh 'go tool dedo vet'",
 		"sh 'go tool dedo breaking -against main'",
 		"buf generate --template bff/buf.gen.yaml",
 		"cd bff && go vet ./... && go test ./...",

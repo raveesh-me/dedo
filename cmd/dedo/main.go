@@ -25,6 +25,9 @@ import (
 const version = "v0.37.0"
 
 func main() {
+	if isVetTool(os.Args[1:]) {
+		vetTool() // go vet -vettool runs dedo's Go rules; it exits
+	}
 	if err := run(os.Args[1:], os.Stdout); err != nil {
 		fmt.Fprintln(os.Stderr, "dedo:", err)
 		os.Exit(1)
@@ -57,6 +60,10 @@ const usage = `usage:
                                     no import cycle between them, shared code imports none, module code
                                     only in internal/<m>, SQL naming only its own schema; then print
                                     the module graph
+  dedo vet [-dir DIR]               run the Go rules on the Go module in DIR and its BFFs: dedo's DEDO_GO_*
+                                    rules (handlers return declared error reasons and publish declared
+                                    events; servers have dedo's interceptors) and dedo.yaml's HOUSE_GO_*
+                                    ones, through go vet with this command as its -vettool
   dedo breaking [-dir DIR] [-against BRANCH]
                                     run buf breaking for each module of buf.yaml against its own directory
                                     on BRANCH (default main), skipping a module that has no protos there yet
@@ -169,6 +176,14 @@ func run(args []string, out io.Writer) error {
 			return err
 		}
 		return modules(*dir, out)
+	case "vet":
+		flags := flag.NewFlagSet("vet", flag.ContinueOnError)
+		flags.SetOutput(out)
+		dir := flags.String("dir", ".", "the Go module to vet")
+		if err := flags.Parse(args[1:]); err != nil {
+			return err
+		}
+		return vet(*dir, out)
 	case "breaking":
 		flags := flag.NewFlagSet("breaking", flag.ContinueOnError)
 		flags.SetOutput(out)

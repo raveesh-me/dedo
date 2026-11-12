@@ -133,9 +133,10 @@ type section struct {
 
 // file is a shared rules file, and the rules of a dedo.yaml.
 type file struct {
-	Imports  []Import `yaml:"imports"`
-	Lint     section  `yaml:"lint"`
-	Breaking section  `yaml:"breaking"`
+	Imports  []Import  `yaml:"imports"`
+	Lint     section   `yaml:"lint"`
+	Breaking section   `yaml:"breaking"`
+	Go       goSection `yaml:"go"`
 }
 
 // project is a dedo.yaml.
@@ -218,6 +219,8 @@ func Find(dir string) string {
 type Config struct {
 	Lint     Selection `json:"lint"`
 	Breaking Selection `json:"breaking"`
+	// Go is what the go sections say, for dedo vet.
+	Go GoSelection `json:"go"`
 }
 
 // Selection is what one kind of rules says: lint or breaking.
@@ -251,7 +254,11 @@ func Load(path string) (Config, error) {
 	if err != nil {
 		return Config{}, err
 	}
-	return Config{Lint: lint, Breaking: breaking}, nil
+	golang, err := l.selectGo(path, all.goRules, all.goDisabled, importers)
+	if err != nil {
+		return Config{}, err
+	}
+	return Config{Lint: lint, Breaking: breaking, Go: golang}, nil
 }
 
 // selectKind checks one kind's disable against its rules and returns what
@@ -287,6 +294,8 @@ func (l *loader) selectKind(path, kind string, rules []Rule, disabled, use []str
 type loaded struct {
 	lint, breaking                 []Rule
 	lintDisabled, breakingDisabled []string
+	goRules                        []GoRule
+	goDisabled                     []string
 }
 
 func (a *loaded) add(b loaded) {
@@ -294,6 +303,8 @@ func (a *loaded) add(b loaded) {
 	a.breaking = append(a.breaking, b.breaking...)
 	a.lintDisabled = append(a.lintDisabled, b.lintDisabled...)
 	a.breakingDisabled = append(a.breakingDisabled, b.breakingDisabled...)
+	a.goRules = append(a.goRules, b.goRules...)
+	a.goDisabled = append(a.goDisabled, b.goDisabled...)
 }
 
 // IsHouse reports whether id names a house rule rather than one of dedo's.
@@ -302,12 +313,12 @@ func IsHouse(id string) bool {
 }
 
 type loader struct {
-	// lintUse and breakingUse are the use of the top file's sections.
-	lintUse, breakingUse []string
-	root                 string
-	seen                 map[string]bool
-	ids                  map[string]string   // rule ID → the file that defines it
-	imports              map[string][]string // file → the files it imports
+	// lintUse, breakingUse and goUse are the use of the top file's sections.
+	lintUse, breakingUse, goUse []string
+	root                        string
+	seen                        map[string]bool
+	ids                         map[string]string   // rule ID → the file that defines it
+	imports                     map[string][]string // file → the files it imports
 }
 
 // importers maps each file to every file that imports it, directly or
@@ -374,8 +385,11 @@ func (l *loader) load(path, repo string, stack []string) (loaded, error) {
 			}
 		}
 	}
+	if f.Go.Use != nil && len(stack) > 0 {
+		return out, fmt.Errorf("%s: go.use belongs in the repository's own dedo.yaml, which chooses the rules it runs; imported files add rules", path)
+	}
 	if len(stack) == 0 {
-		l.lintUse, l.breakingUse = f.Lint.Use, f.Breaking.Use
+		l.lintUse, l.breakingUse, l.goUse = f.Lint.Use, f.Breaking.Use, f.Go.Use
 	}
 	for _, imp := range f.Imports {
 		target, targetRepo, err := resolve(l.root, abs, repo, imp)
@@ -430,6 +444,9 @@ func (l *loader) load(path, repo string, stack []string) (loaded, error) {
 	}
 	out.lintDisabled = append(out.lintDisabled, f.Lint.Disable...)
 	out.breakingDisabled = append(out.breakingDisabled, f.Breaking.Disable...)
+	if err := l.loadGo(path, abs, repo, f.Go, &out); err != nil {
+		return out, err
+	}
 	return out, nil
 }
 
@@ -538,15 +555,7 @@ func validate(r Rule) error {
 	case strings.TrimSpace(r.Message) == "":
 		return fmt.Errorf("%s: no message", r.ID)
 	}
-	for _, id := range r.Overrides {
-		switch {
-		case !anyID.MatchString(id):
-			return fmt.Errorf("%s: overrides %q, which is not a rule ID such as DEDO_HTTP_PATH_VERSION", r.ID, id)
-		case id == r.ID:
-			return fmt.Errorf("%s: overrides itself", r.ID)
-		}
-	}
-	return nil
+	return validOverrides(r.ID, r.Overrides)
 }
 
 // CacheDir is where a git or url import is fetched, under root.

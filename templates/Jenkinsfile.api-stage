@@ -9,6 +9,8 @@ stage('API contract') {
     // branch is skipped.
     sh 'go tool dedo breaking -against main'
     sh 'go tool dedo modules'
+    // The Go rules, on the service and a backend for frontend in bff/.
+    sh 'go tool dedo vet'
     sh 'buf generate && git diff --exit-code gen/ docs/'
     sh 'go test ./...'
     // A backend for frontend in bff/: its generated code current, and its

@@ -47,6 +47,16 @@ Rules rank in layers: **the repository's own `dedo.yaml` > the house rules it im
 
 [RULES.md](https://github.com/raveesh-me/dedo/blob/main/guidance/RULES.md#skipped-rules) lists every rule dedo skips on purpose, by source. Do not re-enable them.
 
+## Go rules
+
+`dedo vet` lints the Go code that serves the contract, and `make check` runs it (`make vet` alone). Run it before you finish any change to Go code, and fix every finding in the code. [RULES.md](https://github.com/raveesh-me/dedo/blob/main/guidance/RULES.md#go-rules) explains each rule; a finding links to its section.
+
+- `DEDO_GO_SERVER_INTERCEPTORS`: every `connect.NewServer` outside tests has `flowid.Interceptor()` and the policy interceptor from `interceptor.New`, the flow ID one first. Never drop either to make a test or a feature work.
+- `DEDO_GO_ERROR_REASON_DECLARED`: a handler returns only the `ErrorInfo` reasons its RPC declares. When a handler needs a new reason, declare it in the proto (`dedo.v1.method` errors, with its code) and regenerate; never rename the reason in Go to dodge the finding.
+- `DEDO_GO_EVENT_DECLARED`: a handler publishes only the event types in its RPC's `emits`. Add the type to the proto first.
+- `HOUSE_GO_*`: your organisation's rules from `dedo.yaml`'s `go` section, such as an import it has ruled out. The finding's message says what to do instead; follow it rather than wrapping the package somewhere it is allowed.
+- Suppress a finding only when it does not apply, with `//dedo:ignore <RULE_ID> <reason>` on or above its line, and say why in the reason: a directive without one suppresses nothing and is itself a finding (`DEDO_GO_IGNORE_REASON`). Name every suppression you add in your summary.
+
 ## Dependencies
 
 Qualify a dependency before adding it, as [dependencies.md](https://github.com/raveesh-me/dedo/blob/main/guidance/dependencies.md) describes. Your organisation's annexure says which licenses it permits.

@@ -11,6 +11,7 @@ import (
 	"buf.build/go/bufplugin/check"
 	"buf.build/go/bufplugin/check/checktest"
 
+	"github.com/raveesh-me/dedo/lint/gorules"
 	"github.com/raveesh-me/dedo/lint/house/config"
 	"github.com/raveesh-me/dedo/lint/rules"
 )
@@ -157,6 +158,11 @@ func TestRulesDocumented(t *testing.T) {
 			t.Errorf("DocsURL(%s) = %s", rule.ID, rules.DocsURL(rule.ID))
 		}
 		delete(headings, rule.ID)
+	}
+	// The Go rules dedo vet runs are documented there too; package
+	// gorules checks their headings.
+	for _, b := range gorules.Builtins() {
+		delete(headings, b.ID)
 	}
 	for id := range headings {
 		t.Errorf("RULES.md documents %q, which is not a rule", id)

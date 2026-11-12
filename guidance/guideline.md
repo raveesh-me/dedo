@@ -44,7 +44,7 @@ my-service/
   dedo.yaml              # which lint rules run, your house rules, agent guidance
   buf.gen.yaml           # the four generators, run through go tool
   Makefile               # include Makefile.api
-  Makefile.api           # run, generate, check, test, tools, modules
+  Makefile.api           # run, generate, check, test, tools, modules, vet
   docs/                  # serves the REST reference
   internal/products/     # module products: its handlers (dedo init writes a stub), store, migrations
   internal/shared/       # helpers every module uses, when there are any
@@ -60,6 +60,7 @@ Why it is set up this way:
 - **The generators are Go tools** pinned in `go.mod`, so every machine and CI generate the same code without Buf's remote plugins.
 - **The lint plugin belongs to the protos, not to a Go module.** The options module's label in `buf.yaml` names its release; `dedo tools` installs it into `$GOBIN` and copies it into `.tools/` (ignored by git), so the editor and CI run the same version, in any repository with protos, whatever its language. It runs as a native binary because Buf starts it about a dozen times per lint. Commit `buf.lock`.
 - **Code follows the proto modules:** each module's handlers, domain, store, migrations and queries go in one Go package at `internal/<module>/`, with a Postgres schema of its own, even when the service has one module. Only `main` and an `app/` package import several modules. [domains.md](domains.md#code-and-data-follow-the-modules) has the layout and the rules that keep modules acyclic. `dedo modules`, which `make check` runs, fails on a cycle between modules, a shared package that imports a module, module code outside `internal/<module>/`, and SQL that names another module's schema, and prints the module graph.
+- **The Go that serves the contract is linted too.** `dedo vet`, which `make check` runs, checks what `buf lint` cannot see: that every `connect.Server` has dedo's interceptors, that handlers return only the error reasons and publish only the event types their RPCs declare, and the organisation's `HOUSE_GO_*` rules from `dedo.yaml` ([RULES.md](RULES.md#go-rules)).
 - **connect-go v2:** one `connect.Server` holds the interceptors (flow IDs, auth, dedo's policy, validation); Connect and gRPC (`connecthttp.Mount`), REST (`vanguard.Mount`) and MCP (`connectinprocess`) all reach it, so every transport gets the same checks.
 
 [install.md](install.md) shows each part by hand, for repositories that prefer not to run `dedo init`. Add `.github/CODEOWNERS` yourself (`dedo templates CODEOWNERS`) so every change under `proto/` needs an API review.
@@ -301,12 +302,13 @@ The interceptor then reads the tenants of every request, on every transport, fro
 | `buf lint` | Any Buf, AIP, Zalando, dedo or house rule is broken |
 | `go tool dedo breaking -against main` | The change breaks clients. It runs `buf breaking` for each module of `buf.yaml` against its own directory on `main`, and skips a module with no protos there yet, so a pull request that adds a module, such as a BFF's, passes |
 | `go tool dedo modules` | The modules are not kept apart, or a [backend for frontend](domains.md#backends-for-frontends) breaks its rules (named, not `AUDIENCE_COMPONENT_INTERNAL`, a data-store client or the backend's own code in its dependencies) |
+| `go tool dedo vet` | The Go code breaks a [Go rule](RULES.md#go-rules), on the service or a BFF: a `connect.Server` without dedo's interceptors, a handler returning an error reason or publishing an event type its RPC does not declare, an import a house rule forbids, or a `//dedo:ignore` without a reason |
 | `buf generate && git diff --exit-code gen/ docs/` | Generated code or docs are stale |
 | `go test ./...` | The policy table test or your tests fail |
 | `if [ -f bff/buf.gen.yaml ]; then buf generate --template bff/buf.gen.yaml && test -z "$(git status --porcelain -- bff/gen frontend/src/gen)"; fi` | A BFF's generated code, or its frontend's client, is stale or missing |
 | `if [ -f bff/go.mod ]; then cd bff && go vet ./... && go test ./...; fi` | A BFF's tests fail. The root's `go test ./...` stops at its nested Go module |
 
-`make check` runs the same: `dedo modules`, `dedo breaking` against `API_BASE` and, when `bff/` exists, the BFF's staleness check, vet and tests. `make test` runs the BFF's tests too, and `make generate` generates its code.
+`make check` runs the same: `dedo modules`, `dedo vet`, `dedo breaking` against `API_BASE` and, when `bff/` exists, the BFF's staleness check, vet and tests. `make test` runs the BFF's tests too, and `make generate` generates its code.
 
 ## 10. Try the reference service
 
