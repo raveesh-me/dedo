@@ -8,6 +8,10 @@ Version bumps, dependency updates and changes to benchmarks or examples alone ar
 
 ## [Unreleased]
 
+### Added
+
+- `guidance/dependencies.md`: how to qualify a dependency before it reaches a repository. Check whether it is needed, and don't depend on thin wrappers (packages that only rename, re-export or set defaults on another library, or turn a service's API into a few functions). Check maintenance, advisories (`govulncheck`, deps.dev) and the modules it brings with it. Pin exact versions in every ecosystem: Go modules and tools, buf, GitHub Actions by commit SHA, images by digest, npm without ranges, CDN scripts with SRI. Check licenses with `go-licenses`; which licenses are permitted is the organisation's policy, stated in its annexure, and dedo does not lint them. The pull request says what each dependency is for and why it passed. `guidance/claude.md`, which `dedo upgrade` writes into `AGENTS.md` and `CLAUDE.md`, gets a Dependencies section with the rules for coding agents.
+
 ## [v0.37.0] - 2026-11-11
 
 ### Breaking

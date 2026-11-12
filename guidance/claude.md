@@ -47,6 +47,16 @@ Rules rank in layers: **the repository's own `dedo.yaml` > the house rules it im
 
 [RULES.md](https://github.com/raveesh-me/dedo/blob/main/guidance/RULES.md#skipped-rules) lists every rule dedo skips on purpose, by source. Do not re-enable them.
 
+## Dependencies
+
+Qualify a dependency before adding it, as [dependencies.md](https://github.com/raveesh-me/dedo/blob/main/guidance/dependencies.md) describes. Your organisation's annexure says which licenses it permits.
+
+- Add a dependency only when the task needs it, and only after checking that the standard library or an existing dependency can't do the job. Name every one you add in your summary, with its version, its license and the modules it brings with it (`go list -m all`, before and after).
+- Never add a thin wrapper: a package that only renames, re-exports or sets defaults on another library, or turns a service's API into a few functions. Use the library directly, or call the API and keep its request and response types in this repository.
+- Pin exact versions: `go get <module>@vX.Y.Z`, `go get -tool <module>@vX.Y.Z`, `go run <module>@vX.Y.Z`, GitHub Actions by commit SHA, images by digest, npm packages without `^` or `~`. Never `@latest`, a floating tag or `go get -u ./...`. Update one dependency per change, except dedo's own pins, which `dedo update && dedo upgrade` moves together.
+- Check the license of the dependency and of every module it brings: `go run github.com/google/go-licenses/v2@v2.0.1 report ./...`. A license the annexure doesn't list as allowed outright needs a person's approval: stop and ask before adding it.
+- Run `go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...` after adding or updating a dependency, and fix what it reports before you finish.
+
 ## MCP tools
 
 Every unary, non-deprecated RPC becomes an MCP tool named after it in snake_case (`GetTodo` becomes `get_todo`), unless its service's `audience` is narrower than `protoc-gen-dedo-mcp`'s `min_audience` (by default, only `AUDIENCE_COMPONENT_INTERNAL` services are left out). `protoc-gen-dedo-mcp` generates them as `<Service>MCPTools()`, and `main.go` serves them with `mcpserver.AddTools(tools, client, <pkg>.<Service>MCPTools()...)`, `client` being `connect.NewClient(connectinprocess.New(server))`: calls go in-process to the service's `connect.Server`. For a service it leaves out, `<Service>MCPTools()` returns no tools, so `main.go` keeps compiling. Never write tool definitions by hand: change the proto and regenerate. Calls go through the same auth, scopes and validation as REST and Connect.
