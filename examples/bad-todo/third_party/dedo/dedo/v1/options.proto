@@ -41,6 +41,9 @@ message ServiceRules {
   // it, the reference uses the service name without its Service suffix,
   // split into words: CatalogEntryService reads "Catalog Entry".
   string title = 4;
+  // The service's level objectives, from which dedo slo writes OpenSLO
+  // documents whose indicators are the RPC metrics the runtime records.
+  ServiceLevel service_level = 5;
 }
 
 // Tenancy declares that a service partitions its data between tenants. The
@@ -156,6 +159,54 @@ message MethodRules {
   // UNAVAILABLE and DATA_LOSS. Each reason must be one the RPC declares in
   // errors.
   repeated ErrorClassification error_classifications = 8;
+  // How the RPC counts toward its service's level objectives: by default,
+  // like every other RPC of the service.
+  MethodServiceLevel service_level = 9;
+}
+
+// ServiceLevel is a service's level objectives over a rolling window, in
+// the shape of OpenSLO v1. Each objective applies to every RPC of the
+// service that is not exempt and has no objectives of its own.
+message ServiceLevel {
+  // What the service promises.
+  Objectives objectives = 1;
+  // The rolling window the objectives are measured over, in whole days,
+  // such as 28 days.
+  google.protobuf.Duration window = 2;
+}
+
+// Objectives are service level objectives, measured on
+// rpc.server.call.duration.
+message Objectives {
+  // The share of calls that are not server errors, such as 0.999: calls
+  // whose span has no error.type. Zero sets no availability objective.
+  double availability = 1;
+  // How fast calls answer. Server-streaming and bidirectional RPCs, whose
+  // duration is the stream's, count for none.
+  repeated LatencyObjective latency = 2;
+}
+
+// LatencyObjective is the share of calls that answer within a threshold.
+message LatencyObjective {
+  // The share of calls, such as 0.99 for the 99th percentile.
+  double percentile = 1;
+  // The time they answer within. It is one of the bucket boundaries of
+  // rpc.server.call.duration, so the share can be counted exactly.
+  google.protobuf.Duration threshold = 2;
+}
+
+// MethodServiceLevel is how one RPC counts toward its service's
+// objectives.
+message MethodServiceLevel {
+  // Exempt, or objectives of its own.
+  oneof level {
+    // The RPC counts toward no objective, such as a long poll or an
+    // internal maintenance RPC.
+    bool exempt = 1;
+    // Objectives of the RPC's own, in place of the service's, over the
+    // service's window.
+    Objectives objectives = 2;
+  }
 }
 
 // ErrorClassification says whether the errors of one declared reason count

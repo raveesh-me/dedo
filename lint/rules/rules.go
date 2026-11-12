@@ -78,6 +78,8 @@ var All = []*check.RuleSpec{
 	fieldAttributeSensitive,
 	fieldAttributeMode,
 	errorClassificationDeclared,
+	serviceLevel,
+	methodServiceLevel,
 	multiTenantServiceTenancy,
 	multiTenantResourcePattern,
 	multiTenantRequestTenant,

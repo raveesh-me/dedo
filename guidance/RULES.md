@@ -322,6 +322,8 @@ A house rule that contradicts a DEDO, AIP or ZALANDO rule without overriding it 
 | [`DEDO_FIELD_ATTRIBUTE_SENSITIVE`](#dedo_field_attribute_sensitive) | A sensitive field's attribute records only whether it is set |
 | [`DEDO_FIELD_ATTRIBUTE_MODE`](#dedo_field_attribute_mode) | An attribute's mode fits its field: a value of a scalar, the item count of a repeated field |
 | [`DEDO_ERROR_CLASSIFICATION_DECLARED`](#dedo_error_classification_declared) | An error classification names a declared reason, once, and changes how it counts |
+| [`DEDO_SERVICE_LEVEL`](#dedo_service_level) | A service's level objectives are sane: shares in range, latency thresholds on bucket boundaries, a window in whole days |
+| [`DEDO_METHOD_SERVICE_LEVEL`](#dedo_method_service_level) | An RPC's own objectives are sane, with no latency on a stream, and an exempt RPC's service declares objectives |
 
 ---
 
@@ -808,6 +810,55 @@ option (dedo.v1.method) = {
 ```
 
 **Fix.** Declare the reason, or remove the classification.
+
+### DEDO_SERVICE_LEVEL
+
+**Checks** a service's `service_level`, the objectives [`dedo slo`](install.md#service-level-objectives-openslo) writes as OpenSLO:
+
+- it declares at least one objective: an `availability`, a `latency`, or both;
+- `availability` is a share between 0.9 and 0.99999, such as `0.999`, not a percentage;
+- each latency `percentile` is a share between 0.5 and 0.9999, at most one objective per percentile;
+- each latency `threshold` is a bucket boundary of `rpc.server.call.duration`: 0.1, 0.25, 0.5, 1, 2.5, 5, 10, 30 or 60 seconds, or one of the boundaries below 0.1 (0.0001 to 0.05);
+- the `window` is a whole number of days, at most 90.
+
+**Why.** The indicators are counted from the duration histogram the runtime records. Its buckets are the ones OpenTelemetry's semantic conventions advise, so a threshold on a boundary is counted exactly, and one between two boundaries can only be estimated. An availability of 1 leaves no error budget, and 99.9 is a percentage that would never be met. A window that is not whole days does not map onto OpenSLO's duration shorthand, and a very long one reacts to nothing.
+
+```protobuf
+option (dedo.v1.service) = {
+  audience: AUDIENCE_EXTERNAL_PUBLIC
+  owner_team: "todo-team"
+  service_level: {
+    objectives: {
+      availability: 0.999                                         // Passes; 99.9 fails.
+      latency: {percentile: 0.99, threshold: {nanos: 250000000}}  // Passes; 300ms fails.
+    }
+    window: {seconds: 2419200}                                    // 28 days.
+  }
+};
+```
+
+**Fix.** Write shares as fractions, pick the nearest bucket boundary, and give the window in whole days.
+
+### DEDO_METHOD_SERVICE_LEVEL
+
+**Checks** an RPC's `service_level`:
+
+- `exempt: true` only on an RPC whose service declares a `service_level`, and never `exempt: false`;
+- its own `objectives` pass the same checks as a service's ([DEDO_SERVICE_LEVEL](#dedo_service_level)), and the service declares the `window` they are measured over;
+- a streaming RPC has no latency objective: its duration is the stream's.
+
+**Why.** By default every RPC counts toward its service's objectives. An RPC that cannot meet them by design, such as a long poll, is exempt, or has objectives of its own, and is left out of the service's. A stream's duration measures how long the client kept it open, not how fast the service answered, so `dedo slo` leaves streaming RPCs out of every latency objective.
+
+```protobuf
+rpc WatchTodos(WatchTodosRequest) returns (stream WatchTodosResponse) {
+  option (dedo.v1.method) = {
+    scopes: "todo.todo.read"
+    service_level: {exempt: true}  // Passes, when the service declares service_level.
+  };
+}
+```
+
+**Fix.** Declare the service's objectives first, or remove the RPC's; drop latency objectives from streaming RPCs.
 
 ## Breaking rules
 

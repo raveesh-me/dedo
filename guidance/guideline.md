@@ -129,6 +129,7 @@ What each option does:
 | `field.sensitive` | Docs, lint, runtime | Marks personal or secret data (`x-sensitive`). Its value never reaches telemetry. |
 | `field.attribute`, `field.attribute_mode` | Runtime, lint | An OpenTelemetry attribute the runtime records from the request on the RPC's server span and its log records: the field's value, whether it is set, or how many items it holds |
 | `method.error_classifications` | Runtime, lint | Declared reasons whose errors count against the service in telemetry differently from their code |
+| `service.service_level`, `method.service_level` | `dedo slo`, lint | The service's availability and latency objectives over a rolling window, and RPCs that are exempt or have their own, written as OpenSLO documents |
 | `service.tenancy`, `method.cross_tenant` | Lint, runtime | A multi-tenant service: the runtime checks every request's tenant ([section 7](#multi-tenant-services)) |
 
 The MCP tool schemas also read the standard annotations, so a model can get a call right the first time:
@@ -250,6 +251,8 @@ An unknown value stops the service at startup rather than serving it publicly.
 - **Logs join traces on `trace_id`.** The log handler puts `trace_id` and `span_id` on every record logged with a call's context, the names log pipelines look for.
 - **No payloads, unless the contract says so.** The runtime records only the request fields the contract names in `(dedo.v1.field).attribute`, under the key it gives, on the span and the log records, never on a metric, where their values would be too many. A sensitive field may record only whether it is set: lint reports anything else, and the runtime refuses to start on it. The key and its mode are part of the API's contract with whoever queries them, so a breaking rule keeps them.
 - **The contract says which errors are the server's.** The conventions let an instrumentation configure which outcomes are errors; dedo does it per declared reason (`error_classifications`), in review with the API, rather than in each service's code: an `UNAVAILABLE` a watch returns on every deploy is not an outage.
+
+- **Objectives belong in the contract.** What a service promises its callers is part of its API, reviewed with it. `dedo slo` writes the declared objectives as [OpenSLO](https://openslo.com), the open specification for SLOs, never as one vendor's rules. Their indicators are the semantic conventions' `rpc.server.call.duration`, selected by `rpc.method`, so they mean the same in any backend that takes OTLP. Availability counts calls with no `error.type`, so the contract's error classifications decide what spends the error budget.
 
 dedo writes its own interceptor rather than using `connectrpc.com/otelconnect`, which supports connect-go v2 since v0.12.0: dedo needs the transport, flow ID and reason attributes, and to classify errors by declared reason, which otelconnect fixes from the code alone, and otelconnect would bring connect-go v1 into every service.
 
