@@ -6,7 +6,7 @@ require (
 	github.com/bufbuild/protocompile v0.14.1
 	github.com/google/jsonschema-go v0.4.3
 	github.com/modelcontextprotocol/go-sdk v1.8.0
-	github.com/raveesh-me/dedo v0.37.0
+	github.com/raveesh-me/dedo v0.38.0
 	go.opentelemetry.io/otel v1.47.0
 	go.opentelemetry.io/otel/sdk v1.47.0
 	go.opentelemetry.io/otel/trace v1.47.0
