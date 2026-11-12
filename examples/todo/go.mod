@@ -9,8 +9,8 @@ require (
 	connectrpc.com/vanguard v0.5.0
 	github.com/modelcontextprotocol/go-sdk v1.8.0
 	github.com/pb33f/libopenapi v0.38.7
-	github.com/raveesh-me/dedo v0.38.0
-	github.com/raveesh-me/dedo/mcp v0.38.0
+	github.com/raveesh-me/dedo v0.39.0
+	github.com/raveesh-me/dedo/mcp v0.39.0
 	go.opentelemetry.io/otel v1.47.0
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp v1.47.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.47.0
@@ -39,7 +39,7 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.30.0 // indirect
 	github.com/pb33f/jsonpath v0.8.2 // indirect
 	github.com/pb33f/ordered-map/v2 v2.3.1 // indirect
-	github.com/raveesh-me/dedo/openapi v0.38.0 // indirect
+	github.com/raveesh-me/dedo/openapi v0.39.0 // indirect
 	github.com/segmentio/asm v1.2.1 // indirect
 	github.com/segmentio/encoding v0.5.4 // indirect
 	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect

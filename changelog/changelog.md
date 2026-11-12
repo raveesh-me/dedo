@@ -8,6 +8,8 @@ Version bumps, dependency updates and changes to benchmarks or examples alone ar
 
 ## [Unreleased]
 
+## [v0.39.0] - 2026-11-13
+
 ### Added
 
 - A telemetry sink in the local kind cluster. `dedo init`'s dev overlay deploys an OpenTelemetry Collector, `zarf/k8s/dev/otel-collector`: the upstream core image (`otel/opentelemetry-collector` 0.165.0, pinned by digest), an OTLP receiver on 4318 (HTTP) and 4317 (gRPC), and the `debug` exporter at `basic` verbosity for traces, metrics and logs. The dev patch of the service's deployment sets `OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318`, `OTEL_SERVICE_NAME` and `OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=dev`, so `setupTelemetry` exports there, and `make kind-otel` tails the collector's log. Other environments set the same `OTEL_*` variables to their own collector. `dedo upgrade` adds `kind-otel` to dedo's `Makefile.kind` but leaves an existing `zarf/` alone: `guidance/guideline.md` (*Telemetry in kind*) says how to add the collector from `dedo templates`.
@@ -534,7 +536,8 @@ The first release, as http-proto-lint (`github.com/raveesh-me/http-proto-lint`, 
 - MCP tools, served on the official MCP Go SDK under short snake_case names and through the same auth and policy as REST. [#1](https://github.com/raveesh-me/dedo/pull/1), [#2](https://github.com/raveesh-me/dedo/pull/2)
 - Templates for service repositories, `guideline.md`, and the `todo`, `bad-todo` and `library` examples. [#1](https://github.com/raveesh-me/dedo/pull/1), [#5](https://github.com/raveesh-me/dedo/pull/5)
 
-[Unreleased]: https://github.com/raveesh-me/dedo/compare/v0.38.0...HEAD
+[Unreleased]: https://github.com/raveesh-me/dedo/compare/v0.39.0...HEAD
+[v0.39.0]: https://github.com/raveesh-me/dedo/compare/v0.38.0...v0.39.0
 [v0.38.0]: https://github.com/raveesh-me/dedo/compare/v0.37.0...v0.38.0
 [v0.37.0]: https://github.com/raveesh-me/dedo/compare/v0.36.0...v0.37.0
 [v0.36.0]: https://github.com/raveesh-me/dedo/compare/v0.35.0...v0.36.0

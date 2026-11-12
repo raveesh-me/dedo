@@ -1,6 +1,6 @@
 // Command dedo sets up a Go repository to build its API with dedo.
 //
-//	go install github.com/raveesh-me/dedo/cmd/dedo@v0.38.0
+//	go install github.com/raveesh-me/dedo/cmd/dedo@v0.39.0
 //	dedo init
 //
 // dedo init adds the options module, the lint plugin, the code generators,
@@ -22,7 +22,7 @@ import (
 
 // version is the dedo release this command installs. The release job checks
 // that it names the release being tagged.
-const version = "v0.38.0"
+const version = "v0.39.0"
 
 func main() {
 	if isVetTool(os.Args[1:]) {
