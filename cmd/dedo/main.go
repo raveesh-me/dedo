@@ -1,6 +1,6 @@
 // Command dedo sets up a Go repository to build its API with dedo.
 //
-//	go install github.com/raveesh-me/dedo/cmd/dedo@latest
+//	go install github.com/raveesh-me/dedo/cmd/dedo@v0.37.0
 //	dedo init
 //
 // dedo init adds the options module, the lint plugin, the code generators,
