@@ -8,6 +8,13 @@ Version bumps, dependency updates and changes to benchmarks or examples alone ar
 
 ## [Unreleased]
 
+### Added
+
+- OpenTelemetry for every RPC, on open standards only: package `telemetry` imports just OpenTelemetry's API, so it is a no-op until the service installs the SDK. `telemetry.NewServerInterceptor` gives every call, on Connect, gRPC, gRPC-Web, REST and MCP, a server span named after `rpc.method` and records `rpc.server.call.duration`, following the semantic conventions for Connect RPC (`rpc.system.name` `connectrpc`, `rpc.status_code`, `error.type`). A server span is an error only for `UNKNOWN`, `DEADLINE_EXCEEDED`, `UNIMPLEMENTED`, `INTERNAL`, `UNAVAILABLE` and `DATA_LOSS`, and `error.type` is set exactly then. dedo's own attributes are `dedo.rpc.transport` (`connect`, `grpc`, `grpc_web`, `rest`, `mcp`, `in_process`), `dedo.flow_id` (spans only) and `dedo.error.reason`, the `ErrorInfo` reason. It continues the caller's trace from `traceparent`, `tracestate` and `baggage`. `telemetry.NewClientInterceptor` records a client span (an error for every code but `OK`) and `rpc.client.call.duration`, and injects the trace context into outbound calls. `telemetry.Middleware` gives `/mcp` a server span that each tool call's span is a child of, so an MCP request is one trace. `telemetry.NewLogHandler` adds `trace_id` and `span_id`, lowercase hex, at the top level of every `slog` record logged with a span's context. The runtime records no request or response fields, so `sensitive` fields never reach telemetry.
+- `dedo init`'s `main.go`, and the BFF's from `dedo init -bff`, set up the OpenTelemetry SDK with OTLP exporters (HTTP/protobuf) in `setupTelemetry`, the service's own code, configured only by the standard `OTEL_*` variables: `OTEL_SERVICE_NAME`, `OTEL_RESOURCE_ATTRIBUTES`, `OTEL_EXPORTER_OTLP_*`, `OTEL_TRACES_SAMPLER`, `OTEL_TRACES_EXPORTER` and `OTEL_METRICS_EXPORTER` (`otlp` or `none`), `OTEL_PROPAGATORS` (`tracecontext`, `baggage`, `none`) and `OTEL_SDK_DISABLED`. They wire the server interceptor after `flowid.Interceptor()`, `telemetry.Middleware` around `/mcp` (the BFF: the client interceptor on its backend client), and `telemetry.NewLogHandler`; they shut the server down gracefully on `SIGINT` and `SIGTERM` and then flush the SDK. `dedo init` pins the SDK and exporters at v1.47.0. A server written before this release adds these lines itself (`dedo templates main.go.tmpl`).
+- Events carry the trace context of the call that published them as the CloudEvents Distributed Tracing extension, `traceparent` and `tracestate`, beside `flowid`.
+- `mcpserver` marks its tool calls, so their spans say `dedo.rpc.transport` `mcp`.
+
 ## [v0.37.0] - 2026-11-11
 
 ### Breaking

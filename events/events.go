@@ -36,6 +36,7 @@ import (
 
 	"connectrpc.com/connect/v2"
 	"connectrpc.com/connect/v2/connectproto"
+	"go.opentelemetry.io/otel/propagation"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 
 	"github.com/raveesh-me/dedo/events/driver"
@@ -89,6 +90,25 @@ func IdempotencyKey(key string) Option {
 // flowIDExtension is the CloudEvents extension that carries the flow ID
 // of the request that caused the event.
 const flowIDExtension = "flowid"
+
+// traceContext writes the CloudEvents Distributed Tracing extension:
+// traceparent and tracestate, in W3C Trace Context's format.
+var traceContext = propagation.TraceContext{}
+
+// extensions are the event's extensions from the context of the call that
+// publishes it: the flow ID and the trace context, so a consumer can carry
+// the trace on. It is nil when the context has neither.
+func extensions(ctx context.Context) map[string]string {
+	ext := map[string]string{}
+	if id := flowid.From(ctx); id != "" {
+		ext[flowIDExtension] = id
+	}
+	traceContext.Inject(ctx, propagation.MapCarrier(ext))
+	if len(ext) == 0 {
+		return nil
+	}
+	return ext
+}
 
 // The default retry policy: about a dozen attempts in five seconds.
 const (
@@ -219,9 +239,7 @@ func (p *Publisher) Publish(ctx context.Context, eventType, subject string, opts
 	if err := refused(ctx, e, o.keySet); err != nil {
 		return driver.Event{}, connect.NewError(connect.CodeInternal, "event refused").WithCause(err)
 	}
-	if id := flowid.From(ctx); id != "" {
-		e.Extensions = map[string]string{flowIDExtension: id}
-	}
+	e.Extensions = extensions(ctx)
 	ctx, cancel := context.WithTimeout(ctx, p.retry.Timeout)
 	defer cancel()
 	attempts, err := p.deliver(ctx, e)
