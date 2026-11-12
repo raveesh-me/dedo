@@ -4,14 +4,9 @@ import (
 	"fmt"
 
 	"go.opentelemetry.io/otel/metric"
-)
 
-// durationBuckets are the bucket boundaries, in seconds, the semantic
-// conventions advise for RPC durations.
-var durationBuckets = []float64{
-	0.0001, 0.00025, 0.0005, 0.001, 0.0025, 0.005, 0.01, 0.025, 0.05,
-	0.1, 0.25, 0.5, 1, 2.5, 5, 10, 30, 60,
-}
+	"github.com/raveesh-me/dedo/telemetry/objectives"
+)
 
 // The duration metrics of the semantic conventions for RPC.
 const (
@@ -24,7 +19,7 @@ func newDuration(meter metric.Meter, name, description string) (metric.Float64Hi
 	h, err := meter.Float64Histogram(name,
 		metric.WithUnit("s"),
 		metric.WithDescription(description),
-		metric.WithExplicitBucketBoundaries(durationBuckets...))
+		metric.WithExplicitBucketBoundaries(objectives.DurationBuckets...))
 	if err != nil {
 		return nil, fmt.Errorf("telemetry: %s: %w", name, err)
 	}

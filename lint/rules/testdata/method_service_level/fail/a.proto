@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+package raveesh_me.library.v1;
+
+import "dedo/v1/options.proto";
+import "google/protobuf/empty.proto";
+
+service LibraryService {
+  option (dedo.v1.service) = {
+    service_level: {
+      objectives: {availability: 0.999}
+      window: {seconds: 2419200}
+    }
+  };
+  // A stream's duration is not a latency.
+  rpc WatchBooks(google.protobuf.Empty) returns (stream google.protobuf.Empty) { // want
+    option (dedo.v1.method) = {
+      service_level: {
+        objectives: {
+          latency: {
+            percentile: 0.95
+            threshold: {seconds: 1}
+          }
+        }
+      }
+    };
+  }
+}
+
+service ShelfService {
+  // Exempt from objectives the service does not declare.
+  rpc GetShelf(google.protobuf.Empty) returns (google.protobuf.Empty) { // want
+    option (dedo.v1.method) = {
+      service_level: {exempt: true}
+    };
+  }
+}

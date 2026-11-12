@@ -18,6 +18,22 @@ service TodoService {
   option (dedo.v1.service) = {
     audience: AUDIENCE_EXTERNAL_PUBLIC
     owner_team: "todo-team"
+    // dedo slo writes these as OpenSLO documents, in slo/.
+    service_level: {
+      objectives: {
+        availability: 0.999
+        latency: {
+          percentile: 0.5
+          threshold: {nanos: 25000000}
+        }
+        latency: {
+          percentile: 0.99
+          threshold: {nanos: 250000000}
+        }
+      }
+      // 28 days.
+      window: {seconds: 2419200}
+    }
   };
 
   // GetTodo returns one to-do.
@@ -222,6 +238,8 @@ service TodoService {
         reason: "TODO_NOT_FOUND"
         code: NOT_FOUND
       }
+      // Its callers are moving to DeleteTodo: it counts toward no objective.
+      service_level: {exempt: true}
     };
   }
 }

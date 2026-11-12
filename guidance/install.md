@@ -315,6 +315,54 @@ Lint checks them ([RULES.md](RULES.md#dedo_field_attribute_key)), and the servic
 
 Other than the fields the contract names, request and response messages never reach spans, metrics or logs from the runtime, and a field marked `(dedo.v1.field).sensitive` can only record whether it is set. Keep sensitive data out of error messages too: the span status carries a server error's message, as the caller's response does.
 
+### Service level objectives: OpenSLO
+
+The contract declares what the service promises, and `dedo slo` writes it as [OpenSLO](https://openslo.com) v1 documents whose indicators are the metric the runtime records, `rpc.server.call.duration`. Declare the objectives on the service, and per RPC where one differs:
+
+```protobuf
+service TodoService {
+  option (dedo.v1.service) = {
+    owner_team: "todo-team"
+    service_level: {
+      objectives: {
+        availability: 0.999                                         // calls that are not server errors
+        latency: {percentile: 0.99, threshold: {nanos: 250000000}}  // 99% of calls answer within 250ms
+      }
+      window: {seconds: 2419200}                                    // a rolling 28 days
+    }
+  };
+  rpc RemoveTodo(RemoveTodoRequest) returns (RemoveTodoResponse) {
+    option (dedo.v1.method) = {
+      service_level: {exempt: true}  // or objectives: {...} of its own
+    };
+  }
+}
+```
+
+`make generate` runs `dedo slo`, which writes `slo/<service>.yaml` for every service that declares objectives (`-out` changes the directory). Each file holds:
+
+- a `Service`, named after the proto service's full name as an RFC 1123 label (`raveesh_me.todo.v1.TodoService` becomes `raveesh-me-todo-v1-todoservice`). Every object carries the full name in the label `dedo.service`, and an RPC's own objectives also carry `dedo.rpc.method`;
+- per objective, an `SLI` and an `SLO` with `budgetingMethod: Occurrences` over the rolling window:
+  - **availability**: good events are calls with no `error.type`, out of all calls;
+  - **latency**: good events are calls that answer within the threshold, out of all calls, with the percentile as the target;
+- two `AlertPolicy` objects, multiwindow burn-rate alerts: page at 14.4 times the budget over 1 hour, ticket at 6 times over 6 hours. They notify an `AlertNotificationTarget` named after the owner team, which your organisation defines.
+
+An indicator selects calls by `rpc.method`, the full procedure (`raveesh_me.todo.v1.TodoService/GetTodo`). The service's objectives cover every RPC that is not exempt and has no objectives of its own. Its latency objectives leave out streaming RPCs, whose duration is the stream's. Each query is written for no particular backend:
+
+```yaml
+metricSource:
+  type: OpenTelemetry          # or metricSourceRef, with dedo slo -datasource NAME
+  spec:
+    metric: rpc.server.call.duration
+    aggregation: count          # observations of the histogram
+    attributes:
+      rpc.method: [raveesh_me.todo.v1.TodoService/GetTodo, ...]
+    absentAttributes: [error.type]  # availability's good events
+    maxValueSeconds: 0.25           # latency's good events: a bucket boundary
+```
+
+Translate it into your backend's query language, or point `-datasource` at a `DataSource` your OpenSLO tooling knows. A latency threshold is always a bucket boundary of the histogram (`DEDO_SERVICE_LEVEL`), so the count is exact.
+
 ### Publishing events
 
 Most services publish no events; skip this until a command declares one in `emits` ([domains.md](domains.md#domain-events-outward-only)). The handler then publishes through `events.Publisher`, from `github.com/raveesh-me/dedo/events`, which the root module already holds.

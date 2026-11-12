@@ -216,7 +216,10 @@ type ServiceRules struct {
 	// The REST reference groups the service's operations under it. Without
 	// it, the reference uses the service name without its Service suffix,
 	// split into words: CatalogEntryService reads "Catalog Entry".
-	Title         string `protobuf:"bytes,4,opt,name=title,proto3" json:"title,omitempty"`
+	Title string `protobuf:"bytes,4,opt,name=title,proto3" json:"title,omitempty"`
+	// The service's level objectives, from which dedo slo writes OpenSLO
+	// documents whose indicators are the RPC metrics the runtime records.
+	ServiceLevel  *ServiceLevel `protobuf:"bytes,5,opt,name=service_level,json=serviceLevel,proto3" json:"service_level,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -277,6 +280,13 @@ func (x *ServiceRules) GetTitle() string {
 		return x.Title
 	}
 	return ""
+}
+
+func (x *ServiceRules) GetServiceLevel() *ServiceLevel {
+	if x != nil {
+		return x.ServiceLevel
+	}
+	return nil
 }
 
 // Tenancy declares that a service partitions its data between tenants. The
@@ -687,8 +697,11 @@ type MethodRules struct {
 	// UNAVAILABLE and DATA_LOSS. Each reason must be one the RPC declares in
 	// errors.
 	ErrorClassifications []*ErrorClassification `protobuf:"bytes,8,rep,name=error_classifications,json=errorClassifications,proto3" json:"error_classifications,omitempty"`
-	unknownFields        protoimpl.UnknownFields
-	sizeCache            protoimpl.SizeCache
+	// How the RPC counts toward its service's level objectives: by default,
+	// like every other RPC of the service.
+	ServiceLevel  *MethodServiceLevel `protobuf:"bytes,9,opt,name=service_level,json=serviceLevel,proto3" json:"service_level,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *MethodRules) Reset() {
@@ -777,6 +790,275 @@ func (x *MethodRules) GetErrorClassifications() []*ErrorClassification {
 	return nil
 }
 
+func (x *MethodRules) GetServiceLevel() *MethodServiceLevel {
+	if x != nil {
+		return x.ServiceLevel
+	}
+	return nil
+}
+
+// ServiceLevel is a service's level objectives over a rolling window, in
+// the shape of OpenSLO v1. Each objective applies to every RPC of the
+// service that is not exempt and has no objectives of its own.
+type ServiceLevel struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// What the service promises.
+	Objectives *Objectives `protobuf:"bytes,1,opt,name=objectives,proto3" json:"objectives,omitempty"`
+	// The rolling window the objectives are measured over, in whole days,
+	// such as 28 days.
+	Window        *durationpb.Duration `protobuf:"bytes,2,opt,name=window,proto3" json:"window,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ServiceLevel) Reset() {
+	*x = ServiceLevel{}
+	mi := &file_dedo_v1_options_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ServiceLevel) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ServiceLevel) ProtoMessage() {}
+
+func (x *ServiceLevel) ProtoReflect() protoreflect.Message {
+	mi := &file_dedo_v1_options_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ServiceLevel.ProtoReflect.Descriptor instead.
+func (*ServiceLevel) Descriptor() ([]byte, []int) {
+	return file_dedo_v1_options_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *ServiceLevel) GetObjectives() *Objectives {
+	if x != nil {
+		return x.Objectives
+	}
+	return nil
+}
+
+func (x *ServiceLevel) GetWindow() *durationpb.Duration {
+	if x != nil {
+		return x.Window
+	}
+	return nil
+}
+
+// Objectives are service level objectives, measured on
+// rpc.server.call.duration.
+type Objectives struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The share of calls that are not server errors, such as 0.999: calls
+	// whose span has no error.type. Zero sets no availability objective.
+	Availability float64 `protobuf:"fixed64,1,opt,name=availability,proto3" json:"availability,omitempty"`
+	// How fast calls answer. Server-streaming and bidirectional RPCs, whose
+	// duration is the stream's, count for none.
+	Latency       []*LatencyObjective `protobuf:"bytes,2,rep,name=latency,proto3" json:"latency,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Objectives) Reset() {
+	*x = Objectives{}
+	mi := &file_dedo_v1_options_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Objectives) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Objectives) ProtoMessage() {}
+
+func (x *Objectives) ProtoReflect() protoreflect.Message {
+	mi := &file_dedo_v1_options_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Objectives.ProtoReflect.Descriptor instead.
+func (*Objectives) Descriptor() ([]byte, []int) {
+	return file_dedo_v1_options_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *Objectives) GetAvailability() float64 {
+	if x != nil {
+		return x.Availability
+	}
+	return 0
+}
+
+func (x *Objectives) GetLatency() []*LatencyObjective {
+	if x != nil {
+		return x.Latency
+	}
+	return nil
+}
+
+// LatencyObjective is the share of calls that answer within a threshold.
+type LatencyObjective struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The share of calls, such as 0.99 for the 99th percentile.
+	Percentile float64 `protobuf:"fixed64,1,opt,name=percentile,proto3" json:"percentile,omitempty"`
+	// The time they answer within. It is one of the bucket boundaries of
+	// rpc.server.call.duration, so the share can be counted exactly.
+	Threshold     *durationpb.Duration `protobuf:"bytes,2,opt,name=threshold,proto3" json:"threshold,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *LatencyObjective) Reset() {
+	*x = LatencyObjective{}
+	mi := &file_dedo_v1_options_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *LatencyObjective) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LatencyObjective) ProtoMessage() {}
+
+func (x *LatencyObjective) ProtoReflect() protoreflect.Message {
+	mi := &file_dedo_v1_options_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use LatencyObjective.ProtoReflect.Descriptor instead.
+func (*LatencyObjective) Descriptor() ([]byte, []int) {
+	return file_dedo_v1_options_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *LatencyObjective) GetPercentile() float64 {
+	if x != nil {
+		return x.Percentile
+	}
+	return 0
+}
+
+func (x *LatencyObjective) GetThreshold() *durationpb.Duration {
+	if x != nil {
+		return x.Threshold
+	}
+	return nil
+}
+
+// MethodServiceLevel is how one RPC counts toward its service's
+// objectives.
+type MethodServiceLevel struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Exempt, or objectives of its own.
+	//
+	// Types that are valid to be assigned to Level:
+	//
+	//	*MethodServiceLevel_Exempt
+	//	*MethodServiceLevel_Objectives
+	Level         isMethodServiceLevel_Level `protobuf_oneof:"level"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MethodServiceLevel) Reset() {
+	*x = MethodServiceLevel{}
+	mi := &file_dedo_v1_options_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MethodServiceLevel) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MethodServiceLevel) ProtoMessage() {}
+
+func (x *MethodServiceLevel) ProtoReflect() protoreflect.Message {
+	mi := &file_dedo_v1_options_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MethodServiceLevel.ProtoReflect.Descriptor instead.
+func (*MethodServiceLevel) Descriptor() ([]byte, []int) {
+	return file_dedo_v1_options_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *MethodServiceLevel) GetLevel() isMethodServiceLevel_Level {
+	if x != nil {
+		return x.Level
+	}
+	return nil
+}
+
+func (x *MethodServiceLevel) GetExempt() bool {
+	if x != nil {
+		if x, ok := x.Level.(*MethodServiceLevel_Exempt); ok {
+			return x.Exempt
+		}
+	}
+	return false
+}
+
+func (x *MethodServiceLevel) GetObjectives() *Objectives {
+	if x != nil {
+		if x, ok := x.Level.(*MethodServiceLevel_Objectives); ok {
+			return x.Objectives
+		}
+	}
+	return nil
+}
+
+type isMethodServiceLevel_Level interface {
+	isMethodServiceLevel_Level()
+}
+
+type MethodServiceLevel_Exempt struct {
+	// The RPC counts toward no objective, such as a long poll or an
+	// internal maintenance RPC.
+	Exempt bool `protobuf:"varint,1,opt,name=exempt,proto3,oneof"`
+}
+
+type MethodServiceLevel_Objectives struct {
+	// Objectives of the RPC's own, in place of the service's, over the
+	// service's window.
+	Objectives *Objectives `protobuf:"bytes,2,opt,name=objectives,proto3,oneof"`
+}
+
+func (*MethodServiceLevel_Exempt) isMethodServiceLevel_Level() {}
+
+func (*MethodServiceLevel_Objectives) isMethodServiceLevel_Level() {}
+
 // ErrorClassification says whether the errors of one declared reason count
 // against the service in telemetry, overriding what their code says.
 type ErrorClassification struct {
@@ -793,7 +1075,7 @@ type ErrorClassification struct {
 
 func (x *ErrorClassification) Reset() {
 	*x = ErrorClassification{}
-	mi := &file_dedo_v1_options_proto_msgTypes[8]
+	mi := &file_dedo_v1_options_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -805,7 +1087,7 @@ func (x *ErrorClassification) String() string {
 func (*ErrorClassification) ProtoMessage() {}
 
 func (x *ErrorClassification) ProtoReflect() protoreflect.Message {
-	mi := &file_dedo_v1_options_proto_msgTypes[8]
+	mi := &file_dedo_v1_options_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -818,7 +1100,7 @@ func (x *ErrorClassification) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ErrorClassification.ProtoReflect.Descriptor instead.
 func (*ErrorClassification) Descriptor() ([]byte, []int) {
-	return file_dedo_v1_options_proto_rawDescGZIP(), []int{8}
+	return file_dedo_v1_options_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *ErrorClassification) GetReason() string {
@@ -847,7 +1129,7 @@ type MessageRules struct {
 
 func (x *MessageRules) Reset() {
 	*x = MessageRules{}
-	mi := &file_dedo_v1_options_proto_msgTypes[9]
+	mi := &file_dedo_v1_options_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -859,7 +1141,7 @@ func (x *MessageRules) String() string {
 func (*MessageRules) ProtoMessage() {}
 
 func (x *MessageRules) ProtoReflect() protoreflect.Message {
-	mi := &file_dedo_v1_options_proto_msgTypes[9]
+	mi := &file_dedo_v1_options_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -872,7 +1154,7 @@ func (x *MessageRules) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MessageRules.ProtoReflect.Descriptor instead.
 func (*MessageRules) Descriptor() ([]byte, []int) {
-	return file_dedo_v1_options_proto_rawDescGZIP(), []int{9}
+	return file_dedo_v1_options_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *MessageRules) GetDescription() string {
@@ -902,7 +1184,7 @@ type FieldRules struct {
 
 func (x *FieldRules) Reset() {
 	*x = FieldRules{}
-	mi := &file_dedo_v1_options_proto_msgTypes[10]
+	mi := &file_dedo_v1_options_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -914,7 +1196,7 @@ func (x *FieldRules) String() string {
 func (*FieldRules) ProtoMessage() {}
 
 func (x *FieldRules) ProtoReflect() protoreflect.Message {
-	mi := &file_dedo_v1_options_proto_msgTypes[10]
+	mi := &file_dedo_v1_options_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -927,7 +1209,7 @@ func (x *FieldRules) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FieldRules.ProtoReflect.Descriptor instead.
 func (*FieldRules) Descriptor() ([]byte, []int) {
-	return file_dedo_v1_options_proto_rawDescGZIP(), []int{10}
+	return file_dedo_v1_options_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *FieldRules) GetSensitive() bool {
@@ -1022,13 +1304,14 @@ var File_dedo_v1_options_proto protoreflect.FileDescriptor
 
 const file_dedo_v1_options_proto_rawDesc = "" +
 	"\n" +
-	"\x15dedo/v1/options.proto\x12\adedo.v1\x1a google/protobuf/descriptor.proto\x1a\x1egoogle/protobuf/duration.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x15google/rpc/code.proto\"\x9e\x01\n" +
+	"\x15dedo/v1/options.proto\x12\adedo.v1\x1a google/protobuf/descriptor.proto\x1a\x1egoogle/protobuf/duration.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x15google/rpc/code.proto\"\xda\x01\n" +
 	"\fServiceRules\x12-\n" +
 	"\baudience\x18\x01 \x01(\x0e2\x11.dedo.v1.AudienceR\baudience\x12\x1d\n" +
 	"\n" +
 	"owner_team\x18\x02 \x01(\tR\townerTeam\x12*\n" +
 	"\atenancy\x18\x03 \x01(\v2\x10.dedo.v1.TenancyR\atenancy\x12\x14\n" +
-	"\x05title\x18\x04 \x01(\tR\x05title\")\n" +
+	"\x05title\x18\x04 \x01(\tR\x05title\x12:\n" +
+	"\rservice_level\x18\x05 \x01(\v2\x15.dedo.v1.ServiceLevelR\fserviceLevel\")\n" +
 	"\aTenancy\x12\x1e\n" +
 	"\n" +
 	"collection\x18\x01 \x01(\tR\n" +
@@ -1063,7 +1346,7 @@ const file_dedo_v1_options_proto_rawDesc = "" +
 	"\x0f_read_only_hintB\x13\n" +
 	"\x11_destructive_hintB\x12\n" +
 	"\x10_idempotent_hintB\x12\n" +
-	"\x10_open_world_hint\"\xe6\x02\n" +
+	"\x10_open_world_hint\"\xa8\x03\n" +
 	"\vMethodRules\x12\x16\n" +
 	"\x06scopes\x18\x01 \x03(\tR\x06scopes\x12*\n" +
 	"\x05cache\x18\x02 \x01(\v2\x14.dedo.v1.CachePolicyR\x05cache\x126\n" +
@@ -1072,7 +1355,28 @@ const file_dedo_v1_options_proto_rawDesc = "" +
 	"\x04tool\x18\x05 \x01(\v2\r.dedo.v1.ToolR\x04tool\x12!\n" +
 	"\fcross_tenant\x18\x06 \x01(\bR\vcrossTenant\x12\x14\n" +
 	"\x05emits\x18\a \x03(\tR\x05emits\x12Q\n" +
-	"\x15error_classifications\x18\b \x03(\v2\x1c.dedo.v1.ErrorClassificationR\x14errorClassifications\"P\n" +
+	"\x15error_classifications\x18\b \x03(\v2\x1c.dedo.v1.ErrorClassificationR\x14errorClassifications\x12@\n" +
+	"\rservice_level\x18\t \x01(\v2\x1b.dedo.v1.MethodServiceLevelR\fserviceLevel\"v\n" +
+	"\fServiceLevel\x123\n" +
+	"\n" +
+	"objectives\x18\x01 \x01(\v2\x13.dedo.v1.ObjectivesR\n" +
+	"objectives\x121\n" +
+	"\x06window\x18\x02 \x01(\v2\x19.google.protobuf.DurationR\x06window\"e\n" +
+	"\n" +
+	"Objectives\x12\"\n" +
+	"\favailability\x18\x01 \x01(\x01R\favailability\x123\n" +
+	"\alatency\x18\x02 \x03(\v2\x19.dedo.v1.LatencyObjectiveR\alatency\"k\n" +
+	"\x10LatencyObjective\x12\x1e\n" +
+	"\n" +
+	"percentile\x18\x01 \x01(\x01R\n" +
+	"percentile\x127\n" +
+	"\tthreshold\x18\x02 \x01(\v2\x19.google.protobuf.DurationR\tthreshold\"n\n" +
+	"\x12MethodServiceLevel\x12\x18\n" +
+	"\x06exempt\x18\x01 \x01(\bH\x00R\x06exempt\x125\n" +
+	"\n" +
+	"objectives\x18\x02 \x01(\v2\x13.dedo.v1.ObjectivesH\x00R\n" +
+	"objectivesB\a\n" +
+	"\x05level\"P\n" +
 	"\x13ErrorClassification\x12\x16\n" +
 	"\x06reason\x18\x01 \x01(\tR\x06reason\x12!\n" +
 	"\fserver_error\x18\x02 \x01(\bR\vserverError\"0\n" +
@@ -1114,7 +1418,7 @@ func file_dedo_v1_options_proto_rawDescGZIP() []byte {
 }
 
 var file_dedo_v1_options_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_dedo_v1_options_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
+var file_dedo_v1_options_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
 var file_dedo_v1_options_proto_goTypes = []any{
 	(Audience)(0),                       // 0: dedo.v1.Audience
 	(AttributeMode)(0),                  // 1: dedo.v1.AttributeMode
@@ -1127,45 +1431,56 @@ var file_dedo_v1_options_proto_goTypes = []any{
 	(*Tool)(nil),                        // 8: dedo.v1.Tool
 	(*ToolAnnotations)(nil),             // 9: dedo.v1.ToolAnnotations
 	(*MethodRules)(nil),                 // 10: dedo.v1.MethodRules
-	(*ErrorClassification)(nil),         // 11: dedo.v1.ErrorClassification
-	(*MessageRules)(nil),                // 12: dedo.v1.MessageRules
-	(*FieldRules)(nil),                  // 13: dedo.v1.FieldRules
-	(*durationpb.Duration)(nil),         // 14: google.protobuf.Duration
-	(*timestamppb.Timestamp)(nil),       // 15: google.protobuf.Timestamp
-	(code.Code)(0),                      // 16: google.rpc.Code
-	(*descriptorpb.ServiceOptions)(nil), // 17: google.protobuf.ServiceOptions
-	(*descriptorpb.MethodOptions)(nil),  // 18: google.protobuf.MethodOptions
-	(*descriptorpb.MessageOptions)(nil), // 19: google.protobuf.MessageOptions
-	(*descriptorpb.FieldOptions)(nil),   // 20: google.protobuf.FieldOptions
+	(*ServiceLevel)(nil),                // 11: dedo.v1.ServiceLevel
+	(*Objectives)(nil),                  // 12: dedo.v1.Objectives
+	(*LatencyObjective)(nil),            // 13: dedo.v1.LatencyObjective
+	(*MethodServiceLevel)(nil),          // 14: dedo.v1.MethodServiceLevel
+	(*ErrorClassification)(nil),         // 15: dedo.v1.ErrorClassification
+	(*MessageRules)(nil),                // 16: dedo.v1.MessageRules
+	(*FieldRules)(nil),                  // 17: dedo.v1.FieldRules
+	(*durationpb.Duration)(nil),         // 18: google.protobuf.Duration
+	(*timestamppb.Timestamp)(nil),       // 19: google.protobuf.Timestamp
+	(code.Code)(0),                      // 20: google.rpc.Code
+	(*descriptorpb.ServiceOptions)(nil), // 21: google.protobuf.ServiceOptions
+	(*descriptorpb.MethodOptions)(nil),  // 22: google.protobuf.MethodOptions
+	(*descriptorpb.MessageOptions)(nil), // 23: google.protobuf.MessageOptions
+	(*descriptorpb.FieldOptions)(nil),   // 24: google.protobuf.FieldOptions
 }
 var file_dedo_v1_options_proto_depIdxs = []int32{
 	0,  // 0: dedo.v1.ServiceRules.audience:type_name -> dedo.v1.Audience
 	4,  // 1: dedo.v1.ServiceRules.tenancy:type_name -> dedo.v1.Tenancy
-	2,  // 2: dedo.v1.CachePolicy.visibility:type_name -> dedo.v1.CachePolicy.Visibility
-	14, // 3: dedo.v1.CachePolicy.max_age:type_name -> google.protobuf.Duration
-	15, // 4: dedo.v1.Deprecation.deprecation_time:type_name -> google.protobuf.Timestamp
-	15, // 5: dedo.v1.Deprecation.sunset_time:type_name -> google.protobuf.Timestamp
-	16, // 6: dedo.v1.ErrorReason.code:type_name -> google.rpc.Code
-	9,  // 7: dedo.v1.Tool.annotations:type_name -> dedo.v1.ToolAnnotations
-	5,  // 8: dedo.v1.MethodRules.cache:type_name -> dedo.v1.CachePolicy
-	6,  // 9: dedo.v1.MethodRules.deprecation:type_name -> dedo.v1.Deprecation
-	7,  // 10: dedo.v1.MethodRules.errors:type_name -> dedo.v1.ErrorReason
-	8,  // 11: dedo.v1.MethodRules.tool:type_name -> dedo.v1.Tool
-	11, // 12: dedo.v1.MethodRules.error_classifications:type_name -> dedo.v1.ErrorClassification
-	1,  // 13: dedo.v1.FieldRules.attribute_mode:type_name -> dedo.v1.AttributeMode
-	17, // 14: dedo.v1.service:extendee -> google.protobuf.ServiceOptions
-	18, // 15: dedo.v1.method:extendee -> google.protobuf.MethodOptions
-	19, // 16: dedo.v1.message:extendee -> google.protobuf.MessageOptions
-	20, // 17: dedo.v1.field:extendee -> google.protobuf.FieldOptions
-	3,  // 18: dedo.v1.service:type_name -> dedo.v1.ServiceRules
-	10, // 19: dedo.v1.method:type_name -> dedo.v1.MethodRules
-	12, // 20: dedo.v1.message:type_name -> dedo.v1.MessageRules
-	13, // 21: dedo.v1.field:type_name -> dedo.v1.FieldRules
-	22, // [22:22] is the sub-list for method output_type
-	22, // [22:22] is the sub-list for method input_type
-	18, // [18:22] is the sub-list for extension type_name
-	14, // [14:18] is the sub-list for extension extendee
-	0,  // [0:14] is the sub-list for field type_name
+	11, // 2: dedo.v1.ServiceRules.service_level:type_name -> dedo.v1.ServiceLevel
+	2,  // 3: dedo.v1.CachePolicy.visibility:type_name -> dedo.v1.CachePolicy.Visibility
+	18, // 4: dedo.v1.CachePolicy.max_age:type_name -> google.protobuf.Duration
+	19, // 5: dedo.v1.Deprecation.deprecation_time:type_name -> google.protobuf.Timestamp
+	19, // 6: dedo.v1.Deprecation.sunset_time:type_name -> google.protobuf.Timestamp
+	20, // 7: dedo.v1.ErrorReason.code:type_name -> google.rpc.Code
+	9,  // 8: dedo.v1.Tool.annotations:type_name -> dedo.v1.ToolAnnotations
+	5,  // 9: dedo.v1.MethodRules.cache:type_name -> dedo.v1.CachePolicy
+	6,  // 10: dedo.v1.MethodRules.deprecation:type_name -> dedo.v1.Deprecation
+	7,  // 11: dedo.v1.MethodRules.errors:type_name -> dedo.v1.ErrorReason
+	8,  // 12: dedo.v1.MethodRules.tool:type_name -> dedo.v1.Tool
+	15, // 13: dedo.v1.MethodRules.error_classifications:type_name -> dedo.v1.ErrorClassification
+	14, // 14: dedo.v1.MethodRules.service_level:type_name -> dedo.v1.MethodServiceLevel
+	12, // 15: dedo.v1.ServiceLevel.objectives:type_name -> dedo.v1.Objectives
+	18, // 16: dedo.v1.ServiceLevel.window:type_name -> google.protobuf.Duration
+	13, // 17: dedo.v1.Objectives.latency:type_name -> dedo.v1.LatencyObjective
+	18, // 18: dedo.v1.LatencyObjective.threshold:type_name -> google.protobuf.Duration
+	12, // 19: dedo.v1.MethodServiceLevel.objectives:type_name -> dedo.v1.Objectives
+	1,  // 20: dedo.v1.FieldRules.attribute_mode:type_name -> dedo.v1.AttributeMode
+	21, // 21: dedo.v1.service:extendee -> google.protobuf.ServiceOptions
+	22, // 22: dedo.v1.method:extendee -> google.protobuf.MethodOptions
+	23, // 23: dedo.v1.message:extendee -> google.protobuf.MessageOptions
+	24, // 24: dedo.v1.field:extendee -> google.protobuf.FieldOptions
+	3,  // 25: dedo.v1.service:type_name -> dedo.v1.ServiceRules
+	10, // 26: dedo.v1.method:type_name -> dedo.v1.MethodRules
+	16, // 27: dedo.v1.message:type_name -> dedo.v1.MessageRules
+	17, // 28: dedo.v1.field:type_name -> dedo.v1.FieldRules
+	29, // [29:29] is the sub-list for method output_type
+	29, // [29:29] is the sub-list for method input_type
+	25, // [25:29] is the sub-list for extension type_name
+	21, // [21:25] is the sub-list for extension extendee
+	0,  // [0:21] is the sub-list for field type_name
 }
 
 func init() { file_dedo_v1_options_proto_init() }
@@ -1174,13 +1489,17 @@ func file_dedo_v1_options_proto_init() {
 		return
 	}
 	file_dedo_v1_options_proto_msgTypes[6].OneofWrappers = []any{}
+	file_dedo_v1_options_proto_msgTypes[11].OneofWrappers = []any{
+		(*MethodServiceLevel_Exempt)(nil),
+		(*MethodServiceLevel_Objectives)(nil),
+	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_dedo_v1_options_proto_rawDesc), len(file_dedo_v1_options_proto_rawDesc)),
 			NumEnums:      3,
-			NumMessages:   11,
+			NumMessages:   15,
 			NumExtensions: 4,
 			NumServices:   0,
 		},

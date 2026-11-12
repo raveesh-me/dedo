@@ -916,7 +916,7 @@ const file_raveesh_me_todo_v1_todo_proto_rawDesc = "" +
 	"\x0eCHANGE_UPDATED\x10\x02\x12\x12\n" +
 	"\x0eCHANGE_DELETED\x10\x03\x12\x13\n" +
 	"\x0fCHANGE_WATCHING\x10\x04:=»\x189\n" +
-	"7One change to the to-do list, and the to-do it changed.2\xe5\x11\n" +
+	"7One change to the to-do list, and the to-do it changed.2\xa1\x12\n" +
 	"\vTodoService\x12\xba\x02\n" +
 	"\aGetTodo\x12\".raveesh_me.todo.v1.GetTodoRequest\x1a#.raveesh_me.todo.v1.GetTodoResponse\"\xe5\x01\xaa\xbb\x18\xaf\x01\n" +
 	"\x0etodo.todo.read\x12\x06\b\x01\x12\x02\b\n" +
@@ -948,13 +948,14 @@ const file_raveesh_me_todo_v1_todo_proto_rawDesc = "" +
 	"WatchTodos\x12%.raveesh_me.todo.v1.WatchTodosRequest\x1a&.raveesh_me.todo.v1.WatchTodosResponse\"F\xaa\xbb\x18B\n" +
 	"\x0etodo.todo.read\"\x18\n" +
 	"\x14SERVER_SHUTTING_DOWN\x10\x0eB\x16\n" +
-	"\x14SERVER_SHUTTING_DOWN0\x01\x12\xdd\x02\n" +
+	"\x14SERVER_SHUTTING_DOWN0\x01\x12\xe1\x02\n" +
 	"\n" +
-	"RemoveTodo\x12%.raveesh_me.todo.v1.RemoveTodoRequest\x1a&.raveesh_me.todo.v1.RemoveTodoResponse\"\xff\x01\xaa\xbb\x18\xc2\x01\n" +
+	"RemoveTodo\x12%.raveesh_me.todo.v1.RemoveTodoRequest\x1a&.raveesh_me.todo.v1.RemoveTodoResponse\"\x83\x02\xaa\xbb\x18\xc6\x01\n" +
 	"\x0ftodo.todo.write\x1a;\n" +
 	"\x06\b\x80\xf2\xd6\xca\x06\x12\x06\b\x80\xd9\xdb\xd9\x06\x1a)raveesh_me.todo.v1.TodoService.DeleteTodo\"\x12\n" +
 	"\x0eTODO_NOT_FOUND\x10\x05*^\n" +
-	"\x1bRemove a to-do (deprecated)\x125Deprecated: use DeleteTodo. Removes a to-do for good.\x1a\b\b\x00\x10\x01\x18\x01 \x00\x82\xd3\xe4\x93\x02,:\x01*\"'/commerce/todo/v1/{name=todos/*}:remove\x88\x02\x01\x90\x02\x02\x1a#\xcaA\x0ftodo.raveesh.me\xa2\xbb\x18\r\b\x05\x12\ttodo-teamB\xd4\x01\n" +
+	"\x1bRemove a to-do (deprecated)\x125Deprecated: use DeleteTodo. Removes a to-do for good.\x1a\b\b\x00\x10\x01\x18\x01 \x00J\x02\b\x01\x82\xd3\xe4\x93\x02,:\x01*\"'/commerce/todo/v1/{name=todos/*}:remove\x88\x02\x01\x90\x02\x02\x1a[\xcaA\x0ftodo.raveesh.me\xa2\xbb\x18E\b\x05\x12\ttodo-team*6\n" +
+	"-\t+\x87\x16\xd9\xce\xf7\xef?\x12\x10\t\x00\x00\x00\x00\x00\x00\xe0?\x12\x05\x10\xc0\xf0\xf5\v\x12\x10\t\xaeG\xe1z\x14\xae\xef?\x12\x05\x10\x80\xe5\x9aw\x12\x05\b\x80ԓ\x01B\xd4\x01\n" +
 	"\x16com.raveesh_me.todo.v1B\tTodoProtoP\x01ZIgithub.com/raveesh-me/dedo/examples/todo/gen/go/raveesh_me/todo/v1;todov1\xa2\x02\x03RTX\xaa\x02\x11RaveeshMe.Todo.V1\xca\x02\x11RaveeshMe\\Todo\\V1\xe2\x02\x1dRaveeshMe\\Todo\\V1\\GPBMetadata\xea\x02\x13RaveeshMe::Todo::V1b\x06proto3"
 
 var (
