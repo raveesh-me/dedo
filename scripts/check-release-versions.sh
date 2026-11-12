@@ -25,6 +25,8 @@ check templates/buf.yaml 'r-a/dedo:v[0-9.]+(-[0-9A-Za-z.]+)?'
 check guidance/install.md 'r-a/dedo:v[0-9.]+(-[0-9A-Za-z.]+)?'
 check guidance/tutorial.md 'raveesh-me/dedo[a-z/-]*@v[0-9.]+(-[0-9A-Za-z.]+)?'
 check cmd/dedo/main.go 'const version = "v[0-9.]+(-[0-9A-Za-z.]+)?"'
+check cmd/dedo/main.go 'raveesh-me/dedo[a-z/-]*@v[0-9.]+(-[0-9A-Za-z.]+)?'
+check proto/README.md 'raveesh-me/dedo[a-z/-]*@v[0-9.]+(-[0-9A-Za-z.]+)?'
 check guidance/guideline.md 'raveesh-me/dedo[a-z/-]*@v[0-9.]+(-[0-9A-Za-z.]+)?'
 check readme.md 'Latest release: \[v[0-9.]+(-[0-9A-Za-z.]+)?\]'
 # Inside the repository: the workspace replacements and every module's
