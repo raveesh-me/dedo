@@ -8,6 +8,9 @@ require (
 	{{.Module}} v0.0.0
 	connectrpc.com/connect/v2 {{.Connect}}
 	{{.DedoModule}} {{.Dedo}}
+{{- range .OtelModules}}
+	{{.}} {{$.Otel}}
+{{- end}}
 )
 
 // The backend's generated clients, from this repository's working tree:

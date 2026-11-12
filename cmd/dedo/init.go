@@ -499,6 +499,21 @@ const (
 	validateRelease = "v0.9.0"
 )
 
+// otelRelease is the OpenTelemetry Go release of the SDK and exporters that
+// main.go sets up, which dedo is built and tested with. The modules move
+// together.
+const otelRelease = "v1.47.0"
+
+// otelModules are the OpenTelemetry modules main.go imports to set up the
+// SDK and its OTLP exporters. dedo's own packages need only the API.
+var otelModules = []string{
+	"go.opentelemetry.io/otel",
+	"go.opentelemetry.io/otel/sdk",
+	"go.opentelemetry.io/otel/sdk/metric",
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp",
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp",
+}
+
 // connectV1Remote matches Buf's remote Connect plugin pinned to a v1 release,
 // which generates code dedo's connect-go v2 runtime cannot serve.
 var connectV1Remote = regexp.MustCompile(`^buf\.build/connectrpc/go(simple)?:v1\.`)
@@ -635,14 +650,18 @@ func (in *initer) mergeManaged(doc, tmpl *yaml.Node) bool {
 // server adds the runtime modules and the REST reference page, and the
 // policy-table test when the repository already has a service.
 func (in *initer) server() error {
-	in.cmds = append(in.cmds, []string{"go", "get",
+	get := []string{"go", "get",
 		"github.com/raveesh-me/dedo@" + in.release,
 		"github.com/raveesh-me/dedo/mcp@" + in.release,
 		"connectrpc.com/connect/v2@" + connectRelease,
 		"connectrpc.com/vanguard@" + vanguardRelease,
 		"connectrpc.com/validate@" + validateRelease,
-	})
-	in.say("go.mod: will add github.com/raveesh-me/dedo and its mcp module at %s", in.release)
+	}
+	for _, mod := range otelModules {
+		get = append(get, mod+"@"+otelRelease)
+	}
+	in.cmds = append(in.cmds, get)
+	in.say("go.mod: will add github.com/raveesh-me/dedo and its mcp module at %s, and the OpenTelemetry SDK at %s", in.release, otelRelease)
 	if _, err := in.replaceSDK("go.mod"); err != nil {
 		return err
 	}
@@ -1024,8 +1043,10 @@ func (in *initer) render(name string) ([]byte, error) {
 
 // mainNames are the names main.go declares or imports, which a module's
 // package may not take there.
-var mainNames = []string{"auth", "bearer", "connect", "connecthttp", "connectinprocess", "context", "docs", "flowid",
-	"http", "interceptor", "log", "main", "mcp", "mcpserver", "os", "policy", "slices", "slog", "strings", "validate", "vanguard"}
+var mainNames = []string{"attribute", "auth", "bearer", "connect", "connecthttp", "connectinprocess", "context", "docs", "errors",
+	"flowid", "fmt", "http", "interceptor", "log", "main", "mcp", "mcpserver", "observe", "os", "otel", "otlpmetrichttp",
+	"otlptracehttp", "policy", "propagation", "resource", "run", "sdkmetric", "sdktrace", "serve", "signal", "slices", "slog",
+	"strings", "syscall", "telemetry", "time", "validate", "vanguard"}
 
 // moduleAlias is the name main.go imports a module's package under: its
 // own, unless main.go uses that name already.

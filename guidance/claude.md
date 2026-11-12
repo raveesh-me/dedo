@@ -57,6 +57,17 @@ Qualify a dependency before adding it, as [dependencies.md](https://github.com/r
 - Check the license of the dependency and of every module it brings: `go run github.com/google/go-licenses/v2@v2.0.1 report ./...`. A license the annexure doesn't list as allowed outright needs a person's approval: stop and ask before adding it.
 - Run `go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...` after adding or updating a dependency, and fix what it reports before you finish.
 
+## Observability
+
+A dedo service reports through OpenTelemetry and W3C Trace Context, never a vendor's SDK or headers. `main.go` sets up the SDK and OTLP exporters in `setupTelemetry`, configured only by the standard `OTEL_*` environment variables; the runtime (package `telemetry`) imports only OpenTelemetry's API.
+
+- Keep `telemetry.NewServerInterceptor` right after `flowid.Interceptor()` in `connect.NewServer`, and `telemetry.Middleware` around `/mcp`. They give every RPC a span and `rpc.server.call.duration`, on every transport, following OpenTelemetry's semantic conventions for Connect RPC. Never instrument a handler by hand for what they record, and never add HTTP tracing middleware for the API routes: it would duplicate the spans.
+- Give every Connect client to another service `telemetry.NewClientInterceptor` beside `flowid.ClientInterceptor()`, so the trace continues there.
+- Log with the call's context, `log.InfoContext(ctx, ...)`, through the `slog` logger `main.go` builds: `telemetry.NewLogHandler` adds `trace_id` and `span_id` only from the context.
+- Configure telemetry with `OTEL_*` variables (`OTEL_SERVICE_NAME`, `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_TRACES_SAMPLER`, ...), never with code or vendor variables. Add a vendor's exporter only to `setupTelemetry`, and only when OTLP cannot reach the backend.
+- A custom attribute goes in your own namespace, never in a semantic-conventions namespace (`rpc.`, `http.`, `server.`, `error.`, ...) or `dedo.`. Never put a field marked `(dedo.v1.field).sensitive`, a token or a whole request on a span, a metric or a log record, and never a value with many distinct values, such as an ID, on a metric.
+- `error.type` and an error status mean the server failed (`INTERNAL`, `UNAVAILABLE`, ...). Return `NOT_FOUND`, `INVALID_ARGUMENT` and the like for the caller's mistakes, with a declared reason, so they do not count against the service.
+
 ## MCP tools
 
 Every unary, non-deprecated RPC becomes an MCP tool named after it in snake_case (`GetTodo` becomes `get_todo`), unless its service's `audience` is narrower than `protoc-gen-dedo-mcp`'s `min_audience` (by default, only `AUDIENCE_COMPONENT_INTERNAL` services are left out). `protoc-gen-dedo-mcp` generates them as `<Service>MCPTools()`, and `main.go` serves them with `mcpserver.AddTools(tools, client, <pkg>.<Service>MCPTools()...)`, `client` being `connect.NewClient(connectinprocess.New(server))`: calls go in-process to the service's `connect.Server`. For a service it leaves out, `<Service>MCPTools()` returns no tools, so `main.go` keeps compiling. Never write tool definitions by hand: change the proto and regenerate. Calls go through the same auth, scopes and validation as REST and Connect.

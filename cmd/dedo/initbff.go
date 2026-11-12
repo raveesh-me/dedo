@@ -27,11 +27,13 @@ const frontendDir = "frontend"
 // from the backend: a BFF package <context>.web.v1 in the backend's
 // context, its owner team, REST root, read scope and resource domain.
 type bffNames struct {
-	Module     string // the backend's Go module: example.com/shop
-	Go         string // the backend's go directive
-	DedoModule string // github.com/raveesh-me/dedo
-	Dedo       string // the dedo release bff/go.mod requires
-	Connect    string // the connect-go release bff/go.mod requires
+	Module      string   // the backend's Go module: example.com/shop
+	Go          string   // the backend's go directive
+	DedoModule  string   // github.com/raveesh-me/dedo
+	Dedo        string   // the dedo release bff/go.mod requires
+	Connect     string   // the connect-go release bff/go.mod requires
+	Otel        string   // the OpenTelemetry release of the SDK main.go sets up
+	OtelModules []string // the OpenTelemetry modules bff/go.mod requires
 
 	// Starter is set when bff/proto has no protos yet, so dedo init -bff
 	// writes the starter service, Package's Service in ProtoDir.
@@ -120,17 +122,19 @@ func (in *initer) bffNames() (bffNames, error) {
 	starter := namesFor(p.module)
 	context, _, _, _ := protoModule(starter.Package)
 	n := bffNames{
-		Module:     p.module,
-		Go:         "1.26",
-		DedoModule: strings.TrimSuffix(cliPkg, "/cmd/dedo"),
-		Dedo:       in.release,
-		Connect:    connectRelease,
-		Service:    "WebService",
-		Team:       starter.Team,
-		Root:       starter.Root,
-		Scope:      starter.App + ".item.read",
-		Domain:     starter.Domain,
-		BackendGo:  p.goPrefix,
+		Module:      p.module,
+		Go:          "1.26",
+		DedoModule:  strings.TrimSuffix(cliPkg, "/cmd/dedo"),
+		Dedo:        in.release,
+		Connect:     connectRelease,
+		Otel:        otelRelease,
+		OtelModules: otelModules,
+		Service:     "WebService",
+		Team:        starter.Team,
+		Root:        starter.Root,
+		Scope:       starter.App + ".item.read",
+		Domain:      starter.Domain,
+		BackendGo:   p.goPrefix,
 	}
 	if n.BackendGo == "" {
 		n.BackendGo = p.module + "/gen/go"

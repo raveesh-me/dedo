@@ -1,7 +1,7 @@
 // Package app is the composition root: it wires the todo module's
 // TodoService (internal/todo) to the dedo runtime: the policy table, the
-// policy interceptor, flow IDs, REST transcoding, the REST reference and the
-// MCP server.
+// policy interceptor, flow IDs, telemetry, REST transcoding, the REST
+// reference and the MCP server.
 package app
 
 import (
@@ -22,6 +22,7 @@ import (
 	"github.com/raveesh-me/dedo/interceptor"
 	"github.com/raveesh-me/dedo/mcp/mcpserver"
 	"github.com/raveesh-me/dedo/policy"
+	"github.com/raveesh-me/dedo/telemetry"
 )
 
 // Config configures the handler.
@@ -31,6 +32,9 @@ type Config struct {
 	// MCPAccess says who may reach /mcp: anyone (public, the default), or
 	// only callers with a known token (authenticated).
 	MCPAccess mcpserver.Access
+	// Telemetry sets the OpenTelemetry providers and propagator; zero
+	// fields use the globals main installs.
+	Telemetry telemetry.Config
 }
 
 // NewHandler returns the HTTP handler for the service. It fails when the
@@ -66,14 +70,16 @@ func NewHandler(cfg Config) (http.Handler, error) {
 	if err != nil {
 		return nil, err
 	}
-	mux.Handle("/mcp", flowid.Middleware(endpoint))
+	// The MCP request gets a span, and its tool calls are children of it.
+	mux.Handle("/mcp", flowid.Middleware(telemetry.Middleware(cfg.Telemetry, "/mcp", endpoint)))
 	return mux, nil
 }
 
 // newServer returns the TodoService behind its policy. The interceptors run
-// for every transport, in order: flow IDs, auth, the declared contract
-// (scopes, headers, error audit), then the buf.validate rules, so an
-// unauthorised caller learns nothing from validation errors.
+// for every transport, in order: flow IDs, telemetry (a span and a duration
+// metric for every call), auth, the declared contract (scopes, headers,
+// error audit), then the buf.validate rules, so an unauthorised caller
+// learns nothing from validation errors.
 func newServer(cfg Config) (*connect.Server, error) {
 	table, err := policy.Build(todov1connect.TodoServiceName)
 	if err != nil {
@@ -88,7 +94,11 @@ func newServer(cfg Config) (*connect.Server, error) {
 	if err != nil {
 		return nil, err
 	}
-	server := connect.NewServer(flowid.Interceptor(), Auth(), guard, validate.NewServerInterceptor())
+	observe, err := telemetry.NewServerInterceptor(cfg.Telemetry)
+	if err != nil {
+		return nil, err
+	}
+	server := connect.NewServer(flowid.Interceptor(), observe, Auth(), guard, validate.NewServerInterceptor())
 	todov1connect.RegisterTodoServiceHandler(server, todo.NewServer())
 	return server, nil
 }

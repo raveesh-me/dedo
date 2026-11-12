@@ -99,6 +99,9 @@ func TestInitBFF(t *testing.T) {
 	}
 	// This release, newer than the backend's: MVS would choose it anyway.
 	want := map[string]string{"example.com/shop": "v0.0.0", "github.com/raveesh-me/dedo": version, "connectrpc.com/connect/v2": connectRelease}
+	for _, mod := range otelModules {
+		want[mod] = otelRelease
+	}
 	for mod, v := range want {
 		if requires[mod] != v {
 			t.Errorf("bff/go.mod requires %s %q, want %s", mod, requires[mod], v)
@@ -150,7 +153,9 @@ func TestInitBFF(t *testing.T) {
 	contains(t, "bff/main.go", read(t, dir, "bff/main.go"),
 		"var buildSHA string", "$(git rev-parse HEAD | cut -c1-12)", "bfftools.CheckSHA(buildSHA)", "bfftools.Forward()", "bfftools.NewActivity(buildSHA, bfftools.ActivityOptions{Log: log})",
 		"bfftools.Pin(buildSHA, prefix, activity.Middleware(api))", `"example.com/shop/bff/gen/go/shop/web/v1/webv1connect"`,
-		"webv1connect.RegisterWebServiceHandler(server, newWebService(backend))")
+		"webv1connect.RegisterWebServiceHandler(server, newWebService(backend))",
+		"setupTelemetry(ctx, log)", "telemetry.NewLogHandler(", "telemetry.NewClientInterceptor(telemetry.Config{})",
+		"connect.NewServer(flowid.Interceptor(), observe)", `const serviceName = "bff"`)
 	contains(t, "bff/web_service.go", read(t, dir, "bff/web_service.go"),
 		`"example.com/shop/gen/go/shop/orders/v1/ordersv1connect"`,
 		"orderService ordersv1connect.OrderServiceClient", "ordersv1connect.NewOrderServiceClient(backend)")
