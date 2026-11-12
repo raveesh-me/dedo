@@ -10,6 +10,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
+	"google.golang.org/protobuf/proto"
 
 	"github.com/raveesh-me/dedo/flowid"
 )
@@ -30,20 +31,26 @@ func NewServerInterceptor(cfg Config) (connect.ServerInterceptor, error) {
 	if err != nil {
 		return nil, err
 	}
+	declared, err := contracts(cfg.Table)
+	if err != nil {
+		return nil, err
+	}
 	s := &server{
-		cfg:      cfg,
-		tracer:   cfg.tracer(),
-		duration: duration,
-		isError:  serverIsError,
+		cfg:       cfg,
+		tracer:    cfg.tracer(),
+		duration:  duration,
+		contracts: declared,
+		isError:   serverClassifier(declared),
 	}
 	return s.wrap, nil
 }
 
 type server struct {
-	cfg      Config
-	tracer   trace.Tracer
-	duration metric.Float64Histogram
-	isError  classifier
+	cfg       Config
+	tracer    trace.Tracer
+	duration  metric.Float64Histogram
+	contracts map[string]contract
+	isError   classifier
 }
 
 func (s *server) wrap(next connect.ServerFunc) connect.ServerFunc {
@@ -64,6 +71,7 @@ func (s *server) wrap(next connect.ServerFunc) connect.ServerFunc {
 			trace.WithSpanKind(trace.SpanKindServer),
 			trace.WithAttributes(serverSpanAttributes(ctx, base, peer)...))
 		defer span.End()
+		ctx, stream = s.recordRequest(ctx, span, spec.Procedure, stream)
 		defer func() {
 			if p := recover(); p != nil {
 				// Record the panic as the INTERNAL error it ends as, then
@@ -76,6 +84,21 @@ func (s *server) wrap(next connect.ServerFunc) connect.ServerFunc {
 		s.record(ctx, span, spec, base, start, err)
 		return err
 	}
+}
+
+// recordRequest has the stream record the declared attributes of the
+// request on the span, and for the log records written while serving it.
+func (s *server) recordRequest(ctx context.Context, span trace.Span, procedure string, stream connect.ServerStream) (context.Context, connect.ServerStream) {
+	c := s.contracts[procedure]
+	if len(c.fields) == 0 {
+		return withRequestAttrs(ctx, nil), stream
+	}
+	holder := &requestAttrs{}
+	return withRequestAttrs(ctx, holder), &recordingStream{ServerStream: stream, record: func(m proto.Message) {
+		attrs := c.attributes(m.ProtoReflect())
+		span.SetAttributes(attrs...)
+		holder.p.Store(&attrs)
+	}}
 }
 
 // record puts the call's outcome on its span and duration metric.

@@ -219,7 +219,7 @@ func newHandler(log *slog.Logger) (http.Handler, error) {
 		return nil, err
 	}
 	// A span and an rpc.server.call.duration for every call (see Observability below).
-	observe, err := telemetry.NewServerInterceptor(telemetry.Config{})
+	observe, err := telemetry.NewServerInterceptor(telemetry.Config{Table: table})
 	if err != nil {
 		return nil, err
 	}
@@ -297,7 +297,23 @@ What the runtime records, on every transport:
 - **Logs**: `telemetry.NewLogHandler` wraps the `slog` handler and adds `trace_id` and `span_id`, lowercase hex, at the top level of every record logged with a call's context (`log.InfoContext(ctx, ...)`). Log pipelines join logs to traces on `trace_id`.
 - **Events**: `events.Publisher` adds the trace context to each event as the [CloudEvents Distributed Tracing extension](https://github.com/cloudevents/spec/blob/main/cloudevents/extensions/distributed-tracing.md), `traceparent` and `tracestate`, beside `flowid`. A driver carries every extension, so consumers continue the trace.
 
-Request and response messages never reach spans, metrics or logs from the runtime, so a field marked `(dedo.v1.field).sensitive` cannot leak through them. Keep sensitive data out of error messages too: the span status carries a server error's message, as the caller's response does.
+**Declared in the contract.** The server interceptor reads two more declarations from the policy table (`telemetry.Config{Table: table}`), at startup:
+
+- `(dedo.v1.field).attribute` on a request field: a key, such as `todo.page_size`, under which the runtime records the field on the RPC's server span and on every log record written while serving it. `attribute_mode` says what: `ATTRIBUTE_MODE_VALUE` (the default) for a scalar or enum, `ATTRIBUTE_MODE_PRESENCE` for whether it is set, `ATTRIBUTE_MODE_ITEM_COUNT` for a repeated field or a map. Fields of nested messages count; an unset message records nothing of its fields. Never on a metric.
+- `error_classifications` in `dedo.v1.method`: a declared reason whose errors count against the service differently from their code, such as `{reason: "SERVER_SHUTTING_DOWN", server_error: false}` on a watch that ends that way on every deploy.
+
+```protobuf
+int32 page_size = 1 [(dedo.v1.field) = {attribute: "todo.page_size"}];
+string assignee_email = 5 [(dedo.v1.field) = {
+  sensitive: true
+  attribute: "todo.assigned"
+  attribute_mode: ATTRIBUTE_MODE_PRESENCE  // the only mode a sensitive field may have
+}];
+```
+
+Lint checks them ([RULES.md](RULES.md#dedo_field_attribute_key)), and the service refuses to start on one that would record a sensitive value, use a key in a semantic-conventions namespace, not fit its field, appear twice in one request, or classify an undeclared reason.
+
+Other than the fields the contract names, request and response messages never reach spans, metrics or logs from the runtime, and a field marked `(dedo.v1.field).sensitive` can only record whether it is set. Keep sensitive data out of error messages too: the span status carries a server error's message, as the caller's response does.
 
 ### Publishing events
 

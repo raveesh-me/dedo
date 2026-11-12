@@ -17,9 +17,10 @@ const (
 
 // NewLogHandler returns a handler that adds trace_id and span_id, as
 // lowercase hex, to every record whose context holds a span, and hands it
-// to next. The two keys stay at the top level of the record, outside any
-// group the logger opened. Log with the context (log.InfoContext(ctx, ...))
-// for the IDs to appear.
+// to next. Within an RPC whose request fields declare attributes
+// ((dedo.v1.field).attribute), it adds those too. These keys stay at the
+// top level of the record, outside any group the logger opened. Log with
+// the context (log.InfoContext(ctx, ...)) for them to appear.
 func NewLogHandler(next slog.Handler) slog.Handler {
 	return &logHandler{next: next}
 }
@@ -64,12 +65,16 @@ func (h *logHandler) WithGroup(name string) slog.Handler {
 
 func (h *logHandler) Handle(ctx context.Context, r slog.Record) error {
 	sc := trace.SpanContextFromContext(ctx)
-	if !sc.IsValid() && len(h.groups) == 0 {
+	request := requestAttrsFrom(ctx)
+	if !sc.IsValid() && len(request) == 0 && len(h.groups) == 0 {
 		return h.next.Handle(ctx, r)
 	}
 	out := slog.NewRecord(r.Time, r.Level, r.Message, r.PC)
 	if sc.IsValid() {
 		out.AddAttrs(slog.String(LogKeyTraceID, sc.TraceID().String()), slog.String(LogKeySpanID, sc.SpanID().String()))
+	}
+	for _, kv := range request {
+		out.AddAttrs(slog.Any(string(kv.Key), kv.Value.AsInterface()))
 	}
 	out.AddAttrs(h.nest(r)...)
 	return h.next.Handle(ctx, out)

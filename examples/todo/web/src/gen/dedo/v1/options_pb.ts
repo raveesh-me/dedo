@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file dedo/v1/options.proto.
  */
 export const file_dedo_v1_options: GenFile = /*@__PURE__*/
-  fileDesc("ChVkZWRvL3YxL29wdGlvbnMucHJvdG8SB2RlZG8udjEieQoMU2VydmljZVJ1bGVzEiMKCGF1ZGllbmNlGAEgASgOMhEuZGVkby52MS5BdWRpZW5jZRISCgpvd25lcl90ZWFtGAIgASgJEiEKB3RlbmFuY3kYAyABKAsyEC5kZWRvLnYxLlRlbmFuY3kSDQoFdGl0bGUYBCABKAkiHQoHVGVuYW5jeRISCgpjb2xsZWN0aW9uGAEgASgJIscBCgtDYWNoZVBvbGljeRIzCgp2aXNpYmlsaXR5GAEgASgOMh8uZGVkby52MS5DYWNoZVBvbGljeS5WaXNpYmlsaXR5EioKB21heF9hZ2UYAiABKAsyGS5nb29nbGUucHJvdG9idWYuRHVyYXRpb24iVwoKVmlzaWJpbGl0eRIaChZWSVNJQklMSVRZX1VOU1BFQ0lGSUVEEAASFgoSVklTSUJJTElUWV9QUklWQVRFEAESFQoRVklTSUJJTElUWV9QVUJMSUMQAiKHAQoLRGVwcmVjYXRpb24SNAoQZGVwcmVjYXRpb25fdGltZRgBIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLwoLc3Vuc2V0X3RpbWUYAiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhEKCXN1Y2Nlc3NvchgDIAEoCSI9CgtFcnJvclJlYXNvbhIOCgZyZWFzb24YASABKAkSHgoEY29kZRgCIAEoDjIQLmdvb2dsZS5ycGMuQ29kZSJZCgRUb29sEg0KBXRpdGxlGAEgASgJEhMKC2Rlc2NyaXB0aW9uGAIgASgJEi0KC2Fubm90YXRpb25zGAMgASgLMhguZGVkby52MS5Ub29sQW5ub3RhdGlvbnMi2QEKD1Rvb2xBbm5vdGF0aW9ucxIbCg5yZWFkX29ubHlfaGludBgBIAEoCEgAiAEBEh0KEGRlc3RydWN0aXZlX2hpbnQYAiABKAhIAYgBARIcCg9pZGVtcG90ZW50X2hpbnQYAyABKAhIAogBARIcCg9vcGVuX3dvcmxkX2hpbnQYBCABKAhIA4gBAUIRCg9fcmVhZF9vbmx5X2hpbnRCEwoRX2Rlc3RydWN0aXZlX2hpbnRCEgoQX2lkZW1wb3RlbnRfaGludEISChBfb3Blbl93b3JsZF9oaW50ItUBCgtNZXRob2RSdWxlcxIOCgZzY29wZXMYASADKAkSIwoFY2FjaGUYAiABKAsyFC5kZWRvLnYxLkNhY2hlUG9saWN5EikKC2RlcHJlY2F0aW9uGAMgASgLMhQuZGVkby52MS5EZXByZWNhdGlvbhIkCgZlcnJvcnMYBCADKAsyFC5kZWRvLnYxLkVycm9yUmVhc29uEhsKBHRvb2wYBSABKAsyDS5kZWRvLnYxLlRvb2wSFAoMY3Jvc3NfdGVuYW50GAYgASgIEg0KBWVtaXRzGAcgAygJIiMKDE1lc3NhZ2VSdWxlcxITCgtkZXNjcmlwdGlvbhgBIAEoCSIfCgpGaWVsZFJ1bGVzEhEKCXNlbnNpdGl2ZRgBIAEoCCrGAQoIQXVkaWVuY2USGAoUQVVESUVOQ0VfVU5TUEVDSUZJRUQQABIfChtBVURJRU5DRV9DT01QT05FTlRfSU5URVJOQUwQARIjCh9BVURJRU5DRV9CVVNJTkVTU19VTklUX0lOVEVSTkFMEAISHQoZQVVESUVOQ0VfQ09NUEFOWV9JTlRFUk5BTBADEh0KGUFVRElFTkNFX0VYVEVSTkFMX1BBUlRORVIQBBIcChhBVURJRU5DRV9FWFRFUk5BTF9QVUJMSUMQBTpSCgdzZXJ2aWNlEh8uZ29vZ2xlLnByb3RvYnVmLlNlcnZpY2VPcHRpb25zGLSHAyABKAsyFS5kZWRvLnYxLlNlcnZpY2VSdWxlc1IHc2VydmljZTpOCgZtZXRob2QSHi5nb29nbGUucHJvdG9idWYuTWV0aG9kT3B0aW9ucxi1hwMgASgLMhQuZGVkby52MS5NZXRob2RSdWxlc1IGbWV0aG9kOlIKB21lc3NhZ2USHy5nb29nbGUucHJvdG9idWYuTWVzc2FnZU9wdGlvbnMYuIcDIAEoCzIVLmRlZG8udjEuTWVzc2FnZVJ1bGVzUgdtZXNzYWdlOkoKBWZpZWxkEh0uZ29vZ2xlLnByb3RvYnVmLkZpZWxkT3B0aW9ucxi3hwMgASgLMhMuZGVkby52MS5GaWVsZFJ1bGVzUgVmaWVsZEIyWjBnaXRodWIuY29tL3JhdmVlc2gtbWUvZGVkby9nZW4vZ28vZGVkby92MTtkZWRvdjFiBnByb3RvMw", [file_google_protobuf_descriptor, file_google_protobuf_duration, file_google_protobuf_timestamp, file_google_rpc_code]);
+  fileDesc("ChVkZWRvL3YxL29wdGlvbnMucHJvdG8SB2RlZG8udjEieQoMU2VydmljZVJ1bGVzEiMKCGF1ZGllbmNlGAEgASgOMhEuZGVkby52MS5BdWRpZW5jZRISCgpvd25lcl90ZWFtGAIgASgJEiEKB3RlbmFuY3kYAyABKAsyEC5kZWRvLnYxLlRlbmFuY3kSDQoFdGl0bGUYBCABKAkiHQoHVGVuYW5jeRISCgpjb2xsZWN0aW9uGAEgASgJIscBCgtDYWNoZVBvbGljeRIzCgp2aXNpYmlsaXR5GAEgASgOMh8uZGVkby52MS5DYWNoZVBvbGljeS5WaXNpYmlsaXR5EioKB21heF9hZ2UYAiABKAsyGS5nb29nbGUucHJvdG9idWYuRHVyYXRpb24iVwoKVmlzaWJpbGl0eRIaChZWSVNJQklMSVRZX1VOU1BFQ0lGSUVEEAASFgoSVklTSUJJTElUWV9QUklWQVRFEAESFQoRVklTSUJJTElUWV9QVUJMSUMQAiKHAQoLRGVwcmVjYXRpb24SNAoQZGVwcmVjYXRpb25fdGltZRgBIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLwoLc3Vuc2V0X3RpbWUYAiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhEKCXN1Y2Nlc3NvchgDIAEoCSI9CgtFcnJvclJlYXNvbhIOCgZyZWFzb24YASABKAkSHgoEY29kZRgCIAEoDjIQLmdvb2dsZS5ycGMuQ29kZSJZCgRUb29sEg0KBXRpdGxlGAEgASgJEhMKC2Rlc2NyaXB0aW9uGAIgASgJEi0KC2Fubm90YXRpb25zGAMgASgLMhguZGVkby52MS5Ub29sQW5ub3RhdGlvbnMi2QEKD1Rvb2xBbm5vdGF0aW9ucxIbCg5yZWFkX29ubHlfaGludBgBIAEoCEgAiAEBEh0KEGRlc3RydWN0aXZlX2hpbnQYAiABKAhIAYgBARIcCg9pZGVtcG90ZW50X2hpbnQYAyABKAhIAogBARIcCg9vcGVuX3dvcmxkX2hpbnQYBCABKAhIA4gBAUIRCg9fcmVhZF9vbmx5X2hpbnRCEwoRX2Rlc3RydWN0aXZlX2hpbnRCEgoQX2lkZW1wb3RlbnRfaGludEISChBfb3Blbl93b3JsZF9oaW50IpICCgtNZXRob2RSdWxlcxIOCgZzY29wZXMYASADKAkSIwoFY2FjaGUYAiABKAsyFC5kZWRvLnYxLkNhY2hlUG9saWN5EikKC2RlcHJlY2F0aW9uGAMgASgLMhQuZGVkby52MS5EZXByZWNhdGlvbhIkCgZlcnJvcnMYBCADKAsyFC5kZWRvLnYxLkVycm9yUmVhc29uEhsKBHRvb2wYBSABKAsyDS5kZWRvLnYxLlRvb2wSFAoMY3Jvc3NfdGVuYW50GAYgASgIEg0KBWVtaXRzGAcgAygJEjsKFWVycm9yX2NsYXNzaWZpY2F0aW9ucxgIIAMoCzIcLmRlZG8udjEuRXJyb3JDbGFzc2lmaWNhdGlvbiI7ChNFcnJvckNsYXNzaWZpY2F0aW9uEg4KBnJlYXNvbhgBIAEoCRIUCgxzZXJ2ZXJfZXJyb3IYAiABKAgiIwoMTWVzc2FnZVJ1bGVzEhMKC2Rlc2NyaXB0aW9uGAEgASgJImIKCkZpZWxkUnVsZXMSEQoJc2Vuc2l0aXZlGAEgASgIEhEKCWF0dHJpYnV0ZRgCIAEoCRIuCg5hdHRyaWJ1dGVfbW9kZRgDIAEoDjIWLmRlZG8udjEuQXR0cmlidXRlTW9kZSrGAQoIQXVkaWVuY2USGAoUQVVESUVOQ0VfVU5TUEVDSUZJRUQQABIfChtBVURJRU5DRV9DT01QT05FTlRfSU5URVJOQUwQARIjCh9BVURJRU5DRV9CVVNJTkVTU19VTklUX0lOVEVSTkFMEAISHQoZQVVESUVOQ0VfQ09NUEFOWV9JTlRFUk5BTBADEh0KGUFVRElFTkNFX0VYVEVSTkFMX1BBUlRORVIQBBIcChhBVURJRU5DRV9FWFRFUk5BTF9QVUJMSUMQBSqFAQoNQXR0cmlidXRlTW9kZRIeChpBVFRSSUJVVEVfTU9ERV9VTlNQRUNJRklFRBAAEhgKFEFUVFJJQlVURV9NT0RFX1ZBTFVFEAESGwoXQVRUUklCVVRFX01PREVfUFJFU0VOQ0UQAhIdChlBVFRSSUJVVEVfTU9ERV9JVEVNX0NPVU5UEAM6UgoHc2VydmljZRIfLmdvb2dsZS5wcm90b2J1Zi5TZXJ2aWNlT3B0aW9ucxi0hwMgASgLMhUuZGVkby52MS5TZXJ2aWNlUnVsZXNSB3NlcnZpY2U6TgoGbWV0aG9kEh4uZ29vZ2xlLnByb3RvYnVmLk1ldGhvZE9wdGlvbnMYtYcDIAEoCzIULmRlZG8udjEuTWV0aG9kUnVsZXNSBm1ldGhvZDpSCgdtZXNzYWdlEh8uZ29vZ2xlLnByb3RvYnVmLk1lc3NhZ2VPcHRpb25zGLiHAyABKAsyFS5kZWRvLnYxLk1lc3NhZ2VSdWxlc1IHbWVzc2FnZTpKCgVmaWVsZBIdLmdvb2dsZS5wcm90b2J1Zi5GaWVsZE9wdGlvbnMYt4cDIAEoCzITLmRlZG8udjEuRmllbGRSdWxlc1IFZmllbGRCMlowZ2l0aHViLmNvbS9yYXZlZXNoLW1lL2RlZG8vZ2VuL2dvL2RlZG8vdjE7ZGVkb3YxYgZwcm90bzM", [file_google_protobuf_descriptor, file_google_protobuf_duration, file_google_protobuf_timestamp, file_google_rpc_code]);
 
 /**
  * ServiceRules is the ownership and audience of a service.
@@ -366,6 +366,18 @@ export type MethodRules = Message<"dedo.v1.MethodRules"> & {
    * @generated from field: repeated string emits = 7;
    */
   emits: string[];
+
+  /**
+   * Declared error reasons whose errors count differently in telemetry
+   * from their code. By default a server span and rpc.server.call.duration
+   * count a call as an error, with error.type, only for the codes that mean
+   * the server failed: UNKNOWN, DEADLINE_EXCEEDED, UNIMPLEMENTED, INTERNAL,
+   * UNAVAILABLE and DATA_LOSS. Each reason must be one the RPC declares in
+   * errors.
+   *
+   * @generated from field: repeated dedo.v1.ErrorClassification error_classifications = 8;
+   */
+  errorClassifications: ErrorClassification[];
 };
 
 /**
@@ -374,6 +386,37 @@ export type MethodRules = Message<"dedo.v1.MethodRules"> & {
  */
 export const MethodRulesSchema: GenMessage<MethodRules> = /*@__PURE__*/
   messageDesc(file_dedo_v1_options, 7);
+
+/**
+ * ErrorClassification says whether the errors of one declared reason count
+ * against the service in telemetry, overriding what their code says.
+ *
+ * @generated from message dedo.v1.ErrorClassification
+ */
+export type ErrorClassification = Message<"dedo.v1.ErrorClassification"> & {
+  /**
+   * A reason the RPC declares in errors.
+   *
+   * @generated from field: string reason = 1;
+   */
+  reason: string;
+
+  /**
+   * True: the server failed, such as an UNAVAILABLE reason that no retry
+   * can fix. False: an expected outcome the caller handles, such as a
+   * FAILED_PRECONDITION reason the service returns by design.
+   *
+   * @generated from field: bool server_error = 2;
+   */
+  serverError: boolean;
+};
+
+/**
+ * Describes the message dedo.v1.ErrorClassification.
+ * Use `create(ErrorClassificationSchema)` to create a new message.
+ */
+export const ErrorClassificationSchema: GenMessage<ErrorClassification> = /*@__PURE__*/
+  messageDesc(file_dedo_v1_options, 8);
 
 /**
  * MessageRules documents a message for API consumers and models.
@@ -395,7 +438,7 @@ export type MessageRules = Message<"dedo.v1.MessageRules"> & {
  * Use `create(MessageRulesSchema)` to create a new message.
  */
 export const MessageRulesSchema: GenMessage<MessageRules> = /*@__PURE__*/
-  messageDesc(file_dedo_v1_options, 8);
+  messageDesc(file_dedo_v1_options, 9);
 
 /**
  * FieldRules classifies the data in a field.
@@ -404,11 +447,30 @@ export const MessageRulesSchema: GenMessage<MessageRules> = /*@__PURE__*/
  */
 export type FieldRules = Message<"dedo.v1.FieldRules"> & {
   /**
-   * The field holds personal or secret data.
+   * The field holds personal or secret data. Its value never reaches
+   * telemetry: an attribute on it may only record its presence.
    *
    * @generated from field: bool sensitive = 1;
    */
   sensitive: boolean;
+
+  /**
+   * The key under which the runtime records the field of a request on the
+   * RPC's server span and on every log record written while serving it,
+   * such as "todo.priority". Lowercase, dot-separated, in a namespace of
+   * the service's own, never one of OpenTelemetry's semantic conventions
+   * (rpc, http, server, error, ...) or dedo's. Never on a metric.
+   *
+   * @generated from field: string attribute = 2;
+   */
+  attribute: string;
+
+  /**
+   * What the attribute records. Applies only with attribute.
+   *
+   * @generated from field: dedo.v1.AttributeMode attribute_mode = 3;
+   */
+  attributeMode: AttributeMode;
 };
 
 /**
@@ -416,7 +478,7 @@ export type FieldRules = Message<"dedo.v1.FieldRules"> & {
  * Use `create(FieldRulesSchema)` to create a new message.
  */
 export const FieldRulesSchema: GenMessage<FieldRules> = /*@__PURE__*/
-  messageDesc(file_dedo_v1_options, 9);
+  messageDesc(file_dedo_v1_options, 10);
 
 /**
  * Audience is who may call an API. Mirrors Zalando rule 219.
@@ -472,6 +534,49 @@ export enum Audience {
  */
 export const AudienceSchema: GenEnum<Audience> = /*@__PURE__*/
   enumDesc(file_dedo_v1_options, 0);
+
+/**
+ * AttributeMode is what an attribute records of its field.
+ *
+ * @generated from enum dedo.v1.AttributeMode
+ */
+export enum AttributeMode {
+  /**
+   * VALUE.
+   *
+   * @generated from enum value: ATTRIBUTE_MODE_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * The value of a scalar or enum field: a string, number or boolean, or an
+   * enum's value name. Not for bytes, messages, repeated fields or maps.
+   *
+   * @generated from enum value: ATTRIBUTE_MODE_VALUE = 1;
+   */
+  VALUE = 1,
+
+  /**
+   * Whether the field is set: true or false. The only mode a sensitive
+   * field may have.
+   *
+   * @generated from enum value: ATTRIBUTE_MODE_PRESENCE = 2;
+   */
+  PRESENCE = 2,
+
+  /**
+   * How many items a repeated field or map holds.
+   *
+   * @generated from enum value: ATTRIBUTE_MODE_ITEM_COUNT = 3;
+   */
+  ITEM_COUNT = 3,
+}
+
+/**
+ * Describes the enum dedo.v1.AttributeMode.
+ */
+export const AttributeModeSchema: GenEnum<AttributeMode> = /*@__PURE__*/
+  enumDesc(file_dedo_v1_options, 1);
 
 /**
  * The ownership and audience of the service.

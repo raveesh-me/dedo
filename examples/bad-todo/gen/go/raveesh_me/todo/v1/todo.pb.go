@@ -690,14 +690,13 @@ var File_raveesh_me_todo_v1_todo_proto protoreflect.FileDescriptor
 
 const file_raveesh_me_todo_v1_todo_proto_rawDesc = "" +
 	"\n" +
-	"\x1draveesh_me/todo/v1/todo.proto\x12\x12raveesh_me.todo.v1\x1a\x15dedo/v1/options.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x17google/api/client.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x19google/api/resource.proto\x1a google/protobuf/field_mask.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xb7\x02\n" +
+	"\x1draveesh_me/todo/v1/todo.proto\x12\x12raveesh_me.todo.v1\x1a\x15dedo/v1/options.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x17google/api/client.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x19google/api/resource.proto\x1a google/protobuf/field_mask.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xc6\x02\n" +
 	"\x04Todo\x12\x18\n" +
 	"\x04name\x18\x01 \x01(\tB\x04\xe2A\x01\bR\x04name\x12\x1e\n" +
 	"\x05title\x18\x02 \x01(\tB\x04\xe2A\x01\x02R\ttodoTitle\x12\x18\n" +
 	"\x04done\x18\x03 \x01(\bB\x04\xe2A\x01\x01R\x04done\x12)\n" +
-	"\rbudget_amount\x18\x04 \x01(\x01B\x04\xe2A\x01\x01R\fbudgetAmount\x126\n" +
-	"\x11assigned_to_email\x18\x05 \x01(\tB\n" +
-	"\xe2A\x01\x01\xba\xbb\x18\x02\b\x01R\x0fassignedToEmail\x12A\n" +
+	"\rbudget_amount\x18\x04 \x01(\x01B\x04\xe2A\x01\x01R\fbudgetAmount\x12E\n" +
+	"\x11assigned_to_email\x18\x05 \x01(\tB\x19\xe2A\x01\x01\xba\xbb\x18\x11\b\x01\x12\rtodo.assigneeR\x0fassignedToEmail\x12A\n" +
 	"\vcreate_time\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampB\x04\xe2A\x01\x03R\n" +
 	"createTime:5\xeaA2\n" +
 	"\x15todo.example.com/Todo\x12\ftodos/{todo}*\x05todos2\x04todo\"_\n" +
@@ -707,9 +706,9 @@ const file_raveesh_me_todo_v1_todo_proto_rawDesc = "" +
 	"\x13Which to-do to get.\"[\n" +
 	"\x0fGetTodoResponse\x12,\n" +
 	"\x04todo\x18\x01 \x01(\v2\x18.raveesh_me.todo.v1.TodoR\x04todo:\x1a»\x18\x16\n" +
-	"\x14The requested to-do.\"\x7f\n" +
-	"\x10ListTodosRequest\x12!\n" +
-	"\tpage_size\x18\x01 \x01(\x05B\x04\xe2A\x01\x01R\bpageSize\x12#\n" +
+	"\x14The requested to-do.\"\x8e\x01\n" +
+	"\x10ListTodosRequest\x120\n" +
+	"\tpage_size\x18\x01 \x01(\x05B\x13\xe2A\x01\x01\xba\xbb\x18\v\x12\tpage_sizeR\bpageSize\x12#\n" +
 	"\n" +
 	"page_token\x18\x02 \x01(\tB\x04\xe2A\x01\x01R\tpageToken:#»\x18\x1f\n" +
 	"\x1dWhich page of to-dos to list.\"\x86\x01\n" +

@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package raveesh_me.library.v1;
+
+import "dedo/v1/options.proto";
+
+message ListBooksRequest {
+  int32 page_size = 1 [(dedo.v1.field) = {attribute: "page_size"}]; // want
+  string filter = 2 [(dedo.v1.field) = {attribute: "rpc.filter"}]; // want
+  string shelf = 3 [(dedo.v1.field) = {attribute: "Library.Shelf"}]; // want
+  string flow = 4 [(dedo.v1.field) = {attribute: "dedo.flow"}]; // want
+  string author = 5 [(dedo.v1.field) = {attribute: "library.author"}];
+  string writer = 6 [(dedo.v1.field) = {attribute: "library.author"}]; // want
+}

@@ -117,6 +117,13 @@ func TestTraceContinuesOverConnect(t *testing.T) {
 	if got := attr(span, "dedo.rpc.transport"); got != "connect" {
 		t.Errorf("transport = %q", got)
 	}
+	// The contract's attributes: the sensitive email by its presence only.
+	if got := attr(span, "todo.assigned"); got != "true" {
+		t.Errorf("todo.assigned = %q, want true", got)
+	}
+	if got := attr(span, "todo.done"); got != "false" {
+		t.Errorf("todo.done = %q, want false", got)
+	}
 	o.assertNoSecret(t)
 }
 
