@@ -10,6 +10,7 @@
 // did a repository's rules.yml before dedo.yaml, which is still read where
 // there is no dedo.yaml:
 //
+//	dedo: v0.38.0                       # the oldest dedo release that reads the file
 //	imports:
 //	  - path: platform-rules            # a folder (its rules.yml) or a file
 //	  - git: https://github.com/acme/api-standards.git
@@ -133,6 +134,8 @@ type section struct {
 
 // file is a shared rules file, and the rules of a dedo.yaml.
 type file struct {
+	// Dedo is the oldest dedo release that reads the file (checkRelease).
+	Dedo     string    `yaml:"dedo"`
 	Imports  []Import  `yaml:"imports"`
 	Lint     section   `yaml:"lint"`
 	Breaking section   `yaml:"breaking"`
@@ -153,6 +156,9 @@ func IsProject(path string) bool {
 // decode reads a dedo.yaml or a rules file; strict rejects unknown keys,
 // saying whether they are a typo or need a newer dedo.
 func decode(path string, b []byte, strict bool) (project, error) {
+	if err := checkRelease(path, b); err != nil {
+		return project{}, err
+	}
 	if err := oldLayout(path, b); err != nil {
 		return project{}, err
 	}
