@@ -150,7 +150,8 @@ func IsProject(path string) bool {
 	return filepath.Base(path) == FileName
 }
 
-// decode reads a dedo.yaml or a rules file; strict rejects unknown keys.
+// decode reads a dedo.yaml or a rules file; strict rejects unknown keys,
+// saying whether they are a typo or need a newer dedo.
 func decode(path string, b []byte, strict bool) (project, error) {
 	if err := oldLayout(path, b); err != nil {
 		return project{}, err
@@ -166,7 +167,7 @@ func decode(path string, b []byte, strict bool) (project, error) {
 	}
 	// An empty file decodes to io.EOF: it simply has no rules.
 	if err != nil && !errors.Is(err, io.EOF) {
-		return project{}, fmt.Errorf("%s: %w", path, err)
+		return project{}, explain(path, err)
 	}
 	return p, nil
 }
