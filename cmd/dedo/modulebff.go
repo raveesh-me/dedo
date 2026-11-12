@@ -15,8 +15,9 @@ import (
 // a directory with its own go.mod, such as bff/, that holds one of
 // buf.yaml's modules, such as bff/proto. That module has no name, so buf
 // push --exclude-unnamed never publishes it, and its services are
-// AUDIENCE_COMPONENT_INTERNAL. The BFF owns no data and reads the backend
-// only through its Connect API; the backend never imports the BFF
+// AUDIENCE_COMPONENT_INTERNAL, or external where the organisation's house
+// rules want every service external. The BFF owns no data and reads the
+// backend only through its Connect API; the backend never imports the BFF
 // (guidance/domains.md).
 type bff struct {
 	// Dir is the BFF's directory, relative and slash-separated: bff.
@@ -25,9 +26,33 @@ type bff struct {
 	Module string
 }
 
-// bffAudience is the audience of every service of a BFF, and of no
-// published module's.
+// bffAudience is the audience dedo init -bff gives a BFF's services: the
+// frontend built from the same commit is their only caller. No published
+// module's service declares it.
 const bffAudience = "AUDIENCE_COMPONENT_INTERNAL"
+
+// bffAudiences are the audiences a BFF's services may declare, bffAudience
+// first. The others are external: the frontend runs in its users' browsers
+// and calls the BFF with their tokens, from outside the network, so an
+// organisation whose house rules want every service external declares its
+// BFF AUDIENCE_EXTERNAL_PARTNER or AUDIENCE_EXTERNAL_PUBLIC. The internal
+// audiences between them are never a BFF's, since no other service calls
+// it.
+func bffAudiences() []string {
+	return []string{bffAudience, "AUDIENCE_EXTERNAL_PARTNER", "AUDIENCE_EXTERNAL_PUBLIC"}
+}
+
+// isBFFAudience reports whether a BFF's service may declare audience, one
+// of bffAudiences.
+func isBFFAudience(audience string) bool {
+	return slices.Contains(bffAudiences(), audience)
+}
+
+// bffAudienceChoice lists bffAudiences for a finding: "A, B or C".
+func bffAudienceChoice() string {
+	a := bffAudiences()
+	return strings.Join(a[:len(a)-1], ", ") + " or " + a[len(a)-1]
+}
 
 // dataStoreClient is a family of data-store client libraries a BFF never
 // depends on: the import path of a package or module, and every package
@@ -122,12 +147,26 @@ var (
 	commentLine = regexp.MustCompile(`(?m)^\s*//.*$`)
 )
 
+// bffAudienceFinding is the finding on service svc, in file of the BFF in
+// the nested Go module at dir, when it declares audience, "" for none, and
+// that is not one of bffAudiences; otherwise "".
+func bffAudienceFinding(file, svc, audience, dir string) string {
+	if isBFFAudience(audience) {
+		return ""
+	}
+	declared := "is " + audience
+	if audience == "" {
+		declared = "declares no audience"
+	}
+	return fmt.Sprintf("%s: service %s %s, but serves the frontend of the Go module in %s: declare audience: %s", file, svc, declared, dir, bffAudienceChoice())
+}
+
 // checkBFFs finds the repository's BFFs, the nested Go modules that hold a
 // buf.yaml module, and checks them: their buf modules are unnamed and their
-// services AUDIENCE_COMPONENT_INTERNAL, which no published module's are;
-// they depend on no database driver and on none of the backend's own code
-// but its generated clients; and the backend, whose packages are pkgs,
-// never imports them.
+// services AUDIENCE_COMPONENT_INTERNAL or external, and no published
+// module's service is AUDIENCE_COMPONENT_INTERNAL; they depend on no
+// database driver and on none of the backend's own code but its generated
+// clients; and the backend, whose packages are pkgs, never imports them.
 func checkBFFs(dir string, l Layout, pkgs []listedPackage) ([]bff, []string, error) {
 	mods, err := bufModules(dir)
 	if err != nil {
@@ -151,15 +190,7 @@ func checkBFFs(dir string, l Layout, pkgs []listedPackage) ([]bff, []string, err
 				findings = append(findings, fmt.Sprintf("%s: buf.yaml names the module %s, which serves the frontend of the Go module in %s: remove the name, so buf push --exclude-unnamed never publishes it", m.Path, m.Name, d))
 			}
 			findings = append(findings, audiences(dir, m.Path, func(file, svc, audience string) string {
-				if audience == bffAudience {
-					return ""
-				}
-				if audience == "" {
-					audience = "declares no audience"
-				} else {
-					audience = "is " + audience
-				}
-				return fmt.Sprintf("%s: service %s %s, but serves the frontend of the Go module in %s: declare audience: %s", file, svc, audience, d, bffAudience)
+				return bffAudienceFinding(file, svc, audience, d)
 			})...)
 		case m.Name != "":
 			findings = append(findings, audiences(dir, m.Path, func(file, svc, audience string) string {

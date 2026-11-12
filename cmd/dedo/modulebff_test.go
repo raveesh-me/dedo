@@ -6,7 +6,46 @@ import (
 	"slices"
 	"strings"
 	"testing"
+
+	dedov1 "github.com/raveesh-me/dedo/gen/go/dedo/v1"
 )
+
+// Every audience of the options module is a BFF's or not, by name: its
+// frontend's only, or external; never another internal audience, unset or
+// a name the module doesn't have.
+func TestIsBFFAudience(t *testing.T) {
+	want := map[string]bool{
+		"AUDIENCE_UNSPECIFIED":            false,
+		"AUDIENCE_COMPONENT_INTERNAL":     true,
+		"AUDIENCE_BUSINESS_UNIT_INTERNAL": false,
+		"AUDIENCE_COMPANY_INTERNAL":       false,
+		"AUDIENCE_EXTERNAL_PARTNER":       true,
+		"AUDIENCE_EXTERNAL_PUBLIC":        true,
+	}
+	for _, name := range dedov1.Audience_name {
+		if _, ok := want[name]; !ok {
+			t.Errorf("audience %s: say whether a BFF may declare it", name)
+		}
+	}
+	for audience, ok := range want {
+		if got := isBFFAudience(audience); got != ok {
+			t.Errorf("isBFFAudience(%q) = %v, want %v", audience, got, ok)
+		}
+	}
+	for _, audience := range []string{"", "AUDIENCE_EXTERNAL", "EXTERNAL_PUBLIC", "audience_external_public"} {
+		if isBFFAudience(audience) {
+			t.Errorf("isBFFAudience(%q) = true, want false", audience)
+		}
+	}
+	for _, a := range bffAudiences() {
+		if _, ok := dedov1.Audience_value[a]; !ok {
+			t.Errorf("bffAudiences() has %s, which is no audience of the options module", a)
+		}
+	}
+	if bffAudiences()[0] != bffAudience {
+		t.Errorf("bffAudiences() = %v: dedo init -bff's audience, %s, comes first", bffAudiences(), bffAudience)
+	}
+}
 
 func TestIsDatabaseDriver(t *testing.T) {
 	for p, want := range map[string]bool{

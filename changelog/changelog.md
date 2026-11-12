@@ -8,6 +8,10 @@ Version bumps, dependency updates and changes to benchmarks or examples alone ar
 
 ## [Unreleased]
 
+### Changed
+
+- `dedo modules` lets a backend for frontend's services declare an external audience, `AUDIENCE_EXTERNAL_PARTNER` or `AUDIENCE_EXTERNAL_PUBLIC`, as well as `AUDIENCE_COMPONENT_INTERNAL`, so a BFF passes both it and house rules that want every service external: its frontend calls it from its users' browsers with their tokens. Every other BFF check stays: an unnamed buf module, no `AUDIENCE_COMPONENT_INTERNAL` service in a named module, no data-store client, none of the backend's own code, no import of the BFF from the backend. A BFF service that declares no audience, `AUDIENCE_BUSINESS_UNIT_INTERNAL` or `AUDIENCE_COMPANY_INTERNAL` still fails, and the finding names the three it may declare. `dedo init -bff`'s starter service stays `AUDIENCE_COMPONENT_INTERNAL`. The generators' default `min_audience` leaves out only `AUDIENCE_COMPONENT_INTERNAL` services, so an external BFF relies on the backend's `buf.gen.yaml` `inputs` leaving `bff/proto` out, which `dedo init -bff` checks (`guidance/domains.md`, *Backends for frontends*).
+
 ## [v0.39.0] - 2026-11-13
 
 ### Added

@@ -449,7 +449,7 @@ func (in *initer) bffNext(n bffNames, generated bool) {
 		fmt.Sprintf("build it with its frontend's commit: cd %s && go build -ldflags \"-X main.buildSHA=$(git rev-parse HEAD | cut -c1-12)\" .", bffDir),
 		"run it with BACKEND_URL set to the backend's address; the frontend calls /bff/<sha>/ and reloads on BFF_VERSION_RETIRED",
 		fmt.Sprintf("for the frontend's client, uncomment protoc-gen-es in %s/buf.gen.yaml", bffDir),
-		"dedo modules checks that the BFF stays apart: unnamed, AUDIENCE_COMPONENT_INTERNAL, no database driver and none of the backend's own code",
+		fmt.Sprintf("dedo modules checks that the BFF stays apart: unnamed, its services %s (external where house rules want every service external), no database driver and none of the backend's own code", bffAudienceChoice()),
 	)
 	for i, s := range steps {
 		in.say("%d. %s", i+1, s)

@@ -7,7 +7,7 @@ import "dedo/v1/options.proto";
 // WebService serves the shop's frontend.
 service WebService {
   option (dedo.v1.service) = {
-    audience: AUDIENCE_EXTERNAL_PUBLIC
+    audience: AUDIENCE_COMPANY_INTERNAL
     tenancy: {collection: "locations"}
   };
 }
@@ -20,4 +20,19 @@ service CartService {
 // PingService answers the frontend's health checks.
 service PingService {
   option (dedo.v1.service).audience = AUDIENCE_COMPONENT_INTERNAL;
+}
+
+// ReportService shows the frontend's reports.
+service ReportService {
+  option (dedo.v1.service).audience = AUDIENCE_BUSINESS_UNIT_INTERNAL;
+}
+
+// StoreService serves the storefront, outside the network.
+service StoreService {
+  option (dedo.v1.service).audience = AUDIENCE_EXTERNAL_PUBLIC;
+}
+
+// PartnerService serves the partners' portal, outside the network.
+service PartnerService {
+  option (dedo.v1.service) = {audience: AUDIENCE_EXTERNAL_PARTNER};
 }

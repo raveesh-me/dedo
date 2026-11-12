@@ -111,9 +111,19 @@ func TestModules(t *testing.T) {
 		{name: "bff-published-internal", over: "bff", findings: 1, want: []string{
 			"proto/shop/orders/v1/orders.proto: service OrderService is AUDIENCE_COMPONENT_INTERNAL in buf.build/acme/shop, a published module: only a backend for frontend's services are; declare the audience of its callers",
 		}},
-		{name: "bff-audience", over: "bff", findings: 2, want: []string{
-			"bff/proto/shop/web/v1/web.proto: service WebService is AUDIENCE_EXTERNAL_PUBLIC, but serves the frontend of the Go module in bff: declare audience: AUDIENCE_COMPONENT_INTERNAL",
-			"bff/proto/shop/web/v1/web.proto: service CartService declares no audience, but serves the frontend of the Go module in bff: declare audience: AUDIENCE_COMPONENT_INTERNAL",
+		// A BFF's service is its frontend's only, or external where the
+		// house rules want every service external; never another
+		// internal audience, and never none.
+		{name: "bff-audience", over: "bff", findings: 3, want: []string{
+			"bff/proto/shop/web/v1/web.proto: service WebService is AUDIENCE_COMPANY_INTERNAL, but serves the frontend of the Go module in bff: declare audience: AUDIENCE_COMPONENT_INTERNAL, AUDIENCE_EXTERNAL_PARTNER or AUDIENCE_EXTERNAL_PUBLIC",
+			"bff/proto/shop/web/v1/web.proto: service CartService declares no audience, but serves the frontend of the Go module in bff: declare audience: AUDIENCE_COMPONENT_INTERNAL, AUDIENCE_EXTERNAL_PARTNER or AUDIENCE_EXTERNAL_PUBLIC",
+			"bff/proto/shop/web/v1/web.proto: service ReportService is AUDIENCE_BUSINESS_UNIT_INTERNAL, but serves the frontend of the Go module in bff: declare audience: AUDIENCE_COMPONENT_INTERNAL, AUDIENCE_EXTERNAL_PARTNER or AUDIENCE_EXTERNAL_PUBLIC",
+		}},
+		{name: "bff-external", over: "bff", want: []string{
+			"dedo modules: 2 modules in shop, no cycles; each depends on:",
+			"  billing  (nothing)",
+			"  orders   -> billing",
+			"bff: bff (frontend; not a backend module)",
 		}},
 		// A driver counts however the BFF reaches it; database/sql/driver,
 		// which value types import, is not one.
@@ -186,8 +196,12 @@ func TestModulesBFFWithoutModules(t *testing.T) {
 			"dedo modules: no modules; a module is a versioned proto package, <context>.<m>.v<n>",
 			"bff: bff (frontend; not a backend module)",
 		}},
-		{name: "violations", audience: "AUDIENCE_EXTERNAL_PUBLIC", main: "package main\n\nimport _ \"database/sql\"\n\nfunc main() {}\n", findings: 2, want: []string{
-			"bff/proto/notes/web/v1/web.proto: service WebService is AUDIENCE_EXTERNAL_PUBLIC, but serves the frontend of the Go module in bff: declare audience: AUDIENCE_COMPONENT_INTERNAL",
+		{name: "external", audience: "AUDIENCE_EXTERNAL_PUBLIC", main: "package main\n\nfunc main() {}\n", want: []string{
+			"dedo modules: no modules; a module is a versioned proto package, <context>.<m>.v<n>",
+			"bff: bff (frontend; not a backend module)",
+		}},
+		{name: "violations", audience: "AUDIENCE_COMPANY_INTERNAL", main: "package main\n\nimport _ \"database/sql\"\n\nfunc main() {}\n", findings: 2, want: []string{
+			"bff/proto/notes/web/v1/web.proto: service WebService is AUDIENCE_COMPANY_INTERNAL, but serves the frontend of the Go module in bff: declare audience: AUDIENCE_COMPONENT_INTERNAL, AUDIENCE_EXTERNAL_PARTNER or AUDIENCE_EXTERNAL_PUBLIC",
 			"bff: depends on the database driver database/sql: a backend for frontend owns no data; read it through the backend's Connect API",
 		}},
 	} {
