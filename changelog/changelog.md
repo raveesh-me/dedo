@@ -8,6 +8,8 @@ Version bumps, dependency updates and changes to benchmarks or examples alone ar
 
 ## [Unreleased]
 
+## [v0.38.0] - 2026-11-12
+
 ### Breaking
 
 - `templates/Makefile.api`: a `vet` target runs `go tool dedo vet`, and `check` runs it after `modules`; `templates/Jenkinsfile.api-stage` runs it too. `dedo upgrade` rewrites `Makefile.api`; copy the Jenkins stage again with `dedo templates Jenkinsfile.api-stage`. `make check` now fails on a Go finding: fix it, or suppress it with `//dedo:ignore <RULE_ID> <reason>`; a service not ready for a rule disables it in `dedo.yaml`'s `go` section. [#152](https://github.com/raveesh-me/dedo/pull/152)
@@ -528,7 +530,8 @@ The first release, as http-proto-lint (`github.com/raveesh-me/http-proto-lint`, 
 - MCP tools, served on the official MCP Go SDK under short snake_case names and through the same auth and policy as REST. [#1](https://github.com/raveesh-me/dedo/pull/1), [#2](https://github.com/raveesh-me/dedo/pull/2)
 - Templates for service repositories, `guideline.md`, and the `todo`, `bad-todo` and `library` examples. [#1](https://github.com/raveesh-me/dedo/pull/1), [#5](https://github.com/raveesh-me/dedo/pull/5)
 
-[Unreleased]: https://github.com/raveesh-me/dedo/compare/v0.37.0...HEAD
+[Unreleased]: https://github.com/raveesh-me/dedo/compare/v0.38.0...HEAD
+[v0.38.0]: https://github.com/raveesh-me/dedo/compare/v0.37.0...v0.38.0
 [v0.37.0]: https://github.com/raveesh-me/dedo/compare/v0.36.0...v0.37.0
 [v0.36.0]: https://github.com/raveesh-me/dedo/compare/v0.35.0...v0.36.0
 [v0.35.0]: https://github.com/raveesh-me/dedo/compare/v0.34.0...v0.35.0
