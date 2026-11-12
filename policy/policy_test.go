@@ -34,6 +34,9 @@ func TestBuildFrom(t *testing.T) {
 	if got := m.Rules.GetScopes(); len(got) != 1 || got[0] != testsvc.ReadScope {
 		t.Errorf("scopes = %v", got)
 	}
+	if m.Descriptor == nil || m.Descriptor.FullName() != "raveesh_me.test.v1.TestService.GetThing" {
+		t.Errorf("descriptor = %v", m.Descriptor)
+	}
 }
 
 func TestBuildFromFailures(t *testing.T) {

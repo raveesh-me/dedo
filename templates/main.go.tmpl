@@ -130,7 +130,7 @@ func newHandler(log *slog.Logger) (http.Handler, error) {
 	}
 	// OpenTelemetry: a span and an rpc.server.call.duration for every call,
 	// continuing the caller's trace. setupTelemetry installed the SDK.
-	observe, err := telemetry.NewServerInterceptor(telemetry.Config{})
+	observe, err := telemetry.NewServerInterceptor(telemetry.Config{Table: table})
 	if err != nil {
 		return nil, err
 	}

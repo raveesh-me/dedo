@@ -73,9 +73,18 @@ var serverErrorCodes = map[connect.Code]bool{
 // classifier decides whether a failed RPC counts as an error on one side.
 type classifier func(procedure string, o outcome) bool
 
-// serverIsError counts the server error codes.
-func serverIsError(_ string, o outcome) bool {
-	return !o.ok && serverErrorCodes[o.code]
+// serverClassifier counts the server error codes, unless the RPC's
+// contract classifies the outcome's reason.
+func serverClassifier(declared map[string]contract) classifier {
+	return func(procedure string, o outcome) bool {
+		if o.ok {
+			return false
+		}
+		if isErr, ok := declared[procedure].classified[o.reason]; ok && o.reason != "" {
+			return isErr
+		}
+		return serverErrorCodes[o.code]
+	}
 }
 
 // clientIsError counts every code but OK: the caller did not get what it

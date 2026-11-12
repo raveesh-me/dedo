@@ -24,6 +24,8 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
+
+	"github.com/raveesh-me/dedo/policy"
 )
 
 // ScopeName is the instrumentation scope of every span and metric this
@@ -66,6 +68,11 @@ const rpcSystem = "connectrpc"
 
 // Config wires the instrumentation. Every field is optional.
 type Config struct {
+	// Table is the service's policy table (policy.Build). The server
+	// interceptor reads what each RPC's contract declares about telemetry
+	// from it: the attributes of its request's fields and how its error
+	// reasons count.
+	Table policy.Table
 	// TracerProvider defaults to otel.GetTracerProvider().
 	TracerProvider trace.TracerProvider
 	// MeterProvider defaults to otel.GetMeterProvider().

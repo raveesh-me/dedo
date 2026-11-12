@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package raveesh_me.library.v1;
+
+import "dedo/v1/options.proto";
+
+message ListBooksRequest {
+  // Renamed.
+  int32 page_size = 1 [(dedo.v1.field) = {attribute: "library.size"}]; // want
+  // Removed.
+  string filter = 2; // want
+  // Now records something else under the same key.
+  repeated string tags = 3 [(dedo.v1.field) = {attribute: "library.tag_count", attribute_mode: ATTRIBUTE_MODE_PRESENCE}]; // want
+  string shelf = 4 [(dedo.v1.field) = {attribute: "library.shelf"}];
+}

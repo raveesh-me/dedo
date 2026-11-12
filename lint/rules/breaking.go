@@ -34,6 +34,7 @@ var Breaking = []*check.RuleSpec{
 	fieldNoNewRequired,
 	resourceSame,
 	sunsetNoEarlier,
+	fieldAttributeKept,
 }
 
 // DefaultBreakingUse are the sets that run when dedo.yaml's breaking

@@ -94,7 +94,10 @@ func newServer(cfg Config) (*connect.Server, error) {
 	if err != nil {
 		return nil, err
 	}
-	observe, err := telemetry.NewServerInterceptor(cfg.Telemetry)
+	// The contract's telemetry declarations come from the table.
+	observed := cfg.Telemetry
+	observed.Table = table
+	observe, err := telemetry.NewServerInterceptor(observed)
 	if err != nil {
 		return nil, err
 	}
