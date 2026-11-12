@@ -137,7 +137,7 @@ func TestLoadGoRejects(t *testing.T) {
 		"override id":    {map[string]string{RulesFileName: "go:\n  rules:\n  - {id: HOUSE_GO_X, forbid_import: unsafe, message: x, overrides: [nope]}\n"}, "not a rule ID"},
 		"override self":  {map[string]string{RulesFileName: "go:\n  rules:\n  - {id: HOUSE_GO_X, forbid_import: unsafe, message: x, overrides: [HOUSE_GO_X]}\n"}, "overrides itself"},
 		"disable final":  {map[string]string{RulesFileName: "imports:\n  - path: b.yml\ngo:\n  disable: [HOUSE_GO_LOCKED]\n", "b.yml": "go:\n  rules:\n  - {id: HOUSE_GO_LOCKED, forbid_import: unsafe, message: x, final: true}\n"}, "b.yml marks final"},
-		"go is no field": {map[string]string{RulesFileName: "go:\n  rules:\n  - {id: HOUSE_GO_X, on: field, forbid_import: unsafe, message: x}\n"}, "field on not found"},
+		"go is no field": {map[string]string{RulesFileName: "go:\n  rules:\n  - {id: HOUSE_GO_X, on: field, forbid_import: unsafe, message: x}\n"}, "doesn't know `on` in a go rule"},
 	} {
 		t.Run(name, func(t *testing.T) {
 			dir := t.TempDir()
