@@ -17,7 +17,8 @@ service {{.Service}} {
     // module never declares this audience. Where house rules want every
     // service external, declare AUDIENCE_EXTERNAL_PARTNER or
     // AUDIENCE_EXTERNAL_PUBLIC: the frontend calls it from its users'
-    // browsers, with their tokens.
+    // browsers, with their tokens. dedo modules then checks that the
+    // backend's buf.gen.yaml inputs leave bff/proto out.
     audience: AUDIENCE_COMPONENT_INTERNAL
     owner_team: "{{.Team}}"
   };

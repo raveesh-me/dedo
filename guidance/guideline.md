@@ -301,7 +301,7 @@ The interceptor then reads the tenants of every request, on every transport, fro
 | `buf format --diff --exit-code` | A `.proto` file is not formatted |
 | `buf lint` | Any Buf, AIP, Zalando, dedo or house rule is broken |
 | `go tool dedo breaking -against main` | The change breaks clients. It runs `buf breaking` for each module of `buf.yaml` against its own directory on `main`, and skips a module with no protos there yet, so a pull request that adds a module, such as a BFF's, passes |
-| `go tool dedo modules` | The modules are not kept apart, or a [backend for frontend](domains.md#backends-for-frontends) breaks its rules (named, a service neither `AUDIENCE_COMPONENT_INTERNAL` nor external, a data-store client or the backend's own code in its dependencies) |
+| `go tool dedo modules` | The modules are not kept apart, or a [backend for frontend](domains.md#backends-for-frontends) breaks its rules (named, a service neither `AUDIENCE_COMPONENT_INTERNAL` nor external, an external one the backend's `buf.gen.yaml` generates, a data-store client or the backend's own code in its dependencies) |
 | `go tool dedo vet` | The Go code breaks a [Go rule](RULES.md#go-rules), on the service or a BFF: a `connect.Server` without dedo's interceptors, a handler returning an error reason or publishing an event type its RPC does not declare, an import a house rule forbids, or a `//dedo:ignore` without a reason |
 | `buf generate && git diff --exit-code gen/ docs/` | Generated code or docs are stale |
 | `go test ./...` | The policy table test or your tests fail |

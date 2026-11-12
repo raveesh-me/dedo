@@ -119,7 +119,9 @@ func (n bffNames) Imports() []string {
 // bffRootInputs warns when the backend's buf.gen.yaml would generate the
 // BFF's protos too: with no inputs it covers the whole workspace, bff/proto
 // included, and runs every generator of the backend over it, OpenAPI and
-// MCP among them, into the backend's gen/go.
+// MCP among them, into the backend's gen/go. It reads the inputs as dedo
+// modules does (rootGenerates), which fails on them once a BFF service is
+// external.
 func (in *initer) bffRootInputs(bffNames) error {
 	doc, ok, err := loadYAML(in.path("buf.gen.yaml"))
 	if err != nil {
@@ -132,23 +134,12 @@ func (in *initer) bffRootInputs(bffNames) error {
 	if protoRoot == "" {
 		protoRoot = "proto"
 	}
-	fix := fmt.Sprintf("so buf generate runs the backend's generators, OpenAPI and MCP among them, over the BFF's protos: set\n    inputs:\n      - directory: %s", protoRoot)
-	inputs := lookup(root(doc), "inputs")
-	if inputs == nil || len(inputs.Content) == 0 {
-		in.say("buf.gen.yaml: WARNING has no inputs, which means the whole workspace, %s/proto included, %s", bffDir, fix)
+	mod := path.Join(bffDir, "proto")
+	why := rootGenerates(doc, mod, moduleProtos(in.p.dir, mod))
+	if why == "" {
+		in.say("buf.gen.yaml: its inputs leave %s out", mod)
 		return nil
 	}
-	for _, input := range inputs.Content {
-		d := lookup(input, "directory")
-		if d == nil {
-			continue
-		}
-		dir := path.Clean(d.Value)
-		if dir == "." || dir == bffDir || strings.HasPrefix(dir, bffDir+"/") || strings.HasPrefix(bffDir, dir+"/") {
-			in.say("buf.gen.yaml: WARNING its input %s holds %s/proto, %s", d.Value, bffDir, fix)
-			return nil
-		}
-	}
-	in.say("buf.gen.yaml: its inputs leave %s/proto out", bffDir)
+	in.say("buf.gen.yaml: WARNING %s, so buf generate runs the backend's generators, OpenAPI and MCP among them, over the BFF's protos: set\n    inputs:\n      - directory: %s", why, protoRoot)
 	return nil
 }

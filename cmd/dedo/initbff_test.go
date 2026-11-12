@@ -420,6 +420,11 @@ func TestInitBFFChecksRootInputs(t *testing.T) {
 		{"the proto root", "inputs:\n  - directory: proto\n", false},
 		{"the BFF's module too", "inputs:\n  - directory: proto\n  - directory: bff/proto\n", true},
 		{"the repository", "inputs:\n  - directory: .\n", true},
+		// dedo modules reads the inputs the same way: exclude_paths
+		// filters by a path inside the BFF's module, and buf ignores one
+		// that holds the module.
+		{"the repository, the BFF's protos excluded", "inputs:\n  - directory: .\n    exclude_paths: [bff/proto/shop]\n", false},
+		{"the repository, the BFF's directory excluded", "inputs:\n  - directory: .\n    exclude_paths: [bff]\n", true},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			dir := bffRepo(t, map[string]string{"buf.gen.yaml": gen + c.inputs})

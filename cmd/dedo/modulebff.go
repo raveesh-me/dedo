@@ -162,8 +162,9 @@ func bffAudienceFinding(file, svc, audience, dir string) string {
 }
 
 // checkBFFs finds the repository's BFFs, the nested Go modules that hold a
-// buf.yaml module, and checks them: their buf modules are unnamed and their
-// services AUDIENCE_COMPONENT_INTERNAL or external, and no published
+// buf.yaml module, and checks them: their buf modules are unnamed, their
+// services AUDIENCE_COMPONENT_INTERNAL or external, and an external one's
+// protos outside the backend's buf.gen.yaml inputs, and no published
 // module's service is AUDIENCE_COMPONENT_INTERNAL; they depend on no
 // database driver and on none of the backend's own code but its generated
 // clients; and the backend, whose packages are pkgs, never imports them.
@@ -173,6 +174,7 @@ func checkBFFs(dir string, l Layout, pkgs []listedPackage) ([]bff, []string, err
 		return nil, nil, err
 	}
 	nested := nestedGoModules(dir)
+	backend := backendModule(mods, nested)
 	var bffs []bff
 	var findings []string
 	for _, m := range mods {
@@ -186,12 +188,11 @@ func checkBFFs(dir string, l Layout, pkgs []listedPackage) ([]bff, []string, err
 			if b != nil {
 				bffs = append(bffs, *b)
 			}
-			if m.Name != "" {
-				findings = append(findings, fmt.Sprintf("%s: buf.yaml names the module %s, which serves the frontend of the Go module in %s: remove the name, so buf push --exclude-unnamed never publishes it", m.Path, m.Name, d))
+			found, err := checkBFFModule(dir, d, m, backend)
+			if err != nil {
+				return nil, nil, err
 			}
-			findings = append(findings, audiences(dir, m.Path, func(file, svc, audience string) string {
-				return bffAudienceFinding(file, svc, audience, d)
-			})...)
+			findings = append(findings, found...)
 		case m.Name != "":
 			findings = append(findings, audiences(dir, m.Path, func(file, svc, audience string) string {
 				if audience != bffAudience {
@@ -257,25 +258,76 @@ func bffAt(dir, rel string, bffs []bff) (*bff, error) {
 	return &bff{Dir: rel, Module: string(m[1])}, nil
 }
 
-// audiences calls finding with the audience of every service in the buf
-// module at mod, "" when a service declares none, and returns the findings
-// it makes.
-func audiences(dir, mod string, finding func(file, svc, audience string) string) []string {
+// checkBFFModule returns the findings on m, a buf module of the BFF in the
+// nested Go module at d: a name, which would publish it, each service whose
+// audience is not a BFF's, and the backend's buf.gen.yaml generating its
+// external services. backend is a buf module of the backend's own.
+func checkBFFModule(dir, d string, m bufModule, backend string) ([]string, error) {
+	var out []string
+	if m.Name != "" {
+		out = append(out, fmt.Sprintf("%s: buf.yaml names the module %s, which serves the frontend of the Go module in %s: remove the name, so buf push --exclude-unnamed never publishes it", m.Path, m.Name, d))
+	}
+	services := moduleServices(dir, m.Path)
+	for _, s := range services {
+		if f := bffAudienceFinding(s.File, s.Name, s.Audience, d); f != "" {
+			out = append(out, f)
+		}
+	}
+	gen, err := bffGenFinding(dir, m.Path, services, backend)
+	if err != nil {
+		return nil, err
+	}
+	if gen != "" {
+		out = append(out, gen)
+	}
+	return out, nil
+}
+
+// moduleService is a service of a buf module: its file, relative to the
+// repository and slash-separated, its name, and the audience it declares,
+// "" for none.
+type moduleService struct {
+	File, Name, Audience string
+}
+
+// moduleProtos returns the protos of the buf module at mod, relative to the
+// repository at dir and slash-separated, or none when it has none.
+func moduleProtos(dir, mod string) []string {
 	rels, err := findProtos(filepath.Join(dir, filepath.FromSlash(mod)))
 	if err != nil {
 		return nil
 	}
-	var out []string
+	out := make([]string, 0, len(rels))
 	for _, rel := range rels {
-		file := path.Join(mod, filepath.ToSlash(rel))
+		out = append(out, path.Join(mod, filepath.ToSlash(rel)))
+	}
+	return out
+}
+
+// moduleServices returns every service of the buf module at mod, in the
+// order of its files and, in each, of its source.
+func moduleServices(dir, mod string) []moduleService {
+	var out []moduleService
+	for _, file := range moduleProtos(dir, mod) {
 		src, err := os.ReadFile(filepath.Join(dir, filepath.FromSlash(file)))
 		if err != nil {
 			continue
 		}
 		for _, s := range serviceAudiences(string(src)) {
-			if f := finding(file, s[0], s[1]); f != "" {
-				out = append(out, f)
-			}
+			out = append(out, moduleService{File: file, Name: s[0], Audience: s[1]})
+		}
+	}
+	return out
+}
+
+// audiences calls finding with the audience of every service in the buf
+// module at mod, "" when a service declares none, and returns the findings
+// it makes.
+func audiences(dir, mod string, finding func(file, svc, audience string) string) []string {
+	var out []string
+	for _, s := range moduleServices(dir, mod) {
+		if f := finding(s.File, s.Name, s.Audience); f != "" {
+			out = append(out, f)
 		}
 	}
 	return out
