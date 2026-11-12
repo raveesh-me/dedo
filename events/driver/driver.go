@@ -42,8 +42,11 @@ type Event struct {
 	// one, such as a Kafka record key.
 	IdempotencyKey string
 	// Extensions are further attributes, such as the flow ID of the
-	// request that caused the event. Names are CloudEvents extension
-	// names: lowercase letters and digits.
+	// request that caused the event (flowid) and its trace context
+	// (traceparent and tracestate, the CloudEvents Distributed Tracing
+	// extension). Names are CloudEvents extension names: lowercase letters
+	// and digits. A driver carries every one, so a consumer can continue
+	// the trace.
 	Extensions map[string]string
 }
 

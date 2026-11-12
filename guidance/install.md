@@ -176,6 +176,10 @@ Add the runtime libraries. dedo is built on connect-go v2, where one `connect.Se
 ```sh
 go get github.com/raveesh-me/dedo@v0.37.0 github.com/raveesh-me/dedo/mcp@v0.37.0
 go get connectrpc.com/connect/v2@v2.0.1 connectrpc.com/vanguard@v0.5.0 connectrpc.com/validate@v0.9.0
+# The OpenTelemetry SDK and OTLP exporters, which main.go sets up
+go get go.opentelemetry.io/otel@v1.47.0 go.opentelemetry.io/otel/sdk@v1.47.0 go.opentelemetry.io/otel/sdk/metric@v1.47.0 \
+  go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp@v1.47.0 \
+  go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp@v1.47.0
 ```
 
 Build against dedo's build of the MCP Go SDK. The SDK release decodes every message through a JSON decoder that allocates at least 32 KiB per call, several times per tool call; the fix is proposed upstream ([go-sdk#1454](https://github.com/modelcontextprotocol/go-sdk/pull/1454)), and until a release has it, dedo's build is that release plus the fix. The replace names the release, so a service that needs a later SDK gets the later upstream release instead. `dedo init` and `dedo upgrade` write and maintain the line, with a comment saying why, and a later dedo release removes it. They keep the same line in each [backend for frontend](#adding-a-bff-dedo-init--bff)'s `go.mod`, such as `bff/go.mod`: a BFF links the backend's generated MCP code, and Go reads a `replace` only from the `go.mod` of the module it builds. When `dedo upgrade` changes a BFF's line, it says so; run `go mod tidy` in the BFF then.
@@ -214,8 +218,13 @@ func newHandler(log *slog.Logger) (http.Handler, error) {
 	if err != nil {
 		return nil, err
 	}
+	// A span and an rpc.server.call.duration for every call (see Observability below).
+	observe, err := telemetry.NewServerInterceptor(telemetry.Config{Table: table})
+	if err != nil {
+		return nil, err
+	}
 	// One server, one interceptor chain, for every transport below.
-	server := connect.NewServer(flowid.Interceptor(), auth, guard, validate.NewServerInterceptor())
+	server := connect.NewServer(flowid.Interceptor(), observe, auth, guard, validate.NewServerInterceptor())
 	// Each module's handlers, from internal/<module>.
 	time_counterv1connect.RegisterCounterServiceHandler(server, time_counter.NewCounterService())
 
@@ -247,8 +256,10 @@ func newHandler(log *slog.Logger) (http.Handler, error) {
 
 	mux.Handle("GET /openapi.json", docs.Spec())
 	mux.Handle("GET /docs", docs.Page())
-	// The MCP transport requires an Origin check.
-	mux.Handle("/mcp", flowid.Middleware(http.NewCrossOriginProtection().Handler(endpoint)))
+	// The MCP transport requires an Origin check. The MCP request gets a
+	// span, and its tool calls are children of it.
+	mux.Handle("/mcp", flowid.Middleware(telemetry.Middleware(telemetry.Config{}, "/mcp",
+		http.NewCrossOriginProtection().Handler(endpoint))))
 	return mux, nil
 }
 ```
@@ -258,6 +269,99 @@ func newHandler(log *slog.Logger) (http.Handler, error) {
 In a multi-tenant service, `interceptor.Config` also takes `Tenants`, a function that says whether the caller may act in a tenant ID; the server will not start without it. `dedo init` writes a development one, next to `devTokens`, when a service declares `tenancy`.
 
 Auth is a server interceptor (`auth` in the template), not HTTP middleware, so it covers MCP calls, which reach the server in-process, as well as Connect, gRPC and REST. The complete file, with `main`, imports and a development `auth`, is [templates/main.go.tmpl](../templates/main.go.tmpl) (`dedo init` fills it in). Add a policy-table test ([templates/policy_table_test.go.tmpl](../templates/policy_table_test.go.tmpl)), which builds every service's table, so a missing declaration fails `go test` before deploy.
+
+### Observability: OpenTelemetry
+
+dedo takes a position on open standards, never on a vendor: [OpenTelemetry](https://opentelemetry.io) for traces and metrics, [W3C Trace Context](https://www.w3.org/TR/trace-context/) and [Baggage](https://www.w3.org/TR/baggage/) on the wire. Any backend that takes OTLP receives what a dedo service reports.
+
+Package `telemetry` depends only on OpenTelemetry's API. With no SDK installed, its spans and metrics are no-ops; the caller's trace context still reaches handlers and logs. The SDK and its exporters are set up in the service's own `main.go`, by `setupTelemetry`, which `dedo init` writes (and the BFF's `main.go` too). It is your code, not a dependency: change it to add an exporter. Only the standard `OTEL_*` environment variables configure it:
+
+| Variable | What it does |
+| --- | --- |
+| `OTEL_SERVICE_NAME`, `OTEL_RESOURCE_ATTRIBUTES` | Name the service and its resource. `service.name` defaults to the module's last path element. |
+| `OTEL_EXPORTER_OTLP_ENDPOINT`, `_HEADERS`, `_TIMEOUT`, `_COMPRESSION`, and their `_TRACES_` and `_METRICS_` forms | Where to send OTLP over HTTP/protobuf. The default is `http://localhost:4318`. |
+| `OTEL_EXPORTER_OTLP_PROTOCOL` | `http/protobuf`, the exporter built in. Another protocol stops the service at startup, saying to add its exporter to `main.go`. |
+| `OTEL_TRACES_EXPORTER`, `OTEL_METRICS_EXPORTER` | `otlp` (the default) or `none` |
+| `OTEL_TRACES_SAMPLER`, `OTEL_TRACES_SAMPLER_ARG`, `OTEL_BSP_*`, `OTEL_METRIC_EXPORT_INTERVAL` | Read by the SDK itself |
+| `OTEL_PROPAGATORS` | `tracecontext,baggage` by default; `none` turns propagation off |
+| `OTEL_SDK_DISABLED=true` | No SDK at all |
+
+`main` shuts the server down gracefully on `SIGINT` or `SIGTERM` and then flushes the SDK, so the last spans are not lost.
+
+What the runtime records, on every transport:
+
+- **A server span per RPC**, from `telemetry.NewServerInterceptor`, which runs right after `flowid.Interceptor()`. It follows OpenTelemetry's [semantic conventions for Connect RPC](https://opentelemetry.io/docs/specs/semconv/rpc/connect-rpc/): the span is named after `rpc.method` (`acme.time_counter.v1.CounterService/AddTime`), with `rpc.system.name` `connectrpc` and `rpc.status_code` (`OK`, `NOT_FOUND`). It is an error only for the codes that mean the server failed: `UNKNOWN`, `DEADLINE_EXCEEDED`, `UNIMPLEMENTED`, `INTERNAL`, `UNAVAILABLE` and `DATA_LOSS`; then `error.type` is the code. dedo adds `dedo.rpc.transport` (`connect`, `grpc`, `grpc_web`, `rest`, `mcp` or `in_process`), `dedo.flow_id` and, when the error carries an `ErrorInfo`, `dedo.error.reason`.
+- **`rpc.server.call.duration`**, a histogram in seconds with the conventions' buckets, with the same attributes except the flow ID, which has too many values for a metric.
+- **The caller's trace**: the interceptor continues the trace in the `traceparent`, `tracestate` and `baggage` headers. `telemetry.Middleware` does the same for `/mcp`, with a span for the MCP request, so that each tool call's span is its child: one trace from the MCP client to the handler.
+- **Outbound calls**: give a Connect client to another service `telemetry.NewClientInterceptor`, beside `flowid.ClientInterceptor`. It records a client span, which is an error for every code but `OK`, and `rpc.client.call.duration`, and injects the trace context into the request.
+- **Logs**: `telemetry.NewLogHandler` wraps the `slog` handler and adds `trace_id` and `span_id`, lowercase hex, at the top level of every record logged with a call's context (`log.InfoContext(ctx, ...)`). Log pipelines join logs to traces on `trace_id`.
+- **Events**: `events.Publisher` adds the trace context to each event as the [CloudEvents Distributed Tracing extension](https://github.com/cloudevents/spec/blob/main/cloudevents/extensions/distributed-tracing.md), `traceparent` and `tracestate`, beside `flowid`. A driver carries every extension, so consumers continue the trace.
+
+**Declared in the contract.** The server interceptor reads two more declarations from the policy table (`telemetry.Config{Table: table}`), at startup:
+
+- `(dedo.v1.field).attribute` on a request field: a key, such as `todo.page_size`, under which the runtime records the field on the RPC's server span and on every log record written while serving it. `attribute_mode` says what: `ATTRIBUTE_MODE_VALUE` (the default) for a scalar or enum, `ATTRIBUTE_MODE_PRESENCE` for whether it is set, `ATTRIBUTE_MODE_ITEM_COUNT` for a repeated field or a map. Fields of nested messages count; an unset message records nothing of its fields. Never on a metric.
+- `error_classifications` in `dedo.v1.method`: a declared reason whose errors count against the service differently from their code, such as `{reason: "SERVER_SHUTTING_DOWN", server_error: false}` on a watch that ends that way on every deploy.
+
+```protobuf
+int32 page_size = 1 [(dedo.v1.field) = {attribute: "todo.page_size"}];
+string assignee_email = 5 [(dedo.v1.field) = {
+  sensitive: true
+  attribute: "todo.assigned"
+  attribute_mode: ATTRIBUTE_MODE_PRESENCE  // the only mode a sensitive field may have
+}];
+```
+
+Lint checks them ([RULES.md](RULES.md#dedo_field_attribute_key)), and the service refuses to start on one that would record a sensitive value, use a key in a semantic-conventions namespace, not fit its field, appear twice in one request, or classify an undeclared reason.
+
+Other than the fields the contract names, request and response messages never reach spans, metrics or logs from the runtime, and a field marked `(dedo.v1.field).sensitive` can only record whether it is set. Keep sensitive data out of error messages too: the span status carries a server error's message, as the caller's response does.
+
+### Service level objectives: OpenSLO
+
+The contract declares what the service promises, and `dedo slo` writes it as [OpenSLO](https://openslo.com) v1 documents whose indicators are the metric the runtime records, `rpc.server.call.duration`. Declare the objectives on the service, and per RPC where one differs:
+
+```protobuf
+service TodoService {
+  option (dedo.v1.service) = {
+    owner_team: "todo-team"
+    service_level: {
+      objectives: {
+        availability: 0.999                                         // calls that are not server errors
+        latency: {percentile: 0.99, threshold: {nanos: 250000000}}  // 99% of calls answer within 250ms
+      }
+      window: {seconds: 2419200}                                    // a rolling 28 days
+    }
+  };
+  rpc RemoveTodo(RemoveTodoRequest) returns (RemoveTodoResponse) {
+    option (dedo.v1.method) = {
+      service_level: {exempt: true}  // or objectives: {...} of its own
+    };
+  }
+}
+```
+
+`make generate` runs `dedo slo`, which writes `slo/<service>.yaml` for every service that declares objectives (`-out` changes the directory). Each file holds:
+
+- a `Service`, named after the proto service's full name as an RFC 1123 label (`raveesh_me.todo.v1.TodoService` becomes `raveesh-me-todo-v1-todoservice`). Every object carries the full name in the label `dedo.service`, and an RPC's own objectives also carry `dedo.rpc.method`;
+- per objective, an `SLI` and an `SLO` with `budgetingMethod: Occurrences` over the rolling window:
+  - **availability**: good events are calls with no `error.type`, out of all calls;
+  - **latency**: good events are calls that answer within the threshold, out of all calls, with the percentile as the target;
+- two `AlertPolicy` objects, multiwindow burn-rate alerts: page at 14.4 times the budget over 1 hour, ticket at 6 times over 6 hours. They notify an `AlertNotificationTarget` named after the owner team, which your organisation defines.
+
+An indicator selects calls by `rpc.method`, the full procedure (`raveesh_me.todo.v1.TodoService/GetTodo`). The service's objectives cover every RPC that is not exempt and has no objectives of its own. Its latency objectives leave out streaming RPCs, whose duration is the stream's. Each query is written for no particular backend:
+
+```yaml
+metricSource:
+  type: OpenTelemetry          # or metricSourceRef, with dedo slo -datasource NAME
+  spec:
+    metric: rpc.server.call.duration
+    aggregation: count          # observations of the histogram
+    attributes:
+      rpc.method: [raveesh_me.todo.v1.TodoService/GetTodo, ...]
+    absentAttributes: [error.type]  # availability's good events
+    maxValueSeconds: 0.25           # latency's good events: a bucket boundary
+```
+
+Translate it into your backend's query language, or point `-datasource` at a `DataSource` your OpenSLO tooling knows. A latency threshold is always a bucket boundary of the histogram (`DEDO_SERVICE_LEVEL`), so the count is exact.
 
 ### Publishing events
 

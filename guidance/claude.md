@@ -57,6 +57,28 @@ Rules rank in layers: **the repository's own `dedo.yaml` > the house rules it im
 - `HOUSE_GO_*`: your organisation's rules from `dedo.yaml`'s `go` section, such as an import it has ruled out. The finding's message says what to do instead; follow it rather than wrapping the package somewhere it is allowed.
 - Suppress a finding only when it does not apply, with `//dedo:ignore <RULE_ID> <reason>` on or above its line, and say why in the reason: a directive without one suppresses nothing and is itself a finding (`DEDO_GO_IGNORE_REASON`). Name every suppression you add in your summary.
 
+## Dependencies
+
+Qualify a dependency before adding it, as [dependencies.md](https://github.com/raveesh-me/dedo/blob/main/guidance/dependencies.md) describes. Your organisation's annexure says which licenses it permits.
+
+- Add a dependency only when the task needs it, and only after checking that the standard library or an existing dependency can't do the job. Name every one you add in your summary, with its version, its license and the modules it brings with it (`go list -m all`, before and after).
+- Never add a thin wrapper: a package that only renames, re-exports or sets defaults on another library, or turns a service's API into a few functions. Use the library directly, or call the API and keep its request and response types in this repository.
+- Pin exact versions: `go get <module>@vX.Y.Z`, `go get -tool <module>@vX.Y.Z`, `go run <module>@vX.Y.Z`, GitHub Actions by commit SHA, images by digest, npm packages without `^` or `~`. Never `@latest`, a floating tag or `go get -u ./...`. Update one dependency per change, except dedo's own pins, which `dedo update && dedo upgrade` moves together.
+- Check the license of the dependency and of every module it brings: `go run github.com/google/go-licenses/v2@v2.0.1 report ./...`. A license the annexure doesn't list as allowed outright needs a person's approval: stop and ask before adding it.
+- Run `go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...` after adding or updating a dependency, and fix what it reports before you finish.
+
+## Observability
+
+A dedo service reports through OpenTelemetry and W3C Trace Context, never a vendor's SDK or headers. `main.go` sets up the SDK and OTLP exporters in `setupTelemetry`, configured only by the standard `OTEL_*` environment variables; the runtime (package `telemetry`) imports only OpenTelemetry's API.
+
+- Keep `telemetry.NewServerInterceptor` right after `flowid.Interceptor()` in `connect.NewServer`, and `telemetry.Middleware` around `/mcp`. They give every RPC a span and `rpc.server.call.duration`, on every transport, following OpenTelemetry's semantic conventions for Connect RPC. Never instrument a handler by hand for what they record, and never add HTTP tracing middleware for the API routes: it would duplicate the spans.
+- Give every Connect client to another service `telemetry.NewClientInterceptor` beside `flowid.ClientInterceptor()`, so the trace continues there.
+- Log with the call's context, `log.InfoContext(ctx, ...)`, through the `slog` logger `main.go` builds: `telemetry.NewLogHandler` adds `trace_id` and `span_id` only from the context.
+- Configure telemetry with `OTEL_*` variables (`OTEL_SERVICE_NAME`, `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_TRACES_SAMPLER`, ...), never with code or vendor variables. Add a vendor's exporter only to `setupTelemetry`, and only when OTLP cannot reach the backend.
+- To record a request field on the span and its logs, declare it in the proto: `(dedo.v1.field) = {attribute: "<module>.<name>"}`, with `attribute_mode` `ATTRIBUTE_MODE_PRESENCE` or `ATTRIBUTE_MODE_ITEM_COUNT` where the value does not fit. Never set it from handler code. A key is in your own namespace, never a semantic-conventions one (`rpc.`, `http.`, `server.`, `error.`, ...) or `dedo.`, and once released it is kept (`DEDO_FIELD_ATTRIBUTE_KEPT`). A sensitive field records only its presence. Never put a token or a whole request on a span, a metric or a log record, and never a value with many distinct values, such as an ID, on a metric.
+- Service level objectives are declared in the proto (`service_level` in `dedo.v1.service`, and `{exempt: true}` or objectives of its own in `dedo.v1.method`), and `make generate` writes them into `slo/` as OpenSLO. Never edit `slo/` by hand, and never write SLO queries by hand for what the contract can declare.
+- `error.type` and an error status mean the server failed (`INTERNAL`, `UNAVAILABLE`, ...). Return `NOT_FOUND`, `INVALID_ARGUMENT` and the like for the caller's mistakes, with a declared reason, so they do not count against the service. When a declared reason counts wrongly by its code, declare `error_classifications` on the RPC rather than changing the code.
+
 ## MCP tools
 
 Every unary, non-deprecated RPC becomes an MCP tool named after it in snake_case (`GetTodo` becomes `get_todo`), unless its service's `audience` is narrower than `protoc-gen-dedo-mcp`'s `min_audience` (by default, only `AUDIENCE_COMPONENT_INTERNAL` services are left out). `protoc-gen-dedo-mcp` generates them as `<Service>MCPTools()`, and `main.go` serves them with `mcpserver.AddTools(tools, client, <pkg>.<Service>MCPTools()...)`, `client` being `connect.NewClient(connectinprocess.New(server))`: calls go in-process to the service's `connect.Server`. For a service it leaves out, `<Service>MCPTools()` returns no tools, so `main.go` keeps compiling. Never write tool definitions by hand: change the proto and regenerate. Calls go through the same auth, scopes and validation as REST and Connect.

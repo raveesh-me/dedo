@@ -849,15 +849,15 @@ var File_raveesh_me_todo_v1_todo_proto protoreflect.FileDescriptor
 
 const file_raveesh_me_todo_v1_todo_proto_rawDesc = "" +
 	"\n" +
-	"\x1draveesh_me/todo/v1/todo.proto\x12\x12raveesh_me.todo.v1\x1a\x1bbuf/validate/validate.proto\x1a\x15dedo/v1/options.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x17google/api/client.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x19google/api/resource.proto\x1a google/protobuf/field_mask.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x17google/type/money.proto\"\xfc\x03\n" +
+	"\x1draveesh_me/todo/v1/todo.proto\x12\x12raveesh_me.todo.v1\x1a\x1bbuf/validate/validate.proto\x1a\x15dedo/v1/options.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x17google/api/client.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x19google/api/resource.proto\x1a google/protobuf/field_mask.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x17google/type/money.proto\"\x9c\x04\n" +
 	"\x04Todo\x12\x18\n" +
 	"\x04name\x18\x01 \x01(\tB\x04\xe2A\x01\bR\x04name\x12\x1a\n" +
-	"\x05title\x18\x02 \x01(\tB\x04\xe2A\x01\x02R\x05title\x12\x18\n" +
-	"\x04done\x18\x03 \x01(\bB\x04\xe2A\x01\x01R\x04done\x12\xcc\x01\n" +
+	"\x05title\x18\x02 \x01(\tB\x04\xe2A\x01\x02R\x05title\x12'\n" +
+	"\x04done\x18\x03 \x01(\bB\x13\xe2A\x01\x01\xba\xbb\x18\v\x12\ttodo.doneR\x04done\x12\xcc\x01\n" +
 	"\rbudget_amount\x18\x04 \x01(\v2\x12.google.type.MoneyB\x92\x01\xe2A\x01\x01\xbaH\x8a\x01\xba\x01\x86\x01\n" +
 	"\n" +
-	"money.sign\x12,units and nanos must not have opposite signs\x1aJthis.units == 0 || this.nanos == 0 || (this.units > 0) == (this.nanos > 0)R\fbudgetAmount\x12;\n" +
-	"\x0eassignee_email\x18\x05 \x01(\tB\x14\xe2A\x01\x01\xbaH\a\xd8\x01\x01r\x02`\x01\xba\xbb\x18\x02\b\x01R\rassigneeEmail\x12A\n" +
+	"money.sign\x12,units and nanos must not have opposite signs\x1aJthis.units == 0 || this.nanos == 0 || (this.units > 0) == (this.nanos > 0)R\fbudgetAmount\x12L\n" +
+	"\x0eassignee_email\x18\x05 \x01(\tB%\xe2A\x01\x01\xbaH\a\xd8\x01\x01r\x02`\x01\xba\xbb\x18\x13\b\x01\x12\rtodo.assigned\x18\x02R\rassigneeEmail\x12A\n" +
 	"\vcreate_time\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampB\x04\xe2A\x01\x03R\n" +
 	"createTime:U\xeaA1\n" +
 	"\x14todo.raveesh.me/Todo\x12\ftodos/{todo}*\x05todos2\x04todo»\x18\x1d\n" +
@@ -868,9 +868,9 @@ const file_raveesh_me_todo_v1_todo_proto_rawDesc = "" +
 	"\x13Which to-do to get.\"[\n" +
 	"\x0fGetTodoResponse\x12,\n" +
 	"\x04todo\x18\x01 \x01(\v2\x18.raveesh_me.todo.v1.TodoR\x04todo:\x1a»\x18\x16\n" +
-	"\x14The requested to-do.\"\x86\x01\n" +
-	"\x10ListTodosRequest\x12(\n" +
-	"\tpage_size\x18\x01 \x01(\x05B\v\xe2A\x01\x01\xbaH\x04\x1a\x02(\x00R\bpageSize\x12#\n" +
+	"\x14The requested to-do.\"\x9a\x01\n" +
+	"\x10ListTodosRequest\x12<\n" +
+	"\tpage_size\x18\x01 \x01(\x05B\x1f\xe2A\x01\x01\xbaH\x04\x1a\x02(\x00\xba\xbb\x18\x10\x12\x0etodo.page_sizeR\bpageSize\x12#\n" +
 	"\n" +
 	"page_token\x18\x02 \x01(\tB\x04\xe2A\x01\x01R\tpageToken:#»\x18\x1f\n" +
 	"\x1dWhich page of to-dos to list.\"\x86\x01\n" +
@@ -916,7 +916,7 @@ const file_raveesh_me_todo_v1_todo_proto_rawDesc = "" +
 	"\x0eCHANGE_UPDATED\x10\x02\x12\x12\n" +
 	"\x0eCHANGE_DELETED\x10\x03\x12\x13\n" +
 	"\x0fCHANGE_WATCHING\x10\x04:=»\x189\n" +
-	"7One change to the to-do list, and the to-do it changed.2\xcd\x11\n" +
+	"7One change to the to-do list, and the to-do it changed.2\xa1\x12\n" +
 	"\vTodoService\x12\xba\x02\n" +
 	"\aGetTodo\x12\".raveesh_me.todo.v1.GetTodoRequest\x1a#.raveesh_me.todo.v1.GetTodoResponse\"\xe5\x01\xaa\xbb\x18\xaf\x01\n" +
 	"\x0etodo.todo.read\x12\x06\b\x01\x12\x02\b\n" +
@@ -943,17 +943,19 @@ const file_raveesh_me_todo_v1_todo_proto_rawDesc = "" +
 	"DeleteTodo\x12%.raveesh_me.todo.v1.DeleteTodoRequest\x1a&.raveesh_me.todo.v1.DeleteTodoResponse\"\xa3\x01\xaa\xbb\x18t\n" +
 	"\x0ftodo.todo.write\"\x12\n" +
 	"\x0eTODO_NOT_FOUND\x10\x05*M\n" +
-	"\x0eDelete a to-do\x121Removes a to-do for good. It cannot be recovered.\x1a\b\b\x00\x10\x01\x18\x01 \x00\x82\xd3\xe4\x93\x02\"* /commerce/todo/v1/{name=todos/*}\x90\x02\x02\x12\x8d\x01\n" +
+	"\x0eDelete a to-do\x121Removes a to-do for good. It cannot be recovered.\x1a\b\b\x00\x10\x01\x18\x01 \x00\x82\xd3\xe4\x93\x02\"* /commerce/todo/v1/{name=todos/*}\x90\x02\x02\x12\xa5\x01\n" +
 	"\n" +
-	"WatchTodos\x12%.raveesh_me.todo.v1.WatchTodosRequest\x1a&.raveesh_me.todo.v1.WatchTodosResponse\".\xaa\xbb\x18*\n" +
+	"WatchTodos\x12%.raveesh_me.todo.v1.WatchTodosRequest\x1a&.raveesh_me.todo.v1.WatchTodosResponse\"F\xaa\xbb\x18B\n" +
 	"\x0etodo.todo.read\"\x18\n" +
-	"\x14SERVER_SHUTTING_DOWN\x10\x0e0\x01\x12\xdd\x02\n" +
+	"\x14SERVER_SHUTTING_DOWN\x10\x0eB\x16\n" +
+	"\x14SERVER_SHUTTING_DOWN0\x01\x12\xe1\x02\n" +
 	"\n" +
-	"RemoveTodo\x12%.raveesh_me.todo.v1.RemoveTodoRequest\x1a&.raveesh_me.todo.v1.RemoveTodoResponse\"\xff\x01\xaa\xbb\x18\xc2\x01\n" +
+	"RemoveTodo\x12%.raveesh_me.todo.v1.RemoveTodoRequest\x1a&.raveesh_me.todo.v1.RemoveTodoResponse\"\x83\x02\xaa\xbb\x18\xc6\x01\n" +
 	"\x0ftodo.todo.write\x1a;\n" +
 	"\x06\b\x80\xf2\xd6\xca\x06\x12\x06\b\x80\xd9\xdb\xd9\x06\x1a)raveesh_me.todo.v1.TodoService.DeleteTodo\"\x12\n" +
 	"\x0eTODO_NOT_FOUND\x10\x05*^\n" +
-	"\x1bRemove a to-do (deprecated)\x125Deprecated: use DeleteTodo. Removes a to-do for good.\x1a\b\b\x00\x10\x01\x18\x01 \x00\x82\xd3\xe4\x93\x02,:\x01*\"'/commerce/todo/v1/{name=todos/*}:remove\x88\x02\x01\x90\x02\x02\x1a#\xcaA\x0ftodo.raveesh.me\xa2\xbb\x18\r\b\x05\x12\ttodo-teamB\xd4\x01\n" +
+	"\x1bRemove a to-do (deprecated)\x125Deprecated: use DeleteTodo. Removes a to-do for good.\x1a\b\b\x00\x10\x01\x18\x01 \x00J\x02\b\x01\x82\xd3\xe4\x93\x02,:\x01*\"'/commerce/todo/v1/{name=todos/*}:remove\x88\x02\x01\x90\x02\x02\x1a[\xcaA\x0ftodo.raveesh.me\xa2\xbb\x18E\b\x05\x12\ttodo-team*6\n" +
+	"-\t+\x87\x16\xd9\xce\xf7\xef?\x12\x10\t\x00\x00\x00\x00\x00\x00\xe0?\x12\x05\x10\xc0\xf0\xf5\v\x12\x10\t\xaeG\xe1z\x14\xae\xef?\x12\x05\x10\x80\xe5\x9aw\x12\x05\b\x80ԓ\x01B\xd4\x01\n" +
 	"\x16com.raveesh_me.todo.v1B\tTodoProtoP\x01ZIgithub.com/raveesh-me/dedo/examples/todo/gen/go/raveesh_me/todo/v1;todov1\xa2\x02\x03RTX\xaa\x02\x11RaveeshMe.Todo.V1\xca\x02\x11RaveeshMe\\Todo\\V1\xe2\x02\x1dRaveeshMe\\Todo\\V1\\GPBMetadata\xea\x02\x13RaveeshMe::Todo::V1b\x06proto3"
 
 var (

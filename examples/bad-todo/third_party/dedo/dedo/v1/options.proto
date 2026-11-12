@@ -41,6 +41,9 @@ message ServiceRules {
   // it, the reference uses the service name without its Service suffix,
   // split into words: CatalogEntryService reads "Catalog Entry".
   string title = 4;
+  // The service's level objectives, from which dedo slo writes OpenSLO
+  // documents whose indicators are the RPC metrics the runtime records.
+  ServiceLevel service_level = 5;
 }
 
 // Tenancy declares that a service partitions its data between tenants. The
@@ -149,6 +152,72 @@ message MethodRules {
   // the API. Most RPCs publish none. The runtime refuses to publish a type
   // the RPC does not declare.
   repeated string emits = 7;
+  // Declared error reasons whose errors count differently in telemetry
+  // from their code. By default a server span and rpc.server.call.duration
+  // count a call as an error, with error.type, only for the codes that mean
+  // the server failed: UNKNOWN, DEADLINE_EXCEEDED, UNIMPLEMENTED, INTERNAL,
+  // UNAVAILABLE and DATA_LOSS. Each reason must be one the RPC declares in
+  // errors.
+  repeated ErrorClassification error_classifications = 8;
+  // How the RPC counts toward its service's level objectives: by default,
+  // like every other RPC of the service.
+  MethodServiceLevel service_level = 9;
+}
+
+// ServiceLevel is a service's level objectives over a rolling window, in
+// the shape of OpenSLO v1. Each objective applies to every RPC of the
+// service that is not exempt and has no objectives of its own.
+message ServiceLevel {
+  // What the service promises.
+  Objectives objectives = 1;
+  // The rolling window the objectives are measured over, in whole days,
+  // such as 28 days.
+  google.protobuf.Duration window = 2;
+}
+
+// Objectives are service level objectives, measured on
+// rpc.server.call.duration.
+message Objectives {
+  // The share of calls that are not server errors, such as 0.999: calls
+  // whose span has no error.type. Zero sets no availability objective.
+  double availability = 1;
+  // How fast calls answer. Server-streaming and bidirectional RPCs, whose
+  // duration is the stream's, count for none.
+  repeated LatencyObjective latency = 2;
+}
+
+// LatencyObjective is the share of calls that answer within a threshold.
+message LatencyObjective {
+  // The share of calls, such as 0.99 for the 99th percentile.
+  double percentile = 1;
+  // The time they answer within. It is one of the bucket boundaries of
+  // rpc.server.call.duration, so the share can be counted exactly.
+  google.protobuf.Duration threshold = 2;
+}
+
+// MethodServiceLevel is how one RPC counts toward its service's
+// objectives.
+message MethodServiceLevel {
+  // Exempt, or objectives of its own.
+  oneof level {
+    // The RPC counts toward no objective, such as a long poll or an
+    // internal maintenance RPC.
+    bool exempt = 1;
+    // Objectives of the RPC's own, in place of the service's, over the
+    // service's window.
+    Objectives objectives = 2;
+  }
+}
+
+// ErrorClassification says whether the errors of one declared reason count
+// against the service in telemetry, overriding what their code says.
+message ErrorClassification {
+  // A reason the RPC declares in errors.
+  string reason = 1;
+  // True: the server failed, such as an UNAVAILABLE reason that no retry
+  // can fix. False: an expected outcome the caller handles, such as a
+  // FAILED_PRECONDITION reason the service returns by design.
+  bool server_error = 2;
 }
 
 // MessageRules documents a message for API consumers and models.
@@ -160,8 +229,31 @@ message MessageRules {
 
 // FieldRules classifies the data in a field.
 message FieldRules {
-  // The field holds personal or secret data.
+  // The field holds personal or secret data. Its value never reaches
+  // telemetry: an attribute on it may only record its presence.
   bool sensitive = 1;
+  // The key under which the runtime records the field of a request on the
+  // RPC's server span and on every log record written while serving it,
+  // such as "todo.priority". Lowercase, dot-separated, in a namespace of
+  // the service's own, never one of OpenTelemetry's semantic conventions
+  // (rpc, http, server, error, ...) or dedo's. Never on a metric.
+  string attribute = 2;
+  // What the attribute records. Applies only with attribute.
+  AttributeMode attribute_mode = 3;
+}
+
+// AttributeMode is what an attribute records of its field.
+enum AttributeMode {
+  // VALUE.
+  ATTRIBUTE_MODE_UNSPECIFIED = 0;
+  // The value of a scalar or enum field: a string, number or boolean, or an
+  // enum's value name. Not for bytes, messages, repeated fields or maps.
+  ATTRIBUTE_MODE_VALUE = 1;
+  // Whether the field is set: true or false. The only mode a sensitive
+  // field may have.
+  ATTRIBUTE_MODE_PRESENCE = 2;
+  // How many items a repeated field or map holds.
+  ATTRIBUTE_MODE_ITEM_COUNT = 3;
 }
 
 extend google.protobuf.ServiceOptions {

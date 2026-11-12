@@ -8,6 +8,8 @@ import (
 
 	"connectrpc.com/connect/v2"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+
+	"github.com/raveesh-me/dedo/telemetry"
 )
 
 // forwardedHeaders are always copied from the MCP request onto the forwarded
@@ -18,8 +20,11 @@ var forwardedHeaders = []string{"Authorization", "X-Flow-ID"}
 type extraHeadersKey struct{}
 
 // forwardHeaders puts the MCP caller's token and flow ID, and the headers
-// withHeaders added, on the forwarded call.
+// withHeaders added, on the forwarded call, and marks it as an MCP call for
+// package telemetry. The call keeps ctx's trace context, so its span is a
+// child of the MCP request's.
 func forwardHeaders(ctx context.Context, req *mcp.CallToolRequest) context.Context {
+	ctx = telemetry.WithTransport(ctx, telemetry.TransportMCP)
 	if req == nil || req.Extra == nil {
 		return ctx
 	}

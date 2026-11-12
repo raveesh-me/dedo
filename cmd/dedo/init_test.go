@@ -182,10 +182,21 @@ func TestInitFreshRepository(t *testing.T) {
 		`time_counterv1connect.RegisterCounterServiceHandler(server, time_counter.NewCounterService())`,
 		`"reader": {"time_counter.counter.read"}`,
 		`"writer": {"time_counter.counter.read", "time_counter.counter.write"}`,
+		// OpenTelemetry: the SDK set up from OTEL_*, a span and metric for
+		// every call, the MCP request's span, and trace IDs in the logs.
+		`const serviceName = "time-counter"`,
+		`shutdownTelemetry, err := setupTelemetry(ctx, log)`,
+		`slog.New(telemetry.NewLogHandler(slog.NewJSONHandler(os.Stderr, nil)))`,
+		`server := connect.NewServer(flowid.Interceptor(), observe, auth, guard, validate.NewServerInterceptor())`,
+		`telemetry.Middleware(telemetry.Config{}, "/mcp", `,
+		`server.Shutdown(`,
 	} {
 		if !strings.Contains(main, want) {
 			t.Errorf("main.go lacks %s", want)
 		}
+	}
+	if !strings.Contains(out, "go.opentelemetry.io/otel/sdk@"+otelRelease) || !strings.Contains(out, "go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp@"+otelRelease) {
+		t.Errorf("output does not pin the OpenTelemetry SDK and exporters:\n%s", out)
 	}
 
 	// A second run changes nothing.

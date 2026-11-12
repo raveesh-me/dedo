@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package raveesh_me.library.v1;
+
+import "dedo/v1/options.proto";
+
+message ListBooksRequest {
+  int32 page_size = 1 [(dedo.v1.field) = {attribute: "library.page_size"}];
+  string filter = 2 [(dedo.v1.field) = {attribute: "library.filter"}];
+  repeated string tags = 3 [(dedo.v1.field) = {attribute: "library.tag_count", attribute_mode: ATTRIBUTE_MODE_ITEM_COUNT}];
+  string shelf = 4 [(dedo.v1.field) = {attribute: "library.shelf", attribute_mode: ATTRIBUTE_MODE_VALUE}];
+  // A new attribute is fine.
+  string author = 5 [(dedo.v1.field) = {attribute: "library.author"}];
+}

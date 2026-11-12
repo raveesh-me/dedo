@@ -127,7 +127,10 @@ What each option does:
 | `method.tool` | MCP, docs | The MCP tool's `title` and `description`, also the REST operation's summary and description. The description is the one field every client passes to the model. |
 | `method.tool.annotations` | MCP | The MCP specification's `ToolAnnotations` hints (`read_only_hint`, `destructive_hint`, `idempotent_hint`, `open_world_hint`), for clients deciding, for example, whether to ask the user first |
 | `message.description` | MCP, docs | The schema description shown to agents and API readers |
-| `field.sensitive` | Docs | Marks personal or secret data (`x-sensitive`) |
+| `field.sensitive` | Docs, lint, runtime | Marks personal or secret data (`x-sensitive`). Its value never reaches telemetry. |
+| `field.attribute`, `field.attribute_mode` | Runtime, lint | An OpenTelemetry attribute the runtime records from the request on the RPC's server span and its log records: the field's value, whether it is set, or how many items it holds |
+| `method.error_classifications` | Runtime, lint | Declared reasons whose errors count against the service in telemetry differently from their code |
+| `service.service_level`, `method.service_level` | `dedo slo`, lint | The service's availability and latency objectives over a rolling window, and RPCs that are exempt or have their own, written as OpenSLO documents |
 | `service.tenancy`, `method.cross_tenant` | Lint, runtime | A multi-tenant service: the runtime checks every request's tenant ([section 7](#multi-tenant-services)) |
 
 The MCP tool schemas also read the standard annotations, so a model can get a call right the first time:
@@ -196,7 +199,7 @@ Commit all of it. CI fails when the committed output is stale.
 
 ```go
 // One connect.Server, with the interceptors every transport runs: flow IDs,
-// auth, the declared contract, then the buf.validate rules.
+// telemetry, auth, the declared contract, then the buf.validate rules.
 table, err := policy.Build(productsv1connect.ProductServiceName) // fails on a missing declaration
 guard, err := interceptor.New(interceptor.Config{
 	Table:         table,
@@ -204,7 +207,8 @@ guard, err := interceptor.New(interceptor.Config{
 	EnforceScopes: true,                   // false only logs denials, to roll out to an existing service
 	Log:           log,
 })
-server := connect.NewServer(flowid.Interceptor(), auth.Interceptor(), guard, validate.NewServerInterceptor())
+observe, err := telemetry.NewServerInterceptor(telemetry.Config{Table: table}) // a span and a metric per call
+server := connect.NewServer(flowid.Interceptor(), observe, auth.Interceptor(), guard, validate.NewServerInterceptor())
 productsv1connect.RegisterProductServiceHandler(server, products.NewProductService()) // from internal/products
 
 mux := http.NewServeMux()
@@ -224,8 +228,10 @@ endpoint, err := mcpserver.Guard(mcp.NewStreamableHTTPHandler(
 
 mux.Handle("GET /openapi.json", docs.Spec()) // embeds docs/openapi.json
 mux.Handle("GET /docs", docs.Page())
-// Cross-origin protection: the MCP transport requires an Origin check.
-mux.Handle("/mcp", flowid.Middleware(http.NewCrossOriginProtection().Handler(endpoint)))
+// Cross-origin protection: the MCP transport requires an Origin check. The
+// MCP request gets a span; its tool calls are children of it.
+mux.Handle("/mcp", flowid.Middleware(telemetry.Middleware(telemetry.Config{}, "/mcp",
+	http.NewCrossOriginProtection().Handler(endpoint))))
 ```
 
 **Who may reach `/mcp`** is a setting, `MCP_ACCESS` in the `main.go` `dedo init` writes:
@@ -236,6 +242,20 @@ mux.Handle("/mcp", flowid.Middleware(http.NewCrossOriginProtection().Handler(end
 An unknown value stops the service at startup rather than serving it publicly.
 
 **Calling another service over HTTP.** MCP tool calls stay in-process, but a handler that calls another service through a Connect client over HTTP (`connecthttp.NewTransport`) needs a connection pool sized for its traffic. `http.DefaultClient` keeps only two idle connections per host: under concurrent calls it keeps opening and closing connections, and the closed ones hold local ports until they time out, so a busy service runs out of ports and every call fails with `cannot assign requested address`. In dedo's benchmark that happened at 32 concurrent calls. Create one `http.Client` per backend, with an `http.Transport` whose `MaxIdleConnsPerHost` covers your concurrency (`examples/todo/cmd/todo-mcp` uses 256), and reuse it for every call.
+
+**Observability follows open standards, not a vendor.** Every RPC, on every transport, gets a span and a duration metric named by OpenTelemetry's [semantic conventions for Connect RPC](https://opentelemetry.io/docs/specs/semconv/rpc/connect-rpc/), and the trace travels in W3C Trace Context and Baggage headers. The reasons:
+
+- **Standards outlive vendors.** OTLP reaches every tracing and metrics backend in use today, so the choice of backend stays an operations decision, made in configuration (`OTEL_*`), never in code. dedo's own packages import only OpenTelemetry's API, which is a no-op until a service installs the SDK; the SDK and exporters are set up in the service's own `main.go`, which `dedo init` writes. That is code the service owns rather than a bootstrap package it depends on: a thin wrapper around OpenTelemetry would put one more publisher in the build and trail upstream's releases.
+- **Semantic conventions make dashboards portable.** `rpc.server.call.duration`, `rpc.method` and `rpc.status_code` mean the same in every service and every backend, so one SLO query or dashboard works across them. dedo's own attributes live in the `dedo.` namespace: `dedo.rpc.transport` tells Connect, gRPC, REST and MCP apart, `dedo.flow_id` joins a trace to the flow ID callers already quote, and `dedo.error.reason` is the declared `ErrorInfo` reason.
+- **A caller's mistake is not the server's error.** A server span is an error only for `UNKNOWN`, `DEADLINE_EXCEEDED`, `UNIMPLEMENTED`, `INTERNAL`, `UNAVAILABLE` and `DATA_LOSS`, as the conventions say, so error rates and alerts track what the service owner can fix; a `NOT_FOUND` is a correct answer. A client span is an error for every code but `OK`: the caller did not get what it asked for. `error.type` is set exactly when the span is an error, so a metric query and a trace query agree.
+- **One trace per request, across transports.** An MCP tool call reaches the server in-process, so its span is a child of the MCP request's span rather than a new trace; `/mcp` continues the caller's `traceparent` like every other route. Events carry the trace as the CloudEvents Distributed Tracing extension, so a consumer's work joins it too.
+- **Logs join traces on `trace_id`.** The log handler puts `trace_id` and `span_id` on every record logged with a call's context, the names log pipelines look for.
+- **No payloads, unless the contract says so.** The runtime records only the request fields the contract names in `(dedo.v1.field).attribute`, under the key it gives, on the span and the log records, never on a metric, where their values would be too many. A sensitive field may record only whether it is set: lint reports anything else, and the runtime refuses to start on it. The key and its mode are part of the API's contract with whoever queries them, so a breaking rule keeps them.
+- **The contract says which errors are the server's.** The conventions let an instrumentation configure which outcomes are errors; dedo does it per declared reason (`error_classifications`), in review with the API, rather than in each service's code: an `UNAVAILABLE` a watch returns on every deploy is not an outage.
+
+- **Objectives belong in the contract.** What a service promises its callers is part of its API, reviewed with it. `dedo slo` writes the declared objectives as [OpenSLO](https://openslo.com), the open specification for SLOs, never as one vendor's rules. Their indicators are the semantic conventions' `rpc.server.call.duration`, selected by `rpc.method`, so they mean the same in any backend that takes OTLP. Availability counts calls with no `error.type`, so the contract's error classifications decide what spends the error budget.
+
+dedo writes its own interceptor rather than using `connectrpc.com/otelconnect`, which supports connect-go v2 since v0.12.0: dedo needs the transport, flow ID and reason attributes, and to classify errors by declared reason, which otelconnect fixes from the code alone, and otelconnect would bring connect-go v1 into every service.
 
 Return errors with a declared reason in a `google.rpc.ErrorInfo` detail. `examples/todo/internal/todo/errors.go` has a helper.
 

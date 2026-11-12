@@ -11,6 +11,7 @@ import (
 
 	"connectrpc.com/connect/v2"
 	"connectrpc.com/connect/v2/connectproto"
+	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 
 	"github.com/raveesh-me/dedo/events"
@@ -330,5 +331,39 @@ func TestPublishRefusesBadIdempotencyKey(t *testing.T) {
 		if n := len(f.driver.Attempts()); n != 0 {
 			t.Fatalf("key %q reached the driver", key)
 		}
+	}
+}
+
+func TestPublishCarriesTraceContext(t *testing.T) {
+	f := newFixture(t, events.Retry{})
+	tid, _ := trace.TraceIDFromHex("4bf92f3577b34da6a3ce929d0e0e4736")
+	sid, _ := trace.SpanIDFromHex("00f067aa0ba902b7")
+	state, _ := trace.ParseTraceState("vendor=value")
+	sc := trace.NewSpanContext(trace.SpanContextConfig{TraceID: tid, SpanID: sid, TraceFlags: trace.FlagsSampled, TraceState: state})
+	ctx := trace.ContextWithSpanContext(inMethod(t.Context(), cancelled), sc)
+	if _, err := f.pub.Publish(ctx, cancelled, subject); err != nil {
+		t.Fatal(err)
+	}
+	e := f.driver.Events()[0]
+	// The CloudEvents Distributed Tracing extension.
+	if got, want := e.Extensions["traceparent"], "00-"+tid.String()+"-"+sid.String()+"-01"; got != want {
+		t.Errorf("traceparent = %q, want %q", got, want)
+	}
+	if got := e.Extensions["tracestate"]; got != "vendor=value" {
+		t.Errorf("tracestate = %q", got)
+	}
+}
+
+func TestPublishWithoutTraceContext(t *testing.T) {
+	f := newFixture(t, events.Retry{})
+	if _, err := f.pub.Publish(inMethod(t.Context(), cancelled), cancelled, subject); err != nil {
+		t.Fatal(err)
+	}
+	e := f.driver.Events()[0]
+	if _, ok := e.Extensions["traceparent"]; ok {
+		t.Errorf("traceparent without a span: %v", e.Extensions)
+	}
+	if _, ok := e.Extensions["tracestate"]; ok {
+		t.Errorf("tracestate without a span: %v", e.Extensions)
 	}
 }

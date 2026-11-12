@@ -1,6 +1,6 @@
 // Command dedo sets up a Go repository to build its API with dedo.
 //
-//	go install github.com/raveesh-me/dedo/cmd/dedo@latest
+//	go install github.com/raveesh-me/dedo/cmd/dedo@v0.37.0
 //	dedo init
 //
 // dedo init adds the options module, the lint plugin, the code generators,
@@ -74,6 +74,12 @@ const usage = `usage:
                                     reader). The URL defaults to the kind cluster's port from
                                     zarf/k8s/dev/kind-config.yaml, or make run's 8080; the name to the Go
                                     module's last element. -print prints the entry; -remove removes it
+  dedo slo [-dir DIR] [-out OUT] [-datasource NAME]
+                                    write the service level objectives the protos declare as OpenSLO v1
+                                    documents, one file per service in OUT (default slo): a Service, an SLI
+                                    and an SLO per objective on rpc.server.call.duration, and burn-rate
+                                    AlertPolicies notifying the owner team. -datasource names an OpenSLO
+                                    DataSource for every indicator
   dedo templates [NAME]             list the bundled templates, or print one
   dedo version                      print the dedo release this command installs
 `
@@ -187,6 +193,16 @@ func run(args []string, out io.Writer) error {
 			return err
 		}
 		return breaking(*dir, *against, out)
+	case "slo":
+		flags := flag.NewFlagSet("slo", flag.ContinueOnError)
+		flags.SetOutput(out)
+		dir := flags.String("dir", ".", "the directory that holds buf.yaml")
+		outDir := flags.String("out", "slo", "the directory to write the documents into, relative to -dir")
+		dataSource := flags.String("datasource", "", "the OpenSLO DataSource every indicator reads from (default: type OpenTelemetry)")
+		if err := flags.Parse(args[1:]); err != nil {
+			return err
+		}
+		return slo(*dir, *outDir, sloOptions{DataSource: *dataSource}, out)
 	case "local-mcp-claude":
 		return localMCPClaude(args[1:], out)
 	case "templates":

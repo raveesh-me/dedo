@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package raveesh_me.library.v1;
+
+import "dedo/v1/options.proto";
+import "google/protobuf/empty.proto";
+
+// A percentage where a share belongs, and no window.
+service LibraryService { // want
+  option (dedo.v1.service) = {
+    service_level: {
+      objectives: {availability: 99.9}
+    }
+  };
+  rpc GetBook(google.protobuf.Empty) returns (google.protobuf.Empty) {}
+}
+
+// A threshold between buckets.
+service ShelfService { // want
+  option (dedo.v1.service) = {
+    service_level: {
+      objectives: {
+        latency: {
+          percentile: 0.99
+          threshold: {nanos: 300000000}
+        }
+      }
+      window: {seconds: 2419200}
+    }
+  };
+  rpc GetShelf(google.protobuf.Empty) returns (google.protobuf.Empty) {}
+}

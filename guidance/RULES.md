@@ -323,6 +323,12 @@ A house rule that contradicts a DEDO, AIP or ZALANDO rule without overriding it 
 | [`DEDO_EVENT_TYPES`](#dedo_event_types) | Declared event types belong to the package, name one of its resources, appear once, and only on RPCs that change state |
 | [`DEDO_EVENT_NOT_PUBLISHED_DECLARED`](#dedo_event_not_published_declared) | RPCs that emit events declare `EVENT_NOT_PUBLISHED` with `UNAVAILABLE` |
 | [`DEDO_NO_HEALTH_RPC`](#dedo_no_health_rpc) | No health check in the contract: the server serves `GET /healthz` |
+| [`DEDO_FIELD_ATTRIBUTE_KEY`](#dedo_field_attribute_key) | A field's telemetry attribute key is namespaced, outside the semantic conventions' and dedo's namespaces, and used once per message |
+| [`DEDO_FIELD_ATTRIBUTE_SENSITIVE`](#dedo_field_attribute_sensitive) | A sensitive field's attribute records only whether it is set |
+| [`DEDO_FIELD_ATTRIBUTE_MODE`](#dedo_field_attribute_mode) | An attribute's mode fits its field: a value of a scalar, the item count of a repeated field |
+| [`DEDO_ERROR_CLASSIFICATION_DECLARED`](#dedo_error_classification_declared) | An error classification names a declared reason, once, and changes how it counts |
+| [`DEDO_SERVICE_LEVEL`](#dedo_service_level) | A service's level objectives are sane: shares in range, latency thresholds on bucket boundaries, a window in whole days |
+| [`DEDO_METHOD_SERVICE_LEVEL`](#dedo_method_service_level) | An RPC's own objectives are sane, with no latency on a stream, and an exempt RPC's service declares objectives |
 
 ---
 
@@ -735,6 +741,130 @@ mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
 
 A readiness probe that checks the server's dependencies, such as its database, is the server's too: serve it beside `/healthz`, never in the contract.
 
+### DEDO_FIELD_ATTRIBUTE_KEY
+
+**Checks** the key of every field's `(dedo.v1.field).attribute`:
+
+- it is lowercase `snake_case` segments joined by dots, at least two of them: a namespace, then the name (`todo.priority`, `acme.orders.line_count`);
+- its first segment is not a namespace of OpenTelemetry's [semantic conventions](https://opentelemetry.io/docs/specs/semconv/registry/attributes/) (`rpc`, `http`, `server`, `client`, `error`, `user`, `session`, `db`, `url`, `service`, ...) nor `dedo` or `otel`;
+- no two fields of one message record the same key.
+
+**Why.** The runtime puts the key on the RPC's server span and on every log record written while serving it. A key in a standard namespace could collide with an attribute the instrumentation sets, or be read by a backend as one it is not. A key without a namespace, such as `priority`, collides between services in the same backend. The runtime refuses to start on a key that breaks these rules, and on two fields of one request, nested ones included, that record the same key.
+
+```protobuf
+message ListTodosRequest {
+  int32 page_size = 1 [(dedo.v1.field) = {attribute: "todo.page_size"}];  // Passes.
+  string filter = 2 [(dedo.v1.field) = {attribute: "rpc.filter"}];        // Fails: a semantic-conventions namespace.
+  string order_by = 3 [(dedo.v1.field) = {attribute: "order_by"}];        // Fails: no namespace.
+}
+```
+
+**Fix.** Put the key in the service's own namespace, such as its proto package's module: `todo.`.
+
+### DEDO_FIELD_ATTRIBUTE_SENSITIVE
+
+**Checks** that a field marked `sensitive` records, if anything, only whether it is set: `attribute_mode: ATTRIBUTE_MODE_PRESENCE`.
+
+**Why.** A sensitive field holds personal or secret data. Telemetry is copied to backends with wider access and longer retention than the service's own store, so its value must never reach a span or a log. Whether it is set is often useful (`todo.assigned`) and reveals nothing. The runtime refuses to start on a sensitive field that records its value or item count.
+
+```protobuf
+string assignee_email = 5 [(dedo.v1.field) = {
+  sensitive: true
+  attribute: "todo.assigned"
+  attribute_mode: ATTRIBUTE_MODE_PRESENCE  // Passes; without it, or with VALUE, fails.
+}];
+```
+
+**Fix.** Record its presence, or no attribute.
+
+### DEDO_FIELD_ATTRIBUTE_MODE
+
+**Checks** that an attribute's mode fits its field:
+
+- `ATTRIBUTE_MODE_VALUE` (the default) on a scalar or enum field, not on bytes, a message, a repeated field or a map;
+- `ATTRIBUTE_MODE_ITEM_COUNT` only on a repeated field or a map;
+- `ATTRIBUTE_MODE_PRESENCE` on any field;
+- no `attribute_mode` without an `attribute`.
+
+**Why.** An attribute is one scalar value that a backend can group and filter by. A message or a list has no such value, and bytes are opaque; their presence or size is what can be compared. The runtime refuses to start on a mode that does not fit.
+
+```protobuf
+repeated string tags = 2 [(dedo.v1.field) = {attribute: "todo.tag_count", attribute_mode: ATTRIBUTE_MODE_ITEM_COUNT}];  // Passes.
+repeated string labels = 3 [(dedo.v1.field) = {attribute: "todo.labels"}];  // Fails: a list has no value.
+```
+
+**Fix.** Choose the mode the table above allows, or put the attribute on a scalar field inside the message.
+
+### DEDO_ERROR_CLASSIFICATION_DECLARED
+
+**Checks** each of an RPC's `error_classifications`:
+
+- its reason is one the RPC declares in `errors`;
+- no reason is classified twice;
+- it changes how its code counts: `server_error: true` on a code the server span does not count as an error (`NOT_FOUND`, `FAILED_PRECONDITION`, ...), or `false` on one it does (`UNKNOWN`, `DEADLINE_EXCEEDED`, `UNIMPLEMENTED`, `INTERNAL`, `UNAVAILABLE`, `DATA_LOSS`).
+
+**Why.** OpenTelemetry's semantic conventions count a server span as an error only for the codes that mean the server failed, and let instrumentations make that configurable. dedo makes it configurable per declared reason, in the contract, so the exceptions are reviewed with the API: a `NOT_FOUND` that means data was lost counts against the service, and an `UNAVAILABLE` the service returns by design, telling the caller to retry, does not. An undeclared reason never reaches the caller as declared, and a classification that changes nothing only misleads its reader. The runtime refuses to start on an undeclared reason.
+
+```protobuf
+option (dedo.v1.method) = {
+  errors: {reason: "TODO_NOT_FOUND", code: NOT_FOUND}
+  errors: {reason: "EVENT_NOT_PUBLISHED", code: UNAVAILABLE}
+  error_classifications: {reason: "EVENT_NOT_PUBLISHED", server_error: false}  // Passes.
+  error_classifications: {reason: "TODO_NOT_FOUND", server_error: false}       // Fails: NOT_FOUND counts so already.
+};
+```
+
+**Fix.** Declare the reason, or remove the classification.
+
+### DEDO_SERVICE_LEVEL
+
+**Checks** a service's `service_level`, the objectives [`dedo slo`](install.md#service-level-objectives-openslo) writes as OpenSLO:
+
+- it declares at least one objective: an `availability`, a `latency`, or both;
+- `availability` is a share between 0.9 and 0.99999, such as `0.999`, not a percentage;
+- each latency `percentile` is a share between 0.5 and 0.9999, at most one objective per percentile;
+- each latency `threshold` is a bucket boundary of `rpc.server.call.duration`: 0.1, 0.25, 0.5, 1, 2.5, 5, 10, 30 or 60 seconds, or one of the boundaries below 0.1 (0.0001 to 0.05);
+- the `window` is a whole number of days, at most 90.
+
+**Why.** The indicators are counted from the duration histogram the runtime records. Its buckets are the ones OpenTelemetry's semantic conventions advise, so a threshold on a boundary is counted exactly, and one between two boundaries can only be estimated. An availability of 1 leaves no error budget, and 99.9 is a percentage that would never be met. A window that is not whole days does not map onto OpenSLO's duration shorthand, and a very long one reacts to nothing.
+
+```protobuf
+option (dedo.v1.service) = {
+  audience: AUDIENCE_EXTERNAL_PUBLIC
+  owner_team: "todo-team"
+  service_level: {
+    objectives: {
+      availability: 0.999                                         // Passes; 99.9 fails.
+      latency: {percentile: 0.99, threshold: {nanos: 250000000}}  // Passes; 300ms fails.
+    }
+    window: {seconds: 2419200}                                    // 28 days.
+  }
+};
+```
+
+**Fix.** Write shares as fractions, pick the nearest bucket boundary, and give the window in whole days.
+
+### DEDO_METHOD_SERVICE_LEVEL
+
+**Checks** an RPC's `service_level`:
+
+- `exempt: true` only on an RPC whose service declares a `service_level`, and never `exempt: false`;
+- its own `objectives` pass the same checks as a service's ([DEDO_SERVICE_LEVEL](#dedo_service_level)), and the service declares the `window` they are measured over;
+- a streaming RPC has no latency objective: its duration is the stream's.
+
+**Why.** By default every RPC counts toward its service's objectives. An RPC that cannot meet them by design, such as a long poll, is exempt, or has objectives of its own, and is left out of the service's. A stream's duration measures how long the client kept it open, not how fast the service answered, so `dedo slo` leaves streaming RPCs out of every latency objective.
+
+```protobuf
+rpc WatchTodos(WatchTodosRequest) returns (stream WatchTodosResponse) {
+  option (dedo.v1.method) = {
+    scopes: "todo.todo.read"
+    service_level: {exempt: true}  // Passes, when the service declares service_level.
+  };
+}
+```
+
+**Fix.** Declare the service's objectives first, or remove the RPC's; drop latency objectives from streaming RPCs.
+
 ## Breaking rules
 
 `buf breaking` compares a contract with an earlier version of itself. Buf's own rules (`FILE`) check the descriptors but never the values of options, so they pass a change to a scope, an event type, a REST path or a resource pattern that breaks every caller who relied on it. dedo's breaking rules check those, in the same plugin: `buf.yaml`'s `breaking.use` lists `DEDO_BREAKING` beside `FILE` (`dedo init` and `dedo upgrade` add it), and `dedo.yaml`'s `breaking` section chooses which of them run, as its `lint` section does for lint rules: `use`, `disable`, house rules with `overrides` and `final`, and the rules its imports bring. Your organisation's own breaking rules are house rules there ([House rules](#house-rules)).
@@ -753,6 +883,7 @@ Each rule pairs an element with the one of the same name in the version compared
 | [`DEDO_FIELD_NO_NEW_REQUIRED`](#dedo_field_no_new_required) | No field becomes `REQUIRED` |
 | [`DEDO_RESOURCE_SAME`](#dedo_resource_same) | A resource keeps its type and every pattern |
 | [`DEDO_SUNSET_NO_EARLIER`](#dedo_sunset_no_earlier) | A sunset does not move earlier |
+| [`DEDO_FIELD_ATTRIBUTE_KEPT`](#dedo_field_attribute_kept) | A field keeps its telemetry attribute's key and mode |
 
 A change these rules report is still possible: make it in a new major version of the package (AIP-185), or add the label your CI reads to allow a breaking change.
 
@@ -854,6 +985,19 @@ option (google.api.http) = {
 **Why.** Callers plan their migration by the sunset they were told.
 
 **Fix.** Keep the date, or move it later.
+
+### DEDO_FIELD_ATTRIBUTE_KEPT
+
+**Checks** that a field that recorded a telemetry attribute (`(dedo.v1.field).attribute`) still records it, under the same key and with the same mode. A new attribute passes, and so does spelling out the default mode, `ATTRIBUTE_MODE_VALUE`.
+
+**Why.** Queries, dashboards and alerts select spans and logs by the key, and read its value by its mode. A renamed or removed key makes them match nothing, silently; a new mode makes them compare a count with a value.
+
+```protobuf
+// Was: int32 page_size = 1 [(dedo.v1.field) = {attribute: "todo.page_size"}];
+int32 page_size = 1 [(dedo.v1.field) = {attribute: "todo.size"}];  // Fails.
+```
+
+**Fix.** Keep the key and mode. Record something new under a new key, beside the old one.
 
 ## Multi-tenant rules
 

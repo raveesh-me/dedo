@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file dedo/v1/options.proto.
  */
 export const file_dedo_v1_options: GenFile = /*@__PURE__*/
-  fileDesc("ChVkZWRvL3YxL29wdGlvbnMucHJvdG8SB2RlZG8udjEieQoMU2VydmljZVJ1bGVzEiMKCGF1ZGllbmNlGAEgASgOMhEuZGVkby52MS5BdWRpZW5jZRISCgpvd25lcl90ZWFtGAIgASgJEiEKB3RlbmFuY3kYAyABKAsyEC5kZWRvLnYxLlRlbmFuY3kSDQoFdGl0bGUYBCABKAkiHQoHVGVuYW5jeRISCgpjb2xsZWN0aW9uGAEgASgJIscBCgtDYWNoZVBvbGljeRIzCgp2aXNpYmlsaXR5GAEgASgOMh8uZGVkby52MS5DYWNoZVBvbGljeS5WaXNpYmlsaXR5EioKB21heF9hZ2UYAiABKAsyGS5nb29nbGUucHJvdG9idWYuRHVyYXRpb24iVwoKVmlzaWJpbGl0eRIaChZWSVNJQklMSVRZX1VOU1BFQ0lGSUVEEAASFgoSVklTSUJJTElUWV9QUklWQVRFEAESFQoRVklTSUJJTElUWV9QVUJMSUMQAiKHAQoLRGVwcmVjYXRpb24SNAoQZGVwcmVjYXRpb25fdGltZRgBIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLwoLc3Vuc2V0X3RpbWUYAiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhEKCXN1Y2Nlc3NvchgDIAEoCSI9CgtFcnJvclJlYXNvbhIOCgZyZWFzb24YASABKAkSHgoEY29kZRgCIAEoDjIQLmdvb2dsZS5ycGMuQ29kZSJZCgRUb29sEg0KBXRpdGxlGAEgASgJEhMKC2Rlc2NyaXB0aW9uGAIgASgJEi0KC2Fubm90YXRpb25zGAMgASgLMhguZGVkby52MS5Ub29sQW5ub3RhdGlvbnMi2QEKD1Rvb2xBbm5vdGF0aW9ucxIbCg5yZWFkX29ubHlfaGludBgBIAEoCEgAiAEBEh0KEGRlc3RydWN0aXZlX2hpbnQYAiABKAhIAYgBARIcCg9pZGVtcG90ZW50X2hpbnQYAyABKAhIAogBARIcCg9vcGVuX3dvcmxkX2hpbnQYBCABKAhIA4gBAUIRCg9fcmVhZF9vbmx5X2hpbnRCEwoRX2Rlc3RydWN0aXZlX2hpbnRCEgoQX2lkZW1wb3RlbnRfaGludEISChBfb3Blbl93b3JsZF9oaW50ItUBCgtNZXRob2RSdWxlcxIOCgZzY29wZXMYASADKAkSIwoFY2FjaGUYAiABKAsyFC5kZWRvLnYxLkNhY2hlUG9saWN5EikKC2RlcHJlY2F0aW9uGAMgASgLMhQuZGVkby52MS5EZXByZWNhdGlvbhIkCgZlcnJvcnMYBCADKAsyFC5kZWRvLnYxLkVycm9yUmVhc29uEhsKBHRvb2wYBSABKAsyDS5kZWRvLnYxLlRvb2wSFAoMY3Jvc3NfdGVuYW50GAYgASgIEg0KBWVtaXRzGAcgAygJIiMKDE1lc3NhZ2VSdWxlcxITCgtkZXNjcmlwdGlvbhgBIAEoCSIfCgpGaWVsZFJ1bGVzEhEKCXNlbnNpdGl2ZRgBIAEoCCrGAQoIQXVkaWVuY2USGAoUQVVESUVOQ0VfVU5TUEVDSUZJRUQQABIfChtBVURJRU5DRV9DT01QT05FTlRfSU5URVJOQUwQARIjCh9BVURJRU5DRV9CVVNJTkVTU19VTklUX0lOVEVSTkFMEAISHQoZQVVESUVOQ0VfQ09NUEFOWV9JTlRFUk5BTBADEh0KGUFVRElFTkNFX0VYVEVSTkFMX1BBUlRORVIQBBIcChhBVURJRU5DRV9FWFRFUk5BTF9QVUJMSUMQBTpSCgdzZXJ2aWNlEh8uZ29vZ2xlLnByb3RvYnVmLlNlcnZpY2VPcHRpb25zGLSHAyABKAsyFS5kZWRvLnYxLlNlcnZpY2VSdWxlc1IHc2VydmljZTpOCgZtZXRob2QSHi5nb29nbGUucHJvdG9idWYuTWV0aG9kT3B0aW9ucxi1hwMgASgLMhQuZGVkby52MS5NZXRob2RSdWxlc1IGbWV0aG9kOlIKB21lc3NhZ2USHy5nb29nbGUucHJvdG9idWYuTWVzc2FnZU9wdGlvbnMYuIcDIAEoCzIVLmRlZG8udjEuTWVzc2FnZVJ1bGVzUgdtZXNzYWdlOkoKBWZpZWxkEh0uZ29vZ2xlLnByb3RvYnVmLkZpZWxkT3B0aW9ucxi3hwMgASgLMhMuZGVkby52MS5GaWVsZFJ1bGVzUgVmaWVsZEIyWjBnaXRodWIuY29tL3JhdmVlc2gtbWUvZGVkby9nZW4vZ28vZGVkby92MTtkZWRvdjFiBnByb3RvMw", [file_google_protobuf_descriptor, file_google_protobuf_duration, file_google_protobuf_timestamp, file_google_rpc_code]);
+  fileDesc("ChVkZWRvL3YxL29wdGlvbnMucHJvdG8SB2RlZG8udjEipwEKDFNlcnZpY2VSdWxlcxIjCghhdWRpZW5jZRgBIAEoDjIRLmRlZG8udjEuQXVkaWVuY2USEgoKb3duZXJfdGVhbRgCIAEoCRIhCgd0ZW5hbmN5GAMgASgLMhAuZGVkby52MS5UZW5hbmN5Eg0KBXRpdGxlGAQgASgJEiwKDXNlcnZpY2VfbGV2ZWwYBSABKAsyFS5kZWRvLnYxLlNlcnZpY2VMZXZlbCIdCgdUZW5hbmN5EhIKCmNvbGxlY3Rpb24YASABKAkixwEKC0NhY2hlUG9saWN5EjMKCnZpc2liaWxpdHkYASABKA4yHy5kZWRvLnYxLkNhY2hlUG9saWN5LlZpc2liaWxpdHkSKgoHbWF4X2FnZRgCIAEoCzIZLmdvb2dsZS5wcm90b2J1Zi5EdXJhdGlvbiJXCgpWaXNpYmlsaXR5EhoKFlZJU0lCSUxJVFlfVU5TUEVDSUZJRUQQABIWChJWSVNJQklMSVRZX1BSSVZBVEUQARIVChFWSVNJQklMSVRZX1BVQkxJQxACIocBCgtEZXByZWNhdGlvbhI0ChBkZXByZWNhdGlvbl90aW1lGAEgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIvCgtzdW5zZXRfdGltZRgCIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASEQoJc3VjY2Vzc29yGAMgASgJIj0KC0Vycm9yUmVhc29uEg4KBnJlYXNvbhgBIAEoCRIeCgRjb2RlGAIgASgOMhAuZ29vZ2xlLnJwYy5Db2RlIlkKBFRvb2wSDQoFdGl0bGUYASABKAkSEwoLZGVzY3JpcHRpb24YAiABKAkSLQoLYW5ub3RhdGlvbnMYAyABKAsyGC5kZWRvLnYxLlRvb2xBbm5vdGF0aW9ucyLZAQoPVG9vbEFubm90YXRpb25zEhsKDnJlYWRfb25seV9oaW50GAEgASgISACIAQESHQoQZGVzdHJ1Y3RpdmVfaGludBgCIAEoCEgBiAEBEhwKD2lkZW1wb3RlbnRfaGludBgDIAEoCEgCiAEBEhwKD29wZW5fd29ybGRfaGludBgEIAEoCEgDiAEBQhEKD19yZWFkX29ubHlfaGludEITChFfZGVzdHJ1Y3RpdmVfaGludEISChBfaWRlbXBvdGVudF9oaW50QhIKEF9vcGVuX3dvcmxkX2hpbnQixgIKC01ldGhvZFJ1bGVzEg4KBnNjb3BlcxgBIAMoCRIjCgVjYWNoZRgCIAEoCzIULmRlZG8udjEuQ2FjaGVQb2xpY3kSKQoLZGVwcmVjYXRpb24YAyABKAsyFC5kZWRvLnYxLkRlcHJlY2F0aW9uEiQKBmVycm9ycxgEIAMoCzIULmRlZG8udjEuRXJyb3JSZWFzb24SGwoEdG9vbBgFIAEoCzINLmRlZG8udjEuVG9vbBIUCgxjcm9zc190ZW5hbnQYBiABKAgSDQoFZW1pdHMYByADKAkSOwoVZXJyb3JfY2xhc3NpZmljYXRpb25zGAggAygLMhwuZGVkby52MS5FcnJvckNsYXNzaWZpY2F0aW9uEjIKDXNlcnZpY2VfbGV2ZWwYCSABKAsyGy5kZWRvLnYxLk1ldGhvZFNlcnZpY2VMZXZlbCJiCgxTZXJ2aWNlTGV2ZWwSJwoKb2JqZWN0aXZlcxgBIAEoCzITLmRlZG8udjEuT2JqZWN0aXZlcxIpCgZ3aW5kb3cYAiABKAsyGS5nb29nbGUucHJvdG9idWYuRHVyYXRpb24iTgoKT2JqZWN0aXZlcxIUCgxhdmFpbGFiaWxpdHkYASABKAESKgoHbGF0ZW5jeRgCIAMoCzIZLmRlZG8udjEuTGF0ZW5jeU9iamVjdGl2ZSJUChBMYXRlbmN5T2JqZWN0aXZlEhIKCnBlcmNlbnRpbGUYASABKAESLAoJdGhyZXNob2xkGAIgASgLMhkuZ29vZ2xlLnByb3RvYnVmLkR1cmF0aW9uIloKEk1ldGhvZFNlcnZpY2VMZXZlbBIQCgZleGVtcHQYASABKAhIABIpCgpvYmplY3RpdmVzGAIgASgLMhMuZGVkby52MS5PYmplY3RpdmVzSABCBwoFbGV2ZWwiOwoTRXJyb3JDbGFzc2lmaWNhdGlvbhIOCgZyZWFzb24YASABKAkSFAoMc2VydmVyX2Vycm9yGAIgASgIIiMKDE1lc3NhZ2VSdWxlcxITCgtkZXNjcmlwdGlvbhgBIAEoCSJiCgpGaWVsZFJ1bGVzEhEKCXNlbnNpdGl2ZRgBIAEoCBIRCglhdHRyaWJ1dGUYAiABKAkSLgoOYXR0cmlidXRlX21vZGUYAyABKA4yFi5kZWRvLnYxLkF0dHJpYnV0ZU1vZGUqxgEKCEF1ZGllbmNlEhgKFEFVRElFTkNFX1VOU1BFQ0lGSUVEEAASHwobQVVESUVOQ0VfQ09NUE9ORU5UX0lOVEVSTkFMEAESIwofQVVESUVOQ0VfQlVTSU5FU1NfVU5JVF9JTlRFUk5BTBACEh0KGUFVRElFTkNFX0NPTVBBTllfSU5URVJOQUwQAxIdChlBVURJRU5DRV9FWFRFUk5BTF9QQVJUTkVSEAQSHAoYQVVESUVOQ0VfRVhURVJOQUxfUFVCTElDEAUqhQEKDUF0dHJpYnV0ZU1vZGUSHgoaQVRUUklCVVRFX01PREVfVU5TUEVDSUZJRUQQABIYChRBVFRSSUJVVEVfTU9ERV9WQUxVRRABEhsKF0FUVFJJQlVURV9NT0RFX1BSRVNFTkNFEAISHQoZQVRUUklCVVRFX01PREVfSVRFTV9DT1VOVBADOlIKB3NlcnZpY2USHy5nb29nbGUucHJvdG9idWYuU2VydmljZU9wdGlvbnMYtIcDIAEoCzIVLmRlZG8udjEuU2VydmljZVJ1bGVzUgdzZXJ2aWNlOk4KBm1ldGhvZBIeLmdvb2dsZS5wcm90b2J1Zi5NZXRob2RPcHRpb25zGLWHAyABKAsyFC5kZWRvLnYxLk1ldGhvZFJ1bGVzUgZtZXRob2Q6UgoHbWVzc2FnZRIfLmdvb2dsZS5wcm90b2J1Zi5NZXNzYWdlT3B0aW9ucxi4hwMgASgLMhUuZGVkby52MS5NZXNzYWdlUnVsZXNSB21lc3NhZ2U6SgoFZmllbGQSHS5nb29nbGUucHJvdG9idWYuRmllbGRPcHRpb25zGLeHAyABKAsyEy5kZWRvLnYxLkZpZWxkUnVsZXNSBWZpZWxkQjJaMGdpdGh1Yi5jb20vcmF2ZWVzaC1tZS9kZWRvL2dlbi9nby9kZWRvL3YxO2RlZG92MWIGcHJvdG8z", [file_google_protobuf_descriptor, file_google_protobuf_duration, file_google_protobuf_timestamp, file_google_rpc_code]);
 
 /**
  * ServiceRules is the ownership and audience of a service.
@@ -53,6 +53,14 @@ export type ServiceRules = Message<"dedo.v1.ServiceRules"> & {
    * @generated from field: string title = 4;
    */
   title: string;
+
+  /**
+   * The service's level objectives, from which dedo slo writes OpenSLO
+   * documents whose indicators are the RPC metrics the runtime records.
+   *
+   * @generated from field: dedo.v1.ServiceLevel service_level = 5;
+   */
+  serviceLevel?: ServiceLevel | undefined;
 };
 
 /**
@@ -366,6 +374,26 @@ export type MethodRules = Message<"dedo.v1.MethodRules"> & {
    * @generated from field: repeated string emits = 7;
    */
   emits: string[];
+
+  /**
+   * Declared error reasons whose errors count differently in telemetry
+   * from their code. By default a server span and rpc.server.call.duration
+   * count a call as an error, with error.type, only for the codes that mean
+   * the server failed: UNKNOWN, DEADLINE_EXCEEDED, UNIMPLEMENTED, INTERNAL,
+   * UNAVAILABLE and DATA_LOSS. Each reason must be one the RPC declares in
+   * errors.
+   *
+   * @generated from field: repeated dedo.v1.ErrorClassification error_classifications = 8;
+   */
+  errorClassifications: ErrorClassification[];
+
+  /**
+   * How the RPC counts toward its service's level objectives: by default,
+   * like every other RPC of the service.
+   *
+   * @generated from field: dedo.v1.MethodServiceLevel service_level = 9;
+   */
+  serviceLevel?: MethodServiceLevel | undefined;
 };
 
 /**
@@ -374,6 +402,168 @@ export type MethodRules = Message<"dedo.v1.MethodRules"> & {
  */
 export const MethodRulesSchema: GenMessage<MethodRules> = /*@__PURE__*/
   messageDesc(file_dedo_v1_options, 7);
+
+/**
+ * ServiceLevel is a service's level objectives over a rolling window, in
+ * the shape of OpenSLO v1. Each objective applies to every RPC of the
+ * service that is not exempt and has no objectives of its own.
+ *
+ * @generated from message dedo.v1.ServiceLevel
+ */
+export type ServiceLevel = Message<"dedo.v1.ServiceLevel"> & {
+  /**
+   * What the service promises.
+   *
+   * @generated from field: dedo.v1.Objectives objectives = 1;
+   */
+  objectives?: Objectives | undefined;
+
+  /**
+   * The rolling window the objectives are measured over, in whole days,
+   * such as 28 days.
+   *
+   * @generated from field: google.protobuf.Duration window = 2;
+   */
+  window?: Duration | undefined;
+};
+
+/**
+ * Describes the message dedo.v1.ServiceLevel.
+ * Use `create(ServiceLevelSchema)` to create a new message.
+ */
+export const ServiceLevelSchema: GenMessage<ServiceLevel> = /*@__PURE__*/
+  messageDesc(file_dedo_v1_options, 8);
+
+/**
+ * Objectives are service level objectives, measured on
+ * rpc.server.call.duration.
+ *
+ * @generated from message dedo.v1.Objectives
+ */
+export type Objectives = Message<"dedo.v1.Objectives"> & {
+  /**
+   * The share of calls that are not server errors, such as 0.999: calls
+   * whose span has no error.type. Zero sets no availability objective.
+   *
+   * @generated from field: double availability = 1;
+   */
+  availability: number;
+
+  /**
+   * How fast calls answer. Server-streaming and bidirectional RPCs, whose
+   * duration is the stream's, count for none.
+   *
+   * @generated from field: repeated dedo.v1.LatencyObjective latency = 2;
+   */
+  latency: LatencyObjective[];
+};
+
+/**
+ * Describes the message dedo.v1.Objectives.
+ * Use `create(ObjectivesSchema)` to create a new message.
+ */
+export const ObjectivesSchema: GenMessage<Objectives> = /*@__PURE__*/
+  messageDesc(file_dedo_v1_options, 9);
+
+/**
+ * LatencyObjective is the share of calls that answer within a threshold.
+ *
+ * @generated from message dedo.v1.LatencyObjective
+ */
+export type LatencyObjective = Message<"dedo.v1.LatencyObjective"> & {
+  /**
+   * The share of calls, such as 0.99 for the 99th percentile.
+   *
+   * @generated from field: double percentile = 1;
+   */
+  percentile: number;
+
+  /**
+   * The time they answer within. It is one of the bucket boundaries of
+   * rpc.server.call.duration, so the share can be counted exactly.
+   *
+   * @generated from field: google.protobuf.Duration threshold = 2;
+   */
+  threshold?: Duration | undefined;
+};
+
+/**
+ * Describes the message dedo.v1.LatencyObjective.
+ * Use `create(LatencyObjectiveSchema)` to create a new message.
+ */
+export const LatencyObjectiveSchema: GenMessage<LatencyObjective> = /*@__PURE__*/
+  messageDesc(file_dedo_v1_options, 10);
+
+/**
+ * MethodServiceLevel is how one RPC counts toward its service's
+ * objectives.
+ *
+ * @generated from message dedo.v1.MethodServiceLevel
+ */
+export type MethodServiceLevel = Message<"dedo.v1.MethodServiceLevel"> & {
+  /**
+   * Exempt, or objectives of its own.
+   *
+   * @generated from oneof dedo.v1.MethodServiceLevel.level
+   */
+  level: {
+    /**
+     * The RPC counts toward no objective, such as a long poll or an
+     * internal maintenance RPC.
+     *
+     * @generated from field: bool exempt = 1;
+     */
+    value: boolean;
+    case: "exempt";
+  } | {
+    /**
+     * Objectives of the RPC's own, in place of the service's, over the
+     * service's window.
+     *
+     * @generated from field: dedo.v1.Objectives objectives = 2;
+     */
+    value: Objectives;
+    case: "objectives";
+  } | { case: undefined; value?: undefined };
+};
+
+/**
+ * Describes the message dedo.v1.MethodServiceLevel.
+ * Use `create(MethodServiceLevelSchema)` to create a new message.
+ */
+export const MethodServiceLevelSchema: GenMessage<MethodServiceLevel> = /*@__PURE__*/
+  messageDesc(file_dedo_v1_options, 11);
+
+/**
+ * ErrorClassification says whether the errors of one declared reason count
+ * against the service in telemetry, overriding what their code says.
+ *
+ * @generated from message dedo.v1.ErrorClassification
+ */
+export type ErrorClassification = Message<"dedo.v1.ErrorClassification"> & {
+  /**
+   * A reason the RPC declares in errors.
+   *
+   * @generated from field: string reason = 1;
+   */
+  reason: string;
+
+  /**
+   * True: the server failed, such as an UNAVAILABLE reason that no retry
+   * can fix. False: an expected outcome the caller handles, such as a
+   * FAILED_PRECONDITION reason the service returns by design.
+   *
+   * @generated from field: bool server_error = 2;
+   */
+  serverError: boolean;
+};
+
+/**
+ * Describes the message dedo.v1.ErrorClassification.
+ * Use `create(ErrorClassificationSchema)` to create a new message.
+ */
+export const ErrorClassificationSchema: GenMessage<ErrorClassification> = /*@__PURE__*/
+  messageDesc(file_dedo_v1_options, 12);
 
 /**
  * MessageRules documents a message for API consumers and models.
@@ -395,7 +585,7 @@ export type MessageRules = Message<"dedo.v1.MessageRules"> & {
  * Use `create(MessageRulesSchema)` to create a new message.
  */
 export const MessageRulesSchema: GenMessage<MessageRules> = /*@__PURE__*/
-  messageDesc(file_dedo_v1_options, 8);
+  messageDesc(file_dedo_v1_options, 13);
 
 /**
  * FieldRules classifies the data in a field.
@@ -404,11 +594,30 @@ export const MessageRulesSchema: GenMessage<MessageRules> = /*@__PURE__*/
  */
 export type FieldRules = Message<"dedo.v1.FieldRules"> & {
   /**
-   * The field holds personal or secret data.
+   * The field holds personal or secret data. Its value never reaches
+   * telemetry: an attribute on it may only record its presence.
    *
    * @generated from field: bool sensitive = 1;
    */
   sensitive: boolean;
+
+  /**
+   * The key under which the runtime records the field of a request on the
+   * RPC's server span and on every log record written while serving it,
+   * such as "todo.priority". Lowercase, dot-separated, in a namespace of
+   * the service's own, never one of OpenTelemetry's semantic conventions
+   * (rpc, http, server, error, ...) or dedo's. Never on a metric.
+   *
+   * @generated from field: string attribute = 2;
+   */
+  attribute: string;
+
+  /**
+   * What the attribute records. Applies only with attribute.
+   *
+   * @generated from field: dedo.v1.AttributeMode attribute_mode = 3;
+   */
+  attributeMode: AttributeMode;
 };
 
 /**
@@ -416,7 +625,7 @@ export type FieldRules = Message<"dedo.v1.FieldRules"> & {
  * Use `create(FieldRulesSchema)` to create a new message.
  */
 export const FieldRulesSchema: GenMessage<FieldRules> = /*@__PURE__*/
-  messageDesc(file_dedo_v1_options, 9);
+  messageDesc(file_dedo_v1_options, 14);
 
 /**
  * Audience is who may call an API. Mirrors Zalando rule 219.
@@ -472,6 +681,49 @@ export enum Audience {
  */
 export const AudienceSchema: GenEnum<Audience> = /*@__PURE__*/
   enumDesc(file_dedo_v1_options, 0);
+
+/**
+ * AttributeMode is what an attribute records of its field.
+ *
+ * @generated from enum dedo.v1.AttributeMode
+ */
+export enum AttributeMode {
+  /**
+   * VALUE.
+   *
+   * @generated from enum value: ATTRIBUTE_MODE_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * The value of a scalar or enum field: a string, number or boolean, or an
+   * enum's value name. Not for bytes, messages, repeated fields or maps.
+   *
+   * @generated from enum value: ATTRIBUTE_MODE_VALUE = 1;
+   */
+  VALUE = 1,
+
+  /**
+   * Whether the field is set: true or false. The only mode a sensitive
+   * field may have.
+   *
+   * @generated from enum value: ATTRIBUTE_MODE_PRESENCE = 2;
+   */
+  PRESENCE = 2,
+
+  /**
+   * How many items a repeated field or map holds.
+   *
+   * @generated from enum value: ATTRIBUTE_MODE_ITEM_COUNT = 3;
+   */
+  ITEM_COUNT = 3,
+}
+
+/**
+ * Describes the enum dedo.v1.AttributeMode.
+ */
+export const AttributeModeSchema: GenEnum<AttributeMode> = /*@__PURE__*/
+  enumDesc(file_dedo_v1_options, 1);
 
 /**
  * The ownership and audience of the service.

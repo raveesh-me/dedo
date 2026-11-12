@@ -18,6 +18,22 @@ service TodoService {
   option (dedo.v1.service) = {
     audience: AUDIENCE_EXTERNAL_PUBLIC
     owner_team: "todo-team"
+    // dedo slo writes these as OpenSLO documents, in slo/.
+    service_level: {
+      objectives: {
+        availability: 0.999
+        latency: {
+          percentile: 0.5
+          threshold: {nanos: 25000000}
+        }
+        latency: {
+          percentile: 0.99
+          threshold: {nanos: 250000000}
+        }
+      }
+      // 28 days.
+      window: {seconds: 2419200}
+    }
   };
 
   // GetTodo returns one to-do.
@@ -180,6 +196,12 @@ service TodoService {
         reason: "SERVER_SHUTTING_DOWN"
         code: UNAVAILABLE
       }
+      // A watch ends this way on every deploy, and the client reconnects:
+      // not a server error.
+      error_classifications: {
+        reason: "SERVER_SHUTTING_DOWN"
+        server_error: false
+      }
     };
   }
 
@@ -216,6 +238,8 @@ service TodoService {
         reason: "TODO_NOT_FOUND"
         code: NOT_FOUND
       }
+      // Its callers are moving to DeleteTodo: it counts toward no objective.
+      service_level: {exempt: true}
     };
   }
 }
@@ -236,7 +260,10 @@ message Todo {
   // What needs doing.
   string title = 2 [(google.api.field_behavior) = REQUIRED];
   // Whether it is done.
-  bool done = 3 [(google.api.field_behavior) = OPTIONAL];
+  bool done = 3 [
+    (google.api.field_behavior) = OPTIONAL,
+    (dedo.v1.field) = {attribute: "todo.done"}
+  ];
   // What doing it may cost.
   google.type.Money budget_amount = 4 [
     (google.api.field_behavior) = OPTIONAL,
@@ -249,7 +276,11 @@ message Todo {
   // The email of the person it is assigned to.
   string assignee_email = 5 [
     (google.api.field_behavior) = OPTIONAL,
-    (dedo.v1.field) = {sensitive: true},
+    (dedo.v1.field) = {
+      sensitive: true
+      attribute: "todo.assigned"
+      attribute_mode: ATTRIBUTE_MODE_PRESENCE
+    },
     (buf.validate.field).string.email = true,
     (buf.validate.field).ignore = IGNORE_IF_ZERO_VALUE
   ];
@@ -284,7 +315,8 @@ message ListTodosRequest {
   // server caps it at 100.
   int32 page_size = 1 [
     (google.api.field_behavior) = OPTIONAL,
-    (buf.validate.field).int32.gte = 0
+    (buf.validate.field).int32.gte = 0,
+    (dedo.v1.field) = {attribute: "todo.page_size"}
   ];
   // The next_page_token of a previous call.
   string page_token = 2 [(google.api.field_behavior) = OPTIONAL];

@@ -105,6 +105,7 @@ vendored-options:
 example-todo: plugins
 	cd examples/todo && buf format --diff --exit-code && buf lint proto
 	cd examples/todo && buf generate && git diff --exit-code gen/ docs/
+	cd cmd/dedo && go run . slo -dir ../../examples/todo && git diff --exit-code ../../examples/todo/slo
 	$(MAKE) -C examples/todo web-gen && git diff --exit-code examples/todo/web/src/gen
 	cd examples/todo && go vet ./... && go test -race ./...
 	cd cmd/dedo && go run . modules -dir ../../examples/todo

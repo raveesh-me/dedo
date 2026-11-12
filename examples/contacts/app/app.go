@@ -1,7 +1,8 @@
 // Package app is the composition root: it wires the contacts module's
 // ContactService and LocationService (internal/contacts) to the dedo
 // runtime: the policy table, the policy interceptor with its tenant check,
-// flow IDs, REST transcoding, the REST reference and the MCP server.
+// flow IDs, telemetry, REST transcoding, the REST reference and the MCP
+// server.
 package app
 
 import (
@@ -22,6 +23,7 @@ import (
 	"github.com/raveesh-me/dedo/interceptor"
 	"github.com/raveesh-me/dedo/mcp/mcpserver"
 	"github.com/raveesh-me/dedo/policy"
+	"github.com/raveesh-me/dedo/telemetry"
 )
 
 // Config configures the handler.
@@ -31,6 +33,9 @@ type Config struct {
 	// MCPAccess says who may reach /mcp: anyone (public, the default), or
 	// only callers with a known token (authenticated).
 	MCPAccess mcpserver.Access
+	// Telemetry sets the OpenTelemetry providers and propagator; zero
+	// fields use the globals main installs.
+	Telemetry telemetry.Config
 }
 
 // NewHandler returns the HTTP handler for both services. It fails when a
@@ -73,12 +78,14 @@ func NewHandler(cfg Config) (http.Handler, error) {
 	if err != nil {
 		return nil, err
 	}
-	mux.Handle("/mcp", flowid.Middleware(endpoint))
+	// The MCP request gets a span, and its tool calls are children of it.
+	mux.Handle("/mcp", flowid.Middleware(telemetry.Middleware(cfg.Telemetry, "/mcp", endpoint)))
 	return mux, nil
 }
 
 // newServer returns both services behind their policy. The interceptors run
-// for every transport, in order: flow IDs, auth, the declared contract
+// for every transport, in order: flow IDs, telemetry (a span and a duration
+// metric for every call), auth, the declared contract
 // (scopes, tenants, headers, error audit), then the buf.validate rules, so
 // an unauthorised caller learns nothing from validation errors.
 func newServer(cfg Config) (*connect.Server, error) {
@@ -96,7 +103,14 @@ func newServer(cfg Config) (*connect.Server, error) {
 	if err != nil {
 		return nil, err
 	}
-	server := connect.NewServer(flowid.Interceptor(), Auth(), guard, validate.NewServerInterceptor())
+	// The contract's telemetry declarations come from the table.
+	observed := cfg.Telemetry
+	observed.Table = table
+	observe, err := telemetry.NewServerInterceptor(observed)
+	if err != nil {
+		return nil, err
+	}
+	server := connect.NewServer(flowid.Interceptor(), observe, Auth(), guard, validate.NewServerInterceptor())
 	api := contacts.NewServer(TenantAccess)
 	contactsv1connect.RegisterContactServiceHandler(server, api)
 	contactsv1connect.RegisterLocationServiceHandler(server, api)

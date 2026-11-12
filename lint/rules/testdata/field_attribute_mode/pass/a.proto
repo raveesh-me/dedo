@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package raveesh_me.library.v1;
+
+import "dedo/v1/options.proto";
+
+message Shelf {
+  string name = 1;
+}
+
+message UpdateShelfRequest {
+  Shelf shelf = 1 [(dedo.v1.field) = {attribute: "library.has_shelf", attribute_mode: ATTRIBUTE_MODE_PRESENCE}];
+  repeated string tags = 2 [(dedo.v1.field) = {attribute: "library.tag_count", attribute_mode: ATTRIBUTE_MODE_ITEM_COUNT}];
+  map<string, string> labels = 3 [(dedo.v1.field) = {attribute: "library.label_count", attribute_mode: ATTRIBUTE_MODE_ITEM_COUNT}];
+  bool force = 4 [(dedo.v1.field) = {attribute: "library.force"}];
+  bytes etag = 5 [(dedo.v1.field) = {attribute: "library.has_etag", attribute_mode: ATTRIBUTE_MODE_PRESENCE}];
+}

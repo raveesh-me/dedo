@@ -20,6 +20,9 @@ type Method struct {
 	// Tenant is set on the methods of a multi-tenant service, except
 	// cross-tenant ones.
 	Tenant *Tenant
+	// Descriptor is the RPC's descriptor, from which the runtime reads
+	// what its request's fields declare.
+	Descriptor protoreflect.MethodDescriptor
 }
 
 // Table maps procedure names to their contracts.
@@ -78,9 +81,10 @@ func addService(table Table, svc protoreflect.ServiceDescriptor) error {
 		}
 		procedure := fmt.Sprintf("/%s/%s", svc.FullName(), m.Name())
 		method := Method{
-			Procedure: procedure,
-			Audience:  svcRules.GetAudience(),
-			Rules:     rules,
+			Procedure:  procedure,
+			Audience:   svcRules.GetAudience(),
+			Rules:      rules,
+			Descriptor: m,
 		}
 		// A tenant-scoped method whose tenant cannot be found would serve
 		// every tenant, so fail closed here too.

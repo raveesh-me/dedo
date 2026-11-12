@@ -207,7 +207,10 @@ message Todo {
   // The email of the person it is assigned to.
   string assigned_to_email = 5 [
     (google.api.field_behavior) = OPTIONAL,
-    (dedo.v1.field) = {sensitive: true}
+    (dedo.v1.field) = {
+      sensitive: true
+      attribute: "todo.assignee"
+    }
   ];
   // When it was created.
   google.protobuf.Timestamp create_time = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
@@ -237,7 +240,10 @@ message ListTodosRequest {
   option (dedo.v1.message) = {description: "Which page of to-dos to list."};
 
   // The maximum number of to-dos to return. The server caps it at 100.
-  int32 page_size = 1 [(google.api.field_behavior) = OPTIONAL];
+  int32 page_size = 1 [
+    (google.api.field_behavior) = OPTIONAL,
+    (dedo.v1.field) = {attribute: "page_size"}
+  ];
   // The next_page_token of a previous call.
   string page_token = 2 [(google.api.field_behavior) = OPTIONAL];
 }

@@ -16,6 +16,7 @@ import (
 
 	"github.com/raveesh-me/dedo/examples/todo/app"
 	"github.com/raveesh-me/dedo/flowid"
+	"github.com/raveesh-me/dedo/telemetry"
 )
 
 func main() {
@@ -24,18 +25,26 @@ func main() {
 	conns := flag.Int("conns", 256, "idle connections to keep to the backend")
 	flag.Parse()
 
-	log := slog.New(slog.NewJSONHandler(os.Stderr, nil))
+	log := slog.New(telemetry.NewLogHandler(slog.NewJSONHandler(os.Stderr, nil)))
 	// Keep a connection per concurrent call: with http.DefaultClient's two
 	// idle connections per host, a busy server opens and closes connections
 	// until it runs out of local ports.
 	client := &http.Client{Transport: &http.Transport{MaxIdleConnsPerHost: *conns}}
-	tools, err := app.NewMCP(connect.NewClient(connecthttp.NewTransport(client, *backend)))
+	// Each tool call is a client span, and carries the trace on to the
+	// backend. Without an OpenTelemetry SDK, the caller's trace context
+	// still passes through.
+	observe, err := telemetry.NewClientInterceptor(telemetry.Config{})
+	if err != nil {
+		log.Error("startup failed", "error", err)
+		os.Exit(1)
+	}
+	tools, err := app.NewMCP(connect.NewClient(connecthttp.NewTransport(client, *backend), flowid.ClientInterceptor(), observe))
 	if err != nil {
 		log.Error("startup failed", "error", err)
 		os.Exit(1)
 	}
 	mux := http.NewServeMux()
-	mux.Handle("/mcp", flowid.Middleware(tools))
+	mux.Handle("/mcp", flowid.Middleware(telemetry.Middleware(telemetry.Config{}, "/mcp", tools)))
 	server := &http.Server{Addr: *addr, Handler: mux, ReadHeaderTimeout: 5 * time.Second}
 	log.Info("listening", "addr", *addr, "backend", *backend)
 	if err := server.ListenAndServe(); err != nil {

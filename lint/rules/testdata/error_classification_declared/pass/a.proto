@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package raveesh_me.library.v1;
+
+import "dedo/v1/options.proto";
+import "google/protobuf/empty.proto";
+
+service LibraryService {
+  rpc GetBook(google.protobuf.Empty) returns (google.protobuf.Empty) {
+    option (dedo.v1.method) = {
+      errors: [
+        {reason: "BOOK_NOT_FOUND", code: NOT_FOUND},
+        {reason: "SHELF_BUSY", code: UNAVAILABLE},
+        {reason: "CATALOG_LOST", code: NOT_FOUND}
+      ]
+      error_classifications: [
+        {reason: "SHELF_BUSY", server_error: false},
+        {reason: "CATALOG_LOST", server_error: true}
+      ]
+    };
+  }
+}

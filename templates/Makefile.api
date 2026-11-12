@@ -14,11 +14,13 @@
 run:
 	go run .
 
-## generate: generate Go, Connect, MCP tools and the REST docs from the
-## protos, then tidy go.mod; run it after every change to a .proto. With a
-## backend for frontend in bff/, also generate its code from bff/buf.gen.yaml
+## generate: generate Go, Connect, MCP tools, the REST docs and the OpenSLO
+## documents (slo/) from the protos, then tidy go.mod; run it after every
+## change to a .proto. With a backend for frontend in bff/, also generate
+## its code from bff/buf.gen.yaml
 generate:
 	buf generate
+	go tool dedo slo
 	go mod tidy
 	@if [ -f bff/buf.gen.yaml ]; then \
 		echo "buf generate --template bff/buf.gen.yaml"; \

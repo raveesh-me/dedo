@@ -9,18 +9,24 @@ permissions:
   pull-requests: read
 jobs:
   check:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-      - uses: actions/setup-go@v7
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          # The latest 1.26 patch: some modules need a newer patch than the
-          # root go.mod, and a toolchain switch mid-build breaks -race/-cover.
-          go-version: "1.26.x"
-      - uses: bufbuild/buf-action@v1
+          # One exact Go release, at least as new as every module's go line:
+          # a toolchain switch mid-build breaks -race/-cover. Dependabot
+          # doesn't move it; raise it here and in mcp-spec.yaml together.
+          go-version: "1.26.10"
+      - uses: bufbuild/buf-action@85aebf73123b5c15fd5528aaecbf9129cddf7fa7 # v1.6.0
         with:
+          # buf-action fetches the latest buf unless told a version. The
+          # checksum is of the buf-Linux-x86_64 binary in the release's
+          # sha256.txt: change both together.
+          version: 1.75.0
+          checksum: fad1e38d6909bbb583a4da81d8c02a01046e2cd663bde7e337dd24277393764b
           setup_only: true
       - run: make check
       # A deliberate breaking change needs the allow-breaking label on the PR.
@@ -46,23 +52,29 @@ jobs:
     # pushed at once.
     if: startsWith(github.ref, 'refs/tags/v')
     needs: check
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
     env:
       BUF_TOKEN: ${{ secrets.BUF_KEY }} # buf reads BUF_TOKEN
       SOURCE_URL: https://github.com/${{ github.repository }}/tree/${{ github.sha }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Check the versions users copy name this release
         run: scripts/check-release-versions.sh "$GITHUB_REF_NAME"
-      - uses: actions/setup-go@v7
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          # The latest 1.26 patch: some modules need a newer patch than the
-          # root go.mod, and a toolchain switch mid-build breaks -race/-cover.
-          go-version: "1.26.x"
-      - uses: bufbuild/buf-action@v1
+          # One exact Go release, at least as new as every module's go line:
+          # a toolchain switch mid-build breaks -race/-cover. Dependabot
+          # doesn't move it; raise it here and in mcp-spec.yaml together.
+          go-version: "1.26.10"
+      - uses: bufbuild/buf-action@85aebf73123b5c15fd5528aaecbf9129cddf7fa7 # v1.6.0
         with:
+          # buf-action fetches the latest buf unless told a version. The
+          # checksum is of the buf-Linux-x86_64 binary in the release's
+          # sha256.txt: change both together.
+          version: 1.75.0
+          checksum: fad1e38d6909bbb583a4da81d8c02a01046e2cd663bde7e337dd24277393764b
           setup_only: true
       - name: Build the plugins, linking findings to this tag's guidance/RULES.md
         run: make wasm-plugins release-binaries DOCS_REF="$GITHUB_REF_NAME"

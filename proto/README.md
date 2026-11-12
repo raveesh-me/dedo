@@ -14,13 +14,13 @@ import "dedo/v1/options.proto";
 
 | Option | On | Declares |
 | --- | --- | --- |
-| `dedo.v1.service` | service | audience, owner team, and for a multi-tenant service its tenant collection |
-| `dedo.v1.method` | RPC | scopes, error reasons, cache policy, deprecation schedule, whether it spans tenants, and the MCP tool: title, description and `ToolAnnotations` (MCP specification 2026-07-28) |
+| `dedo.v1.service` | service | audience, owner team, service level objectives, and for a multi-tenant service its tenant collection |
+| `dedo.v1.method` | RPC | scopes, error reasons and how each counts in telemetry, how it counts toward the service level objectives, cache policy, deprecation schedule, whether it spans tenants, and the MCP tool: title, description and `ToolAnnotations` (MCP specification 2026-07-28) |
 | `dedo.v1.message` | message | a description for API readers and AI agents |
-| `dedo.v1.field` | field | sensitive data |
+| `dedo.v1.field` | field | sensitive data, and the OpenTelemetry attribute that records it on the RPC's span and logs |
 
 The generated Go code ships in `github.com/raveesh-me/dedo/gen/go/dedo/v1` (the file sets `go_package`), so it works with or without Buf's managed mode.
 
-The lint rules that enforce these declarations, the generators, the Go runtime that applies them, and the guides are at [github.com/raveesh-me/dedo](https://github.com/raveesh-me/dedo). To set up a Go service: `go install github.com/raveesh-me/dedo/cmd/dedo@latest && dedo init`.
+The lint rules that enforce these declarations, the generators, the Go runtime that applies them, and the guides are at [github.com/raveesh-me/dedo](https://github.com/raveesh-me/dedo). To set up a Go service: `go install github.com/raveesh-me/dedo/cmd/dedo@v0.37.0 && dedo init`.
 
 Licensed under the Apache License 2.0.
