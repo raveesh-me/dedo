@@ -238,7 +238,7 @@ Now check the contract:
 make check
 ```
 
-It checks formatting, lints, and, once `main` has a contract, checks for breaking changes. Then `dedo modules` checks that the Go code keeps the modules of the protos apart ([domains.md](domains.md#code-and-data-follow-the-modules)) and prints their graph; with one module, it has nothing to depend on. It prints no findings when the contract is clean. Your editor shows the same findings as you type, each linking to its explanation.
+It checks formatting, lints, and, once `main` has a contract, checks for breaking changes. Then `dedo modules` checks that the Go code keeps the modules of the protos apart ([domains.md](domains.md#code-and-data-follow-the-modules)) and prints their graph; with one module, it has nothing to depend on. `dedo vet` then checks the Go code that serves the contract against the [Go rules](RULES.md#go-rules) and prints `dedo vet: no findings (4 rules)`. None of these checks prints a finding when the contract and the code are clean. Your editor shows the same findings as you type, each linking to its explanation.
 
 ## 4. Generate
 

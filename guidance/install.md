@@ -80,10 +80,10 @@ lint:
 
 ```sh
 dedo templates Makefile.api > Makefile.api && printf 'include Makefile.api\n' >> Makefile
-make check          # buf format, buf lint, dedo breaking against main, dedo modules
+make check          # buf format, buf lint, dedo breaking against main, dedo modules, dedo vet
 ```
 
-The breaking check, `dedo breaking`, runs `buf breaking` for each module of `buf.yaml` against its own directory on the `main` branch, and skips a module while `main` has no `.proto` files in it, such as one the branch adds: `buf breaking` over the whole workspace fails when a pull request adds a module with a `breaking` section of its own, such as a BFF's. It is skipped when there is no `main` branch. It runs Buf's `FILE` rules and dedo's [breaking rules](RULES.md#breaking-rules), which catch what `FILE` cannot see: an RPC that drops a scope, a REST path or an event type, a field that becomes required, a resource pattern that goes. Compare with another branch with `make check API_BASE=develop`. `make check` also runs `make modules`, which is `dedo modules` (below). The targets of `Makefile.api` are `run`, `generate`, `check`, `test`, `tools`, `modules`, `docs`, `docs-tunnel` and `docs-static`; where your `Makefile` already has one of those names, `dedo init` names dedo's `api-<name>` instead, and `api-check`, `api-generate` and `api-test` always exist, for CI.
+The breaking check, `dedo breaking`, runs `buf breaking` for each module of `buf.yaml` against its own directory on the `main` branch, and skips a module while `main` has no `.proto` files in it, such as one the branch adds: `buf breaking` over the whole workspace fails when a pull request adds a module with a `breaking` section of its own, such as a BFF's. It is skipped when there is no `main` branch. It runs Buf's `FILE` rules and dedo's [breaking rules](RULES.md#breaking-rules), which catch what `FILE` cannot see: an RPC that drops a scope, a REST path or an event type, a field that becomes required, a resource pattern that goes. Compare with another branch with `make check API_BASE=develop`. `make check` also runs `make modules`, which is `dedo modules`, and `make vet`, which is `dedo vet` (both below). The targets of `Makefile.api` are `run`, `generate`, `check`, `test`, `tools`, `modules`, `vet`, `docs`, `docs-tunnel` and `docs-static`; where your `Makefile` already has one of those names, `dedo init` names dedo's `api-<name>` instead, and `api-check`, `api-generate` and `api-test` always exist, for CI.
 
 `make docs` serves the REST reference, only `docs/index.html` and `docs/openapi.json`, on `127.0.0.1:8099` (`DOCS_ADDR` to change it). `make docs-tunnel` also shares it at a public `trycloudflare.com` URL until Ctrl-C, to show the API to someone off your machine; it needs [cloudflared](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/). It never shares the service itself: development tokens are often public.
 
@@ -318,6 +318,10 @@ dedo modules: 2 modules in acme, no cycles; each depends on:
 ```
 
 Events add no edges: a service publishes them outward only and never subscribes, so an event type is a string in the contract, not a dependency between modules.
+
+### Linting the Go code: `dedo vet`
+
+`dedo vet`, run in the repository (`make vet`; `make check` runs it), lints the Go code that serves the contract, and a BFF nested in it, with the [Go rules](RULES.md#go-rules): every `connect.Server` has dedo's flow ID and policy interceptors, in order; handlers return only the error reasons, and publish only the event types, their RPCs declare; and nothing imports what your organisation's `HOUSE_GO_*` rules, in `dedo.yaml`'s `go` section, forbid. It runs `go vet` with the `dedo` command as its `-vettool`, so it needs no setup beyond `dedo` in `go.mod`'s tools, and go vet's cache keeps reruns fast. Suppress a finding that does not apply with `//dedo:ignore <RULE_ID> <reason>`. A service set up before this release gets the `vet` target from `dedo upgrade`, which rewrites `Makefile.api`; copy the Jenkins stage again with `dedo templates Jenkinsfile.api-stage`.
 
 ```sh
 make generate

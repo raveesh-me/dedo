@@ -10,6 +10,8 @@
 
 A fourth prefix, `HOUSE_*`, is reserved for your organisation's own rules, written as CEL checks in `dedo.yaml` (see [House rules](#house-rules)). dedo never ships a `HOUSE_*` rule, so yours never clash with an upgrade. House rules rank above dedo's, and may override them (see [Precedence](#precedence)).
 
+The Go code that serves the contract has rules of its own, which `dedo vet` runs: dedo's `DEDO_GO_*` and your organisation's `HOUSE_GO_*`, from the `go` section of `dedo.yaml` (see [Go rules](#go-rules)).
+
 `DEDO_MULTI_TENANT_*` rules are dedo's own too, but opt-in: they are a rule set of their own rather than part of `DEDO`, for services that partition their data between tenants (see [Multi-tenant rules](#multi-tenant-rules)).
 
 ## Choosing the rules
@@ -45,6 +47,9 @@ breaking:
   use: [DEDO, HOUSE]     # dedo's breaking rules and the house ones; the default
   disable: [DEDO_SUNSET_NO_EARLIER]
   rules: [...]           # this repository's own breaking rules
+go:                      # the Go rules dedo vet runs (see Go rules)
+  use: [DEDO, HOUSE]
+  rules: [...]           # this repository's own HOUSE_GO_* rules
 annexure: [...]          # the organisation's guidance for coding agents (install.md, section 5)
 ```
 
@@ -941,3 +946,118 @@ rpc GetContact(GetContactRequest) returns (GetContactResponse) {
 **Why.** `Cache-Control: public` lets shared caches, such as a CDN, store the response and serve it to the next caller of the same URL without asking the server, so the tenant check never runs.
 
 **Fix.** Use `VISIBILITY_PRIVATE`.
+
+## Go rules
+
+`buf lint` checks the contract; `dedo vet` checks the Go code that serves it, for what a contract that lints clean can still get wrong at runtime. `make check` runs it (`go tool dedo vet`), on the service and on a [backend for frontend](domains.md#backends-for-frontends) nested in it. Its rules come in two classes, as the contract's do:
+
+| Class | Source | What it checks |
+| --- | --- | --- |
+| `DEDO_GO_*` | dedo itself | That the server runs dedo's interceptors, and that handlers return the error reasons and publish the event types their RPCs declare |
+| `HOUSE_GO_*` | your organisation, in the `go` section of `dedo.yaml` and the rules files it imports | Imports the organisation has ruled out, such as an SDK it is moving off |
+
+The rules are analyzers on [`golang.org/x/tools/go/analysis`](https://pkg.go.dev/golang.org/x/tools/go/analysis). `dedo vet` runs `go vet -vettool` with the `dedo` command as the tool, so go vet's build cache skips packages that have not changed, and `go vet -vettool=$(go tool -n dedo) ./...` runs dedo's own rules too (without the house rules, which only `dedo vet` reads from `dedo.yaml`). A finding names its rule and ends with a link to its section here, pinned to the release of `dedo` that reported it, or to a house rule's `doc`:
+
+```text
+internal/orders/server.go:42:31: DEDO_GO_ERROR_REASON_DECLARED: GetOrder returns the error reason ORDER_GONE, which /acme.orders.v1.OrderService/GetOrder does not declare: add it to the RPC's dedo.v1.method errors, or return a reason it declares (https://github.com/raveesh-me/dedo/blob/<release>/guidance/RULES.md#dedo_go_error_reason_declared)
+```
+
+**No guesses.** Each rule reports only what it can tell from the code for certain. Where it cannot, such as an interceptor passed in as a parameter or wrapped by another function, a reason computed at runtime, or an event published through an interface, it reports nothing; the runtime still logs an undeclared reason and refuses an undeclared event. Test code is not checked: `_test.go` files, and packages of test helpers or fakes, which import `testing` outside their `_test.go` files, such as an `orderstest`.
+
+**Suppression.** Put `//dedo:ignore <RULE_ID> <reason>` on the line of the finding, on the line above it, or above the statement or import that holds it:
+
+```go
+//dedo:ignore DEDO_GO_SERVER_INTERCEPTORS this server only answers the readiness probe
+probe := connect.NewServer(flowid.Interceptor())
+```
+
+The reason is required, and is what a reviewer reads: a directive without one suppresses nothing and is a finding itself ([`DEDO_GO_IGNORE_REASON`](#dedo_go_ignore_reason)).
+
+**Choosing the rules.** `dedo.yaml`'s `go` section chooses among them as its `lint` section does, with the same [precedence](#precedence), [overrides](#overrides) and [final rules](#final-rules): `use` names the sets (`DEDO`, `HOUSE`; both by default) or rules by ID, `disable` turns rules off by ID, and `rules` holds the house Go rules. An imported rules file has a `go` section too, without `use`; a rule may override dedo's Go rules and the Go rules of the files its rules file imports, and a rule marked `final: true` cannot be overridden or disabled. A Go rule overrides only Go rules. `dedo tools` lists the Go rules in force after the lint and breaking ones.
+
+```yaml
+go:
+  use: [DEDO, HOUSE]                 # the default
+  disable: [DEDO_GO_EVENT_DECLARED]  # dedo's, or an imported house rule
+  rules:
+    - id: HOUSE_GO_NO_PLATFORM_SDK
+      forbid_import: example.com/platform-sdk/...   # the package and every one under it
+      allow_in: [internal/legacy/**]                  # files that may import it all the same
+      message: Call the platform services directly; see docs/platform.md.
+      doc: https://wiki.example.com/go/platform-sdk
+      final: true
+```
+
+### DEDO_GO_SERVER_INTERCEPTORS
+
+**Checks** that every `connect.NewServer` (connect-go v2) outside test code has `flowid.Interceptor()` and dedo's policy interceptor, the result of `interceptor.New`, with the flow ID interceptor first. Other interceptors may come before, between or after them. The rule follows a local variable to the declaration that defines it when nothing assigns it again, a helper function every return of which gives one of the two, in any package, and a slice literal spread into the call (`connect.NewServer(interceptors...)`). An argument it cannot resolve, such as a parameter or a function that wraps an interceptor it is given, might be either, so then it reports only a wrong order. In a BFF, which serves no contract of its own to enforce, it wants only the flow ID interceptor.
+
+**Why.** The policy interceptor is what enforces the contract: scopes, tenants, cache and deprecation headers, and the error audit. A server built without it serves every RPC with none of them, and nothing fails. Without the flow ID interceptor, a call carries no `X-Flow-ID`, so its logs and events cannot be followed across services; after the policy interceptor, the audit logs run without one.
+
+```go
+guard, err := interceptor.New(interceptor.Config{Table: table, Scopes: scopes, EnforceScopes: true, Log: log})
+if err != nil {
+	return nil, err
+}
+connect.NewServer(flowid.Interceptor(), auth, guard, validate.NewServerInterceptor()) // Passes.
+connect.NewServer(flowid.Interceptor(), auth)                                         // Fails: no policy interceptor.
+connect.NewServer(guard, flowid.Interceptor())                                        // Fails: out of order.
+```
+
+**Fix.** Build the server as the `main.go` `dedo init` writes does.
+
+### DEDO_GO_ERROR_REASON_DECLARED
+
+**Checks** that each constant reason a handler builds into a `google.rpc.ErrorInfo` is declared on its RPC, in `dedo.v1.method`'s `errors`. A handler is a method, outside test code, named after a unary RPC of a service that declares `dedo.v1.service`, taking a context and the RPC's request message and returning its response message and an error, as connect-go's generated handler interfaces declare it. The rule reads each RPC's declarations from the descriptors protoc-gen-go generates, as `policy` reads them at startup. It finds a reason:
+
+- in an `errdetails.ErrorInfo` literal, or an assignment to its `Reason`, in the handler;
+- as the constant argument of a helper, in any package, that passes that parameter on to an `ErrorInfo` unchanged, such as `apiError(connect.CodeNotFound, reasonNotFound, msg)`, however many helpers deep;
+- in a call to a helper every return of which ends in one constant reason, such as `notFound(name)`.
+
+A reason the handler computes at runtime, or gets from a helper that may return several, is not checked. When two services declare an RPC of the same name and messages, a handler of that name may serve either, so a reason either declares passes.
+
+**Why.** The policy interceptor only logs an undeclared reason, at runtime, as an audit finding; the caller still gets it, while the REST reference and the MCP tool description do not list it, so clients and agents cannot handle it.
+
+```protobuf
+rpc GetOrder(GetOrderRequest) returns (GetOrderResponse) {
+  option (dedo.v1.method) = {errors: {reason: "ORDER_NOT_FOUND", code: NOT_FOUND}};
+}
+```
+
+```go
+return nil, apiError(connect.CodeNotFound, "ORDER_NOT_FOUND", "no such order") // Passes.
+return nil, apiError(connect.CodeNotFound, "ORDER_GONE", "the order is gone")  // Fails: not declared.
+```
+
+**Fix.** Declare the reason on the RPC, with its code, or return one it declares.
+
+### DEDO_GO_EVENT_DECLARED
+
+**Checks** that each constant event type a handler (as above) publishes through `(*events.Publisher).Publish` is in its RPC's `emits`, directly or through helpers, in any package, that pass the event type on unchanged.
+
+**Why.** `events.Publisher` refuses an event type the RPC does not declare, with an `INTERNAL` error, only when the handler runs: the command has already committed, and the event is lost.
+
+```go
+p.Publish(ctx, "acme.orders.order.cancelled", name) // Passes when CancelOrder declares it in emits.
+p.Publish(ctx, "acme.orders.order.deleted", name)   // Fails: CancelOrder does not.
+```
+
+**Fix.** Add the type to the RPC's `emits`, or publish one it declares.
+
+### DEDO_GO_IGNORE_REASON
+
+**Checks** that every `//dedo:ignore` directive names a rule ID and gives a reason. Text after ` //` on the line is not the reason.
+
+**Why.** A suppression is a decision a reviewer has to be able to judge. A directive without a reason suppresses nothing, so the finding it meant to hide is reported too.
+
+**Fix.** Write why the finding does not apply: `//dedo:ignore DEDO_GO_ERROR_REASON_DECLARED the gateway declares this reason`.
+
+**Final:** it cannot be disabled or overridden.
+
+## House Go rules
+
+A house Go rule has an ID that starts with `HOUSE_GO_`, a `message`, an optional `doc` link (relative to a url-imported rules file, like a lint rule's), and one kind of check. The one kind so far:
+
+- **`forbid_import`**: no Go file of the module, test files included, imports the package, or with `/...`, the package or any under it. `allow_in` lists globs of the files that may, relative to the folder of `dedo.yaml`, in which `**` matches any number of folders, such as `internal/legacy/**` or `**/*_test.go`. Only direct imports count: a package the module's dependencies import is theirs to rule out.
+
+The finding is reported on the import, with the rule's `message` and `doc`.

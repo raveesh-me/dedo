@@ -8,6 +8,15 @@ Version bumps, dependency updates and changes to benchmarks or examples alone ar
 
 ## [Unreleased]
 
+### Breaking
+
+- `templates/Makefile.api`: a `vet` target runs `go tool dedo vet`, and `check` runs it after `modules`; `templates/Jenkinsfile.api-stage` runs it too. `dedo upgrade` rewrites `Makefile.api`; copy the Jenkins stage again with `dedo templates Jenkinsfile.api-stage`. `make check` now fails on a Go finding: fix it, or suppress it with `//dedo:ignore <RULE_ID> <reason>`; a service not ready for a rule disables it in `dedo.yaml`'s `go` section. [#PR](https://github.com/raveesh-me/dedo/pull/PR)
+
+### Added
+
+- `dedo vet` lints the Go code that serves the contract, on the service and a BFF nested in it, with analyzers on `golang.org/x/tools/go/analysis` (package `lint/gorules`), run through `go vet` with `dedo` as its `-vettool`, so go vet's cache skips unchanged packages; `go vet -vettool=$(go tool -n dedo) ./...` runs dedo's rules too. Four rules, `DEDO_GO_*`, each reporting only what it can tell for certain: `DEDO_GO_SERVER_INTERCEPTORS`, every `connect.NewServer` outside test code has `flowid.Interceptor()` and the policy interceptor from `interceptor.New`, the flow ID one first (a BFF's needs only the flow ID one), following variables, slices spread into the call and helpers in any package; `DEDO_GO_ERROR_REASON_DECLARED`, a constant reason a handler puts in a `google.rpc.ErrorInfo`, directly or through helpers that pass it on (`apiError(code, reason, msg)`) or always return one (`notFound(name)`), is declared on its RPC, read from protoc-gen-go's descriptors as `policy` reads them; `DEDO_GO_EVENT_DECLARED`, a constant event type a handler publishes through `events.Publisher` is in its RPC's `emits`; and `DEDO_GO_IGNORE_REASON`, final, every `//dedo:ignore <RULE_ID> <reason>` directive, which suppresses a finding on or below its line, gives a reason. Findings link to the new Go rules section of `guidance/RULES.md`. [#PR](https://github.com/raveesh-me/dedo/pull/PR)
+- House Go rules: `dedo.yaml` and the rules files it imports take a `go` section, with `use` (`DEDO`, `HOUSE`), `disable` and `rules`, ranked, overridden and made final as lint rules are, which `dedo tools` lists after the lint and breaking rules. The first kind is `forbid_import`: a `HOUSE_GO_*` rule forbids importing a package, or with `/...` every package under it, except in the files its `allow_in` globs name. A lint plugin before this release refuses a rules file with a `go` section, so publish Go rules in a shared rules file only once the services that import it run this release. [#PR](https://github.com/raveesh-me/dedo/pull/PR)
+
 ## [v0.37.0] - 2026-11-11
 
 ### Breaking

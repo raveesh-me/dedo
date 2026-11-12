@@ -149,7 +149,8 @@ func toolsLint(dir, release string, offline bool, out io.Writer) error {
 // houseRules fetches the git imports of the repository's dedo.yaml into
 // .tools/rules/, where buf-plugin-dedo-lint reads them (the plugin never
 // touches the network), then has the plugin consolidate every rule and
-// report its overrides, so a mistake shows here rather than in the editor.
+// report its overrides, so a mistake shows here rather than in the editor,
+// and lists the Go rules dedo vet runs.
 func houseRules(dir string, out io.Writer) error {
 	if path := config.Find(dir); path != "" {
 		fetched, err := config.Fetch(path)
@@ -160,7 +161,21 @@ func houseRules(dir string, out io.Writer) error {
 			fmt.Fprintf(out, "fetched house rules %s\n", f)
 		}
 	}
-	return consolidate(dir, out)
+	if err := consolidate(dir, out); err != nil {
+		return err
+	}
+	return goRules(dir, out)
+}
+
+// goRules consolidates the Go rules dedo vet runs, as dedo vet does, and
+// lists them.
+func goRules(dir string, out io.Writer) error {
+	plan, _, err := vetPlan(dir)
+	if err != nil {
+		return err
+	}
+	fmt.Fprint(out, plan.Report())
+	return nil
 }
 
 // consolidate runs the built plugin's -dedo-rules report in dir: dedo.yaml

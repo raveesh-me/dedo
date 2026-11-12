@@ -47,6 +47,16 @@ Rules rank in layers: **the repository's own `dedo.yaml` > the house rules it im
 
 [RULES.md](https://github.com/raveesh-me/dedo/blob/main/guidance/RULES.md#skipped-rules) lists every rule dedo skips on purpose, by source. Do not re-enable them.
 
+## Go rules
+
+`dedo vet` lints the Go code that serves the contract, and `make check` runs it (`make vet` alone). Run it before you finish any change to Go code, and fix every finding in the code. [RULES.md](https://github.com/raveesh-me/dedo/blob/main/guidance/RULES.md#go-rules) explains each rule; a finding links to its section.
+
+- `DEDO_GO_SERVER_INTERCEPTORS`: every `connect.NewServer` outside tests has `flowid.Interceptor()` and the policy interceptor from `interceptor.New`, the flow ID one first. Never drop either to make a test or a feature work.
+- `DEDO_GO_ERROR_REASON_DECLARED`: a handler returns only the `ErrorInfo` reasons its RPC declares. When a handler needs a new reason, declare it in the proto (`dedo.v1.method` errors, with its code) and regenerate; never rename the reason in Go to dodge the finding.
+- `DEDO_GO_EVENT_DECLARED`: a handler publishes only the event types in its RPC's `emits`. Add the type to the proto first.
+- `HOUSE_GO_*`: your organisation's rules from `dedo.yaml`'s `go` section, such as an import it has ruled out. The finding's message says what to do instead; follow it rather than wrapping the package somewhere it is allowed.
+- Suppress a finding only when it does not apply, with `//dedo:ignore <RULE_ID> <reason>` on or above its line, and say why in the reason: a directive without one suppresses nothing and is itself a finding (`DEDO_GO_IGNORE_REASON`). Name every suppression you add in your summary.
+
 ## MCP tools
 
 Every unary, non-deprecated RPC becomes an MCP tool named after it in snake_case (`GetTodo` becomes `get_todo`), unless its service's `audience` is narrower than `protoc-gen-dedo-mcp`'s `min_audience` (by default, only `AUDIENCE_COMPONENT_INTERNAL` services are left out). `protoc-gen-dedo-mcp` generates them as `<Service>MCPTools()`, and `main.go` serves them with `mcpserver.AddTools(tools, client, <pkg>.<Service>MCPTools()...)`, `client` being `connect.NewClient(connectinprocess.New(server))`: calls go in-process to the service's `connect.Server`. For a service it leaves out, `<Service>MCPTools()` returns no tools, so `main.go` keeps compiling. Never write tool definitions by hand: change the proto and regenerate. Calls go through the same auth, scopes and validation as REST and Connect.

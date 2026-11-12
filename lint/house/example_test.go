@@ -26,9 +26,14 @@ func TestExampleRulesFile(t *testing.T) {
 		Rules   []config.Rule `yaml:"rules"`
 	}
 	var doc struct {
-		Imports  []config.Import   `yaml:"imports"`
-		Lint     section           `yaml:"lint"`
-		Breaking section           `yaml:"breaking"`
+		Imports  []config.Import `yaml:"imports"`
+		Lint     section         `yaml:"lint"`
+		Breaking section         `yaml:"breaking"`
+		Go       struct {
+			Use     []string        `yaml:"use"`
+			Disable []string        `yaml:"disable"`
+			Rules   []config.GoRule `yaml:"rules"`
+		} `yaml:"go"`
 		Annexure []config.Annexure `yaml:"annexure"`
 	}
 	dec := yaml.NewDecoder(f)
@@ -53,6 +58,9 @@ func TestExampleRulesFile(t *testing.T) {
 	}
 	if len(doc.Imports) < 3 || len(file.Disable) == 0 || len(doc.Breaking.Disable) == 0 {
 		t.Errorf("imports %v, disable %v and %v: the example should show each", doc.Imports, file.Disable, doc.Breaking.Disable)
+	}
+	if strings.Join(doc.Go.Use, ",") != "DEDO,HOUSE" || len(doc.Go.Disable) == 0 || len(doc.Go.Rules) == 0 {
+		t.Errorf("go = %+v: the example should show use, disable and a rule", doc.Go)
 	}
 	if strings.Join(doc.Breaking.Use, ",") != "DEDO,HOUSE" {
 		t.Errorf("breaking.use = %v, want both breaking rule sets", doc.Breaking.Use)

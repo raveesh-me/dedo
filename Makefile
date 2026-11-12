@@ -101,27 +101,31 @@ vendored-options:
 	for ex in todo bad-todo contacts; do diff -r proto/dedo examples/$$ex/third_party/dedo/dedo || exit 1; done
 	for ex in todo contacts; do diff templates/docs/docs.go.tmpl examples/$$ex/docs/docs.go || exit 1; done
 
-## example-todo: the compliant service lints clean, passes its tests and keeps its modules apart
+## example-todo: the compliant service lints clean, passes its tests, keeps its modules apart and passes the Go rules
 example-todo: plugins
 	cd examples/todo && buf format --diff --exit-code && buf lint proto
 	cd examples/todo && buf generate && git diff --exit-code gen/ docs/
 	$(MAKE) -C examples/todo web-gen && git diff --exit-code examples/todo/web/src/gen
 	cd examples/todo && go vet ./... && go test -race ./...
 	cd cmd/dedo && go run . modules -dir ../../examples/todo
+	cd cmd/dedo && go run . vet -dir ../../examples/todo
 
-## example-contacts: the multi-tenant service lints clean, passes its tests and keeps its modules apart
+## example-contacts: the multi-tenant service lints clean, passes its tests, keeps its modules apart and passes the Go rules
 example-contacts: plugins
 	cd examples/contacts && buf format --diff --exit-code && buf lint proto
 	cd examples/contacts && buf generate && git diff --exit-code gen/ docs/
 	cd examples/contacts && go vet ./... && go test -race ./...
 	cd cmd/dedo && go run . modules -dir ../../examples/contacts
+	cd cmd/dedo && go run . vet -dir ../../examples/contacts
 
-## example-bad-todo: the rule-breaking service reports exactly the expected findings
+## example-bad-todo: the rule-breaking service reports exactly the expected
+## findings, of buf lint and of dedo vet
 example-bad-todo: plugins
 	cd examples/bad-todo && buf format --diff --exit-code
 	cd examples/bad-todo && buf lint proto --error-format=msvs | sed -E 's/^[^(]*\(([0-9]+),[0-9]+\) : [a-z]+ ([A-Z0-9_]+) : .*/\1 \2/' | sort -k1,1n -k2,2 | diff -u expected-lint.txt -
 	cd examples/bad-todo && buf generate && git diff --exit-code gen/
 	cd examples/bad-todo && go vet ./... && go test -race ./...
+	cd cmd/dedo && { go run . vet -dir ../../examples/bad-todo || true; } | sed -nE 's/^([^:]+:[0-9]+):[0-9]+: ([A-Z0-9_]+): .*/\1 \2/p' | diff -u ../../examples/bad-todo/expected-vet.txt -
 
 clean:
 	rm -rf $(DIST)
