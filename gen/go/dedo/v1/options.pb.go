@@ -25,17 +25,22 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// Audience is who may call an API. Mirrors Zalando rule 219.
+// Audience is who an API is designed, documented and supported for, which
+// decides where it is published: Zalando rule 219's x-audience. It is not who
+// is authorized to call: every call is checked against its method's scopes,
+// whatever the audience.
 type Audience int32
 
 const (
 	// The audience is unset. Lint rejects it.
 	Audience_AUDIENCE_UNSPECIFIED Audience = 0
-	// Callers inside the owning service only.
+	// The owning component only, such as a backend for frontend that only its
+	// own frontend calls. Never published: the generators leave it out by
+	// default.
 	Audience_AUDIENCE_COMPONENT_INTERNAL Audience = 1
-	// Callers inside the owning business unit.
+	// The owning business unit's components.
 	Audience_AUDIENCE_BUSINESS_UNIT_INTERNAL Audience = 2
-	// Any caller inside the company.
+	// Any component in the company.
 	Audience_AUDIENCE_COMPANY_INTERNAL Audience = 3
 	// Named external partners.
 	Audience_AUDIENCE_EXTERNAL_PARTNER Audience = 4
@@ -205,7 +210,8 @@ func (CachePolicy_Visibility) EnumDescriptor() ([]byte, []int) {
 // ServiceRules is the ownership and audience of a service.
 type ServiceRules struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// Who may call the service.
+	// Who the service is designed and supported for, which decides where it
+	// is published. Not who is authorized: that is each method's scopes.
 	Audience Audience `protobuf:"varint,1,opt,name=audience,proto3,enum=dedo.v1.Audience" json:"audience,omitempty"`
 	// The team that owns the service, as named in the team registry.
 	OwnerTeam string `protobuf:"bytes,2,opt,name=owner_team,json=ownerTeam,proto3" json:"owner_team,omitempty"`
