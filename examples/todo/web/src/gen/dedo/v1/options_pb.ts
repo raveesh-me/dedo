@@ -23,7 +23,8 @@ export const file_dedo_v1_options: GenFile = /*@__PURE__*/
  */
 export type ServiceRules = Message<"dedo.v1.ServiceRules"> & {
   /**
-   * Who may call the service.
+   * Who the service is designed and supported for, which decides where it
+   * is published. Not who is authorized: that is each method's scopes.
    *
    * @generated from field: dedo.v1.Audience audience = 1;
    */
@@ -628,7 +629,10 @@ export const FieldRulesSchema: GenMessage<FieldRules> = /*@__PURE__*/
   messageDesc(file_dedo_v1_options, 14);
 
 /**
- * Audience is who may call an API. Mirrors Zalando rule 219.
+ * Audience is who an API is designed, documented and supported for, which
+ * decides where it is published: Zalando rule 219's x-audience. It is not who
+ * is authorized to call: every call is checked against its method's scopes,
+ * whatever the audience.
  *
  * @generated from enum dedo.v1.Audience
  */
@@ -641,21 +645,23 @@ export enum Audience {
   UNSPECIFIED = 0,
 
   /**
-   * Callers inside the owning service only.
+   * The owning component only, such as a backend for frontend that only its
+   * own frontend calls. Never published: the generators leave it out by
+   * default.
    *
    * @generated from enum value: AUDIENCE_COMPONENT_INTERNAL = 1;
    */
   COMPONENT_INTERNAL = 1,
 
   /**
-   * Callers inside the owning business unit.
+   * The owning business unit's components.
    *
    * @generated from enum value: AUDIENCE_BUSINESS_UNIT_INTERNAL = 2;
    */
   BUSINESS_UNIT_INTERNAL = 2,
 
   /**
-   * Any caller inside the company.
+   * Any component in the company.
    *
    * @generated from enum value: AUDIENCE_COMPANY_INTERNAL = 3;
    */

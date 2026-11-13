@@ -118,7 +118,7 @@ What each option does:
 
 | Option | Read by | Effect |
 | --- | --- | --- |
-| `service.audience`, `service.owner_team` | Lint, docs, generators, `dedo modules` | Who may call the API, and who owns it. The generators leave out services narrower than their `min_audience`, by default only `AUDIENCE_COMPONENT_INTERNAL` ones, which only a [backend for frontend](domains.md#backends-for-frontends)'s unnamed module may declare |
+| `service.audience`, `service.owner_team` | Lint, docs, generators, `dedo modules` | Who the API is designed and supported for, which decides where it is published, and who owns it. It is not who is authorized: every call is checked against its method's scopes, whatever the audience. The generators leave out services narrower than their `min_audience`, by default only `AUDIENCE_COMPONENT_INTERNAL` ones, which only a [backend for frontend](domains.md#backends-for-frontends)'s unnamed module may declare |
 | `service.title` | Docs | The heading the REST reference groups the service's operations under. Optional: without it, the service name without its `Service` suffix, split into words (`CatalogEntryService` reads "Catalog Entry") |
 | `method.scopes` | Runtime, docs | A caller needs one of them. The service will not start if an RPC has none. |
 | `method.errors` | Runtime, docs | Every error the RPC returns. Undeclared ones are logged. The docs list them per HTTP status. |
