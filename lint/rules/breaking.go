@@ -3,6 +3,7 @@ package rules
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"slices"
 
 	"buf.build/go/bufplugin/check"
@@ -216,7 +217,7 @@ func required(f protoreflect.FieldDescriptor) bool {
 
 var resourceSame = breakingRule(
 	idResourceSame,
-	"Checks that a resource keeps its type and every name pattern it had, so stored names and references still resolve.",
+	"Checks that a resource keeps its type and every name pattern it had, up to the names of the pattern's variables, so stored names and references still resolve.",
 	checkutil.NewMessagePairRuleHandler(func(_ context.Context, w check.ResponseWriter, _ check.Request, m, against protoreflect.MessageDescriptor) error {
 		before := extension[*annotations.ResourceDescriptor](against.Options(), annotations.E_Resource)
 		if before == nil {
@@ -227,14 +228,38 @@ var resourceSame = breakingRule(
 			breakingAt(w, m, against, idResourceSame, "Message %q is resource %q, not %q: references to the old type no longer resolve.", m.Name(), now.GetType(), before.GetType())
 			return nil
 		}
-		for _, p := range before.GetPattern() {
-			if !slices.Contains(now.GetPattern(), p) {
-				breakingAt(w, m, against, idResourceSame, "Resource %q no longer has the pattern %q, so names stored in it no longer resolve. Keep it, and add the new pattern beside it.", before.GetType(), p)
-			}
+		for _, p := range missingPatterns(before.GetPattern(), now.GetPattern()) {
+			breakingAt(w, m, against, idResourceSame, "Resource %q no longer has the pattern %q, so names stored in it no longer resolve. Keep it, and add the new pattern beside it.", before.GetType(), p)
 		}
 		return nil
 	}, checkutil.WithoutImports()),
 )
+
+// patternVariable is a variable of a resource name pattern, such as {book}.
+// A variable with a template of its own, {book=shelves/*}, is not one, so it
+// is compared as text.
+var patternVariable = regexp.MustCompile(`\{[^{}=]*\}`)
+
+// samePattern reports whether two resource name patterns have the same
+// literals in the same places and differ at most in the names of their
+// variables, as tax-rates/{tax_rate} and tax-rates/{taxRate} do. A name such
+// as tax-rates/abc resolves the same under both: on the wire, a variable's
+// name appears in no resource name, request or REST path.
+func samePattern(a, b string) bool {
+	return patternVariable.ReplaceAllString(a, "{}") == patternVariable.ReplaceAllString(b, "{}")
+}
+
+// missingPatterns returns the patterns of before that no pattern of now is
+// the same as.
+func missingPatterns(before, now []string) []string {
+	var missing []string
+	for _, p := range before {
+		if !slices.ContainsFunc(now, func(n string) bool { return samePattern(p, n) }) {
+			missing = append(missing, p)
+		}
+	}
+	return missing
+}
 
 var sunsetNoEarlier = breakingRule(
 	idSunsetNoEarlier,
