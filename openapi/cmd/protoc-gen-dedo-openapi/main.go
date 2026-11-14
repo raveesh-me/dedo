@@ -4,7 +4,8 @@
 //
 // The option min_audience (an Audience, AUDIENCE_ prefix optional) leaves out
 // the services for a narrower audience; unset, it leaves out the
-// AUDIENCE_COMPONENT_INTERNAL ones.
+// AUDIENCE_COMPONENT_INTERNAL ones. The option no_tag_groups leaves out
+// x-tagGroups, which otherwise groups the service tags by proto package.
 package main
 
 import (

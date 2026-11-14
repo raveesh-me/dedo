@@ -9,6 +9,7 @@ type Document struct {
 	Info       Info                 `json:"info"`
 	Servers    []Server             `json:"servers,omitempty"`
 	Tags       []Tag                `json:"tags,omitempty"`
+	TagGroups  []TagGroup           `json:"x-tagGroups,omitempty"`
 	Paths      map[string]*PathItem `json:"paths"`
 	Components Components           `json:"components"`
 }
@@ -36,6 +37,14 @@ type Tag struct {
 	Kind        string `json:"kind,omitempty"`
 	Audience    string `json:"x-audience,omitempty"`
 	OwnerTeam   string `json:"x-owner-team,omitempty"`
+}
+
+// TagGroup is an entry of x-tagGroups, the extension Redoc introduced and
+// documentation sites such as Docusaurus's OpenAPI plugin build their
+// navigation from: a heading over the tags it lists.
+type TagGroup struct {
+	Name string   `json:"name"`
+	Tags []string `json:"tags"`
 }
 
 // PathItem holds the operations of one path.

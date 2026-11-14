@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -147,5 +148,93 @@ func TestTagPlace(t *testing.T) {
 		if got := tagPlace(c.tag); got != c.want {
 			t.Errorf("tagPlace(%+v) = %q, want %q", c.tag, got, c.want)
 		}
+	}
+}
+
+// The document groups its tags in x-tagGroups, one group per package named
+// after its title, so sites that build their navigation from the extension
+// put every operation under its package rather than under "UNTAGGED".
+func TestGenerateTagGroups(t *testing.T) {
+	for _, c := range []struct {
+		name   string
+		params string
+		protos []string
+		want   []TagGroup
+	}{
+		{
+			name:   "packages",
+			protos: shopProtos,
+			want: []TagGroup{
+				{Name: "Catalog", Tags: []string{"Product"}},
+				{Name: "Orders", Tags: []string{"Orders", "Return"}},
+			},
+		},
+		{
+			name: "one package",
+			want: []TagGroup{{Name: "Library", Tags: []string{"Library"}}},
+		},
+		{
+			name:   "no package",
+			params: "title=Ping API",
+			protos: []string{"nopackage.proto"},
+			want:   []TagGroup{{Name: "Ping API", Tags: []string{"Ping"}}},
+		},
+		{name: "off", params: "no_tag_groups", protos: shopProtos},
+		{name: "off with a value", params: "no_tag_groups=true", protos: shopProtos},
+		{
+			name:   "kept",
+			params: "no_tag_groups=false",
+			want:   []TagGroup{{Name: "Library", Tags: []string{"Library"}}},
+		},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			got := generate(t, c.params, c.protos...)
+			var doc struct {
+				TagGroups []TagGroup `json:"x-tagGroups"`
+			}
+			if err := json.Unmarshal([]byte(got), &doc); err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(doc.TagGroups, c.want) {
+				t.Errorf("x-tagGroups = %+v, want %+v", doc.TagGroups, c.want)
+			}
+			if c.want == nil && strings.Contains(got, "x-tagGroups") {
+				t.Error("the document has x-tagGroups")
+			}
+		})
+	}
+}
+
+// Two packages with one title are told apart by their full names; the
+// others keep their titles.
+func TestTagGroupsSameTitle(t *testing.T) {
+	mods := modules{
+		{pkg: "acme.orders.v1", services: []Tag{{Name: "Orders"}}},
+		{pkg: "shop.orders.v1", services: []Tag{{Name: "Shop orders"}}},
+		{pkg: "acme.catalog.v1", services: []Tag{{Name: "Product"}, {Name: "Price"}}},
+	}
+	want := []TagGroup{
+		{Name: "acme.orders.v1", Tags: []string{"Orders"}},
+		{Name: "shop.orders.v1", Tags: []string{"Shop orders"}},
+		{Name: "Catalog", Tags: []string{"Product", "Price"}},
+	}
+	if got := mods.tagGroups("API"); !reflect.DeepEqual(got, want) {
+		t.Errorf("tagGroups = %+v, want %+v", got, want)
+	}
+}
+
+func TestConfigNoTagGroups(t *testing.T) {
+	for value, want := range map[string]bool{"": true, "true": true, "1": true, "false": false} {
+		var cfg Config
+		if err := cfg.Set("no_tag_groups", value); err != nil {
+			t.Fatalf("no_tag_groups=%s: %v", value, err)
+		}
+		if cfg.NoTagGroups != want {
+			t.Errorf("no_tag_groups=%s: NoTagGroups = %v, want %v", value, cfg.NoTagGroups, want)
+		}
+	}
+	var cfg Config
+	if err := cfg.Set("no_tag_groups", "yes"); err == nil || !strings.Contains(err.Error(), "no_tag_groups") {
+		t.Errorf("no_tag_groups=yes: err = %v, want one naming the parameter", err)
 	}
 }

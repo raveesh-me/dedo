@@ -8,6 +8,10 @@ Version bumps, dependency updates and changes to benchmarks or examples alone ar
 
 ## [Unreleased]
 
+### Added
+
+- `protoc-gen-dedo-openapi` writes a top-level `x-tagGroups`: one group per proto package, named after its title (the nav tag's `summary`, such as "Orders" for `acme.orders.v1`), listing the tags of its services. A document of one package gets one group. Documentation sites that build their navigation from `x-tagGroups`, such as Docusaurus with `docusaurus-plugin-openapi-docs`, put every operation under its package rather than under "UNTAGGED". The 3.2 `parent` and `kind: nav` tags are unchanged. Scalar reads the groups too, so a single-package reference now shows its package as a heading over its services. The new `no_tag_groups` option (bare, or `no_tag_groups=true`) leaves it out.
+
 ### Changed
 
 - `dedo.v1.Audience` and `ServiceRules.audience` now say what dedo uses them for: who an API is designed, documented and supported for, which decides where it is published (Zalando rule 219's `x-audience`). The audience is not who is authorized to call: every call is checked against its method's scopes, whatever the audience. Their comments, and `guideline.md`, used to say "who may call", which read as authorization. Only the documentation changed.

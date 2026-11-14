@@ -48,5 +48,8 @@ plugins:
       # Leave out services for an audience narrower than this; unset, only
       # AUDIENCE_COMPONENT_INTERNAL ones are left out.
       # - min_audience=EXTERNAL_PARTNER
+      # Leave out x-tagGroups, which groups the services' tags by package
+      # for sites such as Docusaurus's OpenAPI plugin.
+      # - no_tag_groups
 inputs:
   - directory: proto

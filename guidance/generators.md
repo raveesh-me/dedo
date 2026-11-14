@@ -47,6 +47,8 @@ managed:
       - server=https://api.example.com
 ```
 
+`protoc-gen-dedo-openapi` groups the service tags of each package in `x-tagGroups`, which sites such as Docusaurus's OpenAPI plugin build their navigation from; `no_tag_groups` in its `opt` leaves it out.
+
 Both generators take `min_audience`, an `Audience` value with or without its `AUDIENCE_` prefix, and leave out every service whose `audience` is narrower; a service that declares none stays, for lint to report. Without it, they leave out only `AUDIENCE_COMPONENT_INTERNAL` services. A reference published to everyone adds `min_audience=EXTERNAL_PUBLIC` to `opt`, so internal services stay out of it. For a service it leaves out, `protoc-gen-dedo-mcp` still generates `<Service>MCPTools()`, returning no tools, so the server's code keeps compiling.
 
 ## Server

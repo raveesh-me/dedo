@@ -17,6 +17,14 @@
       "x-owner-team": "library-team"
     }
   ],
+  "x-tagGroups": [
+    {
+      "name": "Library",
+      "tags": [
+        "Library"
+      ]
+    }
+  ],
   "paths": {
     "/v1/shelves/{shelf}/books/{book}": {
       "get": {
