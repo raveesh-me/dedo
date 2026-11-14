@@ -16,3 +16,27 @@ message Shelf { // want
   option (google.api.resource) = {type: "library.raveesh.me/Bookcase" pattern: "shelves/{shelf}"};
   string name = 1;
 }
+message TaxRate { // want
+  option (google.api.resource) = {type: "library.raveesh.me/TaxRate" pattern: "taxRates/{taxRate}"};
+  string name = 1;
+}
+message Chapter { // want
+  option (google.api.resource) = {type: "library.raveesh.me/Chapter" pattern: "shelves/{shelf}/books/{book}/sections/{chapter}"};
+  string name = 1;
+}
+message Author { // want
+  option (google.api.resource) = {type: "library.raveesh.me/Author" pattern: "authors/{author}"};
+  string name = 1;
+}
+message Edition { // want
+  option (google.api.resource) = {type: "library.raveesh.me/Edition" pattern: "editions/{edition}/{printing}"};
+  string name = 1;
+}
+message Loan { // want
+  option (google.api.resource) = {type: "library.raveesh.me/Loan" pattern: "members/{member}/loans"};
+  string name = 1;
+}
+message Copy { // want
+  option (google.api.resource) = {type: "library.raveesh.me/Copy" pattern: "copies/{copy}/libraries/{library}"};
+  string name = 1;
+}

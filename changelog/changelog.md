@@ -16,6 +16,11 @@ Version bumps, dependency updates and changes to benchmarks or examples alone ar
 
 - `dedo.v1.Audience` and `ServiceRules.audience` now say what dedo uses them for: who an API is designed, documented and supported for, which decides where it is published (Zalando rule 219's `x-audience`). The audience is not who is authorized to call: every call is checked against its method's scopes, whatever the audience. Their comments, and `guideline.md`, used to say "who may call", which read as authorization. Only the documentation changed.
 
+### Fixed
+
+- `DEDO_RESOURCE_SAME` compares resource name patterns by their structure, not as text. Renaming only a pattern's variables, as `tax-rates/{tax_rate}` to `tax-rates/{taxRate}` for a house rule that wants them in lowerCamelCase, no longer reports the old pattern as dropped: `tax-rates/abc` resolves the same under both. A literal segment changed, added or removed, a variable added or removed, segments reordered or a pattern dropped still fails.
+- `guidance/RULES.md` said `// buf:breaking:ignore` suppresses a breaking finding. `buf breaking` reads no comment ignores, so it suppresses nothing; its *Breaking rules* section now says to accept one finding by listing its file under the rule in `buf.yaml`'s `breaking.ignore_only`.
+
 ## [v0.39.0] - 2026-11-13
 
 ### Added

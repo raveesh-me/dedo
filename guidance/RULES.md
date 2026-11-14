@@ -219,7 +219,7 @@ breaking:
       message: A method served under /commerce/ stays there.
 ```
 
-House rules run while their section's `use` lists `HOUSE`, as it does by default; `buf.yaml` already lists `DEDO` and `DEDO_BREAKING`, which hold every rule of the plugin. Each rule is a Buf rule of its own, so `// buf:lint:ignore HOUSE_REST_ROOT` suppresses one lint finding (`// buf:breaking:ignore` a breaking one), `disable: [HOUSE_REST_ROOT]` in a service's `lint` section turns an imported rule off, and a finding shows the rule's `message` and `doc` link.
+House rules run while their section's `use` lists `HOUSE`, as it does by default; `buf.yaml` already lists `DEDO` and `DEDO_BREAKING`, which hold every rule of the plugin. Each rule is a Buf rule of its own, so `// buf:lint:ignore HOUSE_REST_ROOT` suppresses one lint finding (a breaking one is accepted in `buf.yaml`, as [Breaking rules](#breaking-rules) says: `buf breaking` reads no comment ignores), `disable: [HOUSE_REST_ROOT]` in a service's `lint` section turns an imported rule off, and a finding shows the rule's `message` and `doc` link.
 
 **Breaking rules.** A rule of a `breaking` section runs in `buf breaking`, on each element that the version compared against also has: the same file, service, method, message, field (by number), enum or resource. Its check reads the current element's variables, below, and the earlier element's as `against`, a map of the same names: `against.scopes.all(s, s in scopes)` keeps every scope. An element that is new, or deleted, is not checked; Buf's `FILE` rules report a deletion. Imports, `disable`, `overrides` and `final` work as for lint rules, among breaking rules: a breaking house rule overrides dedo's [breaking rules](#breaking-rules) and the breaking rules of the files it imports.
 
@@ -891,11 +891,21 @@ Each rule pairs an element with the one of the same name in the version compared
 | [`DEDO_CROSS_TENANT_NO_DELETE`](#dedo_cross_tenant_no_delete) | A cross-tenant RPC stays cross-tenant |
 | [`DEDO_HTTP_BINDING_SAME`](#dedo_http_binding_same) | Every REST binding stays, with the same body and response body |
 | [`DEDO_FIELD_NO_NEW_REQUIRED`](#dedo_field_no_new_required) | No field becomes `REQUIRED` |
-| [`DEDO_RESOURCE_SAME`](#dedo_resource_same) | A resource keeps its type and every pattern |
+| [`DEDO_RESOURCE_SAME`](#dedo_resource_same) | A resource keeps its type and every pattern, up to its variables' names |
 | [`DEDO_SUNSET_NO_EARLIER`](#dedo_sunset_no_earlier) | A sunset does not move earlier |
 | [`DEDO_FIELD_ATTRIBUTE_KEPT`](#dedo_field_attribute_kept) | A field keeps its telemetry attribute's key and mode |
 
 A change these rules report is still possible: make it in a new major version of the package (AIP-185), or add the label your CI reads to allow a breaking change.
+
+`buf breaking` reads no comment ignores: `// buf:breaking:ignore`, unlike `// buf:lint:ignore`, suppresses nothing (Buf turns comment ignores off for breaking rules). To accept one finding, list its file under the rule in `buf.yaml`'s `breaking.ignore_only`, by its path from `buf.yaml`, in the pull request that makes the change, and remove the entry once it merges: from then on the change is in the version compared against.
+
+```yaml
+breaking:
+  use: [FILE, DEDO_BREAKING]
+  ignore_only:
+    DEDO_RESOURCE_SAME:
+      - proto/acme/tax/v1/tax_rate.proto   # the change this pull request makes on purpose
+```
 
 ### DEDO_EMITS_NO_DELETE
 
@@ -982,9 +992,18 @@ option (google.api.http) = {
 
 ### DEDO_RESOURCE_SAME
 
-**Checks** that a resource keeps its `type` and every `pattern` it had. Adding a pattern passes.
+**Checks** that a resource keeps its `type` and every `pattern` it had. Adding a pattern passes. Patterns are compared by their structure, not as text: renaming a pattern's variables passes, as `tax-rates/{tax_rate}` to `tax-rates/{taxRate}`, since `tax-rates/abc` resolves the same under both and a variable's name appears in no resource name or REST path. Adding, removing or changing a literal segment, adding or removing a variable, or reordering segments fails.
 
 **Why.** Clients store resource names and refer to resources by type. A dropped pattern leaves stored names that no longer resolve; a new type breaks every `resource_reference` to the old one.
+
+```protobuf
+// Before:
+option (google.api.resource) = {type: "tax.acme.com/TaxRate" pattern: "locations/{location}/tax-rates/{tax_rate}"};
+// After, passes: only a variable is renamed.
+option (google.api.resource) = {type: "tax.acme.com/TaxRate" pattern: "locations/{location}/tax-rates/{taxRate}"};
+// After, fails: the collection is renamed, so stored names no longer resolve.
+option (google.api.resource) = {type: "tax.acme.com/TaxRate" pattern: "locations/{location}/taxRates/{taxRate}"};
+```
 
 **Fix.** Keep the type and the old pattern, and add the new pattern beside it.
 
