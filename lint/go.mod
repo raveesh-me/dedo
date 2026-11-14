@@ -3,10 +3,11 @@ module github.com/raveesh-me/dedo/lint
 go 1.26.0
 
 require (
+	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.12-20260825204119-511051f7f437.1
 	buf.build/go/bufplugin v0.11.1
 	github.com/google/cel-go v0.29.0
 	github.com/googleapis/api-linter/v2 v2.4.1
-	github.com/raveesh-me/dedo v0.39.0
+	github.com/raveesh-me/dedo v0.40.0
 	golang.org/x/mod v0.42.0
 	golang.org/x/tools v0.52.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20261026165753-2ffab32bce7e
@@ -18,7 +19,6 @@ require (
 require (
 	bitbucket.org/creachadair/stringset v0.0.12 // indirect
 	buf.build/gen/go/bufbuild/bufplugin/protocolbuffers/go v1.36.12-20261002170247-538130002972.2 // indirect
-	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.12-20260825204119-511051f7f437.1 // indirect
 	buf.build/gen/go/pluginrpc/pluginrpc/protocolbuffers/go v1.36.12-20241007202033-cf42259fcbfc.1 // indirect
 	buf.build/go/protovalidate v1.1.3 // indirect
 	buf.build/go/spdx v0.2.0 // indirect

@@ -8,8 +8,11 @@ Version bumps, dependency updates and changes to benchmarks or examples alone ar
 
 ## [Unreleased]
 
+## [v0.40.0] - 2026-11-15
+
 ### Breaking
 
+- `protoc-gen-dedo-openapi` writes `x-tagGroups` by default (see *Added*), so every regenerated reference changes, and documentation sites that read the extension, Scalar included, show each package as a heading over its services. Regenerate and commit the reference; to keep the old output, add `no_tag_groups` to the generator's `opt` in `buf.gen.yaml`. [#169](https://github.com/raveesh-me/dedo/pull/169)
 - `DEDO_FIELD_EXAMPLE`, in `DEDO`: every scalar field that the REST reference documents declares an example, in protovalidate's `example` rule of its type, such as `(buf.validate.field).string.example = "todos/42"` or `int64.example = 240`; a repeated scalar in `repeated.items`, a map in `map.keys` and `map.values`, a `Timestamp`, `Duration` or `FieldMask` in its own rule, a wrapper in the wrapped type's. The fields checked are those of the module's messages that a non-deprecated RPC with an HTTP binding reaches, when its service is not `AUDIENCE_COMPONENT_INTERNAL`; output-only fields included, deprecated fields, enums and messages not. A declared `enum.example` must be a value of the enum, and a resource name's example must have one of its resource's patterns' forms. Add the examples ([guideline.md](guidance/guideline.md#examples) says how to write them, `guidance/claude.md` tells coding agents), with `buf.build/bufbuild/protovalidate` in `buf.yaml`'s `deps`, which `dedo init` already writes; a service not ready for the rule disables it in `dedo.yaml`.
 
 ### Added
@@ -557,7 +560,8 @@ The first release, as http-proto-lint (`github.com/raveesh-me/http-proto-lint`, 
 - MCP tools, served on the official MCP Go SDK under short snake_case names and through the same auth and policy as REST. [#1](https://github.com/raveesh-me/dedo/pull/1), [#2](https://github.com/raveesh-me/dedo/pull/2)
 - Templates for service repositories, `guideline.md`, and the `todo`, `bad-todo` and `library` examples. [#1](https://github.com/raveesh-me/dedo/pull/1), [#5](https://github.com/raveesh-me/dedo/pull/5)
 
-[Unreleased]: https://github.com/raveesh-me/dedo/compare/v0.39.0...HEAD
+[Unreleased]: https://github.com/raveesh-me/dedo/compare/v0.40.0...HEAD
+[v0.40.0]: https://github.com/raveesh-me/dedo/compare/v0.39.0...v0.40.0
 [v0.39.0]: https://github.com/raveesh-me/dedo/compare/v0.38.0...v0.39.0
 [v0.38.0]: https://github.com/raveesh-me/dedo/compare/v0.37.0...v0.38.0
 [v0.37.0]: https://github.com/raveesh-me/dedo/compare/v0.36.0...v0.37.0
