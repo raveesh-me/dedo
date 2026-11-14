@@ -1,0 +1,63 @@
+syntax = "proto3";
+
+// Carts and what is in them,
+//   as HighLevel keeps them.
+package shop.notes.v1;
+
+import "dedo/v1/options.proto";
+import "google/api/resource.proto";
+
+// Manages carts.
+service CartService {
+  // Returns a cart, as GHL shows it.
+  rpc GetCart(GetCartRequest) returns (Cart) {
+    option (dedo.v1.method) = {
+      scopes: "shop.cart.read"
+      tool: {
+        title: "Get a GoHighLevel cart"
+        description: "Returns a cart."
+      }
+    };
+  }
+
+  // Lists carts.
+  rpc ListCarts(ListCartsRequest) returns (ListCartsResponse) {
+    option (dedo.v1.method) = {scopes: "shop.cart.read"};
+  }
+}
+
+// A cart.
+message Cart {
+  option (google.api.resource) = {
+    type: "shop.example.com/Cart"
+    pattern: "carts/{cart}"
+  };
+
+  // The resource name.
+  string name = 1;
+  string owner = 2; // Who owns it in ghl: a trailing comment, not documentation.
+}
+
+// GetCartRequest asks for a cart.
+message GetCartRequest {
+  // The cart's name, such as carts/ghl-1.
+  string name = 1;
+}
+
+// ListCartsRequest asks for carts.
+message ListCartsRequest {
+  // The highlevelness of the carts: no whole word.
+  int32 page_size = 1;
+}
+
+// ListCartsResponse lists carts.
+message ListCartsResponse {
+  // The carts.
+  repeated Cart carts = 1;
+}
+
+// A cart's state, from GoHighLevel.
+enum State {
+  // Unset.
+  STATE_UNSPECIFIED = 0;
+}

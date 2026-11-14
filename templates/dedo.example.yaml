@@ -104,6 +104,21 @@ lint:
       check: size(values) <= 50
       message: An enum has at most 50 values; use a resource for longer lists.
 
+    # Rules on documentation: comments is an element's leading comment, the
+    # description the reference and the MCP tools show. A method's tool
+    # title and description are in its options.
+    - id: HOUSE_FIELD_NO_PRODUCT_NAME
+      on: field
+      check: "!comments.lowerAscii().matches(r'\\b(acme|acmecorp)\\b')"
+      message: Field descriptions say what the field holds, not which product serves it.
+    - id: HOUSE_TOOL_NO_PRODUCT_NAME
+      on: method
+      check: >-
+        !comments.lowerAscii().matches(r'\b(acme|acmecorp)\b') &&
+        (!has(options['dedo.v1.method'].tool) ||
+        !(options['dedo.v1.method'].tool.title + ' ' + options['dedo.v1.method'].tool.description).lowerAscii().matches(r'\b(acme|acmecorp)\b'))
+      message: A method's description and tool text name no product.
+
 
 breaking:
   # The breaking rule sets that run: DEDO, dedo's (an RPC keeps its scopes,
