@@ -23,6 +23,15 @@
       "x-owner-team": "contacts-team"
     }
   ],
+  "x-tagGroups": [
+    {
+      "name": "Contacts",
+      "tags": [
+        "Contact",
+        "Location"
+      ]
+    }
+  ],
   "paths": {
     "/commerce/contacts/v1/locations": {
       "get": {

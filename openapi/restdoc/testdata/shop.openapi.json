@@ -33,6 +33,21 @@
       "parent": "acme.orders.v1"
     }
   ],
+  "x-tagGroups": [
+    {
+      "name": "Catalog",
+      "tags": [
+        "Product"
+      ]
+    },
+    {
+      "name": "Orders",
+      "tags": [
+        "Orders",
+        "Return"
+      ]
+    }
+  ],
   "paths": {
     "/shop/v1/orders/{ordersId}": {
       "get": {

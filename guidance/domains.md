@@ -213,6 +213,16 @@ The layers are how the code is built; the reader sees only the domain. Headings 
 
 A reference that supports 3.2 shows context, module, aggregate and operation as four levels. The docs page that `dedo init` writes uses Scalar, which does. A viewer that ignores `parent` still lists every service, without the package level.
 
+Documentation sites that build their navigation from `x-tagGroups` instead, the extension Redoc introduced, such as Docusaurus with `docusaurus-plugin-openapi-docs`, find the same grouping there: the document lists one group per package, named after its title (the nav tag's `summary`), with the tags of its services in order. A document of one package gets one group too, since those sites put a tag that no group lists under "UNTAGGED"; when that package has no name, the group takes the document's title. Two packages with one title, such as `acme.orders.v1` and `shop.orders.v1`, are told apart by their full names. The nav tags themselves are in no group: they hold no operations.
+
+```json
+"x-tagGroups": [
+  {"name": "Orders", "tags": ["Orders", "Returns"]}
+]
+```
+
+`no_tag_groups` in the generator's `opt` leaves `x-tagGroups` out. Scalar reads it too, as a heading over the services of each package, so a single-package reference shows that heading above its services.
+
 ## Checklist
 
 - One repository, one context, one REST root.
