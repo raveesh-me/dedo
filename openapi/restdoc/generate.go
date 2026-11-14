@@ -6,6 +6,7 @@ package restdoc
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -14,6 +15,7 @@ import (
 	"google.golang.org/protobuf/compiler/protogen"
 	"google.golang.org/protobuf/proto"
 
+	"github.com/raveesh-me/dedo/accessdoc"
 	dedov1 "github.com/raveesh-me/dedo/gen/go/dedo/v1"
 )
 
@@ -28,6 +30,13 @@ type Config struct {
 	// narrower one are left out. Unset, only AUDIENCE_COMPONENT_INTERNAL
 	// services are left out.
 	MinAudience dedov1.Audience
+
+	// Access are the paths of access files (package accessdoc), read in
+	// order: what an auth generator says a caller holding a scope must also
+	// satisfy. An operation gets each of its scopes' paragraphs in its
+	// description and their specification extensions. The access=<path>
+	// parameter adds one, and may be repeated.
+	Access []string
 
 	// Warn, when set, receives each warning: a problem worth fixing that
 	// does not stop generation. It is not a plugin parameter.
@@ -51,6 +60,11 @@ func (c *Config) Set(name, value string) error {
 			return err
 		}
 		c.MinAudience = a
+	case "access":
+		if strings.TrimSpace(value) == "" {
+			return errors.New("access: name an access file")
+		}
+		c.Access = append(c.Access, value)
 	default:
 		return fmt.Errorf("unknown parameter %q", name)
 	}
@@ -60,6 +74,8 @@ func (c *Config) Set(name, value string) error {
 type generator struct {
 	schemas   *schemas
 	resources map[string][]string // resource type to patterns
+	// access are the access files' requirements, by scope.
+	access accessdoc.Requirements
 }
 
 // Generate writes one OpenAPI document for every service in the files to
@@ -68,13 +84,17 @@ type generator struct {
 // the document still exists, with no operations, so whatever serves or
 // embeds it keeps working.
 func Generate(plugin *protogen.Plugin, cfg Config) error {
+	access, err := readAccess(cfg.Access)
+	if err != nil {
+		return err
+	}
 	services, mods, version, left := documented(plugin, cfg)
 	if cfg.Warn != nil && len(services) == 0 && left > 0 {
 		cfg.Warn(fmt.Sprintf("every service (%d) is for an audience narrower than min_audience, so the document has no operations", left))
 	}
 	// Schemas are named over the documented services' messages only, so a
 	// left-out message never changes, or shows, a documented one's name.
-	g := &generator{schemas: newSchemas(plugin.Files, services), resources: resourceIndex(plugin.Files)}
+	g := &generator{schemas: newSchemas(plugin.Files, services), resources: resourceIndex(plugin.Files), access: access}
 	doc := &Document{
 		OpenAPI: "3.2.0",
 		Paths:   map[string]*PathItem{},

@@ -8,6 +8,10 @@ Version bumps, dependency updates and changes to benchmarks or examples alone ar
 
 ## [Unreleased]
 
+### Added
+
+- Access requirements per scope. `protoc-gen-dedo-openapi` and `protoc-gen-dedo-mcp` take `access=<path>`, repeatable: a file an auth generator writes (commerce-auth's `protoc-gen-commerce-iam`, `opt: access=access.json`), keyed by scope, `{"scopes": {"<scope>": {"description": "…", "extensions": {"x-…": …}, "meta": {"<key>": …}}}}` (package `accessdoc`), so a condition on a scope is declared once, in the auth contract, and dedo stays auth-agnostic. An RPC gets the entry of each scope it declares: the descriptions as paragraphs of its operation's description, after the scopes and before the events, and of its tool's, before its errors, in scope order and then file order; the extensions, named `x-…` and none of dedo's own, on its operation, after dedo's fields in name order; the meta in its tool's `_meta` (`mcpserver.Meta`). A scope no documented RPC declares is ignored; one extension or meta key twice for an RPC, an unreadable file or an unknown field fails the run. Error reasons stay in `(dedo.v1.method).errors`. `mcpserver.DescribeWithRequirements` is `Describe` with the requirements' paragraph. Without `access=`, the output is unchanged.
+
 ### Changed
 
 - `dedo.v1.Audience` and `ServiceRules.audience` now say what dedo uses them for: who an API is designed, documented and supported for, which decides where it is published (Zalando rule 219's `x-audience`). The audience is not who is authorized to call: every call is checked against its method's scopes, whatever the audience. Their comments, and `guideline.md`, used to say "who may call", which read as authorization. Only the documentation changed.

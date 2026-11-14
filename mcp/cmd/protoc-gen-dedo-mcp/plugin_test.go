@@ -36,8 +36,20 @@ func TestMain(m *testing.M) {
 }
 
 // execPlugin runs protoc-gen-dedo-mcp over the files with params, as buf
-// does, and returns its response and stderr.
+// does, and returns its response and stderr. A response error fails the
+// test.
 func execPlugin(t *testing.T, params string, files ...*descriptorpb.FileDescriptorProto) (*pluginpb.CodeGeneratorResponse, string, error) {
+	t.Helper()
+	resp, stderr, err := execPluginResponse(t, params, files...)
+	if err == nil && resp.Error != nil {
+		t.Fatalf("plugin error: %s", resp.GetError())
+	}
+	return resp, stderr, err
+}
+
+// execPluginResponse is execPlugin returning the response as it is, error
+// included.
+func execPluginResponse(t *testing.T, params string, files ...*descriptorpb.FileDescriptorProto) (*pluginpb.CodeGeneratorResponse, string, error) {
 	t.Helper()
 	var names []string
 	for _, f := range files {
@@ -62,9 +74,6 @@ func execPlugin(t *testing.T, params string, files ...*descriptorpb.FileDescript
 	var resp pluginpb.CodeGeneratorResponse
 	if err := proto.Unmarshal(stdout.Bytes(), &resp); err != nil {
 		t.Fatal(err)
-	}
-	if resp.Error != nil {
-		t.Fatalf("plugin error: %s", resp.GetError())
 	}
 	return &resp, stderr.String(), nil
 }

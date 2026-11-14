@@ -17,6 +17,11 @@
 // AUDIENCE_COMPONENT_INTERNAL ones. A left-out service still gets its
 // <Service>MCPTools, returning no tools and with no schemas, so a main.go
 // that registers every service's tools keeps compiling.
+//
+// The option access=<path>, repeatable, reads an access file (package
+// accessdoc) that an auth generator wrote: each tool gets, from the scopes
+// its RPC declares, their paragraphs in its description, before its errors,
+// and their meta in its _meta.
 package main
 
 import (
@@ -28,6 +33,7 @@ import (
 	"google.golang.org/protobuf/compiler/protogen"
 	"google.golang.org/protobuf/types/pluginpb"
 
+	"github.com/raveesh-me/dedo/accessdoc"
 	"github.com/raveesh-me/dedo/mcp/mcpserver"
 	"github.com/raveesh-me/dedo/mcp/schema"
 )
@@ -99,7 +105,7 @@ func generate(plugin *protogen.Plugin, f *protogen.File, cfg Config) error {
 		writeMap(g, inputSchemas(svc), "MCP tool input, built from the request message, its field comments and\n// google.api.field_behavior.", inputs)
 		g.P()
 		writeMap(g, outputSchemas(svc), "MCP tool output: the response message as mcpserver encodes it in\n// structuredContent.", outputs)
-		if err := writeTools(g, svc); err != nil {
+		if err := writeTools(g, svc, cfg.access); err != nil {
 			return err
 		}
 	}
@@ -124,8 +130,9 @@ func writeNoTools(g *protogen.GeneratedFile, svc *protogen.Service) {
 }
 
 // writeTools writes <Service>MCPTools, with each tool's definition as
-// mcpserver.Describe returns it and a typed forwarder.
-func writeTools(g *protogen.GeneratedFile, svc *protogen.Service) error {
+// mcpserver.DescribeWithRequirements returns it, with the access requirements of
+// its RPC's scopes, their meta as its _meta, and a typed forwarder.
+func writeTools(g *protogen.GeneratedFile, svc *protogen.Service, access accessdoc.Requirements) error {
 	var methods []*protogen.Method
 	for _, m := range svc.Methods {
 		if mcpserver.Serves(m.Desc) {
@@ -143,9 +150,17 @@ func writeTools(g *protogen.GeneratedFile, svc *protogen.Service) error {
 	g.P("func ", name, "() []", tool, " {")
 	g.P("return []", tool, "{")
 	for _, m := range methods {
-		t, err := mcpserver.Describe(m.Desc)
+		req, err := access.For(scopes(m))
+		if err != nil {
+			return fmt.Errorf("%s: %w", m.Desc.FullName(), err)
+		}
+		t, err := mcpserver.DescribeWithRequirements(m.Desc, req.Description)
 		if err != nil {
 			return err
+		}
+		meta, err := req.MetaJSON()
+		if err != nil {
+			return fmt.Errorf("%s: _meta: %w", m.Desc.FullName(), err)
 		}
 		full := strconv.Quote(string(m.Desc.FullName()))
 		raw := g.QualifiedGoIdent(protogen.GoIdent{GoName: "RawMessage", GoImportPath: jsonPkg})
@@ -154,6 +169,9 @@ func writeTools(g *protogen.GeneratedFile, svc *protogen.Service) error {
 		g.P("Name: ", strconv.Quote(t.Name), ",")
 		g.P("Title: ", strconv.Quote(t.Title), ",")
 		g.P("Description: ", strconv.Quote(t.Description), ",")
+		if meta != nil {
+			g.P("Meta: ", g.QualifiedGoIdent(protogen.GoIdent{GoName: "Meta", GoImportPath: mcpserverPkg}), "(", strconv.Quote(string(meta)), "),")
+		}
 		a := t.Annotations
 		g.P("Annotations: &", g.QualifiedGoIdent(protogen.GoIdent{GoName: "ToolAnnotations", GoImportPath: mcpPkg}), "{")
 		g.P("Title: ", strconv.Quote(a.Title), ",")

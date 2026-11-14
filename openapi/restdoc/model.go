@@ -1,5 +1,12 @@
 package restdoc
 
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"sort"
+)
+
 // The subset of OpenAPI 3.2 the generator emits. Maps marshal with sorted
 // keys, so the output is deterministic.
 
@@ -64,6 +71,40 @@ type Operation struct {
 	Procedure    string                `json:"x-rpc-procedure"`
 	ErrorReasons []string              `json:"x-error-reasons,omitempty"`
 	Emits        []string              `json:"x-emits,omitempty"`
+	// Extensions are the specification extensions the access files give
+	// its scopes, by name, written after the fields above in name order.
+	Extensions map[string]json.RawMessage `json:"-"`
+}
+
+// MarshalJSON writes the operation's fields, then its Extensions sorted by
+// name, so the same operation is always the same bytes.
+func (o *Operation) MarshalJSON() ([]byte, error) {
+	type fields Operation
+	b, err := json.Marshal((*fields)(o))
+	if err != nil || len(o.Extensions) == 0 {
+		return b, err
+	}
+	names := make([]string, 0, len(o.Extensions))
+	for name := range o.Extensions {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	var buf bytes.Buffer
+	buf.Write(b[:len(b)-1]) // the object, without its closing brace
+	for _, name := range names {
+		key, err := json.Marshal(name)
+		if err != nil {
+			return nil, err
+		}
+		buf.WriteByte(',')
+		buf.Write(key)
+		buf.WriteByte(':')
+		if err := json.Compact(&buf, o.Extensions[name]); err != nil {
+			return nil, fmt.Errorf("extension %s: %w", name, err)
+		}
+	}
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 
 // Parameter is a path or query parameter.
