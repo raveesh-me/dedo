@@ -245,13 +245,13 @@ An older dedo then fails the lint before reading anything else in the file, with
 
 | `on` | Variables |
 | --- | --- |
-| `file` | `name` (the path), `proto_package`, `imports`, `options` |
-| `service` | `name`, `full_name`, `file`, `proto_package`, `methods`, `resources` (the `google.api.resource` types its methods take or return, at any depth, each once), `roots` (those of `resources` with no pattern nested under another's: `orders/{order}/lines/{line}` belongs to `orders/{order}`), `title` (of `dedo.v1.service`, empty when unset), `options` |
-| `method` | `name`, `full_name`, `file`, `proto_package`, `service`, `input`, `output`, `client_streaming`, `server_streaming`, `idempotency` (`NO_SIDE_EFFECTS`, `IDEMPOTENT`, `UNKNOWN`), `http_verb` and `http_path` (of the `google.api.http` rule), `http_bindings` (the rule and each of its `additional_bindings`, as `{verb, path}` maps), `scopes`, `errors` (reasons), `deprecated`, `options`, `service_options` (its service's `options`) |
-| `message` | `name`, `full_name`, `file`, `proto_package`, `fields`, `options` |
-| `field` | `name`, `full_name`, `file`, `proto_package`, `message`, `type` (a scalar kind such as `string`, or a message or enum full name), `repeated`, `optional`, `behaviors` (such as `REQUIRED`), `json_name`, `options` |
-| `enum` | `name`, `full_name`, `file`, `proto_package`, `values`, `options` |
-| `resource` | `name`, `full_name`, `file`, `proto_package`, `type`, `patterns`, `singular`, `plural`, `options` |
+| `file` | `name` (the path), `proto_package`, `imports`, `comments` (of its `package` statement), `options` |
+| `service` | `name`, `full_name`, `file`, `proto_package`, `comments`, `methods`, `resources` (the `google.api.resource` types its methods take or return, at any depth, each once), `roots` (those of `resources` with no pattern nested under another's: `orders/{order}/lines/{line}` belongs to `orders/{order}`), `title` (of `dedo.v1.service`, empty when unset), `options` |
+| `method` | `name`, `full_name`, `file`, `proto_package`, `comments`, `service`, `input`, `output`, `client_streaming`, `server_streaming`, `idempotency` (`NO_SIDE_EFFECTS`, `IDEMPOTENT`, `UNKNOWN`), `http_verb` and `http_path` (of the `google.api.http` rule), `http_bindings` (the rule and each of its `additional_bindings`, as `{verb, path}` maps), `scopes`, `errors` (reasons), `deprecated`, `options`, `service_options` (its service's `options`) |
+| `message` | `name`, `full_name`, `file`, `proto_package`, `comments`, `fields`, `options` |
+| `field` | `name`, `full_name`, `file`, `proto_package`, `comments`, `message`, `type` (a scalar kind such as `string`, or a message or enum full name), `repeated`, `optional`, `behaviors` (such as `REQUIRED`), `json_name`, `options` |
+| `enum` | `name`, `full_name`, `file`, `proto_package`, `comments`, `values`, `options` |
+| `resource` | `name`, `full_name`, `file`, `proto_package`, `comments` (the message's), `type`, `patterns`, `singular`, `plural`, `options` |
 
 `options` holds every extension set on the element's options, keyed by the extension's full name, whatever file declares it: dedo's own, such as `dedo.v1.method`, and your organisation's, which buf passes with the module's imports. A message value is a map of its fields by their names in the `.proto`, an enum is its value's name, a repeated field is a list and a map field a map with string keys. An unset scalar reads as its zero value and an unset repeated or map field as empty; an unset message field, and an unset member of a oneof (a proto3 `optional` field among them), are left out, so test them with `has()`. An extension that is not set is not a key, so test it with `in`. A method also reads its service's options as `service_options`. With `acme.auth.v1` options of your own:
 
@@ -270,6 +270,24 @@ An older dedo then fails the lint before reading anything else in the file, with
 ```
 
 A breaking rule reads the earlier element's as `against.options`: `against.options['acme.auth.v1.file'].permissions == options['acme.auth.v1.file'].permissions` keeps a file's permissions as they were.
+
+`comments` is the element's leading comment, the text the REST reference and the MCP tools show as its description: each line trimmed, without the comment markers, empty when there is none. A file's is the comment above its `package` statement, which the reference shows as the package's description. Trailing and detached comments are not read, since dedo publishes neither. A method's tool title and description, which the MCP tools and the reference show too, are options: `options['dedo.v1.method'].tool.title` and `.description`, after `has(options['dedo.v1.method'].tool)`; a message's `dedo.v1.message` description is `options['dedo.v1.message'].description`. Keep a word out of everything readers see:
+
+```yaml
+- id: HOUSE_NO_PRODUCT_NAME
+  on: field                # and one rule each on file, service, method, message and enum
+  check: "!comments.lowerAscii().matches(r'\\b(acme|acmecorp)\\b')"
+  message: Descriptions say what the API does, not which product serves it.
+- id: HOUSE_NO_PRODUCT_NAME_TOOL
+  on: method
+  check: >-
+    !has(options['dedo.v1.method'].tool) ||
+    !(options['dedo.v1.method'].tool.title + ' ' + options['dedo.v1.method'].tool.description)
+      .lowerAscii().matches(r'\b(acme|acmecorp)\b')
+  message: A tool's title and description name no product.
+```
+
+A rules file whose checks read `comments` needs the release that added it: set its `dedo` key to that release (see [Newer rules files](#house-rules)), so an older dedo says to upgrade rather than failing to compile the check.
 
 **Across files.** Every check also reads `image`: each file, service and method buf passes, your module's and its imports', so a rule on one element can look at the others. `image.files` is keyed by path, `image.services` and `image.methods` by full name, and each entry holds the variables a rule on that element reads, `options` included (and `service_options` for a method), plus `imported`, true for an element of an imported file. A breaking rule reads the current version's `image`; `against` has none. A rule that never reads `image` costs nothing; the first that does builds it once per run. With `calls`, an `acme.auth.v1.method` option naming the methods one calls with the caller's token:
 

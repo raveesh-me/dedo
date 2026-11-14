@@ -156,3 +156,36 @@ func TestMessageCarriesDoc(t *testing.T) {
 		t.Errorf("spec = %+v", specs[0])
 	}
 }
+
+// Every kind reads its element's leading comment as comments, trimmed as
+// the reference shows it: a file the comment of its package statement. A
+// trailing comment is not documentation, so it is not read. A method's
+// tool text is reachable through its options.
+func TestComments(t *testing.T) {
+	const whitelabel = "!comments.lowerAscii().matches(r'\\b(ghl|highlevel|gohighlevel)\\b')"
+	const tool = "options['dedo.v1.method'].tool"
+	got := findingsIn(t, "comments.proto",
+		rule("HOUSE_FILE_WHITELABEL", "file", whitelabel),
+		rule("HOUSE_SERVICE_WHITELABEL", "service", whitelabel),
+		rule("HOUSE_METHOD_WHITELABEL", "method", whitelabel),
+		rule("HOUSE_MESSAGE_WHITELABEL", "message", whitelabel),
+		rule("HOUSE_FIELD_WHITELABEL", "field", whitelabel),
+		rule("HOUSE_ENUM_WHITELABEL", "enum", whitelabel),
+		rule("HOUSE_RESOURCE_WHITELABEL", "resource", whitelabel),
+		rule("HOUSE_TOOL_WHITELABEL", "method",
+			"!has("+tool+") || !("+tool+".title + ' ' + "+tool+".description).lowerAscii().matches(r'\\b(ghl|highlevel|gohighlevel)\\b')"),
+		rule("HOUSE_FILE_COMMENTS_OK", "file", "comments == 'Carts and what is in them,\\nas HighLevel keeps them.'"),
+		rule("HOUSE_RESOURCE_COMMENTS_OK", "resource", "comments == 'A cart.'"),
+		rule("HOUSE_COMMENTED", "field", "comments != ''"),
+		rule("HOUSE_IMAGE_COMMENTS_OK", "file", "image.services['shop.notes.v1.CartService'].comments == 'Manages carts.' && "+
+			"image.methods['shop.notes.v1.CartService.ListCarts'].comments == 'Lists carts.'"),
+	)
+	assertFindings(t, got, map[string]int{
+		"HOUSE_FILE_WHITELABEL":   1, // HighLevel, on its second line
+		"HOUSE_METHOD_WHITELABEL": 1, // GetCart: GHL
+		"HOUSE_FIELD_WHITELABEL":  1, // GetCartRequest.name: ghl-1
+		"HOUSE_ENUM_WHITELABEL":   1, // GoHighLevel
+		"HOUSE_TOOL_WHITELABEL":   1, // GetCart's title
+		"HOUSE_COMMENTED":         1, // Cart.owner has only a trailing comment
+	})
+}

@@ -8,6 +8,10 @@ Version bumps, dependency updates and changes to benchmarks or examples alone ar
 
 ## [Unreleased]
 
+### Added
+
+- House rules read documentation: `comments`, on every kind of element and in `image`'s entries, is its leading comment as the reference and the MCP tools show it, each line trimmed, empty when there is none; a file's is the comment on its `package` statement. Trailing and detached comments are left out, since dedo publishes neither. A rule can keep a word out of every description, such as `!comments.lowerAscii().matches(r'\b(acme|acmecorp)\b')`. A method's tool title and description were already readable, as `options['dedo.v1.method'].tool.title` and `.description`; `guidance/RULES.md` now says so. A shared rules file that reads `comments` sets its `dedo` key to this release, so an older dedo asks for an upgrade rather than failing to compile the check.
+
 ### Changed
 
 - `dedo.v1.Audience` and `ServiceRules.audience` now say what dedo uses them for: who an API is designed, documented and supported for, which decides where it is published (Zalando rule 219's `x-audience`). The audience is not who is authorized to call: every call is checked against its method's scopes, whatever the audience. Their comments, and `guideline.md`, used to say "who may call", which read as authorization. Only the documentation changed.
