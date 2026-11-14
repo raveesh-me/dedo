@@ -210,7 +210,8 @@
           "code": {
             "type": "integer",
             "format": "int32",
-            "description": "The google.rpc.Code."
+            "description": "The google.rpc.Code.",
+            "example": 5
           },
           "details": {
             "type": "array",
@@ -218,15 +219,24 @@
               "type": "object",
               "properties": {
                 "@type": {
-                  "type": "string"
+                  "type": "string",
+                  "description": "The type of the detail.",
+                  "example": "type.googleapis.com/google.rpc.ErrorInfo"
                 }
               },
               "additionalProperties": {}
-            }
+            },
+            "example": [
+              {
+                "@type": "type.googleapis.com/google.rpc.ErrorInfo",
+                "reason": "NOT_FOUND"
+              }
+            ]
           },
           "message": {
             "type": "string",
-            "description": "A developer-facing explanation."
+            "description": "A developer-facing explanation.",
+            "example": "The resource was not found."
           }
         },
         "required": [

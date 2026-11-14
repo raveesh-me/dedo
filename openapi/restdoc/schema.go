@@ -125,6 +125,7 @@ func (s *schemas) object(m *protogen.Message, skip map[string]bool) *Schema {
 		fs := s.field(f.Desc)
 		fs.Description = cleanComment(f.Comments.Leading)
 		applyFieldOptions(fs, f.Desc)
+		fs.Example = fieldExample(f.Desc)
 		out.Properties[f.Desc.JSONName()] = fs
 		if hasBehavior(f.Desc, annotations.FieldBehavior_REQUIRED) {
 			out.Required = append(out.Required, f.Desc.JSONName())

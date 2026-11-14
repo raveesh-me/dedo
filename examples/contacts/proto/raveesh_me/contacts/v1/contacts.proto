@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package raveesh_me.contacts.v1;
 
+import "buf/validate/validate.proto";
 import "dedo/v1/options.proto";
 import "google/api/annotations.proto";
 import "google/api/field_behavior.proto";
@@ -204,9 +205,12 @@ message Location {
   };
 
   // The resource name, such as locations/1.
-  string name = 1 [(google.api.field_behavior) = IDENTIFIER];
+  string name = 1 [
+    (google.api.field_behavior) = IDENTIFIER,
+    (buf.validate.field).string.example = "locations/1"
+  ];
   // The name shown to people.
-  string display_name = 2;
+  string display_name = 2 [(buf.validate.field).string.example = "Downtown"];
 }
 
 // Contact is one person a location keeps in touch with.
@@ -221,18 +225,26 @@ message Contact {
   };
 
   // The resource name, such as locations/1/contacts/2.
-  string name = 1 [(google.api.field_behavior) = IDENTIFIER];
+  string name = 1 [
+    (google.api.field_behavior) = IDENTIFIER,
+    (buf.validate.field).string.example = "locations/1/contacts/7"
+  ];
   // The name shown to people.
-  string display_name = 2 [(google.api.field_behavior) = REQUIRED];
+  string display_name = 2 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.example = "Grace Hopper"
+  ];
   // The contact's email address.
   string email = 3 [
     (google.api.field_behavior) = OPTIONAL,
-    (dedo.v1.field) = {sensitive: true}
+    (dedo.v1.field) = {sensitive: true},
+    (buf.validate.field).string.example = "grace@example.com"
   ];
   // The location this contact mostly deals with, such as locations/1.
   string home_location = 4 [
     (google.api.field_behavior) = OPTIONAL,
-    (google.api.resource_reference) = {type: "contacts.raveesh.me/Location"}
+    (google.api.resource_reference) = {type: "contacts.raveesh.me/Location"},
+    (buf.validate.field).string.example = "locations/1"
   ];
 }
 
@@ -243,7 +255,8 @@ message GetContactRequest {
   // The resource name of the contact.
   string name = 1 [
     (google.api.field_behavior) = REQUIRED,
-    (google.api.resource_reference) = {type: "contacts.raveesh.me/Contact"}
+    (google.api.resource_reference) = {type: "contacts.raveesh.me/Contact"},
+    (buf.validate.field).string.example = "locations/1/contacts/7"
   ];
 }
 
@@ -262,12 +275,19 @@ message ListContactsRequest {
   // The location whose contacts to list, such as locations/1.
   string parent = 1 [
     (google.api.field_behavior) = REQUIRED,
-    (google.api.resource_reference) = {child_type: "contacts.raveesh.me/Contact"}
+    (google.api.resource_reference) = {child_type: "contacts.raveesh.me/Contact"},
+    (buf.validate.field).string.example = "locations/1"
   ];
   // The most contacts to return. The server picks a size when it is 0.
-  int32 page_size = 2 [(google.api.field_behavior) = OPTIONAL];
+  int32 page_size = 2 [
+    (google.api.field_behavior) = OPTIONAL,
+    (buf.validate.field).int32.example = 20
+  ];
   // The next_page_token of the previous page, empty for the first.
-  string page_token = 3 [(google.api.field_behavior) = OPTIONAL];
+  string page_token = 3 [
+    (google.api.field_behavior) = OPTIONAL,
+    (buf.validate.field).string.example = "20"
+  ];
 }
 
 // ListContactsResponse is the response of ListContacts.
@@ -277,7 +297,7 @@ message ListContactsResponse {
   // The contacts on this page.
   repeated Contact contacts = 1;
   // The token of the next page, empty on the last.
-  string next_page_token = 2;
+  string next_page_token = 2 [(buf.validate.field).string.example = "20"];
 }
 
 // CreateContactRequest is the request of CreateContact.
@@ -287,12 +307,16 @@ message CreateContactRequest {
   // The location to add the contact to, such as locations/1.
   string parent = 1 [
     (google.api.field_behavior) = REQUIRED,
-    (google.api.resource_reference) = {child_type: "contacts.raveesh.me/Contact"}
+    (google.api.resource_reference) = {child_type: "contacts.raveesh.me/Contact"},
+    (buf.validate.field).string.example = "locations/1"
   ];
   // The contact to add.
   Contact contact = 2 [(google.api.field_behavior) = REQUIRED];
   // The ID to give the contact. The server picks one when it is empty.
-  string contact_id = 3 [(google.api.field_behavior) = OPTIONAL];
+  string contact_id = 3 [
+    (google.api.field_behavior) = OPTIONAL,
+    (buf.validate.field).string.example = "grace-hopper"
+  ];
 }
 
 // CreateContactResponse is the response of CreateContact.
@@ -310,7 +334,10 @@ message UpdateContactRequest {
   // The contact, with its name and the fields to change.
   Contact contact = 1 [(google.api.field_behavior) = REQUIRED];
   // The fields to change, such as display_name.
-  google.protobuf.FieldMask update_mask = 2 [(google.api.field_behavior) = OPTIONAL];
+  google.protobuf.FieldMask update_mask = 2 [
+    (google.api.field_behavior) = OPTIONAL,
+    (buf.validate.field).field_mask.example = {paths: "display_name"}
+  ];
 }
 
 // UpdateContactResponse is the response of UpdateContact.
@@ -328,7 +355,8 @@ message GetLocationRequest {
   // The resource name of the location.
   string name = 1 [
     (google.api.field_behavior) = REQUIRED,
-    (google.api.resource_reference) = {type: "contacts.raveesh.me/Location"}
+    (google.api.resource_reference) = {type: "contacts.raveesh.me/Location"},
+    (buf.validate.field).string.example = "locations/1"
   ];
 }
 
@@ -345,9 +373,15 @@ message ListLocationsRequest {
   option (dedo.v1.message) = {description: "Which page of locations to list."};
 
   // The most locations to return. The server picks a size when it is 0.
-  int32 page_size = 1 [(google.api.field_behavior) = OPTIONAL];
+  int32 page_size = 1 [
+    (google.api.field_behavior) = OPTIONAL,
+    (buf.validate.field).int32.example = 20
+  ];
   // The next_page_token of the previous page, empty for the first.
-  string page_token = 2 [(google.api.field_behavior) = OPTIONAL];
+  string page_token = 2 [
+    (google.api.field_behavior) = OPTIONAL,
+    (buf.validate.field).string.example = "20"
+  ];
 }
 
 // ListLocationsResponse is the response of ListLocations.
@@ -357,5 +391,5 @@ message ListLocationsResponse {
   // The locations on this page.
   repeated Location locations = 1;
   // The token of the next page, empty on the last.
-  string next_page_token = 2;
+  string next_page_token = 2 [(buf.validate.field).string.example = "20"];
 }

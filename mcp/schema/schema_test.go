@@ -3,6 +3,8 @@ package schema
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"math"
 	"strings"
 	"testing"
 
@@ -13,6 +15,8 @@ import (
 	"google.golang.org/protobuf/reflect/protodesc"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/descriptorpb"
+	"google.golang.org/protobuf/types/known/durationpb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 	"google.golang.org/protobuf/types/pluginpb"
 )
 
@@ -244,5 +248,49 @@ func TestPatternRegexp(t *testing.T) {
 		if got := patternRegexp(patterns); got != want {
 			t.Errorf("patternRegexp(%v) = %s, want %s", patterns, got, want)
 		}
+	}
+}
+
+// A field's protovalidate example becomes the keyword examples, in the
+// JSON mapping, on inputs and outputs alike.
+func TestExamples(t *testing.T) {
+	ms := methods(t)
+	for _, c := range []struct {
+		name   string
+		schema Object
+		path   []string
+		want   []any
+	}{
+		{"get input name", Input(ms["GetTodo"]), []string{"name"}, []any{"todos/42"}},
+		{"list input page_size", Input(ms["ListTodos"]), []string{"page_size"}, []any{int32(20)}},
+		{"create input title", Input(ms["CreateTodo"]), []string{"todo", "title"}, []any{"Renew the office lease"}},
+		{"output create_time", Output(ms["GetTodo"]), []string{"todo", "create_time"}, []any{"2026-01-01T00:00:00Z"}},
+		{"output done", Output(ms["GetTodo"]), []string{"todo", "done"}, []any{false}},
+		{"no example", Output(ms["GetTodo"]), []string{"todo", "budget_amount", "units"}, nil},
+	} {
+		compiled(t, c.name, c.schema)
+		got, _ := props(c.schema, c.path...)["examples"].([]any)
+		if fmt.Sprint(got) != fmt.Sprint(c.want) {
+			t.Errorf("%s: examples = %#v, want %#v", c.name, got, c.want)
+		}
+	}
+}
+
+func TestExampleValues(t *testing.T) {
+	ts := &timestamppb.Timestamp{Seconds: 1767225600, Nanos: 500000000}
+	if got := timestampJSON(ts); got != "2026-01-01T00:00:00.5Z" {
+		t.Errorf("timestamp = %v", got)
+	}
+	if got := durationJSON(&durationpb.Duration{Seconds: 90}); got != "90s" {
+		t.Errorf("duration = %v", got)
+	}
+	if got := durationJSON(&durationpb.Duration{Seconds: 1, Nanos: 500000000}); got != "1.5s" {
+		t.Errorf("duration = %v", got)
+	}
+	if got := finite(math.NaN()); got != nil {
+		t.Errorf("NaN example = %v, want none", got)
+	}
+	if got := decimal([]int64{12}); got != "12" {
+		t.Errorf("int64 example = %#v, want \"12\"", got)
 	}
 }

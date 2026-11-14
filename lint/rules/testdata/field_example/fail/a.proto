@@ -1,0 +1,70 @@
+syntax = "proto3";
+
+package raveesh_me.todo.v1;
+
+import "buf/validate/validate.proto";
+import "dedo/v1/options.proto";
+import "google/api/annotations.proto";
+import "google/api/field_behavior.proto";
+import "google/api/resource.proto";
+import "google/protobuf/duration.proto";
+import "google/protobuf/field_mask.proto";
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/wrappers.proto";
+
+service TodoService {
+  option (dedo.v1.service) = {audience: AUDIENCE_EXTERNAL_PUBLIC};
+  rpc GetTodo(GetTodoRequest) returns (GetTodoResponse) {
+    option (google.api.http) = {get: "/v1/{name=todos/*}"};
+  }
+  rpc UpdateTodo(UpdateTodoRequest) returns (UpdateTodoResponse) {
+    option (google.api.http) = {
+      patch: "/v1/{todo.name=todos/*}"
+      body: "todo"
+    };
+  }
+}
+
+message Todo {
+  option (google.api.resource) = {
+    type: "example.com/Todo"
+    pattern: "todos/{todo}"
+  };
+  string name = 1 [(buf.validate.field).string.example = "tasks/1"]; // want
+  string title = 2; // want
+  int64 count = 3 [(buf.validate.field).string.example = "3"]; // want
+  google.protobuf.Timestamp create_time = 4 [(google.api.field_behavior) = OUTPUT_ONLY]; // want
+  google.protobuf.Duration lifetime = 5; // want
+  google.protobuf.StringValue nickname = 6; // want
+  repeated string labels = 7; // want
+  map<string, int32> sizes = 8 [(buf.validate.field).map.values.int32.example = 3]; // want
+  Status status = 9 [(buf.validate.field).enum.example = 7]; // want
+  Detail detail = 10;
+  bytes thumbnail = 11; // want
+}
+
+message Detail {
+  bool done = 1; // want
+}
+
+enum Status {
+  STATUS_UNSPECIFIED = 0;
+  STATUS_OPEN = 1;
+}
+
+message GetTodoRequest {
+  string name = 1 [(google.api.resource_reference).type = "example.com/Todo"]; // want
+}
+
+message GetTodoResponse {
+  Todo todo = 1;
+}
+
+message UpdateTodoRequest {
+  Todo todo = 1;
+  google.protobuf.FieldMask update_mask = 2; // want
+}
+
+message UpdateTodoResponse {
+  Todo todo = 1;
+}

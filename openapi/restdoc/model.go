@@ -165,6 +165,7 @@ type Schema struct {
 	AdditionalProperties *Schema            `json:"additionalProperties,omitempty"`
 	Enum                 []string           `json:"enum,omitempty"`
 	Pattern              string             `json:"pattern,omitempty"`
+	Example              any                `json:"example,omitempty"`
 	ReadOnly             bool               `json:"readOnly,omitempty"`
 	WriteOnly            bool               `json:"writeOnly,omitempty"`
 	Deprecated           bool               `json:"deprecated,omitempty"`

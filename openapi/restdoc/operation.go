@@ -184,7 +184,7 @@ func (g *generator) parameters(m *protogen.Method, params []pathParam, body stri
 			In:          "path",
 			Required:    true,
 			Description: fmt.Sprintf("Part of `%s`, which has the form `%s`.", p.field, p.full),
-			Schema:      &Schema{Type: "string"},
+			Schema:      &Schema{Type: "string", Example: g.pathExample(m.Input, p)},
 		})
 		bound[strings.Split(p.field, ".")[0]] = true
 	}
@@ -201,7 +201,7 @@ func (g *generator) parameters(m *protogen.Method, params []pathParam, body stri
 			In:          "query",
 			Description: cleanComment(f.Comments.Leading),
 			Required:    hasBehavior(f.Desc, annotations.FieldBehavior_REQUIRED),
-			Schema:      g.schemas.field(f.Desc),
+			Schema:      withExample(g.schemas.field(f.Desc), f.Desc),
 		})
 	}
 	return out

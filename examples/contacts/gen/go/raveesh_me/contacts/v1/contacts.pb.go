@@ -7,6 +7,7 @@
 package contactsv1
 
 import (
+	_ "buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
 	_ "github.com/raveesh-me/dedo/gen/go/dedo/v1"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
@@ -780,70 +781,72 @@ var File_raveesh_me_contacts_v1_contacts_proto protoreflect.FileDescriptor
 
 const file_raveesh_me_contacts_v1_contacts_proto_rawDesc = "" +
 	"\n" +
-	"%raveesh_me/contacts/v1/contacts.proto\x12\x16raveesh_me.contacts.v1\x1a\x15dedo/v1/options.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x19google/api/resource.proto\x1a google/protobuf/field_mask.proto\"\xd1\x01\n" +
-	"\bLocation\x12\x18\n" +
-	"\x04name\x18\x01 \x01(\tB\x04\xe2A\x01\bR\x04name\x12!\n" +
-	"\fdisplay_name\x18\x02 \x01(\tR\vdisplayName:\x87\x01\xeaAI\n" +
+	"%raveesh_me/contacts/v1/contacts.proto\x12\x16raveesh_me.contacts.v1\x1a\x1bbuf/validate/validate.proto\x1a\x15dedo/v1/options.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x19google/api/resource.proto\x1a google/protobuf/field_mask.proto\"\xf6\x01\n" +
+	"\bLocation\x12+\n" +
+	"\x04name\x18\x01 \x01(\tB\x17\xe2A\x01\b\xbaH\x10r\x0e\x92\x02\vlocations/1R\x04name\x123\n" +
+	"\fdisplay_name\x18\x02 \x01(\tB\x10\xbaH\rr\v\x92\x02\bDowntownR\vdisplayName:\x87\x01\xeaAI\n" +
 	"\x1ccontacts.raveesh.me/Location\x12\x14locations/{location}*\tlocations2\blocation»\x187\n" +
-	"5A business location. Contacts belong to one location.\"\xc7\x02\n" +
-	"\aContact\x12\x18\n" +
-	"\x04name\x18\x01 \x01(\tB\x04\xe2A\x01\bR\x04name\x12'\n" +
-	"\fdisplay_name\x18\x02 \x01(\tB\x04\xe2A\x01\x02R\vdisplayName\x12 \n" +
-	"\x05email\x18\x03 \x01(\tB\n" +
-	"\xe2A\x01\x01\xba\xbb\x18\x02\b\x01R\x05email\x12J\n" +
-	"\rhome_location\x18\x04 \x01(\tB%\xe2A\x01\x01\xfaA\x1e\n" +
-	"\x1ccontacts.raveesh.me/LocationR\fhomeLocation:\x8a\x01\xeaAY\n" +
+	"5A business location. Contacts belong to one location.\"\xa5\x03\n" +
+	"\aContact\x126\n" +
+	"\x04name\x18\x01 \x01(\tB\"\xe2A\x01\b\xbaH\x1br\x19\x92\x02\x16locations/1/contacts/7R\x04name\x12;\n" +
+	"\fdisplay_name\x18\x02 \x01(\tB\x18\xe2A\x01\x02\xbaH\x11r\x0f\x92\x02\fGrace HopperR\vdisplayName\x129\n" +
+	"\x05email\x18\x03 \x01(\tB#\xe2A\x01\x01\xbaH\x16r\x14\x92\x02\x11grace@example.com\xba\xbb\x18\x02\b\x01R\x05email\x12]\n" +
+	"\rhome_location\x18\x04 \x01(\tB8\xe2A\x01\x01\xfaA\x1e\n" +
+	"\x1ccontacts.raveesh.me/Location\xbaH\x10r\x0e\x92\x02\vlocations/1R\fhomeLocation:\x8a\x01\xeaAY\n" +
 	"\x1bcontacts.raveesh.me/Contact\x12'locations/{location}/contacts/{contact}*\bcontacts2\acontact»\x18*\n" +
-	"(A person a location keeps in touch with.\"j\n" +
-	"\x11GetContactRequest\x128\n" +
-	"\x04name\x18\x01 \x01(\tB$\xe2A\x01\x02\xfaA\x1d\n" +
-	"\x1bcontacts.raveesh.me/ContactR\x04name:\x1b»\x18\x17\n" +
+	"(A person a location keeps in touch with.\"\x88\x01\n" +
+	"\x11GetContactRequest\x12V\n" +
+	"\x04name\x18\x01 \x01(\tBB\xe2A\x01\x02\xfaA\x1d\n" +
+	"\x1bcontacts.raveesh.me/Contact\xbaH\x1br\x19\x92\x02\x16locations/1/contacts/7R\x04name:\x1b»\x18\x17\n" +
 	"\x15Which contact to get.\"m\n" +
 	"\x12GetContactResponse\x129\n" +
 	"\acontact\x18\x01 \x01(\v2\x1f.raveesh_me.contacts.v1.ContactR\acontact:\x1c»\x18\x18\n" +
-	"\x16The requested contact.\"\xca\x01\n" +
-	"\x13ListContactsRequest\x12<\n" +
-	"\x06parent\x18\x01 \x01(\tB$\xe2A\x01\x02\xfaA\x1d\x12\x1bcontacts.raveesh.me/ContactR\x06parent\x12!\n" +
-	"\tpage_size\x18\x02 \x01(\x05B\x04\xe2A\x01\x01R\bpageSize\x12#\n" +
+	"\x16The requested contact.\"\xee\x01\n" +
+	"\x13ListContactsRequest\x12O\n" +
+	"\x06parent\x18\x01 \x01(\tB7\xe2A\x01\x02\xfaA\x1d\x12\x1bcontacts.raveesh.me/Contact\xbaH\x10r\x0e\x92\x02\vlocations/1R\x06parent\x12(\n" +
+	"\tpage_size\x18\x02 \x01(\x05B\v\xe2A\x01\x01\xbaH\x04\x1a\x02@\x14R\bpageSize\x12-\n" +
 	"\n" +
-	"page_token\x18\x03 \x01(\tB\x04\xe2A\x01\x01R\tpageToken:-»\x18)\n" +
-	"'Whose contacts to list, and which page.\"\x98\x01\n" +
+	"page_token\x18\x03 \x01(\tB\x0e\xe2A\x01\x01\xbaH\ar\x05\x92\x02\x0220R\tpageToken:-»\x18)\n" +
+	"'Whose contacts to list, and which page.\"\xa4\x01\n" +
 	"\x14ListContactsResponse\x12;\n" +
-	"\bcontacts\x18\x01 \x03(\v2\x1f.raveesh_me.contacts.v1.ContactR\bcontacts\x12&\n" +
-	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken:\x1b»\x18\x17\n" +
-	"\x15One page of contacts.\"\xf4\x01\n" +
-	"\x14CreateContactRequest\x12<\n" +
-	"\x06parent\x18\x01 \x01(\tB$\xe2A\x01\x02\xfaA\x1d\x12\x1bcontacts.raveesh.me/ContactR\x06parent\x12?\n" +
-	"\acontact\x18\x02 \x01(\v2\x1f.raveesh_me.contacts.v1.ContactB\x04\xe2A\x01\x02R\acontact\x12#\n" +
+	"\bcontacts\x18\x01 \x03(\v2\x1f.raveesh_me.contacts.v1.ContactR\bcontacts\x122\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tB\n" +
+	"\xbaH\ar\x05\x92\x02\x0220R\rnextPageToken:\x1b»\x18\x17\n" +
+	"\x15One page of contacts.\"\x9b\x02\n" +
+	"\x14CreateContactRequest\x12O\n" +
+	"\x06parent\x18\x01 \x01(\tB7\xe2A\x01\x02\xfaA\x1d\x12\x1bcontacts.raveesh.me/Contact\xbaH\x10r\x0e\x92\x02\vlocations/1R\x06parent\x12?\n" +
+	"\acontact\x18\x02 \x01(\v2\x1f.raveesh_me.contacts.v1.ContactB\x04\xe2A\x01\x02R\acontact\x127\n" +
 	"\n" +
-	"contact_id\x18\x03 \x01(\tB\x04\xe2A\x01\x01R\tcontactId:8»\x184\n" +
+	"contact_id\x18\x03 \x01(\tB\x18\xe2A\x01\x01\xbaH\x11r\x0f\x92\x02\fgrace-hopperR\tcontactId:8»\x184\n" +
 	"2The contact to add, and the location to add it to.\"l\n" +
 	"\x15CreateContactResponse\x129\n" +
 	"\acontact\x18\x01 \x01(\v2\x1f.raveesh_me.contacts.v1.ContactR\acontact:\x18»\x18\x14\n" +
-	"\x12The added contact.\"\xd8\x01\n" +
+	"\x12The added contact.\"\xee\x01\n" +
 	"\x14UpdateContactRequest\x12?\n" +
-	"\acontact\x18\x01 \x01(\v2\x1f.raveesh_me.contacts.v1.ContactB\x04\xe2A\x01\x02R\acontact\x12A\n" +
-	"\vupdate_mask\x18\x02 \x01(\v2\x1a.google.protobuf.FieldMaskB\x04\xe2A\x01\x01R\n" +
+	"\acontact\x18\x01 \x01(\v2\x1f.raveesh_me.contacts.v1.ContactB\x04\xe2A\x01\x02R\acontact\x12W\n" +
+	"\vupdate_mask\x18\x02 \x01(\v2\x1a.google.protobuf.FieldMaskB\x1a\xe2A\x01\x01\xbaH\x13\xe2\x01\x10\"\x0e\n" +
+	"\fdisplay_nameR\n" +
 	"updateMask:<»\x188\n" +
 	"6The contact's new fields, and which of them to change.\"n\n" +
 	"\x15UpdateContactResponse\x129\n" +
 	"\acontact\x18\x01 \x01(\v2\x1f.raveesh_me.contacts.v1.ContactR\acontact:\x1a»\x18\x16\n" +
-	"\x14The updated contact.\"m\n" +
-	"\x12GetLocationRequest\x129\n" +
-	"\x04name\x18\x01 \x01(\tB%\xe2A\x01\x02\xfaA\x1e\n" +
-	"\x1ccontacts.raveesh.me/LocationR\x04name:\x1c»\x18\x18\n" +
+	"\x14The updated contact.\"\x80\x01\n" +
+	"\x12GetLocationRequest\x12L\n" +
+	"\x04name\x18\x01 \x01(\tB8\xe2A\x01\x02\xfaA\x1e\n" +
+	"\x1ccontacts.raveesh.me/Location\xbaH\x10r\x0e\x92\x02\vlocations/1R\x04name:\x1c»\x18\x18\n" +
 	"\x16Which location to get.\"r\n" +
 	"\x13GetLocationResponse\x12<\n" +
 	"\blocation\x18\x01 \x01(\v2 .raveesh_me.contacts.v1.LocationR\blocation:\x1d»\x18\x19\n" +
-	"\x17The requested location.\"\x86\x01\n" +
-	"\x14ListLocationsRequest\x12!\n" +
-	"\tpage_size\x18\x01 \x01(\x05B\x04\xe2A\x01\x01R\bpageSize\x12#\n" +
+	"\x17The requested location.\"\x97\x01\n" +
+	"\x14ListLocationsRequest\x12(\n" +
+	"\tpage_size\x18\x01 \x01(\x05B\v\xe2A\x01\x01\xbaH\x04\x1a\x02@\x14R\bpageSize\x12-\n" +
 	"\n" +
-	"page_token\x18\x02 \x01(\tB\x04\xe2A\x01\x01R\tpageToken:&»\x18\"\n" +
-	" Which page of locations to list.\"\xaa\x01\n" +
+	"page_token\x18\x02 \x01(\tB\x0e\xe2A\x01\x01\xbaH\ar\x05\x92\x02\x0220R\tpageToken:&»\x18\"\n" +
+	" Which page of locations to list.\"\xb6\x01\n" +
 	"\x15ListLocationsResponse\x12>\n" +
-	"\tlocations\x18\x01 \x03(\v2 .raveesh_me.contacts.v1.LocationR\tlocations\x12&\n" +
-	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken:)»\x18%\n" +
+	"\tlocations\x18\x01 \x03(\v2 .raveesh_me.contacts.v1.LocationR\tlocations\x122\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tB\n" +
+	"\xbaH\ar\x05\x92\x02\x0220R\rnextPageToken:)»\x18%\n" +
 	"#One page of the caller's locations.2\xd9\v\n" +
 	"\x0eContactService\x12\xca\x02\n" +
 	"\n" +

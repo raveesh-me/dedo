@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package {{.Package}};
 
+import "buf/validate/validate.proto";
 import "dedo/v1/options.proto";
 import "google/api/annotations.proto";
 import "google/api/field_behavior.proto";
@@ -78,11 +79,20 @@ message Item {
   option (dedo.v1.message) = {description: "One item."};
 
   // The resource name, such as items/1.
-  string name = 1 [(google.api.field_behavior) = IDENTIFIER];
+  string name = 1 [
+    (google.api.field_behavior) = IDENTIFIER,
+    (buf.validate.field).string.example = "items/1"
+  ];
   // The item's name, as people see it.
-  string display_name = 2 [(google.api.field_behavior) = REQUIRED];
+  string display_name = 2 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.example = "First item"
+  ];
   // When the item was created.
-  google.protobuf.Timestamp create_time = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+  google.protobuf.Timestamp create_time = 3 [
+    (google.api.field_behavior) = OUTPUT_ONLY,
+    (buf.validate.field).timestamp.example = {seconds: 1767225600}
+  ];
 }
 
 // GetItemRequest is the request of GetItem.
@@ -92,7 +102,8 @@ message GetItemRequest {
   // The resource name of the item.
   string name = 1 [
     (google.api.field_behavior) = REQUIRED,
-    (google.api.resource_reference) = {type: "{{.Domain}}/Item"}
+    (google.api.resource_reference) = {type: "{{.Domain}}/Item"},
+    (buf.validate.field).string.example = "items/1"
   ];
 }
 
@@ -111,7 +122,10 @@ message CreateItemRequest {
   // The item to create.
   Item item = 1 [(google.api.field_behavior) = REQUIRED];
   // The ID to give the item. The server picks one when it is empty.
-  string item_id = 2 [(google.api.field_behavior) = OPTIONAL];
+  string item_id = 2 [
+    (google.api.field_behavior) = OPTIONAL,
+    (buf.validate.field).string.example = "first-item"
+  ];
 }
 
 // CreateItemResponse is the response of CreateItem.
