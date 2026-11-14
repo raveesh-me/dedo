@@ -992,7 +992,7 @@ option (google.api.http) = {
 
 ### DEDO_RESOURCE_SAME
 
-**Checks** that a resource keeps its `type` and every `pattern` it had. Adding a pattern passes. Patterns are compared by their structure, not as text: renaming a pattern's variables passes, as `tax-rates/{tax_rate}` to `tax-rates/{taxRate}`, since `tax-rates/abc` resolves the same under both and a variable's name appears in no resource name or REST path. Adding, removing or changing a literal segment, adding or removing a variable, or reordering segments fails.
+**Checks** that a resource keeps its `type` and every `pattern` it had. Adding a pattern passes. Patterns are compared by their structure, not as text: renaming a pattern's variables passes, as `tax-rates/{tax_rate}` to `tax-rates/{taxRate}`, since `tax-rates/abc` resolves the same under both and, on the wire, a variable's name appears in no resource name or REST path (a client generator that names helpers after the variables, as Google's do, sees a source change). Adding, removing or changing a literal segment, adding or removing a variable, or reordering segments fails.
 
 **Why.** Clients store resource names and refer to resources by type. A dropped pattern leaves stored names that no longer resolve; a new type breaks every `resource_reference` to the old one.
 

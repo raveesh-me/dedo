@@ -236,13 +236,15 @@ var resourceSame = breakingRule(
 )
 
 // patternVariable is a variable of a resource name pattern, such as {book}.
-var patternVariable = regexp.MustCompile(`\{[^{}]*\}`)
+// A variable with a template of its own, {book=shelves/*}, is not one, so it
+// is compared as text.
+var patternVariable = regexp.MustCompile(`\{[^{}=]*\}`)
 
 // samePattern reports whether two resource name patterns have the same
 // literals in the same places and differ at most in the names of their
 // variables, as tax-rates/{tax_rate} and tax-rates/{taxRate} do. A name such
-// as tax-rates/abc resolves the same under both: a variable's name appears in
-// no resource name, request or REST path.
+// as tax-rates/abc resolves the same under both: on the wire, a variable's
+// name appears in no resource name, request or REST path.
 func samePattern(a, b string) bool {
 	return patternVariable.ReplaceAllString(a, "{}") == patternVariable.ReplaceAllString(b, "{}")
 }

@@ -32,6 +32,7 @@ func TestSamePattern(t *testing.T) {
 		{"segments reordered", "libraries/{library}/copies/{copy}", "copies/{copy}/libraries/{library}", false},
 		{"variable became literal", "books/{book}", "books/default", false},
 		{"literal became variable", "books/default", "books/{book}", false},
+		{"variable template changed", "books/{book=shelves/*}", "books/{book=racks/*}", false},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := samePattern(tt.before, tt.now); got != tt.same {
