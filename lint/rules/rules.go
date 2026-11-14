@@ -80,6 +80,7 @@ var All = []*check.RuleSpec{
 	errorClassificationDeclared,
 	serviceLevel,
 	methodServiceLevel,
+	fieldExampleRequired,
 	multiTenantServiceTenancy,
 	multiTenantResourcePattern,
 	multiTenantRequestTenant,

@@ -43,6 +43,7 @@ syntax = "proto3";
 
 package acme.time_counter.v1;
 
+import "buf/validate/validate.proto";
 import "google/api/annotations.proto";
 import "google/api/field_behavior.proto";
 import "google/api/resource.proto";
@@ -145,13 +146,25 @@ message Counter {
   option (dedo.v1.message) = {description: "The time counted for one task."};
 
   // The resource name, such as counters/1.
-  string name = 1 [(google.api.field_behavior) = IDENTIFIER];
+  string name = 1 [
+    (google.api.field_behavior) = IDENTIFIER,
+    (buf.validate.field).string.example = "counters/1"
+  ];
   // The task being timed.
-  string display_name = 2 [(google.api.field_behavior) = REQUIRED];
+  string display_name = 2 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.example = "Quarterly report"
+  ];
   // The time counted so far.
-  google.protobuf.Duration elapsed = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+  google.protobuf.Duration elapsed = 3 [
+    (google.api.field_behavior) = OUTPUT_ONLY,
+    (buf.validate.field).duration.example = {seconds: 5400}
+  ];
   // When the counter was created.
-  google.protobuf.Timestamp create_time = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+  google.protobuf.Timestamp create_time = 4 [
+    (google.api.field_behavior) = OUTPUT_ONLY,
+    (buf.validate.field).timestamp.example = {seconds: 1767225600}
+  ];
 }
 
 // GetCounterRequest is the request of GetCounter.
@@ -161,7 +174,8 @@ message GetCounterRequest {
   // The resource name of the counter.
   string name = 1 [
     (google.api.field_behavior) = REQUIRED,
-    (google.api.resource_reference) = {type: "time-counter.acme.com/Counter"}
+    (google.api.resource_reference) = {type: "time-counter.acme.com/Counter"},
+    (buf.validate.field).string.example = "counters/1"
   ];
 }
 
@@ -180,7 +194,10 @@ message CreateCounterRequest {
   // The counter to create.
   Counter counter = 1 [(google.api.field_behavior) = REQUIRED];
   // The ID to give the counter. The server picks one when it is empty.
-  string counter_id = 2 [(google.api.field_behavior) = OPTIONAL];
+  string counter_id = 2 [
+    (google.api.field_behavior) = OPTIONAL,
+    (buf.validate.field).string.example = "quarterly-report"
+  ];
 }
 
 // CreateCounterResponse is the response of CreateCounter.
@@ -198,10 +215,14 @@ message AddTimeRequest {
   // The resource name of the counter.
   string name = 1 [
     (google.api.field_behavior) = REQUIRED,
-    (google.api.resource_reference) = {type: "time-counter.acme.com/Counter"}
+    (google.api.resource_reference) = {type: "time-counter.acme.com/Counter"},
+    (buf.validate.field).string.example = "counters/1"
   ];
   // How much time to add.
-  google.protobuf.Duration duration = 2 [(google.api.field_behavior) = REQUIRED];
+  google.protobuf.Duration duration = 2 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).duration.example = {seconds: 90}
+  ];
 }
 
 // AddTimeResponse is the response of AddTime.
@@ -213,7 +234,7 @@ message AddTimeResponse {
 }
 ```
 
-`tool` is how each RPC appears as an MCP tool. The model always sees `description`; `annotations` are the MCP specification's hints for the client. `AddTime` only adds time, so it is not destructive; a delete would be. [RULES.md](RULES.md#dedo_tool_annotations) explains how to set each hint.
+Every scalar field, and every timestamp and duration, carries an example in protovalidate's `example` rule of its type, which the REST reference and the MCP tools show and validation ignores ([guideline.md](guideline.md#examples) says how to write them). `tool` is how each RPC appears as an MCP tool. The model always sees `description`; `annotations` are the MCP specification's hints for the client. `AddTime` only adds time, so it is not destructive; a delete would be. [RULES.md](RULES.md#dedo_tool_annotations) explains how to set each hint.
 
 Then set the repository up around it:
 

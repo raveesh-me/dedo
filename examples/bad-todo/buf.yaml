@@ -8,6 +8,7 @@ modules:
   - path: third_party/dedo
 deps:
   - buf.build/googleapis/googleapis
+  - buf.build/bufbuild/protovalidate
 lint:
   use:
     - STANDARD

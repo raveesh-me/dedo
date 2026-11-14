@@ -142,12 +142,43 @@ The MCP tool schemas also read the standard annotations, so a model can get a ca
 | `google.api.resource` and `resource_reference` | A `pattern` for resource names, such as `^todos/[^/]+$` |
 | `buf.validate` rules | `minimum`, `maximum`, `minLength`, `maxLength`, `pattern`, `enum`, `minItems`, `maxItems`, and `format` for `email`, `uri` and `uuid`. Add `connectrpc.com/validate`'s interceptor so the server enforces the same rules on every transport (see `examples/todo/app/app.go`). |
 | `google.type.Money` | The currency code pattern and the `nanos` range its comments document |
+| `buf.validate` `example` | `examples`, with the first example of a scalar, an enum, a timestamp, a duration, a wrapper or a repeated field's items ([Examples](#examples)) |
 
 Tool calls name fields as the proto does (`budget_amount`), field masks included; `mcpserver` converts mask paths to the JSON mapping. Responses carry every field, defaults included, so an empty list reads `{"todos": [], "next_page_token": ""}`.
 
 Write `tool.description` and `message.description` for the person or model choosing between operations: what it does and when to use it. Proto comments stay the place for notes to implementers.
 
 Every RPC returns a unique `<Rpc>Response` message. Set `response_body` on Get, Create and Update, so REST callers receive the bare resource.
+
+### Examples
+
+Give every scalar field an example with protovalidate's `example` rule of the field's type. protovalidate ignores it when it validates; the reference shows it on the property and the parameters, and the MCP tools in their schemas (`examples`). [`DEDO_FIELD_EXAMPLE`](RULES.md#dedo_field_example) requires one on every scalar field the REST reference documents, output-only fields included.
+
+```protobuf
+message Product {
+  string name = 1 [
+    (google.api.field_behavior) = IDENTIFIER,
+    (buf.validate.field).string.example = "products/01HZX3QK4M"
+  ];
+  string title = 2 [(buf.validate.field).string.example = "Linen shirt, navy"];
+  int64 stock = 3 [(buf.validate.field).int64.example = 240];
+  repeated string tags = 4 [(buf.validate.field).repeated.items.string.example = "summer"];
+  google.protobuf.Timestamp create_time = 5 [
+    (google.api.field_behavior) = OUTPUT_ONLY,
+    (buf.validate.field).timestamp.example = {seconds: 1767225600}
+  ];
+  ProductStatus status = 6;  // An enum needs none: the reference shows its first value after the zero value.
+}
+```
+
+- **Realistic.** Write what a real caller sends or sees: a plausible title, a typical amount, a real-looking ID in the form the service issues (`products/01HZX3QK4M`, not `products/string` or `products/123` when IDs are ULIDs). Readers copy examples; one that the server rejects teaches the wrong thing.
+- **Never secret or personal.** No real tokens, keys, passwords, email addresses, phone numbers or customer names, and nothing from production. Use reserved forms: `ada@example.com`, `+1 555 0100`, `https://example.com/...`. A `sensitive` field still gets an example, an obviously made-up one.
+- **Resource names in their pattern's form.** A resource's `name` and every field with a `resource_reference` take a full name that matches one of the resource's patterns, `shelves/main/books/01HZX3`, never a bare ID. Lint checks the form, and the reference takes each path parameter's example from the matching segment, so `{shelf}` shows `main` and `{book}` shows `01HZX3`. Keep the IDs of related examples consistent: the book a `GetBookRequest` names is the book its response shows.
+- **The declared type, in the field's own rule.** `int64.example = 240` on an `int64` field, never `string.example = "240"`: the rule of another type does not count, and the generator writes each example in the JSON mapping (a 64-bit integer as `"240"`, bytes in base64, a timestamp in RFC 3339), so it always matches the schema. A repeated field's example goes in `repeated.items`, a map's in `map.keys` and `map.values`, a wrapper's in the wrapped type's rule (`string.example` on a `StringValue`).
+- **One of the enum's values.** An enum's example is a value it declares: `enum.example = 2` must be a number the enum defines, and without one the reference uses its first value after `_UNSPECIFIED`. Keep strings that the server accepts from a fixed set, such as a currency code, to that set too (`"USD"`, not `"usd"`).
+- **Plain values.** No brand, product or company names that the API should not carry, and nothing a reader would mistake for a real account.
+
+The first example is the one the reference and the tools show; add more only for the reader of the proto.
 
 ## 4. Lint
 

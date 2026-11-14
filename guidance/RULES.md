@@ -357,6 +357,7 @@ A house rule that contradicts a DEDO, AIP or ZALANDO rule without overriding it 
 | [`DEDO_ERROR_CLASSIFICATION_DECLARED`](#dedo_error_classification_declared) | An error classification names a declared reason, once, and changes how it counts |
 | [`DEDO_SERVICE_LEVEL`](#dedo_service_level) | A service's level objectives are sane: shares in range, latency thresholds on bucket boundaries, a window in whole days |
 | [`DEDO_METHOD_SERVICE_LEVEL`](#dedo_method_service_level) | An RPC's own objectives are sane, with no latency on a stream, and an exempt RPC's service declares objectives |
+| [`DEDO_FIELD_EXAMPLE`](#dedo_field_example) | Every scalar field the REST reference documents has a protovalidate example of its type, and a resource name's has its form |
 
 ---
 
@@ -892,6 +893,44 @@ rpc WatchTodos(WatchTodosRequest) returns (stream WatchTodosResponse) {
 ```
 
 **Fix.** Declare the service's objectives first, or remove the RPC's; drop latency objectives from streaming RPCs.
+
+### DEDO_FIELD_EXAMPLE
+
+**Checks** that every field the REST reference documents with a single JSON value declares an example, in protovalidate's `example` rule of the field's type: `(buf.validate.field).string.example`, `int64.example`, `bool.example` and so on. protovalidate ignores `example` when it validates, so it only documents. The fields checked are those of the module's own messages that the request or response of an RPC reaches, through fields, when the RPC has a `google.api.http` binding, is not deprecated, and its service's audience is not `AUDIENCE_COMPONENT_INTERNAL` (the generators leave those out by default). Each field is checked once, however many RPCs reach it.
+
+| Field | Needs |
+| --- | --- |
+| A scalar, output-only and input-only ones too | `<type>.example`, such as `string.example`; the type must be the field's, so `string.example` on an `int64` field does not count (and Buf's `PROTOVALIDATE` rule rejects it) |
+| A repeated scalar | `repeated.items.<type>.example` |
+| A map | `map.keys.<type>.example`, and `map.values.<type>.example` when its values are scalars |
+| `Timestamp`, `Duration`, `FieldMask` | `timestamp.example`, `duration.example`, `field_mask.example` |
+| A wrapper, such as `StringValue` | The wrapped type's: `string.example` |
+| An enum | Nothing: the reference uses the first value after the zero value. An `enum.example` it declares must be one of its values |
+| A message, `Struct`, `Value`, `Any` | Nothing: its schema documents its fields, and the reference composes a list's or map's example from them |
+| A deprecated field | Nothing |
+
+It also checks that every example of a resource name, the `name` of a resource or a field with a `resource_reference`, has one of the resource's patterns' forms: `todos/01HZX3` for `todos/{todo}`. The reference takes a path parameter's example from the matching segment of the bound field's example.
+
+**Why.** An example shows a reader, and an agent, what a value looks like, which a type and a description rarely do: the form of an ID, the unit of an amount, the precision of a time. API catalogues and quality gates require one on every parameter and every scalar property, such as HighLevel's public API gate (its rule 13). Output-only fields need one too: the reference documents responses, and a reader learns most from what a response holds. `protoc-gen-dedo-openapi` puts the first example on the property, the query parameter and the path parameters, in the JSON mapping (a 64-bit integer as a string, bytes in base64, a timestamp in RFC 3339), so it always matches the declared type. `protoc-gen-dedo-mcp` adds it to the tool's schemas as `examples`.
+
+```protobuf
+message Todo {
+  string name = 1 [
+    (google.api.field_behavior) = IDENTIFIER,
+    (buf.validate.field).string.example = "todos/01HZX3QK4M"  // Passes: the form of todos/{todo}.
+  ];
+  string title = 2 [(buf.validate.field).string.example = "Renew the office lease"];  // Passes.
+  int32 priority = 3;  // Fails: no example.
+  int64 views = 4 [(buf.validate.field).string.example = "12"];  // Fails, and Buf's PROTOVALIDATE: int64 takes int64.example = 12.
+  google.protobuf.Timestamp create_time = 5 [
+    (google.api.field_behavior) = OUTPUT_ONLY,
+    (buf.validate.field).timestamp.example = {seconds: 1767225600}  // Passes: 2026-01-01T00:00:00Z.
+  ];
+  Status status = 6;  // Passes: the reference uses STATUS_OPEN, the first value after STATUS_UNSPECIFIED.
+}
+```
+
+**Fix.** Add a realistic example of the field's type, following [Examples](guideline.md#examples) in the guideline: a value a real caller would send or see, never a secret or real personal data. A service not ready for the rule disables it in `dedo.yaml`.
 
 ## Breaking rules
 

@@ -3,6 +3,7 @@ module github.com/raveesh-me/dedo/examples/bad-todo
 go 1.26.0
 
 require (
+	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.12-20260825204119-511051f7f437.2
 	connectrpc.com/connect/v2 v2.0.1
 	connectrpc.com/vanguard v0.5.0
 	github.com/raveesh-me/dedo v0.39.0

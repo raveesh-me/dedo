@@ -220,19 +220,27 @@ func resourceIndex(files []*protogen.File) map[string][]string {
 	return index
 }
 
+// errorInfoType is the type URL of google.rpc.ErrorInfo, the detail that
+// carries an error's reason.
+const errorInfoType = "type.googleapis.com/google.rpc.ErrorInfo"
+
 // statusSchemaDef is the google.rpc.Status JSON that REST errors carry.
 func statusSchemaDef() *Schema {
 	return &Schema{
 		Type:        "object",
 		Description: "An error. details holds a google.rpc.ErrorInfo whose reason is one of the operation's declared reasons.",
 		Properties: map[string]*Schema{
-			"code":    {Type: "integer", Format: "int32", Description: "The google.rpc.Code."},
-			"message": {Type: "string", Description: "A developer-facing explanation."},
+			"code":    {Type: "integer", Format: "int32", Description: "The google.rpc.Code.", Example: 5},
+			"message": {Type: "string", Description: "A developer-facing explanation.", Example: "The resource was not found."},
 			"details": {Type: "array", Items: &Schema{
-				Type:                 "object",
-				Properties:           map[string]*Schema{"@type": {Type: "string"}},
+				Type: "object",
+				Properties: map[string]*Schema{"@type": {
+					Type:        "string",
+					Description: "The type of the detail.",
+					Example:     errorInfoType,
+				}},
 				AdditionalProperties: &Schema{},
-			}},
+			}, Example: []any{map[string]any{"@type": errorInfoType, "reason": "NOT_FOUND"}}},
 		},
 		Required: []string{"code", "message"},
 	}

@@ -7,6 +7,7 @@
 package todov1
 
 import (
+	_ "buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
 	_ "github.com/raveesh-me/dedo/gen/go/dedo/v1"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
@@ -212,7 +213,7 @@ type ListTodosRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// The maximum number of to-dos to return. The server caps it at 100.
 	PageSize int32 `protobuf:"varint,1,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
-	// The next_page_token of a previous call.
+	// The next_page_token of a previous call. It has no example.
 	PageToken     string `protobuf:"bytes,2,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -690,56 +691,58 @@ var File_raveesh_me_todo_v1_todo_proto protoreflect.FileDescriptor
 
 const file_raveesh_me_todo_v1_todo_proto_rawDesc = "" +
 	"\n" +
-	"\x1draveesh_me/todo/v1/todo.proto\x12\x12raveesh_me.todo.v1\x1a\x15dedo/v1/options.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x17google/api/client.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x19google/api/resource.proto\x1a google/protobuf/field_mask.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xc6\x02\n" +
-	"\x04Todo\x12\x18\n" +
-	"\x04name\x18\x01 \x01(\tB\x04\xe2A\x01\bR\x04name\x12\x1e\n" +
-	"\x05title\x18\x02 \x01(\tB\x04\xe2A\x01\x02R\ttodoTitle\x12\x18\n" +
-	"\x04done\x18\x03 \x01(\bB\x04\xe2A\x01\x01R\x04done\x12)\n" +
-	"\rbudget_amount\x18\x04 \x01(\x01B\x04\xe2A\x01\x01R\fbudgetAmount\x12E\n" +
-	"\x11assigned_to_email\x18\x05 \x01(\tB\x19\xe2A\x01\x01\xba\xbb\x18\x11\b\x01\x12\rtodo.assigneeR\x0fassignedToEmail\x12A\n" +
-	"\vcreate_time\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampB\x04\xe2A\x01\x03R\n" +
+	"\x1draveesh_me/todo/v1/todo.proto\x12\x12raveesh_me.todo.v1\x1a\x1bbuf/validate/validate.proto\x1a\x15dedo/v1/options.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x17google/api/client.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x19google/api/resource.proto\x1a google/protobuf/field_mask.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xae\x03\n" +
+	"\x04Todo\x12(\n" +
+	"\x04name\x18\x01 \x01(\tB\x14\xe2A\x01\b\xbaH\rr\v\x92\x02\btodos/42R\x04name\x12<\n" +
+	"\x05title\x18\x02 \x01(\tB\"\xe2A\x01\x02\xbaH\x1br\x19\x92\x02\x16Renew the office leaseR\ttodoTitle\x12\x1f\n" +
+	"\x04done\x18\x03 \x01(\bB\v\xe2A\x01\x01\xbaH\x04j\x02\x10\x00R\x04done\x127\n" +
+	"\rbudget_amount\x18\x04 \x01(\x01B\x12\xe2A\x01\x01\xbaH\v\x12\tI\x00\x00\x00\x00\x00 ^@R\fbudgetAmount\x12\\\n" +
+	"\x11assigned_to_email\x18\x05 \x01(\tB0\xe2A\x01\x01\xbaH\x14r\x12\x92\x02\x0fada@example.com\xba\xbb\x18\x11\b\x01\x12\rtodo.assigneeR\x0fassignedToEmail\x12O\n" +
+	"\vcreate_time\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampB\x12\xe2A\x01\x03\xbaH\v\xb2\x01\bR\x06\b\x80\xf2\xd6\xca\x06R\n" +
 	"createTime:5\xeaA2\n" +
-	"\x15todo.example.com/Todo\x12\ftodos/{todo}*\x05todos2\x04todo\"_\n" +
-	"\x0eGetTodoRequest\x122\n" +
-	"\x04name\x18\x01 \x01(\tB\x1e\xe2A\x01\x02\xfaA\x17\n" +
-	"\x15todo.example.com/TodoR\x04name:\x19»\x18\x15\n" +
+	"\x15todo.example.com/Todo\x12\ftodos/{todo}*\x05todos2\x04todo\"o\n" +
+	"\x0eGetTodoRequest\x12B\n" +
+	"\x04name\x18\x01 \x01(\tB.\xe2A\x01\x02\xfaA\x17\n" +
+	"\x15todo.example.com/Todo\xbaH\rr\v\x92\x02\btodos/42R\x04name:\x19»\x18\x15\n" +
 	"\x13Which to-do to get.\"[\n" +
 	"\x0fGetTodoResponse\x12,\n" +
 	"\x04todo\x18\x01 \x01(\v2\x18.raveesh_me.todo.v1.TodoR\x04todo:\x1a»\x18\x16\n" +
-	"\x14The requested to-do.\"\x8e\x01\n" +
-	"\x10ListTodosRequest\x120\n" +
-	"\tpage_size\x18\x01 \x01(\x05B\x13\xe2A\x01\x01\xba\xbb\x18\v\x12\tpage_sizeR\bpageSize\x12#\n" +
+	"\x14The requested to-do.\"\x95\x01\n" +
+	"\x10ListTodosRequest\x127\n" +
+	"\tpage_size\x18\x01 \x01(\x05B\x1a\xe2A\x01\x01\xbaH\x04\x1a\x02@\x14\xba\xbb\x18\v\x12\tpage_sizeR\bpageSize\x12#\n" +
 	"\n" +
 	"page_token\x18\x02 \x01(\tB\x04\xe2A\x01\x01R\tpageToken:#»\x18\x1f\n" +
-	"\x1dWhich page of to-dos to list.\"\x86\x01\n" +
+	"\x1dWhich page of to-dos to list.\"\x92\x01\n" +
 	"\x11ListTodosResponse\x12.\n" +
-	"\x05todos\x18\x01 \x03(\v2\x18.raveesh_me.todo.v1.TodoR\x05todos\x12&\n" +
-	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken:\x19»\x18\x15\n" +
-	"\x13One page of to-dos.\"\x99\x01\n" +
+	"\x05todos\x18\x01 \x03(\v2\x18.raveesh_me.todo.v1.TodoR\x05todos\x122\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tB\n" +
+	"\xbaH\ar\x05\x92\x02\x0220R\rnextPageToken:\x19»\x18\x15\n" +
+	"\x13One page of to-dos.\"\xae\x01\n" +
 	"\x11CreateTodoRequest\x122\n" +
-	"\x04todo\x18\x01 \x01(\v2\x18.raveesh_me.todo.v1.TodoB\x04\xe2A\x01\x02R\x04todo\x12\x1d\n" +
-	"\atodo_id\x18\x02 \x01(\tB\x04\xe2A\x01\x01R\x06todoId:1»\x18-\n" +
+	"\x04todo\x18\x01 \x01(\v2\x18.raveesh_me.todo.v1.TodoB\x04\xe2A\x01\x02R\x04todo\x122\n" +
+	"\atodo_id\x18\x02 \x01(\tB\x19\xe2A\x01\x01\xbaH\x12r\x10\x92\x02\rlease-renewalR\x06todoId:1»\x18-\n" +
 	"+The to-do to create, and optionally its ID.\"\\\n" +
 	"\x12CreateTodoResponse\x12,\n" +
 	"\x04todo\x18\x01 \x01(\v2\x18.raveesh_me.todo.v1.TodoR\x04todo:\x18»\x18\x14\n" +
-	"\x12The created to-do.\"\xce\x01\n" +
+	"\x12The created to-do.\"\xdc\x01\n" +
 	"\x11UpdateTodoRequest\x122\n" +
-	"\x04todo\x18\x01 \x01(\v2\x18.raveesh_me.todo.v1.TodoB\x04\xe2A\x01\x02R\x04todo\x12A\n" +
-	"\vupdate_mask\x18\x02 \x01(\v2\x1a.google.protobuf.FieldMaskB\x04\xe2A\x01\x01R\n" +
+	"\x04todo\x18\x01 \x01(\v2\x18.raveesh_me.todo.v1.TodoB\x04\xe2A\x01\x02R\x04todo\x12O\n" +
+	"\vupdate_mask\x18\x02 \x01(\v2\x1a.google.protobuf.FieldMaskB\x12\xe2A\x01\x01\xbaH\v\xe2\x01\b\"\x06\n" +
+	"\x04doneR\n" +
 	"updateMask:B»\x18>\n" +
 	"<The new field values of a to-do, and which fields to change.\"\\\n" +
 	"\x12UpdateTodoResponse\x12,\n" +
 	"\x04todo\x18\x01 \x01(\v2\x18.raveesh_me.todo.v1.TodoR\x04todo:\x18»\x18\x14\n" +
-	"\x12The updated to-do.\"e\n" +
-	"\x11DeleteTodoRequest\x122\n" +
-	"\x04name\x18\x01 \x01(\tB\x1e\xe2A\x01\x02\xfaA\x17\n" +
-	"\x15todo.example.com/TodoR\x04name:\x1c»\x18\x18\n" +
+	"\x12The updated to-do.\"u\n" +
+	"\x11DeleteTodoRequest\x12B\n" +
+	"\x04name\x18\x01 \x01(\tB.\xe2A\x01\x02\xfaA\x17\n" +
+	"\x15todo.example.com/Todo\xbaH\rr\v\x92\x02\btodos/42R\x04name:\x1c»\x18\x18\n" +
 	"\x16Which to-do to delete.\"-\n" +
 	"\x12DeleteTodoResponse:\x17»\x18\x13\n" +
-	"\x11Empty on success.\"e\n" +
-	"\x11RemoveTodoRequest\x122\n" +
-	"\x04name\x18\x01 \x01(\tB\x1e\xe2A\x01\x02\xfaA\x17\n" +
-	"\x15todo.example.com/TodoR\x04name:\x1c»\x18\x18\n" +
+	"\x11Empty on success.\"u\n" +
+	"\x11RemoveTodoRequest\x12B\n" +
+	"\x04name\x18\x01 \x01(\tB.\xe2A\x01\x02\xfaA\x17\n" +
+	"\x15todo.example.com/Todo\xbaH\rr\v\x92\x02\btodos/42R\x04name:\x1c»\x18\x18\n" +
 	"\x16Which to-do to remove.\"-\n" +
 	"\x12RemoveTodoResponse:\x17»\x18\x13\n" +
 	"\x11Empty on success.2\x9b\f\n" +

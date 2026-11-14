@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package raveesh_me.todo.v1;
 
+import "buf/validate/validate.proto";
 import "dedo/v1/options.proto";
 import "google/api/annotations.proto";
 import "google/api/client.proto";
@@ -195,25 +196,39 @@ message Todo {
   };
 
   // The resource name, such as todos/abc.
-  string name = 1 [(google.api.field_behavior) = IDENTIFIER];
+  string name = 1 [
+    (google.api.field_behavior) = IDENTIFIER,
+    (buf.validate.field).string.example = "todos/42"
+  ];
   // What needs doing.
   string title = 2 [
     json_name = "todoTitle",
-    (google.api.field_behavior) = REQUIRED
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.example = "Renew the office lease"
   ];
-  bool done = 3 [(google.api.field_behavior) = OPTIONAL];
+  bool done = 3 [
+    (google.api.field_behavior) = OPTIONAL,
+    (buf.validate.field).bool.example = false
+  ];
   // What doing it may cost.
-  double budget_amount = 4 [(google.api.field_behavior) = OPTIONAL];
+  double budget_amount = 4 [
+    (google.api.field_behavior) = OPTIONAL,
+    (buf.validate.field).double.example = 120.5
+  ];
   // The email of the person it is assigned to.
   string assigned_to_email = 5 [
     (google.api.field_behavior) = OPTIONAL,
     (dedo.v1.field) = {
       sensitive: true
       attribute: "todo.assignee"
-    }
+    },
+    (buf.validate.field).string.example = "ada@example.com"
   ];
   // When it was created.
-  google.protobuf.Timestamp create_time = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+  google.protobuf.Timestamp create_time = 6 [
+    (google.api.field_behavior) = OUTPUT_ONLY,
+    (buf.validate.field).timestamp.example = {seconds: 1767225600}
+  ];
 }
 
 // GetTodoRequest is the request of GetTodo.
@@ -223,7 +238,8 @@ message GetTodoRequest {
   // The resource name of the to-do.
   string name = 1 [
     (google.api.field_behavior) = REQUIRED,
-    (google.api.resource_reference) = {type: "todo.example.com/Todo"}
+    (google.api.resource_reference) = {type: "todo.example.com/Todo"},
+    (buf.validate.field).string.example = "todos/42"
   ];
 }
 
@@ -242,9 +258,10 @@ message ListTodosRequest {
   // The maximum number of to-dos to return. The server caps it at 100.
   int32 page_size = 1 [
     (google.api.field_behavior) = OPTIONAL,
-    (dedo.v1.field) = {attribute: "page_size"}
+    (dedo.v1.field) = {attribute: "page_size"},
+    (buf.validate.field).int32.example = 20
   ];
-  // The next_page_token of a previous call.
+  // The next_page_token of a previous call. It has no example.
   string page_token = 2 [(google.api.field_behavior) = OPTIONAL];
 }
 
@@ -255,7 +272,7 @@ message ListTodosResponse {
   // The to-dos.
   repeated Todo todos = 1;
   // The token of the next page, or empty on the last page.
-  string next_page_token = 2;
+  string next_page_token = 2 [(buf.validate.field).string.example = "20"];
 }
 
 // CreateTodoRequest is the request of CreateTodo.
@@ -266,7 +283,10 @@ message CreateTodoRequest {
   Todo todo = 1 [(google.api.field_behavior) = REQUIRED];
   // The ID to give the to-do, which becomes the last segment of its name.
   // The server picks one when it is empty.
-  string todo_id = 2 [(google.api.field_behavior) = OPTIONAL];
+  string todo_id = 2 [
+    (google.api.field_behavior) = OPTIONAL,
+    (buf.validate.field).string.example = "lease-renewal"
+  ];
 }
 
 // CreateTodoResponse is the response of CreateTodo.
@@ -284,7 +304,10 @@ message UpdateTodoRequest {
   // The to-do to update. Its name selects it.
   Todo todo = 1 [(google.api.field_behavior) = REQUIRED];
   // The fields to update.
-  google.protobuf.FieldMask update_mask = 2 [(google.api.field_behavior) = OPTIONAL];
+  google.protobuf.FieldMask update_mask = 2 [
+    (google.api.field_behavior) = OPTIONAL,
+    (buf.validate.field).field_mask.example = {paths: "done"}
+  ];
 }
 
 // UpdateTodoResponse is the response of UpdateTodo.
@@ -302,7 +325,8 @@ message DeleteTodoRequest {
   // The resource name of the to-do.
   string name = 1 [
     (google.api.field_behavior) = REQUIRED,
-    (google.api.resource_reference) = {type: "todo.example.com/Todo"}
+    (google.api.resource_reference) = {type: "todo.example.com/Todo"},
+    (buf.validate.field).string.example = "todos/42"
   ];
 }
 
@@ -318,7 +342,8 @@ message RemoveTodoRequest {
   // The resource name of the to-do.
   string name = 1 [
     (google.api.field_behavior) = REQUIRED,
-    (google.api.resource_reference) = {type: "todo.example.com/Todo"}
+    (google.api.resource_reference) = {type: "todo.example.com/Todo"},
+    (buf.validate.field).string.example = "todos/42"
   ];
 }
 
