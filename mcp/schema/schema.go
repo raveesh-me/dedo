@@ -105,7 +105,7 @@ func message(msg *protogen.Message, mode mode, depth int) Object {
 			continue
 		}
 		name := string(f.Desc.Name())
-		out["properties"].(Object)[name] = withDescription(field(f, depth, mode), comment(f))
+		out["properties"].(Object)[name] = withDescription(withExamples(field(f, depth, mode), f), comment(f))
 		switch {
 		case mode == modeOutput:
 		case mode == modePatch && identifier:

@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package raveesh_me.library.v1;
 
+import "buf/validate/validate.proto";
 import "dedo/v1/options.proto";
 import "google/api/annotations.proto";
 import "google/api/field_behavior.proto";
@@ -120,13 +121,19 @@ message Book {
   };
 
   // The resource name, such as shelves/1/books/2.
-  string name = 1 [(google.api.field_behavior) = IDENTIFIER];
+  string name = 1 [
+    (google.api.field_behavior) = IDENTIFIER,
+    (buf.validate.field).string.example = "shelves/fiction/books/9780141439518"
+  ];
   // The title shown to readers.
-  string title = 2;
+  string title = 2 [(buf.validate.field).string.example = "Pride and Prejudice"];
   // The retail price.
   google.type.Money price = 3;
   // The email of the reader who reserved the book.
-  string reserver_email = 4 [(dedo.v1.field) = {sensitive: true}];
+  string reserver_email = 4 [
+    (dedo.v1.field) = {sensitive: true},
+    (buf.validate.field).string.example = "reader@example.com"
+  ];
 }
 
 // GetBookRequest is the request of GetBook.
@@ -136,7 +143,8 @@ message GetBookRequest {
   // The resource name of the book.
   string name = 1 [
     (google.api.field_behavior) = REQUIRED,
-    (google.api.resource_reference) = {type: "library.raveesh.me/Book"}
+    (google.api.resource_reference) = {type: "library.raveesh.me/Book"},
+    (buf.validate.field).string.example = "shelves/fiction/books/9780141439518"
   ];
 }
 
@@ -155,7 +163,8 @@ message DeleteBookRequest {
   // The resource name of the book.
   string name = 1 [
     (google.api.field_behavior) = REQUIRED,
-    (google.api.resource_reference) = {type: "library.raveesh.me/Book"}
+    (google.api.resource_reference) = {type: "library.raveesh.me/Book"},
+    (buf.validate.field).string.example = "shelves/fiction/books/9780141439518"
   ];
 }
 
@@ -171,7 +180,8 @@ message RemoveBookRequest {
   // The resource name of the book.
   string name = 1 [
     (google.api.field_behavior) = REQUIRED,
-    (google.api.resource_reference) = {type: "library.raveesh.me/Book"}
+    (google.api.resource_reference) = {type: "library.raveesh.me/Book"},
+    (buf.validate.field).string.example = "shelves/fiction/books/9780141439518"
   ];
 }
 

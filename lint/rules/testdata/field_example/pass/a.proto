@@ -1,0 +1,108 @@
+syntax = "proto3";
+
+package raveesh_me.todo.v1;
+
+import "buf/validate/validate.proto";
+import "dedo/v1/options.proto";
+import "google/api/annotations.proto";
+import "google/api/resource.proto";
+import "google/protobuf/duration.proto";
+import "google/protobuf/field_mask.proto";
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/wrappers.proto";
+
+service TodoService {
+  option (dedo.v1.service) = {audience: AUDIENCE_EXTERNAL_PUBLIC};
+  rpc GetTodo(GetTodoRequest) returns (GetTodoResponse) {
+    option (google.api.http) = {get: "/v1/{name=todos/*}"};
+  }
+  rpc UpdateTodo(UpdateTodoRequest) returns (UpdateTodoResponse) {
+    option (google.api.http) = {
+      patch: "/v1/{todo.name=todos/*}"
+      body: "todo"
+    };
+  }
+  // A deprecated RPC is not documented on the quality gate.
+  rpc OldTodo(OldTodoRequest) returns (OldTodoResponse) {
+    option deprecated = true;
+    option (google.api.http) = {get: "/v1/old"};
+  }
+  // An RPC without an HTTP binding is not in the REST reference.
+  rpc PingTodo(OldTodoRequest) returns (OldTodoResponse);
+}
+
+// A service its frontend alone calls is not documented by default.
+service WebService {
+  option (dedo.v1.service) = {audience: AUDIENCE_COMPONENT_INTERNAL};
+  rpc GetPage(OldTodoRequest) returns (OldTodoResponse) {
+    option (google.api.http) = {get: "/v1/pages"};
+  }
+}
+
+message Todo {
+  option (google.api.resource) = {
+    type: "example.com/Todo"
+    pattern: "todos/{todo}"
+  };
+  string name = 1 [
+    (buf.validate.field).string.example = "todos/01HZX3",
+    (buf.validate.field).string.example = "todos/01HZX4"
+  ];
+  string title = 2 [(buf.validate.field).string.example = "Buy milk"];
+  int64 count = 3 [(buf.validate.field).int64.example = 3];
+  google.protobuf.Timestamp create_time = 4 [(buf.validate.field).timestamp.example = {seconds: 1767225600}];
+  google.protobuf.Duration lifetime = 5 [(buf.validate.field).duration.example = {seconds: 90}];
+  google.protobuf.StringValue nickname = 6 [(buf.validate.field).string.example = "Milk"];
+  repeated string labels = 7 [(buf.validate.field).repeated.items.string.example = "home"];
+  map<string, int32> sizes = 8 [
+    (buf.validate.field).map.keys.string.example = "cups",
+    (buf.validate.field).map.values.int32.example = 3
+  ];
+  // An enum's example is derived; a declared one names a value.
+  Status status = 9;
+  Status next_status = 10 [(buf.validate.field).enum.example = 1];
+  // Messages document their own fields.
+  Detail detail = 11;
+  repeated Detail details = 12;
+  google.protobuf.Struct extra = 13;
+  // A deprecated field needs none.
+  string legacy = 14 [deprecated = true];
+}
+
+message Detail {
+  bool done = 1 [(buf.validate.field).bool.example = true];
+}
+
+enum Status {
+  STATUS_UNSPECIFIED = 0;
+  STATUS_OPEN = 1;
+}
+
+message GetTodoRequest {
+  string name = 1 [
+    (google.api.resource_reference).type = "example.com/Todo",
+    (buf.validate.field).string.example = "todos/01HZX3"
+  ];
+}
+
+message GetTodoResponse {
+  Todo todo = 1;
+}
+
+message UpdateTodoRequest {
+  Todo todo = 1;
+  google.protobuf.FieldMask update_mask = 2 [(buf.validate.field).field_mask.example = {paths: ["title"]}];
+}
+
+message UpdateTodoResponse {
+  Todo todo = 1;
+}
+
+message OldTodoRequest {
+  string id = 1;
+}
+
+message OldTodoResponse {
+  string id = 1;
+}

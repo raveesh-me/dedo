@@ -8,6 +8,15 @@ Version bumps, dependency updates and changes to benchmarks or examples alone ar
 
 ## [Unreleased]
 
+### Breaking
+
+- `DEDO_FIELD_EXAMPLE`, in `DEDO`: every scalar field that the REST reference documents declares an example, in protovalidate's `example` rule of its type, such as `(buf.validate.field).string.example = "todos/42"` or `int64.example = 240`; a repeated scalar in `repeated.items`, a map in `map.keys` and `map.values`, a `Timestamp`, `Duration` or `FieldMask` in its own rule, a wrapper in the wrapped type's. The fields checked are those of the module's messages that a non-deprecated RPC with an HTTP binding reaches, when its service is not `AUDIENCE_COMPONENT_INTERNAL`; output-only fields included, deprecated fields, enums and messages not. A declared `enum.example` must be a value of the enum, and a resource name's example must have one of its resource's patterns' forms. Add the examples ([guideline.md](guidance/guideline.md#examples) says how to write them, `guidance/claude.md` tells coding agents), with `buf.build/bufbuild/protovalidate` in `buf.yaml`'s `deps`, which `dedo init` already writes; a service not ready for the rule disables it in `dedo.yaml`.
+
+### Added
+
+- Examples in the REST reference. `protoc-gen-dedo-openapi` puts a field's first protovalidate example on its schema property and its query parameter, in the JSON mapping (a 64-bit integer as a string, bytes in base64, a timestamp in RFC 3339, a field mask in lowerCamelCase), so it matches the declared type. A path parameter's example is the matching segment of the bound field's example: `main` for `{shelf}` from `shelves/main/books/42`. An enum without one gets its first value after the zero value; a list or map of messages gets an example composed of its message's field examples; `google.type.Money`'s fields get `USD`, `"42"` and `500000000`. The error schema has examples too, and a description of `details[].@type`. HighLevel's public API quality gate requires an example on every parameter and scalar property (its rule 13), and checks it matches the type and the enum (rules 19 and 20).
+- `protoc-gen-dedo-mcp` adds a field's first protovalidate example to the tool's input and output schemas as JSON Schema's `examples`, for a scalar, a declared enum value, a timestamp, a duration, a wrapper or a repeated field's items.
+
 ### Changed
 
 - `dedo.v1.Audience` and `ServiceRules.audience` now say what dedo uses them for: who an API is designed, documented and supported for, which decides where it is published (Zalando rule 219's `x-audience`). The audience is not who is authorized to call: every call is checked against its method's scopes, whatever the audience. Their comments, and `guideline.md`, used to say "who may call", which read as authorization. Only the documentation changed.

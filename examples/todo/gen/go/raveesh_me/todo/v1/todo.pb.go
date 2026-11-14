@@ -849,59 +849,61 @@ var File_raveesh_me_todo_v1_todo_proto protoreflect.FileDescriptor
 
 const file_raveesh_me_todo_v1_todo_proto_rawDesc = "" +
 	"\n" +
-	"\x1draveesh_me/todo/v1/todo.proto\x12\x12raveesh_me.todo.v1\x1a\x1bbuf/validate/validate.proto\x1a\x15dedo/v1/options.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x17google/api/client.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x19google/api/resource.proto\x1a google/protobuf/field_mask.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x17google/type/money.proto\"\x9c\x04\n" +
-	"\x04Todo\x12\x18\n" +
-	"\x04name\x18\x01 \x01(\tB\x04\xe2A\x01\bR\x04name\x12\x1a\n" +
-	"\x05title\x18\x02 \x01(\tB\x04\xe2A\x01\x02R\x05title\x12'\n" +
-	"\x04done\x18\x03 \x01(\bB\x13\xe2A\x01\x01\xba\xbb\x18\v\x12\ttodo.doneR\x04done\x12\xcc\x01\n" +
+	"\x1draveesh_me/todo/v1/todo.proto\x12\x12raveesh_me.todo.v1\x1a\x1bbuf/validate/validate.proto\x1a\x15dedo/v1/options.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x17google/api/client.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x19google/api/resource.proto\x1a google/protobuf/field_mask.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x17google/type/money.proto\"\xf1\x04\n" +
+	"\x04Todo\x12(\n" +
+	"\x04name\x18\x01 \x01(\tB\x14\xe2A\x01\b\xbaH\rr\v\x92\x02\btodos/42R\x04name\x128\n" +
+	"\x05title\x18\x02 \x01(\tB\"\xe2A\x01\x02\xbaH\x1br\x19\x92\x02\x16Renew the office leaseR\x05title\x12.\n" +
+	"\x04done\x18\x03 \x01(\bB\x1a\xe2A\x01\x01\xbaH\x04j\x02\x10\x00\xba\xbb\x18\v\x12\ttodo.doneR\x04done\x12\xcc\x01\n" +
 	"\rbudget_amount\x18\x04 \x01(\v2\x12.google.type.MoneyB\x92\x01\xe2A\x01\x01\xbaH\x8a\x01\xba\x01\x86\x01\n" +
 	"\n" +
-	"money.sign\x12,units and nanos must not have opposite signs\x1aJthis.units == 0 || this.nanos == 0 || (this.units > 0) == (this.nanos > 0)R\fbudgetAmount\x12L\n" +
-	"\x0eassignee_email\x18\x05 \x01(\tB%\xe2A\x01\x01\xbaH\a\xd8\x01\x01r\x02`\x01\xba\xbb\x18\x13\b\x01\x12\rtodo.assigned\x18\x02R\rassigneeEmail\x12A\n" +
-	"\vcreate_time\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampB\x04\xe2A\x01\x03R\n" +
+	"money.sign\x12,units and nanos must not have opposite signs\x1aJthis.units == 0 || this.nanos == 0 || (this.units > 0) == (this.nanos > 0)R\fbudgetAmount\x12^\n" +
+	"\x0eassignee_email\x18\x05 \x01(\tB7\xe2A\x01\x01\xbaH\x19\xd8\x01\x01r\x14\x92\x02\x0fada@example.com`\x01\xba\xbb\x18\x13\b\x01\x12\rtodo.assigned\x18\x02R\rassigneeEmail\x12O\n" +
+	"\vcreate_time\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampB\x12\xe2A\x01\x03\xbaH\v\xb2\x01\bR\x06\b\x80\xf2\xd6\xca\x06R\n" +
 	"createTime:U\xeaA1\n" +
 	"\x14todo.raveesh.me/Todo\x12\ftodos/{todo}*\x05todos2\x04todo»\x18\x1d\n" +
-	"\x1bOne item on the to-do list.\"^\n" +
-	"\x0eGetTodoRequest\x121\n" +
-	"\x04name\x18\x01 \x01(\tB\x1d\xe2A\x01\x02\xfaA\x16\n" +
-	"\x14todo.raveesh.me/TodoR\x04name:\x19»\x18\x15\n" +
+	"\x1bOne item on the to-do list.\"n\n" +
+	"\x0eGetTodoRequest\x12A\n" +
+	"\x04name\x18\x01 \x01(\tB-\xe2A\x01\x02\xfaA\x16\n" +
+	"\x14todo.raveesh.me/Todo\xbaH\rr\v\x92\x02\btodos/42R\x04name:\x19»\x18\x15\n" +
 	"\x13Which to-do to get.\"[\n" +
 	"\x0fGetTodoResponse\x12,\n" +
 	"\x04todo\x18\x01 \x01(\v2\x18.raveesh_me.todo.v1.TodoR\x04todo:\x1a»\x18\x16\n" +
-	"\x14The requested to-do.\"\x9a\x01\n" +
-	"\x10ListTodosRequest\x12<\n" +
-	"\tpage_size\x18\x01 \x01(\x05B\x1f\xe2A\x01\x01\xbaH\x04\x1a\x02(\x00\xba\xbb\x18\x10\x12\x0etodo.page_sizeR\bpageSize\x12#\n" +
+	"\x14The requested to-do.\"\xa6\x01\n" +
+	"\x10ListTodosRequest\x12>\n" +
+	"\tpage_size\x18\x01 \x01(\x05B!\xe2A\x01\x01\xbaH\x06\x1a\x04@\x14(\x00\xba\xbb\x18\x10\x12\x0etodo.page_sizeR\bpageSize\x12-\n" +
 	"\n" +
-	"page_token\x18\x02 \x01(\tB\x04\xe2A\x01\x01R\tpageToken:#»\x18\x1f\n" +
-	"\x1dWhich page of to-dos to list.\"\x86\x01\n" +
+	"page_token\x18\x02 \x01(\tB\x0e\xe2A\x01\x01\xbaH\ar\x05\x92\x02\x0220R\tpageToken:#»\x18\x1f\n" +
+	"\x1dWhich page of to-dos to list.\"\x92\x01\n" +
 	"\x11ListTodosResponse\x12.\n" +
-	"\x05todos\x18\x01 \x03(\v2\x18.raveesh_me.todo.v1.TodoR\x05todos\x12&\n" +
-	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken:\x19»\x18\x15\n" +
-	"\x13One page of to-dos.\"\x99\x01\n" +
+	"\x05todos\x18\x01 \x03(\v2\x18.raveesh_me.todo.v1.TodoR\x05todos\x122\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tB\n" +
+	"\xbaH\ar\x05\x92\x02\x0220R\rnextPageToken:\x19»\x18\x15\n" +
+	"\x13One page of to-dos.\"\xae\x01\n" +
 	"\x11CreateTodoRequest\x122\n" +
-	"\x04todo\x18\x01 \x01(\v2\x18.raveesh_me.todo.v1.TodoB\x04\xe2A\x01\x02R\x04todo\x12\x1d\n" +
-	"\atodo_id\x18\x02 \x01(\tB\x04\xe2A\x01\x01R\x06todoId:1»\x18-\n" +
+	"\x04todo\x18\x01 \x01(\v2\x18.raveesh_me.todo.v1.TodoB\x04\xe2A\x01\x02R\x04todo\x122\n" +
+	"\atodo_id\x18\x02 \x01(\tB\x19\xe2A\x01\x01\xbaH\x12r\x10\x92\x02\rlease-renewalR\x06todoId:1»\x18-\n" +
 	"+The to-do to create, and optionally its ID.\"\\\n" +
 	"\x12CreateTodoResponse\x12,\n" +
 	"\x04todo\x18\x01 \x01(\v2\x18.raveesh_me.todo.v1.TodoR\x04todo:\x18»\x18\x14\n" +
-	"\x12The created to-do.\"\xce\x01\n" +
+	"\x12The created to-do.\"\xdc\x01\n" +
 	"\x11UpdateTodoRequest\x122\n" +
-	"\x04todo\x18\x01 \x01(\v2\x18.raveesh_me.todo.v1.TodoB\x04\xe2A\x01\x02R\x04todo\x12A\n" +
-	"\vupdate_mask\x18\x02 \x01(\v2\x1a.google.protobuf.FieldMaskB\x04\xe2A\x01\x01R\n" +
+	"\x04todo\x18\x01 \x01(\v2\x18.raveesh_me.todo.v1.TodoB\x04\xe2A\x01\x02R\x04todo\x12O\n" +
+	"\vupdate_mask\x18\x02 \x01(\v2\x1a.google.protobuf.FieldMaskB\x12\xe2A\x01\x01\xbaH\v\xe2\x01\b\"\x06\n" +
+	"\x04doneR\n" +
 	"updateMask:B»\x18>\n" +
 	"<The new field values of a to-do, and which fields to change.\"\\\n" +
 	"\x12UpdateTodoResponse\x12,\n" +
 	"\x04todo\x18\x01 \x01(\v2\x18.raveesh_me.todo.v1.TodoR\x04todo:\x18»\x18\x14\n" +
-	"\x12The updated to-do.\"d\n" +
-	"\x11DeleteTodoRequest\x121\n" +
-	"\x04name\x18\x01 \x01(\tB\x1d\xe2A\x01\x02\xfaA\x16\n" +
-	"\x14todo.raveesh.me/TodoR\x04name:\x1c»\x18\x18\n" +
+	"\x12The updated to-do.\"t\n" +
+	"\x11DeleteTodoRequest\x12A\n" +
+	"\x04name\x18\x01 \x01(\tB-\xe2A\x01\x02\xfaA\x16\n" +
+	"\x14todo.raveesh.me/Todo\xbaH\rr\v\x92\x02\btodos/42R\x04name:\x1c»\x18\x18\n" +
 	"\x16Which to-do to delete.\"-\n" +
 	"\x12DeleteTodoResponse:\x17»\x18\x13\n" +
-	"\x11Empty on success.\"d\n" +
-	"\x11RemoveTodoRequest\x121\n" +
-	"\x04name\x18\x01 \x01(\tB\x1d\xe2A\x01\x02\xfaA\x16\n" +
-	"\x14todo.raveesh.me/TodoR\x04name:\x1c»\x18\x18\n" +
+	"\x11Empty on success.\"t\n" +
+	"\x11RemoveTodoRequest\x12A\n" +
+	"\x04name\x18\x01 \x01(\tB-\xe2A\x01\x02\xfaA\x16\n" +
+	"\x14todo.raveesh.me/Todo\xbaH\rr\v\x92\x02\btodos/42R\x04name:\x1c»\x18\x18\n" +
 	"\x16Which to-do to remove.\"-\n" +
 	"\x12RemoveTodoResponse:\x17»\x18\x13\n" +
 	"\x11Empty on success.\"H\n" +

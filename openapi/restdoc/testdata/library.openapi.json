@@ -33,7 +33,8 @@
             "description": "Part of `name`, which has the form `shelves/{shelf}/books/{book}`.",
             "required": true,
             "schema": {
-              "type": "string"
+              "type": "string",
+              "example": "fiction"
             }
           },
           {
@@ -42,7 +43,8 @@
             "description": "Part of `name`, which has the form `shelves/{shelf}/books/{book}`.",
             "required": true,
             "schema": {
-              "type": "string"
+              "type": "string",
+              "example": "9780141439518"
             }
           }
         ],
@@ -118,7 +120,8 @@
             "description": "Part of `name`, which has the form `shelves/{shelf}/books/{book}`.",
             "required": true,
             "schema": {
-              "type": "string"
+              "type": "string",
+              "example": "fiction"
             }
           },
           {
@@ -127,7 +130,8 @@
             "description": "Part of `name`, which has the form `shelves/{shelf}/books/{book}`.",
             "required": true,
             "schema": {
-              "type": "string"
+              "type": "string",
+              "example": "9780141439518"
             }
           }
         ],
@@ -208,7 +212,8 @@
         "properties": {
           "name": {
             "type": "string",
-            "description": "The resource name, such as shelves/1/books/2."
+            "description": "The resource name, such as shelves/1/books/2.",
+            "example": "shelves/fiction/books/9780141439518"
           },
           "price": {
             "$ref": "#/components/schemas/Money",
@@ -217,11 +222,13 @@
           "reserverEmail": {
             "type": "string",
             "description": "The email of the reader who reserved the book.",
+            "example": "reader@example.com",
             "x-sensitive": true
           },
           "title": {
             "type": "string",
-            "description": "The title shown to readers."
+            "description": "The title shown to readers.",
+            "example": "Pride and Prejudice"
           }
         }
       },
@@ -235,17 +242,20 @@
         "properties": {
           "currencyCode": {
             "type": "string",
-            "description": "The three-letter currency code defined in ISO 4217."
+            "description": "The three-letter currency code defined in ISO 4217.",
+            "example": "USD"
           },
           "nanos": {
             "type": "integer",
             "format": "int32",
-            "description": "Number of nano (10^-9) units of the amount.\nThe value must be between -999,999,999 and +999,999,999 inclusive.\nIf `units` is positive, `nanos` must be positive or zero.\nIf `units` is zero, `nanos` can be positive, zero, or negative.\nIf `units` is negative, `nanos` must be negative or zero.\nFor example $-1.75 is represented as `units`=-1 and `nanos`=-750,000,000."
+            "description": "Number of nano (10^-9) units of the amount.\nThe value must be between -999,999,999 and +999,999,999 inclusive.\nIf `units` is positive, `nanos` must be positive or zero.\nIf `units` is zero, `nanos` can be positive, zero, or negative.\nIf `units` is negative, `nanos` must be negative or zero.\nFor example $-1.75 is represented as `units`=-1 and `nanos`=-750,000,000.",
+            "example": 500000000
           },
           "units": {
             "type": "string",
             "format": "int64",
-            "description": "The whole units of the amount.\nFor example if `currencyCode` is `\"USD\"`, then 1 unit is one US dollar."
+            "description": "The whole units of the amount.\nFor example if `currencyCode` is `\"USD\"`, then 1 unit is one US dollar.",
+            "example": "42"
           }
         }
       },
@@ -256,7 +266,8 @@
           "code": {
             "type": "integer",
             "format": "int32",
-            "description": "The google.rpc.Code."
+            "description": "The google.rpc.Code.",
+            "example": 5
           },
           "details": {
             "type": "array",
@@ -264,15 +275,24 @@
               "type": "object",
               "properties": {
                 "@type": {
-                  "type": "string"
+                  "type": "string",
+                  "description": "The type of the detail.",
+                  "example": "type.googleapis.com/google.rpc.ErrorInfo"
                 }
               },
               "additionalProperties": {}
-            }
+            },
+            "example": [
+              {
+                "@type": "type.googleapis.com/google.rpc.ErrorInfo",
+                "reason": "NOT_FOUND"
+              }
+            ]
           },
           "message": {
             "type": "string",
-            "description": "A developer-facing explanation."
+            "description": "A developer-facing explanation.",
+            "example": "The resource was not found."
           }
         },
         "required": [

@@ -1,0 +1,143 @@
+syntax = "proto3";
+
+// Examples documents values with protovalidate's example rules.
+package acme.examples.v1;
+
+import "buf/validate/validate.proto";
+import "google/api/annotations.proto";
+import "google/api/field_behavior.proto";
+import "google/api/resource.proto";
+import "google/protobuf/duration.proto";
+import "google/protobuf/field_mask.proto";
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/wrappers.proto";
+
+// Reads and changes widgets.
+service WidgetService {
+  // Gets a widget.
+  rpc GetWidget(GetWidgetRequest) returns (GetWidgetResponse) {
+    option (google.api.http) = {get: "/v1/{name=shelves/*/widgets/*}"};
+  }
+
+  // Changes a widget.
+  rpc UpdateWidget(UpdateWidgetRequest) returns (UpdateWidgetResponse) {
+    option (google.api.http) = {
+      patch: "/v1/{widget.name=shelves/*/widgets/*}"
+      body: "widget"
+    };
+  }
+}
+
+// A widget.
+message Widget {
+  option (google.api.resource) = {
+    type: "acme.example.com/Widget"
+    pattern: "shelves/{shelf}/widgets/{widget}"
+  };
+
+  // The widget's resource name.
+  string name = 1 [
+    (google.api.field_behavior) = IDENTIFIER,
+    (buf.validate.field).string.example = "shelves/main/widgets/w-42",
+    (buf.validate.field).string.example = "shelves/other/widgets/w-7"
+  ];
+  // How many there are.
+  int64 count = 2 [(buf.validate.field).int64.example = 12];
+  // Whether it is on sale.
+  bool on_sale = 3 [(buf.validate.field).bool.example = true];
+  // Its weight in kilograms.
+  double weight = 4 [(buf.validate.field).double.example = 1.5];
+  // A thumbnail.
+  bytes thumbnail = 5 [(buf.validate.field).bytes.example = "hi"];
+  // Its color, with an example.
+  Color color = 6 [(buf.validate.field).enum.example = 2];
+  // Its finish, without one.
+  Finish finish = 7;
+  // Its labels.
+  repeated string labels = 8 [(buf.validate.field).repeated.items.string.example = "blue"];
+  // Its parts.
+  repeated Part parts = 9;
+  // Its attributes.
+  map<string, int32> attributes = 10 [
+    (buf.validate.field).map.keys.string.example = "height",
+    (buf.validate.field).map.values.int32.example = 30
+  ];
+  // When it was made.
+  google.protobuf.Timestamp create_time = 11 [
+    (google.api.field_behavior) = OUTPUT_ONLY,
+    (buf.validate.field).timestamp.example = {seconds: 1767225600}
+  ];
+  // How long it lasts.
+  google.protobuf.Duration lifetime = 12 [(buf.validate.field).duration.example = {seconds: 90}];
+  // A nickname.
+  google.protobuf.StringValue nickname = 13 [(buf.validate.field).string.example = "Widgy"];
+  // A note, without an example.
+  string note = 14;
+  // A mismatched example, which is left out.
+  int32 size = 15 [(buf.validate.field).string.example = "large"];
+  // Its main part.
+  Part main_part = 16;
+}
+
+// A part of a widget.
+message Part {
+  // The part's code.
+  string code = 1 [(buf.validate.field).string.example = "P-1"];
+  // Its sub-parts.
+  repeated Part parts = 2;
+}
+
+// A color.
+enum Color {
+  // Unspecified.
+  COLOR_UNSPECIFIED = 0;
+  // Red.
+  COLOR_RED = 1;
+  // Blue.
+  COLOR_BLUE = 2;
+}
+
+// A finish.
+enum Finish {
+  // Unspecified.
+  FINISH_UNSPECIFIED = 0;
+  // Matte.
+  FINISH_MATTE = 1;
+}
+
+// The request of GetWidget.
+message GetWidgetRequest {
+  // The widget.
+  string name = 1 [
+    (google.api.resource_reference).type = "acme.example.com/Widget",
+    (buf.validate.field).string.example = "shelves/main/widgets/w-42"
+  ];
+  // How many to read.
+  int32 page_size = 2 [(buf.validate.field).int32.example = 25];
+  // The view.
+  Finish view = 3;
+  // Tags to match.
+  repeated string tags = 4 [(buf.validate.field).repeated.items.string.example = "new"];
+  // Read as of.
+  google.protobuf.Timestamp read_time = 5 [(buf.validate.field).timestamp.example = {seconds: 1767225600}];
+}
+
+// The response of GetWidget.
+message GetWidgetResponse {
+  // The widget.
+  Widget widget = 1;
+}
+
+// The request of UpdateWidget.
+message UpdateWidgetRequest {
+  // The widget.
+  Widget widget = 1;
+  // The fields to change.
+  google.protobuf.FieldMask update_mask = 2 [(buf.validate.field).field_mask.example = {paths: ["on_sale", "count"]}];
+}
+
+// The response of UpdateWidget.
+message UpdateWidgetResponse {
+  // The widget.
+  Widget widget = 1;
+}

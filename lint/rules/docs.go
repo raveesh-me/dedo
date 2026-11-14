@@ -42,6 +42,7 @@ const (
 	idErrorClassificationDeclared = "DEDO_ERROR_CLASSIFICATION_DECLARED"
 	idServiceLevel                = "DEDO_SERVICE_LEVEL"
 	idMethodServiceLevel          = "DEDO_METHOD_SERVICE_LEVEL"
+	idFieldExample                = "DEDO_FIELD_EXAMPLE"
 
 	idEmitsNoDelete       = "DEDO_EMITS_NO_DELETE"
 	idScopesNoDelete      = "DEDO_SCOPES_NO_DELETE"

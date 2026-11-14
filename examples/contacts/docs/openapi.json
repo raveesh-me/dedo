@@ -39,7 +39,8 @@
             "description": "The most locations to return. The server picks a size when it is 0.",
             "schema": {
               "type": "integer",
-              "format": "int32"
+              "format": "int32",
+              "example": 20
             }
           },
           {
@@ -47,7 +48,8 @@
             "in": "query",
             "description": "The next_page_token of the previous page, empty for the first.",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "example": "20"
             }
           }
         ],
@@ -119,7 +121,8 @@
             "description": "Part of `parent`, which has the form `locations/{locationsId}`.",
             "required": true,
             "schema": {
-              "type": "string"
+              "type": "string",
+              "example": "1"
             }
           },
           {
@@ -128,7 +131,8 @@
             "description": "The most contacts to return. The server picks a size when it is 0.",
             "schema": {
               "type": "integer",
-              "format": "int32"
+              "format": "int32",
+              "example": 20
             }
           },
           {
@@ -136,7 +140,8 @@
             "in": "query",
             "description": "The next_page_token of the previous page, empty for the first.",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "example": "20"
             }
           }
         ],
@@ -206,7 +211,8 @@
             "description": "Part of `parent`, which has the form `locations/{locationsId}`.",
             "required": true,
             "schema": {
-              "type": "string"
+              "type": "string",
+              "example": "1"
             }
           },
           {
@@ -214,7 +220,8 @@
             "in": "query",
             "description": "The ID to give the contact. The server picks one when it is empty.",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "example": "grace-hopper"
             }
           }
         ],
@@ -297,7 +304,8 @@
             "description": "Part of `name`, which has the form `locations/{location}`.",
             "required": true,
             "schema": {
-              "type": "string"
+              "type": "string",
+              "example": "1"
             }
           }
         ],
@@ -369,7 +377,8 @@
             "description": "Part of `name`, which has the form `locations/{location}/contacts/{contact}`.",
             "required": true,
             "schema": {
-              "type": "string"
+              "type": "string",
+              "example": "1"
             }
           },
           {
@@ -378,7 +387,8 @@
             "description": "Part of `name`, which has the form `locations/{location}/contacts/{contact}`.",
             "required": true,
             "schema": {
-              "type": "string"
+              "type": "string",
+              "example": "7"
             }
           }
         ],
@@ -454,7 +464,8 @@
             "description": "Part of `contact.name`, which has the form `locations/{location}/contacts/{contact}`.",
             "required": true,
             "schema": {
-              "type": "string"
+              "type": "string",
+              "example": "1"
             }
           },
           {
@@ -463,7 +474,8 @@
             "description": "Part of `contact.name`, which has the form `locations/{location}/contacts/{contact}`.",
             "required": true,
             "schema": {
-              "type": "string"
+              "type": "string",
+              "example": "7"
             }
           },
           {
@@ -472,7 +484,8 @@
             "description": "The fields to change, such as display_name.",
             "schema": {
               "type": "string",
-              "description": "Comma-separated lowerCamelCase field paths."
+              "description": "Comma-separated lowerCamelCase field paths.",
+              "example": "displayName"
             }
           }
         ],
@@ -549,20 +562,24 @@
         "properties": {
           "displayName": {
             "type": "string",
-            "description": "The name shown to people."
+            "description": "The name shown to people.",
+            "example": "Grace Hopper"
           },
           "email": {
             "type": "string",
             "description": "The contact's email address.",
+            "example": "grace@example.com",
             "x-sensitive": true
           },
           "homeLocation": {
             "type": "string",
-            "description": "The location this contact mostly deals with, such as locations/1."
+            "description": "The location this contact mostly deals with, such as locations/1.",
+            "example": "locations/1"
           },
           "name": {
             "type": "string",
-            "description": "The resource name, such as locations/1/contacts/2."
+            "description": "The resource name, such as locations/1/contacts/2.",
+            "example": "locations/1/contacts/7"
           }
         },
         "required": [
@@ -578,11 +595,20 @@
             "description": "The contacts on this page.",
             "items": {
               "$ref": "#/components/schemas/Contact"
-            }
+            },
+            "example": [
+              {
+                "displayName": "Grace Hopper",
+                "email": "grace@example.com",
+                "homeLocation": "locations/1",
+                "name": "locations/1/contacts/7"
+              }
+            ]
           },
           "nextPageToken": {
             "type": "string",
-            "description": "The token of the next page, empty on the last."
+            "description": "The token of the next page, empty on the last.",
+            "example": "20"
           }
         }
       },
@@ -595,11 +621,18 @@
             "description": "The locations on this page.",
             "items": {
               "$ref": "#/components/schemas/Location"
-            }
+            },
+            "example": [
+              {
+                "displayName": "Downtown",
+                "name": "locations/1"
+              }
+            ]
           },
           "nextPageToken": {
             "type": "string",
-            "description": "The token of the next page, empty on the last."
+            "description": "The token of the next page, empty on the last.",
+            "example": "20"
           }
         }
       },
@@ -609,11 +642,13 @@
         "properties": {
           "displayName": {
             "type": "string",
-            "description": "The name shown to people."
+            "description": "The name shown to people.",
+            "example": "Downtown"
           },
           "name": {
             "type": "string",
-            "description": "The resource name, such as locations/1."
+            "description": "The resource name, such as locations/1.",
+            "example": "locations/1"
           }
         }
       },
@@ -624,7 +659,8 @@
           "code": {
             "type": "integer",
             "format": "int32",
-            "description": "The google.rpc.Code."
+            "description": "The google.rpc.Code.",
+            "example": 5
           },
           "details": {
             "type": "array",
@@ -632,15 +668,24 @@
               "type": "object",
               "properties": {
                 "@type": {
-                  "type": "string"
+                  "type": "string",
+                  "description": "The type of the detail.",
+                  "example": "type.googleapis.com/google.rpc.ErrorInfo"
                 }
               },
               "additionalProperties": {}
-            }
+            },
+            "example": [
+              {
+                "@type": "type.googleapis.com/google.rpc.ErrorInfo",
+                "reason": "NOT_FOUND"
+              }
+            ]
           },
           "message": {
             "type": "string",
-            "description": "A developer-facing explanation."
+            "description": "A developer-facing explanation.",
+            "example": "The resource was not found."
           }
         },
         "required": [
