@@ -8,6 +8,10 @@ Version bumps, dependency updates and changes to benchmarks or examples alone ar
 
 ## [Unreleased]
 
+### Added
+
+- `protoc-gen-dedo-openapi` and `protoc-gen-dedo-mcp` take `notes=<path>`, repeatable: a doc notes file another generator writes, such as an auth generator saying which accounts a method is for, so the REST reference and the MCP tools say it too. The file is JSON keyed by RPC full name, `{"methods": {"<pkg.Service.Method>": {"description": "…", "extensions": {"x-…": …}}}}` (package `docnotes`). A note's description is a paragraph of the operation's description, after the scopes and before the events, and of the tool's, before its errors; its extensions, named `x-…` and none of dedo's own, are the operation's, after dedo's fields in name order. Notes for RPCs a generator does not document are ignored; an unreadable file, an unknown field, an extension not named `x-…`, or one given twice for an RPC fails the run. `mcpserver.DescribeWithNote` is `Describe` with a note. Without `notes=`, the output is unchanged.
+
 ### Changed
 
 - `dedo.v1.Audience` and `ServiceRules.audience` now say what dedo uses them for: who an API is designed, documented and supported for, which decides where it is published (Zalando rule 219's `x-audience`). The audience is not who is authorized to call: every call is checked against its method's scopes, whatever the audience. Their comments, and `guideline.md`, used to say "who may call", which read as authorization. Only the documentation changed.

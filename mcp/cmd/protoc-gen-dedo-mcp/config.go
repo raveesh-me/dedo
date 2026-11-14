@@ -1,12 +1,15 @@
 package main
 
 import (
+	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	"google.golang.org/protobuf/compiler/protogen"
 	"google.golang.org/protobuf/proto"
 
+	"github.com/raveesh-me/dedo/docnotes"
 	dedov1 "github.com/raveesh-me/dedo/gen/go/dedo/v1"
 )
 
@@ -21,10 +24,17 @@ type Config struct {
 	// MinAudience is the narrowest audience whose services become tools.
 	// Unset, only AUDIENCE_COMPONENT_INTERNAL services are left out.
 	MinAudience dedov1.Audience
+	// Notes are the paths of doc notes files (package docnotes), in order:
+	// a paragraph another generator adds to given tools' descriptions. The
+	// notes=<path> parameter adds one, and may be repeated.
+	Notes []string
+	// notes are what Notes' files say, by RPC full name.
+	notes docnotes.Notes
 }
 
 // Set applies one plugin parameter, as protogen.Options.ParamFunc. The
-// parameter is protoc-gen-dedo-openapi's, so both plugins can share it.
+// parameters are protoc-gen-dedo-openapi's, so both plugins can share them.
+// A notes file is read here, so one that cannot be read fails the run.
 func (c *Config) Set(name, value string) error {
 	switch name {
 	case "min_audience":
@@ -33,6 +43,15 @@ func (c *Config) Set(name, value string) error {
 			return err
 		}
 		c.MinAudience = a
+	case "notes":
+		if strings.TrimSpace(value) == "" {
+			return errors.New("notes: name a doc notes file")
+		}
+		notes, err := docnotes.Read(append(slices.Clone(c.Notes), value))
+		if err != nil {
+			return err
+		}
+		c.Notes, c.notes = append(c.Notes, value), notes
 	default:
 		return fmt.Errorf("unknown parameter %q", name)
 	}

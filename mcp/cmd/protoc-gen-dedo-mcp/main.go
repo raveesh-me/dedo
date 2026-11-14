@@ -17,6 +17,10 @@
 // AUDIENCE_COMPONENT_INTERNAL ones. A left-out service still gets its
 // <Service>MCPTools, returning no tools and with no schemas, so a main.go
 // that registers every service's tools keeps compiling.
+//
+// The option notes=<path>, repeatable, reads a doc notes file (package
+// docnotes) that another generator wrote: each noted RPC's tool description
+// gets the note's paragraph before its errors.
 package main
 
 import (
@@ -28,6 +32,7 @@ import (
 	"google.golang.org/protobuf/compiler/protogen"
 	"google.golang.org/protobuf/types/pluginpb"
 
+	"github.com/raveesh-me/dedo/docnotes"
 	"github.com/raveesh-me/dedo/mcp/mcpserver"
 	"github.com/raveesh-me/dedo/mcp/schema"
 )
@@ -99,7 +104,7 @@ func generate(plugin *protogen.Plugin, f *protogen.File, cfg Config) error {
 		writeMap(g, inputSchemas(svc), "MCP tool input, built from the request message, its field comments and\n// google.api.field_behavior.", inputs)
 		g.P()
 		writeMap(g, outputSchemas(svc), "MCP tool output: the response message as mcpserver encodes it in\n// structuredContent.", outputs)
-		if err := writeTools(g, svc); err != nil {
+		if err := writeTools(g, svc, cfg.notes); err != nil {
 			return err
 		}
 	}
@@ -124,8 +129,9 @@ func writeNoTools(g *protogen.GeneratedFile, svc *protogen.Service) {
 }
 
 // writeTools writes <Service>MCPTools, with each tool's definition as
-// mcpserver.Describe returns it and a typed forwarder.
-func writeTools(g *protogen.GeneratedFile, svc *protogen.Service) error {
+// mcpserver.DescribeWithNote returns it, with the doc note of its RPC, and
+// a typed forwarder.
+func writeTools(g *protogen.GeneratedFile, svc *protogen.Service, notes docnotes.Notes) error {
 	var methods []*protogen.Method
 	for _, m := range svc.Methods {
 		if mcpserver.Serves(m.Desc) {
@@ -143,7 +149,7 @@ func writeTools(g *protogen.GeneratedFile, svc *protogen.Service) error {
 	g.P("func ", name, "() []", tool, " {")
 	g.P("return []", tool, "{")
 	for _, m := range methods {
-		t, err := mcpserver.Describe(m.Desc)
+		t, err := mcpserver.DescribeWithNote(m.Desc, notes[string(m.Desc.FullName())].Description)
 		if err != nil {
 			return err
 		}

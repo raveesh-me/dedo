@@ -70,10 +70,12 @@ func (g *generator) operation(svc *protogen.Service, m *protogen.Method, b bindi
 	path, params := tmpl.openAPIPath(func(seg segment) []string { return g.paramNames(m.Input, seg) })
 	rules, _ := proto.GetExtension(m.Desc.Options(), dedov1.E_Method).(*dedov1.MethodRules)
 
+	note := g.notes[string(m.Desc.FullName())]
 	op := &Operation{
 		OperationID: fmt.Sprintf("%s_%s", svc.Desc.Name(), m.Desc.Name()),
 		Summary:     rules.GetTool().GetTitle(),
-		Description: operationDescription(m, rules),
+		Description: operationDescription(m, rules, note.Description),
+		Extensions:  note.Extensions,
 		Tags:        []string{serviceTag(svc)},
 		Procedure:   fmt.Sprintf("/%s/%s", svc.Desc.FullName(), m.Desc.Name()),
 		Destructive: rules.GetTool().GetAnnotations().GetDestructiveHint(),
@@ -103,15 +105,19 @@ func (g *generator) operation(svc *protogen.Service, m *protogen.Method, b bindi
 }
 
 // operationDescription prefers the tool description and adds the scopes,
-// which some renderers do not show from the security requirement, and the
-// events the RPC may publish, which OpenAPI has no field for.
-func operationDescription(m *protogen.Method, rules *dedov1.MethodRules) string {
+// which some renderers do not show from the security requirement, the doc
+// notes' paragraph, which another generator adds, and the events the RPC
+// may publish, which OpenAPI has no field for.
+func operationDescription(m *protogen.Method, rules *dedov1.MethodRules, note string) string {
 	text := strings.TrimSpace(rules.GetTool().GetDescription())
 	if text == "" {
 		text = cleanComment(m.Comments.Leading)
 	}
 	if scopes := rules.GetScopes(); len(scopes) > 0 {
 		text += fmt.Sprintf("\n\nRequires one of the token scopes: `%s`.", strings.Join(scopes, "`, `"))
+	}
+	if note != "" {
+		text += "\n\n" + note
 	}
 	if emits := rules.GetEmits(); len(emits) > 0 {
 		text += fmt.Sprintf("\n\nMay publish the events: `%s`. Each event carries only its type and the name of the resource it is about; consumers fetch the resource through this API.", strings.Join(emits, "`, `"))

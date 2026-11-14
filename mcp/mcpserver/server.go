@@ -123,17 +123,29 @@ func Serves(m protoreflect.MethodDescriptor) bool {
 
 // Describe returns the tool of an RPC without its schemas: the name, and
 // the title, description, error reasons and ToolAnnotations from its
-// options. protoc-gen-dedo-mcp writes the result out as Go code.
+// options.
 func Describe(m protoreflect.MethodDescriptor) (*mcp.Tool, error) {
+	return DescribeWithNote(m, "")
+}
+
+// DescribeWithNote is Describe with a doc note (package docnotes), a
+// paragraph another generator adds to the description, before the error
+// reasons. An empty note adds nothing. protoc-gen-dedo-mcp writes the
+// result out as Go code.
+func DescribeWithNote(m protoreflect.MethodDescriptor, note string) (*mcp.Tool, error) {
 	name := ToolName(m)
 	if !validName.MatchString(name) {
 		return nil, fmt.Errorf("mcpserver: %s: tool name %q is not a valid MCP tool name", m.FullName(), name)
 	}
 	rules, _ := proto.GetExtension(m.Options(), dedov1.E_Method).(*dedov1.MethodRules)
+	description := rules.GetTool().GetDescription()
+	if note = strings.TrimSpace(note); note != "" {
+		description = strings.TrimSpace(strings.TrimSpace(description) + "\n\n" + note)
+	}
 	return &mcp.Tool{
 		Name:        name,
 		Title:       rules.GetTool().GetTitle(),
-		Description: withErrors(rules.GetTool().GetDescription(), rules.GetErrors()),
+		Description: withErrors(description, rules.GetErrors()),
 		Annotations: annotations(rules.GetTool()),
 	}, nil
 }

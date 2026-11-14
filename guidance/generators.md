@@ -49,6 +49,8 @@ managed:
 
 Both generators take `min_audience`, an `Audience` value with or without its `AUDIENCE_` prefix, and leave out every service whose `audience` is narrower; a service that declares none stays, for lint to report. Without it, they leave out only `AUDIENCE_COMPONENT_INTERNAL` services. A reference published to everyone adds `min_audience=EXTERNAL_PUBLIC` to `opt`, so internal services stay out of it. For a service it leaves out, `protoc-gen-dedo-mcp` still generates `<Service>MCPTools()`, returning no tools, so the server's code keeps compiling.
 
+Both generators also take `notes=<path>`, once per file, to add what another generator knows about given RPCs, such as an auth generator saying which accounts a method is for. A notes file (package `docnotes`) is JSON keyed by each RPC's full name: `{"methods": {"acme.orders.v1.OrderService.RefundOrder": {"description": "Only for accounts on the pro plan.", "extensions": {"x-plans": {"plans": ["pro"]}}}}}`. The description becomes a paragraph of the operation's description, after the scopes, and of the tool's, before its errors; the extensions, each named `x-…` and none of dedo's own, go on the operation. A note for an RPC the generator does not document is ignored, and a file that cannot be read or holds a field the format does not have fails the run. The path is relative to where `buf generate` runs, so generate the notes first, in a run of their own (`buf generate --template <its template>`), and commit them with the rest.
+
 ## Server
 
 Generated MCP tools do nothing until the server mounts dedo's runtime. In the Go module of the server:

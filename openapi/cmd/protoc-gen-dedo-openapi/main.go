@@ -5,6 +5,10 @@
 // The option min_audience (an Audience, AUDIENCE_ prefix optional) leaves out
 // the services for a narrower audience; unset, it leaves out the
 // AUDIENCE_COMPONENT_INTERNAL ones.
+//
+// The option notes=<path>, repeatable, reads a doc notes file (package
+// docnotes) that another generator wrote: each noted RPC's operation gets
+// the note's paragraph in its description and its x- extensions.
 package main
 
 import (
