@@ -38,13 +38,13 @@ var CategorySpec = &check.CategorySpec{ID: Category, Purpose: "Checks the organi
 
 // variables are the names a check can use, per kind of element.
 var variables = map[string][]string{
-	"file":     {"name", "proto_package", "imports", "options"},
-	"service":  {"name", "full_name", "file", "proto_package", "methods", "resources", "roots", "title", "options"},
-	"method":   {"name", "full_name", "file", "proto_package", "service", "input", "output", "client_streaming", "server_streaming", "idempotency", "http_verb", "http_path", "http_bindings", "scopes", "errors", "deprecated", "options", "service_options"},
-	"message":  {"name", "full_name", "file", "proto_package", "fields", "options"},
-	"field":    {"name", "full_name", "file", "proto_package", "message", "type", "repeated", "optional", "behaviors", "json_name", "options"},
-	"enum":     {"name", "full_name", "file", "proto_package", "values", "options"},
-	"resource": {"name", "full_name", "file", "proto_package", "type", "patterns", "singular", "plural", "options"},
+	"file":     {"name", "proto_package", "imports", "comments", "options"},
+	"service":  {"name", "full_name", "file", "proto_package", "comments", "methods", "resources", "roots", "title", "options"},
+	"method":   {"name", "full_name", "file", "proto_package", "comments", "service", "input", "output", "client_streaming", "server_streaming", "idempotency", "http_verb", "http_path", "http_bindings", "scopes", "errors", "deprecated", "options", "service_options"},
+	"message":  {"name", "full_name", "file", "proto_package", "comments", "fields", "options"},
+	"field":    {"name", "full_name", "file", "proto_package", "comments", "message", "type", "repeated", "optional", "behaviors", "json_name", "options"},
+	"enum":     {"name", "full_name", "file", "proto_package", "comments", "values", "options"},
+	"resource": {"name", "full_name", "file", "proto_package", "comments", "type", "patterns", "singular", "plural", "options"},
 }
 
 // Specs compiles house rules into rule specs. It fails on a check that does
@@ -282,6 +282,7 @@ func base(d protoreflect.Descriptor) map[string]any {
 		"full_name":     string(d.FullName()),
 		"file":          d.ParentFile().Path(),
 		"proto_package": string(d.ParentFile().Package()),
+		"comments":      leadingComments(d.ParentFile().SourceLocations().ByDescriptor(d)),
 	}
 }
 
@@ -290,7 +291,29 @@ func fileVars(fd protoreflect.FileDescriptor) map[string]any {
 	for i := range fd.Imports().Len() {
 		imports = append(imports, fd.Imports().Get(i).Path())
 	}
-	return map[string]any{"name": fd.Path(), "proto_package": string(fd.Package()), "imports": strs(imports)}
+	return map[string]any{
+		"name":          fd.Path(),
+		"proto_package": string(fd.Package()),
+		"imports":       strs(imports),
+		"comments":      leadingComments(fd.SourceLocations().ByPath(protoreflect.SourcePath{packageField})),
+	}
+}
+
+// packageField is the field number of package in FileDescriptorProto: the
+// source path of a file's package statement, whose leading comment the
+// reference shows as the package's description.
+const packageField = 2
+
+// leadingComments is the leading comment of an element as the reference
+// and the MCP tools show it: each line trimmed, the whole without the
+// blank lines around it, and empty when there is none. Trailing and
+// detached comments are left out: dedo publishes only leading ones.
+func leadingComments(loc protoreflect.SourceLocation) string {
+	lines := strings.Split(strings.TrimSpace(loc.LeadingComments), "\n")
+	for i, l := range lines {
+		lines[i] = strings.TrimSpace(l)
+	}
+	return strings.TrimSpace(strings.Join(lines, "\n"))
 }
 
 func serviceVars(s protoreflect.ServiceDescriptor) map[string]any {
