@@ -116,6 +116,18 @@ func describe(m protoreflect.MethodDescriptor, cfg Config) (*mcp.Tool, error) {
 	return tool, nil
 }
 
+// Meta decodes a tool's _meta from the JSON object protoc-gen-dedo-mcp
+// writes for it, the meta of the access requirements of its RPC's scopes.
+// It panics on anything but a JSON object, which the generator never
+// writes.
+func Meta(object string) mcp.Meta {
+	var m mcp.Meta
+	if err := json.Unmarshal([]byte(object), &m); err != nil || m == nil {
+		panic(fmt.Sprintf("mcpserver: _meta is not a JSON object: %q", object))
+	}
+	return m
+}
+
 // Serves reports whether an RPC becomes a tool: unary and not deprecated.
 func Serves(m protoreflect.MethodDescriptor) bool {
 	return !m.IsStreamingClient() && !m.IsStreamingServer() && !isDeprecated(m)
@@ -125,22 +137,23 @@ func Serves(m protoreflect.MethodDescriptor) bool {
 // the title, description, error reasons and ToolAnnotations from its
 // options.
 func Describe(m protoreflect.MethodDescriptor) (*mcp.Tool, error) {
-	return DescribeWithNote(m, "")
+	return DescribeWithRequirements(m, "")
 }
 
-// DescribeWithNote is Describe with a doc note (package docnotes), a
-// paragraph another generator adds to the description, before the error
-// reasons. An empty note adds nothing. protoc-gen-dedo-mcp writes the
-// result out as Go code.
-func DescribeWithNote(m protoreflect.MethodDescriptor, note string) (*mcp.Tool, error) {
+// DescribeWithRequirements is Describe with the access requirements of the
+// RPC's scopes (package accessdoc): what a caller holding them must also
+// satisfy, a paragraph in the description, before the error reasons. An
+// empty one adds nothing. protoc-gen-dedo-mcp writes the result out as Go
+// code.
+func DescribeWithRequirements(m protoreflect.MethodDescriptor, requirements string) (*mcp.Tool, error) {
 	name := ToolName(m)
 	if !validName.MatchString(name) {
 		return nil, fmt.Errorf("mcpserver: %s: tool name %q is not a valid MCP tool name", m.FullName(), name)
 	}
 	rules, _ := proto.GetExtension(m.Options(), dedov1.E_Method).(*dedov1.MethodRules)
 	description := rules.GetTool().GetDescription()
-	if note = strings.TrimSpace(note); note != "" {
-		description = strings.TrimSpace(strings.TrimSpace(description) + "\n\n" + note)
+	if requirements = strings.TrimSpace(requirements); requirements != "" {
+		description = strings.TrimSpace(strings.TrimSpace(description) + "\n\n" + requirements)
 	}
 	return &mcp.Tool{
 		Name:        name,

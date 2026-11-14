@@ -9,7 +9,7 @@ import (
 	"google.golang.org/protobuf/compiler/protogen"
 	"google.golang.org/protobuf/proto"
 
-	"github.com/raveesh-me/dedo/docnotes"
+	"github.com/raveesh-me/dedo/accessdoc"
 	dedov1 "github.com/raveesh-me/dedo/gen/go/dedo/v1"
 )
 
@@ -24,17 +24,19 @@ type Config struct {
 	// MinAudience is the narrowest audience whose services become tools.
 	// Unset, only AUDIENCE_COMPONENT_INTERNAL services are left out.
 	MinAudience dedov1.Audience
-	// Notes are the paths of doc notes files (package docnotes), in order:
-	// a paragraph another generator adds to given tools' descriptions. The
-	// notes=<path> parameter adds one, and may be repeated.
-	Notes []string
-	// notes are what Notes' files say, by RPC full name.
-	notes docnotes.Notes
+	// Access are the paths of access files (package accessdoc), in order:
+	// what an auth generator says a caller holding a scope must also
+	// satisfy. A tool gets each of its scopes' paragraphs in its
+	// description and their meta in its _meta. The access=<path> parameter
+	// adds one, and may be repeated.
+	Access []string
+	// access are what Access' files say, by scope.
+	access accessdoc.Requirements
 }
 
 // Set applies one plugin parameter, as protogen.Options.ParamFunc. The
 // parameters are protoc-gen-dedo-openapi's, so both plugins can share them.
-// A notes file is read here, so one that cannot be read fails the run.
+// An access file is read here, so one that cannot be read fails the run.
 func (c *Config) Set(name, value string) error {
 	switch name {
 	case "min_audience":
@@ -43,15 +45,15 @@ func (c *Config) Set(name, value string) error {
 			return err
 		}
 		c.MinAudience = a
-	case "notes":
+	case "access":
 		if strings.TrimSpace(value) == "" {
-			return errors.New("notes: name a doc notes file")
+			return errors.New("access: name an access file")
 		}
-		notes, err := docnotes.Read(append(slices.Clone(c.Notes), value))
+		access, err := accessdoc.Read(append(slices.Clone(c.Access), value))
 		if err != nil {
 			return err
 		}
-		c.Notes, c.notes = append(c.Notes, value), notes
+		c.Access, c.access = append(c.Access, value), access
 	default:
 		return fmt.Errorf("unknown parameter %q", name)
 	}
@@ -102,4 +104,10 @@ func (c Config) serves(svc *protogen.Service) bool {
 func audience(svc *protogen.Service) dedov1.Audience {
 	rules, _ := proto.GetExtension(svc.Desc.Options(), dedov1.E_Service).(*dedov1.ServiceRules)
 	return rules.GetAudience()
+}
+
+// scopes are the scopes m declares in dedo.v1.method.
+func scopes(m *protogen.Method) []string {
+	rules, _ := proto.GetExtension(m.Desc.Options(), dedov1.E_Method).(*dedov1.MethodRules)
+	return rules.GetScopes()
 }

@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+// Vault has an RPC with two scopes, for access requirements per scope.
+package acme.vault.v1;
+
+import "dedo/v1/options.proto";
+import "google/api/annotations.proto";
+
+// Opens vaults.
+service VaultService {
+  // OpenVault needs either scope.
+  rpc OpenVault(OpenVaultRequest) returns (OpenVaultResponse) {
+    option (google.api.http) = {
+      post: "/v1/{name=vaults/*}:open"
+      body: "*"
+    };
+    option (dedo.v1.method) = {
+      scopes: "vault.open"
+      scopes: "vault.admin"
+    };
+  }
+}
+
+// The request of OpenVault.
+message OpenVaultRequest {
+  // The vault, vaults/{vault}.
+  string name = 1;
+}
+
+// The response of OpenVault.
+message OpenVaultResponse {
+  // The vault, vaults/{vault}.
+  string name = 1;
+}

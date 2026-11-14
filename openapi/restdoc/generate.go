@@ -15,7 +15,7 @@ import (
 	"google.golang.org/protobuf/compiler/protogen"
 	"google.golang.org/protobuf/proto"
 
-	"github.com/raveesh-me/dedo/docnotes"
+	"github.com/raveesh-me/dedo/accessdoc"
 	dedov1 "github.com/raveesh-me/dedo/gen/go/dedo/v1"
 )
 
@@ -31,11 +31,12 @@ type Config struct {
 	// services are left out.
 	MinAudience dedov1.Audience
 
-	// Notes are the paths of doc notes files (package docnotes), read in
-	// order: what another generator adds to given operations, a paragraph
-	// in the description and specification extensions. The notes=<path>
+	// Access are the paths of access files (package accessdoc), read in
+	// order: what an auth generator says a caller holding a scope must also
+	// satisfy. An operation gets each of its scopes' paragraphs in its
+	// description and their specification extensions. The access=<path>
 	// parameter adds one, and may be repeated.
-	Notes []string
+	Access []string
 
 	// Warn, when set, receives each warning: a problem worth fixing that
 	// does not stop generation. It is not a plugin parameter.
@@ -59,11 +60,11 @@ func (c *Config) Set(name, value string) error {
 			return err
 		}
 		c.MinAudience = a
-	case "notes":
+	case "access":
 		if strings.TrimSpace(value) == "" {
-			return errors.New("notes: name a doc notes file")
+			return errors.New("access: name an access file")
 		}
-		c.Notes = append(c.Notes, value)
+		c.Access = append(c.Access, value)
 	default:
 		return fmt.Errorf("unknown parameter %q", name)
 	}
@@ -73,7 +74,8 @@ func (c *Config) Set(name, value string) error {
 type generator struct {
 	schemas   *schemas
 	resources map[string][]string // resource type to patterns
-	notes     docnotes.Notes      // by RPC full name
+	// access are the access files' requirements, by scope.
+	access accessdoc.Requirements
 }
 
 // Generate writes one OpenAPI document for every service in the files to
@@ -82,7 +84,7 @@ type generator struct {
 // the document still exists, with no operations, so whatever serves or
 // embeds it keeps working.
 func Generate(plugin *protogen.Plugin, cfg Config) error {
-	notes, err := readNotes(cfg.Notes)
+	access, err := readAccess(cfg.Access)
 	if err != nil {
 		return err
 	}
@@ -92,7 +94,7 @@ func Generate(plugin *protogen.Plugin, cfg Config) error {
 	}
 	// Schemas are named over the documented services' messages only, so a
 	// left-out message never changes, or shows, a documented one's name.
-	g := &generator{schemas: newSchemas(plugin.Files, services), resources: resourceIndex(plugin.Files), notes: notes}
+	g := &generator{schemas: newSchemas(plugin.Files, services), resources: resourceIndex(plugin.Files), access: access}
 	doc := &Document{
 		OpenAPI: "3.2.0",
 		Paths:   map[string]*PathItem{},

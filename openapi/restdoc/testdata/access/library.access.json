@@ -1,0 +1,17 @@
+{
+  "scopes": {
+    "library.book.write": {
+      "description": "Only for: Libraries on the Archive plan (`archive`). Other callers get 403 `PERMISSION_DENIED` with reason `CONDITION_NOT_MET`.",
+      "extensions": {
+        "x-commerce-conditions": [{"id": "archive", "label": "Libraries on the Archive plan"}],
+        "x-commerce-permissions": [{"id": "library/books.manage", "label": "Manage books"}]
+      },
+      "meta": {
+        "conditions": [{"id": "archive", "label": "Libraries on the Archive plan"}]
+      }
+    },
+    "library.shelf.admin": {
+      "description": "Ignored: no documented RPC declares this scope."
+    }
+  }
+}

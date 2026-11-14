@@ -71,8 +71,8 @@ type Operation struct {
 	Procedure    string                `json:"x-rpc-procedure"`
 	ErrorReasons []string              `json:"x-error-reasons,omitempty"`
 	Emits        []string              `json:"x-emits,omitempty"`
-	// Extensions are the specification extensions doc notes add, by name,
-	// written after the fields above in name order.
+	// Extensions are the specification extensions the access files give
+	// its scopes, by name, written after the fields above in name order.
 	Extensions map[string]json.RawMessage `json:"-"`
 }
 
