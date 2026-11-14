@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"google.golang.org/genproto/googleapis/api/annotations"
@@ -38,6 +39,9 @@ type Config struct {
 	// parameter adds one, and may be repeated.
 	Access []string
 
+	// NoTagGroups leaves x-tagGroups out of the document.
+	NoTagGroups bool
+
 	// Warn, when set, receives each warning: a problem worth fixing that
 	// does not stop generation. It is not a plugin parameter.
 	Warn func(msg string)
@@ -65,10 +69,29 @@ func (c *Config) Set(name, value string) error {
 			return errors.New("access: name an access file")
 		}
 		c.Access = append(c.Access, value)
+	case "no_tag_groups":
+		on, err := parseFlag(name, value)
+		if err != nil {
+			return err
+		}
+		c.NoTagGroups = on
 	default:
 		return fmt.Errorf("unknown parameter %q", name)
 	}
 	return nil
+}
+
+// parseFlag reads a parameter that turns something on: bare, as
+// no_tag_groups, or with a boolean value, as no_tag_groups=true.
+func parseFlag(name, value string) (bool, error) {
+	if value == "" {
+		return true, nil
+	}
+	on, err := strconv.ParseBool(value)
+	if err != nil {
+		return false, fmt.Errorf("%s: want true, false or no value, not %q", name, value)
+	}
+	return on, nil
 }
 
 type generator struct {
@@ -121,6 +144,9 @@ func Generate(plugin *protogen.Plugin, cfg Config) error {
 	doc.Tags = tags
 	warnTitles(cfg, services, mods)
 	doc.Info.Title = firstNonEmpty(cfg.Title, strings.Join(names, ", "), "API")
+	if !cfg.NoTagGroups {
+		doc.TagGroups = mods.tagGroups(doc.Info.Title)
+	}
 	doc.Info.Version = firstNonEmpty(cfg.Version, version, "v1")
 	g.schemas.built[statusSchema] = statusSchemaDef()
 	doc.Components.Schemas = g.schemas.built

@@ -17,6 +17,14 @@
       "x-owner-team": "todo-team"
     }
   ],
+  "x-tagGroups": [
+    {
+      "name": "Todo",
+      "tags": [
+        "Todo"
+      ]
+    }
+  ],
   "paths": {
     "/commerce/todo/v1/todos": {
       "get": {

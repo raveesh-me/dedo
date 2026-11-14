@@ -82,6 +82,36 @@ func (mods modules) tags() ([]Tag, error) {
 	return out, uniqueNames(out)
 }
 
+// tagGroups are the document's x-tagGroups: one group per package, named
+// after its title as its navigation tag's summary is, listing the tags of
+// its services in order. Sites that build their navigation from
+// x-tagGroups, such as Docusaurus's OpenAPI plugin, put a tag no group
+// lists under "UNTAGGED", so a document of one package gets a group too.
+// Its package names it, else untitled, the document's title. Two packages
+// with one title are told apart by their full names.
+func (mods modules) tagGroups(untitled string) []TagGroup {
+	titles := map[string]int{}
+	for _, m := range mods {
+		titles[moduleTitle(m.pkg)]++
+	}
+	groups := make([]TagGroup, 0, len(mods))
+	for _, m := range mods {
+		name := moduleTitle(m.pkg)
+		switch {
+		case m.pkg == "":
+			name = untitled
+		case titles[name] > 1:
+			name = string(m.pkg)
+		}
+		tags := make([]string, 0, len(m.services))
+		for _, t := range m.services {
+			tags = append(tags, t.Name)
+		}
+		groups = append(groups, TagGroup{Name: name, Tags: tags})
+	}
+	return groups
+}
+
 // uniqueNames reports tags that share a name.
 func uniqueNames(tags []Tag) error {
 	seen := map[string]Tag{}

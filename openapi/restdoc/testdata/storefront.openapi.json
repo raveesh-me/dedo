@@ -46,6 +46,27 @@
       "x-owner-team": "storefront"
     }
   ],
+  "x-tagGroups": [
+    {
+      "name": "Catalog",
+      "tags": [
+        "Product"
+      ]
+    },
+    {
+      "name": "Orders",
+      "tags": [
+        "Orders",
+        "Return"
+      ]
+    },
+    {
+      "name": "Storefront",
+      "tags": [
+        "Stock"
+      ]
+    }
+  ],
   "paths": {
     "/shop/v1/orders/{ordersId}": {
       "get": {

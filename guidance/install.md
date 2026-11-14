@@ -146,6 +146,8 @@ Both dedo generators take `min_audience`: an `Audience` value, with or without i
       - min_audience=EXTERNAL_PUBLIC
 ```
 
+`protoc-gen-dedo-openapi` also lists the service tags of each package under a heading in `x-tagGroups`, which documentation sites such as Docusaurus's OpenAPI plugin build their navigation from ([domains.md](domains.md#how-the-reference-shows-it)). `no_tag_groups` in its `opt` leaves it out.
+
 A service `protoc-gen-dedo-mcp` leaves out still gets its `<Service>MCPTools()`, returning no tools, so `main.go` compiles unchanged.
 
 If `buf.gen.yaml` uses managed mode, keep dedo's Go package and the modules that ship their own Go code out of it:

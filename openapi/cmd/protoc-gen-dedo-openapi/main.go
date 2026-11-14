@@ -10,6 +10,9 @@
 // accessdoc) that an auth generator wrote: each operation gets, from the
 // scopes its RPC declares, their paragraphs in its description and their
 // x- extensions.
+//
+// The option no_tag_groups leaves out x-tagGroups, which otherwise groups
+// the service tags by proto package.
 package main
 
 import (
