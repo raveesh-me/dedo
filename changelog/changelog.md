@@ -8,6 +8,8 @@ Version bumps, dependency updates and changes to benchmarks or examples alone ar
 
 ## [Unreleased]
 
+## [v0.41.0] - 2026-11-15
+
 ### Added
 
 - Examples and descriptions for the googleapis types. `protoc-gen-dedo-openapi` and `protoc-gen-dedo-mcp` give every field of a `google.type` message (`PostalAddress`, `Date`, `DateTime`, `TimeZone`, `Decimal`, `Money`, `LatLng`, `TimeOfDay`, `Interval`, `PhoneNumber`, `Color`, `Fraction`, `Quaternion`, `Expr` and `LocalizedText`) a realistic example, such as `regionCode: "US"`, `postalCode: "94043"` and `addressLines: ["1600 Amphitheatre Parkway"]`, since a service cannot add protovalidate examples to those protos; a list of such messages gets an example composed of them. A field keeps its googleapis comment as its description, and gets dedo's shortened one when the plugin request carries no comments for googleapis' files. The error schema's `details` and a `google.protobuf.Any`'s `@type` now have descriptions, and that `@type` an example. HighLevel's public API quality gate requires a description and an example on every property (its rules 12 and 13). The new package `googletype` holds the examples and descriptions. [#171](https://github.com/raveesh-me/dedo/pull/171)
@@ -572,7 +574,8 @@ The first release, as http-proto-lint (`github.com/raveesh-me/http-proto-lint`, 
 - MCP tools, served on the official MCP Go SDK under short snake_case names and through the same auth and policy as REST. [#1](https://github.com/raveesh-me/dedo/pull/1), [#2](https://github.com/raveesh-me/dedo/pull/2)
 - Templates for service repositories, `guideline.md`, and the `todo`, `bad-todo` and `library` examples. [#1](https://github.com/raveesh-me/dedo/pull/1), [#5](https://github.com/raveesh-me/dedo/pull/5)
 
-[Unreleased]: https://github.com/raveesh-me/dedo/compare/v0.40.0...HEAD
+[Unreleased]: https://github.com/raveesh-me/dedo/compare/v0.41.0...HEAD
+[v0.41.0]: https://github.com/raveesh-me/dedo/compare/v0.40.0...v0.41.0
 [v0.40.0]: https://github.com/raveesh-me/dedo/compare/v0.39.0...v0.40.0
 [v0.39.0]: https://github.com/raveesh-me/dedo/compare/v0.38.0...v0.39.0
 [v0.38.0]: https://github.com/raveesh-me/dedo/compare/v0.37.0...v0.38.0
