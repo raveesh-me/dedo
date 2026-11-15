@@ -39,6 +39,12 @@ type Config struct {
 	// parameter adds one, and may be repeated.
 	Access []string
 
+	// Headers are the paths of header files, read in order: the request
+	// headers every operation declares, inline, after its path and query
+	// parameters, such as a gateway's Version header. dedo assumes none.
+	// The headers=<path> parameter adds one, and may be repeated.
+	Headers []string
+
 	// NoTagGroups leaves x-tagGroups out of the document.
 	NoTagGroups bool
 
@@ -69,6 +75,11 @@ func (c *Config) Set(name, value string) error {
 			return errors.New("access: name an access file")
 		}
 		c.Access = append(c.Access, value)
+	case "headers":
+		if strings.TrimSpace(value) == "" {
+			return errors.New("headers: name a header file")
+		}
+		c.Headers = append(c.Headers, value)
 	case "no_tag_groups":
 		on, err := parseFlag(name, value)
 		if err != nil {
@@ -99,6 +110,9 @@ type generator struct {
 	resources map[string][]string // resource type to patterns
 	// access are the access files' requirements, by scope.
 	access accessdoc.Requirements
+	// headers are the header files' parameters, which every operation
+	// declares.
+	headers []Parameter
 }
 
 // Generate writes one OpenAPI document for every service in the files to
@@ -111,13 +125,17 @@ func Generate(plugin *protogen.Plugin, cfg Config) error {
 	if err != nil {
 		return err
 	}
+	headers, err := readHeaders(cfg.Headers)
+	if err != nil {
+		return err
+	}
 	services, mods, version, left := documented(plugin, cfg)
 	if cfg.Warn != nil && len(services) == 0 && left > 0 {
 		cfg.Warn(fmt.Sprintf("every service (%d) is for an audience narrower than min_audience, so the document has no operations", left))
 	}
 	// Schemas are named over the documented services' messages only, so a
 	// left-out message never changes, or shows, a documented one's name.
-	g := &generator{schemas: newSchemas(plugin.Files, services), resources: resourceIndex(plugin.Files), access: access}
+	g := &generator{schemas: newSchemas(plugin.Files, services), resources: resourceIndex(plugin.Files), access: access, headers: headers}
 	doc := &Document{
 		OpenAPI: "3.2.0",
 		Paths:   map[string]*PathItem{},

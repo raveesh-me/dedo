@@ -91,7 +91,10 @@ func (g *generator) operation(svc *protogen.Service, m *protogen.Method, b bindi
 	if scopes := rules.GetScopes(); len(scopes) > 0 {
 		op.Security = []map[string][]string{{bearerScheme: scopes}}
 	}
-	op.Parameters = g.parameters(m, params, b.rule.GetBody())
+	op.Parameters, err = withHeaders(g.parameters(m, params, b.rule.GetBody()), g.headers)
+	if err != nil {
+		return "", nil, fmt.Errorf("%s: %w", m.Desc.FullName(), err)
+	}
 	op.RequestBody = g.requestBody(m, params, b.rule.GetBody())
 	op.Responses["200"] = g.success(m, b, rules)
 	g.errorResponses(op, rules)

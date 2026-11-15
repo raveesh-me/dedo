@@ -234,3 +234,44 @@ func TestPluginRejectsUnknownAudience(t *testing.T) {
 		t.Errorf("err = %v, stderr %q, response %v; want a failure naming EVERYONE", err, stderr, resp)
 	}
 }
+
+// headers=<path> gives every operation the file's header parameters, as
+// buf passes the parameter; MCP tools are another plugin's, unchanged.
+func TestPluginHeaders(t *testing.T) {
+	doc, stderr := generated(t, "headers=../../restdoc/testdata/headers/version.headers.json", catalog, orders)
+	if len(doc.Paths) == 0 {
+		t.Fatal("no operations")
+	}
+	for path, raw := range doc.Paths {
+		var item map[string]struct {
+			Parameters []struct{ Name, In string } `json:"parameters"`
+		}
+		if err := json.Unmarshal(raw, &item); err != nil {
+			t.Fatal(err)
+		}
+		for method, op := range item {
+			n := len(op.Parameters)
+			if n == 0 || op.Parameters[n-1].Name != "Version" || op.Parameters[n-1].In != "header" {
+				t.Errorf("%s %s parameters = %v, want the Version header last", method, path, op.Parameters)
+			}
+		}
+	}
+	if stderr != "" {
+		t.Errorf("stderr = %q, want nothing", stderr)
+	}
+}
+
+// A header file that is not one fails the run: the response carries an
+// error, which buf reports, naming the file and what is wrong with it, and
+// no document.
+func TestPluginRejectsBadHeaders(t *testing.T) {
+	path := t.TempDir() + "/bad.headers.json"
+	if err := os.WriteFile(path, []byte(`{"headers": [{"name": "Version", "schema": {"type": "string"}}]}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	resp, _ := runPlugin(t, request(t, "headers="+path, catalog))
+	msg := resp.GetError()
+	if !strings.Contains(msg, "bad.headers.json") || !strings.Contains(msg, "Version has no description") || len(resp.File) != 0 {
+		t.Errorf("error %q, %d files; want an error naming the file and the missing description, and no document", msg, len(resp.File))
+	}
+}

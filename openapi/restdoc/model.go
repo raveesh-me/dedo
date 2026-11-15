@@ -116,13 +116,15 @@ func (o *Operation) MarshalJSON() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// Parameter is a path or query parameter.
+// Parameter is a path, query or header parameter.
 type Parameter struct {
 	Name        string  `json:"name"`
 	In          string  `json:"in"`
 	Description string  `json:"description,omitempty"`
 	Required    bool    `json:"required,omitempty"`
 	Schema      *Schema `json:"schema"`
+	// Example overrides the schema's; only a header file sets it.
+	Example any `json:"example,omitempty"`
 }
 
 // RequestBody is the JSON body of a request.
