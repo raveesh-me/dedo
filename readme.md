@@ -5,6 +5,9 @@
   </picture>
 </p>
 
+> [!IMPORTANT]
+> **dedo has moved to HighLevel, and this repository is archived.** dedo went from a personal project to a project I personally believe can be widely adopted. The archive stays here, but the project itself will continue to evolve within the closed boundaries of HighLevel.
+
 **Define once, deploy everywhere.** Author one `.proto`, ship it everywhere. The same contract serves your API as RPC (Connect and gRPC), REST and MCP tools for AI agents, with the same auth, documentation and behaviour on every transport:
 
 | From one `.proto` you get | How |
