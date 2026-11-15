@@ -13,6 +13,8 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
+
+	"github.com/raveesh-me/dedo/googletype"
 )
 
 // maxExampleDepth bounds how deep an example of a list or map of messages
@@ -47,26 +49,25 @@ func fieldExampleAt(fd protoreflect.FieldDescriptor, outer []protoreflect.FullNa
 		}
 		return map[string]any{mapKey(key): value}
 	case fd.IsList():
-		item := valueExample(fd, rules.GetRepeated().GetItems(), outer)
-		if item == nil {
-			return nil
+		if item := valueExample(fd, rules.GetRepeated().GetItems(), outer); item != nil {
+			return []any{item}
 		}
-		return []any{item}
+		return knownExample(fd)
 	case fd.Message() != nil && wellKnown(fd.Message()) == nil:
 		return nil
 	}
 	if ex := valueExample(fd, rules, outer); ex != nil {
 		return ex
 	}
-	return knownExamples[fd.FullName()]
+	return knownExample(fd)
 }
 
-// knownExamples are examples of common googleapis fields, whose protos
-// declare none and which a service cannot change.
-var knownExamples = map[protoreflect.FullName]any{
-	"google.type.Money.currency_code": "USD",
-	"google.type.Money.units":         "42",
-	"google.type.Money.nanos":         500000000,
+// knownExample is the example dedo knows for a field of a googleapis
+// message, such as google.type.PostalAddress.postal_code, whose proto
+// declares none and which a service cannot change; nil for any other.
+func knownExample(fd protoreflect.FieldDescriptor) any {
+	doc, _ := googletype.Lookup(fd.FullName())
+	return doc.Example
 }
 
 // valueExample returns the example of one value of a field, from rules: a
@@ -211,22 +212,32 @@ func enumExample(ed protoreflect.EnumDescriptor, examples []int32) any {
 // messageExample composes an object of the examples of a message's fields,
 // for a list or map of messages, whose schema needs an example of its own.
 // It is nil when no field has one. A message inside itself is left out, so
-// a recursive message's example ends.
+// a recursive message's example ends, and a oneof contributes only its
+// first member with an example, since a value sets at most one.
 func messageExample(md protoreflect.MessageDescriptor, outer []protoreflect.FullName) any {
 	if len(outer) >= maxExampleDepth || slices.Contains(outer, md.FullName()) || wellKnown(md) != nil {
 		return nil
 	}
 	inner := append(slices.Clone(outer), md.FullName())
 	out := map[string]any{}
+	set := map[protoreflect.FullName]bool{} // the oneofs with a member in out
 	fields := md.Fields()
 	for i := range fields.Len() {
 		fd := fields.Get(i)
+		oneof := fd.ContainingOneof()
+		if oneof != nil && !oneof.IsSynthetic() && set[oneof.FullName()] {
+			continue
+		}
 		ex := fieldExampleAt(fd, inner)
 		if fd.Message() != nil && !fd.IsMap() && !fd.IsList() && wellKnown(fd.Message()) == nil {
 			ex = messageExample(fd.Message(), inner)
 		}
-		if ex != nil {
-			out[fd.JSONName()] = ex
+		if ex == nil {
+			continue
+		}
+		out[fd.JSONName()] = ex
+		if oneof != nil {
+			set[oneof.FullName()] = true
 		}
 	}
 	if len(out) == 0 {

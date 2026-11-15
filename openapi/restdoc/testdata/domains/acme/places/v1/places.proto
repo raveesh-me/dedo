@@ -1,0 +1,141 @@
+syntax = "proto3";
+
+// Places reaches every google.type message, whose protos declare no
+// examples, and an empty request body and response.
+package acme.places.v1;
+
+import "google/api/annotations.proto";
+import "google/api/resource.proto";
+import "google/protobuf/any.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/struct.proto";
+import "google/type/color.proto";
+import "google/type/date.proto";
+import "google/type/datetime.proto";
+import "google/type/decimal.proto";
+import "google/type/expr.proto";
+import "google/type/fraction.proto";
+import "google/type/interval.proto";
+import "google/type/latlng.proto";
+import "google/type/localized_text.proto";
+import "google/type/money.proto";
+import "google/type/phone_number.proto";
+import "google/type/postal_address.proto";
+import "google/type/quaternion.proto";
+import "google/type/timeofday.proto";
+
+// Reads, archives and deletes sites.
+service SiteService {
+  // Gets a site.
+  rpc GetSite(GetSiteRequest) returns (Site) {
+    option (google.api.http) = {get: "/v1/{name=sites/*}"};
+  }
+
+  // Archives a site. The body takes every field, and the path binds them all.
+  rpc ArchiveSite(ArchiveSiteRequest) returns (ArchiveSiteResponse) {
+    option (google.api.http) = {
+      post: "/v1/{name=sites/*}:archive"
+      body: "*"
+    };
+  }
+
+  // Renames a site. The body takes the fields the path does not bind.
+  rpc RenameSite(RenameSiteRequest) returns (Site) {
+    option (google.api.http) = {
+      post: "/v1/{name=sites/*}:rename"
+      body: "*"
+    };
+  }
+
+  // Deletes a site.
+  rpc DeleteSite(DeleteSiteRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {delete: "/v1/{name=sites/*}"};
+  }
+}
+
+// A site.
+message Site {
+  option (google.api.resource) = {
+    type: "acme.example.com/Site"
+    pattern: "sites/{site}"
+  };
+
+  // The site's resource name.
+  string name = 1;
+  // Where it is.
+  google.type.PostalAddress address = 2;
+  // Where else it has been.
+  repeated google.type.PostalAddress previous_addresses = 3;
+  // When it opened.
+  google.type.Date open_date = 4;
+  // Its floor area in square meters.
+  google.type.Decimal area = 5;
+  // Its monthly rent.
+  google.type.Money rent = 6;
+  // Its position.
+  google.type.LatLng position = 7;
+  // When it opens each day.
+  google.type.TimeOfDay opens_at = 8;
+  // When it is closed for works.
+  google.type.Interval closure = 9;
+  // When it was last inspected, in local time.
+  google.type.DateTime inspected_at = 10;
+  // The phone numbers to call it on.
+  repeated google.type.PhoneNumber phones = 11;
+  // Its brand color.
+  google.type.Color color = 12;
+  // Its share of the region's sales.
+  google.type.Fraction share = 13;
+  // Its orientation.
+  google.type.Quaternion orientation = 14;
+  // Who may enter it.
+  google.type.Expr entry_rule = 15;
+  // Its name on signs.
+  google.type.LocalizedText sign = 16;
+  // When it was inspected before.
+  repeated google.type.DateTime inspections = 17;
+  // A record of its own type.
+  google.protobuf.Any record = 18;
+  // Its visits.
+  repeated Visit visits = 19;
+}
+
+// A visit, noted freely or on a day.
+message Visit {
+  // When or how it happened.
+  oneof when {
+    // A free-form note, which has no example.
+    google.protobuf.Struct note = 1;
+    // The day.
+    google.type.Date day = 2;
+  }
+}
+
+// The request of GetSite.
+message GetSiteRequest {
+  // The site's resource name.
+  string name = 1 [(google.api.resource_reference) = {type: "acme.example.com/Site"}];
+}
+
+// The request of ArchiveSite.
+message ArchiveSiteRequest {
+  // The site's resource name.
+  string name = 1 [(google.api.resource_reference) = {type: "acme.example.com/Site"}];
+}
+
+// The request of RenameSite.
+message RenameSiteRequest {
+  // The site's resource name.
+  string name = 1 [(google.api.resource_reference) = {type: "acme.example.com/Site"}];
+  // The new name on signs.
+  string display_name = 2;
+}
+
+// Empty: the site is archived.
+message ArchiveSiteResponse {}
+
+// The request of DeleteSite.
+message DeleteSiteRequest {
+  // The site's resource name.
+  string name = 1 [(google.api.resource_reference) = {type: "acme.example.com/Site"}];
+}

@@ -258,11 +258,11 @@ func statusSchemaDef() *Schema {
 		Properties: map[string]*Schema{
 			"code":    {Type: "integer", Format: "int32", Description: "The google.rpc.Code.", Example: 5},
 			"message": {Type: "string", Description: "A developer-facing explanation.", Example: "The resource was not found."},
-			"details": {Type: "array", Items: &Schema{
+			"details": {Type: "array", Description: "Messages that carry the error's details, each with the type URL of its message in @type.", Items: &Schema{
 				Type: "object",
 				Properties: map[string]*Schema{"@type": {
 					Type:        "string",
-					Description: "The type of the detail.",
+					Description: "The type URL of the detail's message, whose fields are the detail's other properties.",
 					Example:     errorInfoType,
 				}},
 				AdditionalProperties: &Schema{},

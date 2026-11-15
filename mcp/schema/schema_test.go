@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"slices"
 	"strings"
 	"testing"
 
@@ -26,22 +27,31 @@ const todoProto = "raveesh_me/todo/v1/todo.proto"
 // plugin request so custom options arrive resolved, and returns its RPCs.
 func methods(t *testing.T) map[string]*protogen.Method {
 	t.Helper()
+	return methodsOf(t, todoProto, "../../examples/todo/proto", "../../examples/todo/third_party/dedo")
+}
+
+// methodsOf compiles file, found in importPaths or the shared test
+// dependencies, as methods does the todo example, and returns its RPCs.
+func methodsOf(t *testing.T, file string, importPaths ...string) map[string]*protogen.Method {
+	t.Helper()
+	return methodsIn(t, requestOf(t, file, importPaths...))
+}
+
+// requestOf compiles file into a plugin request, encoded and decoded so
+// custom options arrive resolved.
+func requestOf(t *testing.T, file string, importPaths ...string) *pluginpb.CodeGeneratorRequest {
+	t.Helper()
 	compiler := protocompile.Compiler{
 		Resolver: protocompile.WithStandardImports(&protocompile.SourceResolver{
-			ImportPaths: []string{
-				"../../examples/todo/proto",
-				"../../examples/todo/third_party/dedo",
-				"../../openapi/restdoc/testdata/deps",
-				"testdata/deps",
-			},
+			ImportPaths: slices.Concat(importPaths, []string{"../../openapi/restdoc/testdata/deps", "testdata/deps"}),
 		}),
 		SourceInfoMode: protocompile.SourceInfoStandard,
 	}
-	files, err := compiler.Compile(context.Background(), todoProto)
+	files, err := compiler.Compile(context.Background(), file)
 	if err != nil {
 		t.Fatal(err)
 	}
-	req := &pluginpb.CodeGeneratorRequest{FileToGenerate: []string{todoProto}}
+	req := &pluginpb.CodeGeneratorRequest{FileToGenerate: []string{file}}
 	seen := map[string]bool{}
 	var add func(fd protoreflect.FileDescriptor)
 	add = func(fd protoreflect.FileDescriptor) {
@@ -68,7 +78,13 @@ func methods(t *testing.T) map[string]*protogen.Method {
 	if err := proto.Unmarshal(b, decoded); err != nil {
 		t.Fatal(err)
 	}
-	plugin, err := protogen.Options{}.New(decoded)
+	return decoded
+}
+
+// methodsIn returns the RPCs of a plugin request's files.
+func methodsIn(t *testing.T, req *pluginpb.CodeGeneratorRequest) map[string]*protogen.Method {
+	t.Helper()
+	plugin, err := protogen.Options{}.New(req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -266,7 +282,8 @@ func TestExamples(t *testing.T) {
 		{"create input title", Input(ms["CreateTodo"]), []string{"todo", "title"}, []any{"Renew the office lease"}},
 		{"output create_time", Output(ms["GetTodo"]), []string{"todo", "create_time"}, []any{"2026-01-01T00:00:00Z"}},
 		{"output done", Output(ms["GetTodo"]), []string{"todo", "done"}, []any{false}},
-		{"no example", Output(ms["GetTodo"]), []string{"todo", "budget_amount", "units"}, nil},
+		{"googleapis example", Output(ms["GetTodo"]), []string{"todo", "budget_amount", "units"}, []any{"42"}},
+		{"no example", Output(ms["GetTodo"]), []string{"todo", "budget_amount"}, nil},
 	} {
 		compiled(t, c.name, c.schema)
 		got, _ := props(c.schema, c.path...)["examples"].([]any)

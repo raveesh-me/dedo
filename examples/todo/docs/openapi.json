@@ -479,7 +479,10 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "description": "Which to-do to remove."
+                "description": "Which to-do to remove.",
+                "enum": [
+                  {}
+                ]
               }
             }
           }
@@ -558,7 +561,10 @@
     "schemas": {
       "DeleteTodoResponse": {
         "type": "object",
-        "description": "Empty on success."
+        "description": "Empty on success.",
+        "enum": [
+          {}
+        ]
       },
       "ListTodosResponse": {
         "type": "object",
@@ -617,7 +623,10 @@
       },
       "RemoveTodoResponse": {
         "type": "object",
-        "description": "Empty on success."
+        "description": "Empty on success.",
+        "enum": [
+          {}
+        ]
       },
       "Status": {
         "type": "object",
@@ -631,12 +640,13 @@
           },
           "details": {
             "type": "array",
+            "description": "Messages that carry the error's details, each with the type URL of its message in @type.",
             "items": {
               "type": "object",
               "properties": {
                 "@type": {
                   "type": "string",
-                  "description": "The type of the detail.",
+                  "description": "The type URL of the detail's message, whose fields are the detail's other properties.",
                   "example": "type.googleapis.com/google.rpc.ErrorInfo"
                 }
               },

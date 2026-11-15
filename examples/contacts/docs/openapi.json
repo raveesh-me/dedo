@@ -673,12 +673,13 @@
           },
           "details": {
             "type": "array",
+            "description": "Messages that carry the error's details, each with the type URL of its message in @type.",
             "items": {
               "type": "object",
               "properties": {
                 "@type": {
                   "type": "string",
-                  "description": "The type of the detail.",
+                  "description": "The type URL of the detail's message, whose fields are the detail's other properties.",
                   "example": "type.googleapis.com/google.rpc.ErrorInfo"
                 }
               },
