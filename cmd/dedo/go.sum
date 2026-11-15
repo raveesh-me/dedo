@@ -1,9 +1,9 @@
 github.com/google/go-cmp v0.7.0 h1:wk8382ETsv4JYUZwIsn6YpYiWiBsYLSJiTsyBybVuN8=
 github.com/google/go-cmp v0.7.0/go.mod h1:pXiqmnSA92OHEEa9HXL2W4E7lf9JzCmGVUdgjX3N/iU=
-github.com/raveesh-me/dedo v0.40.0 h1:WQKhPoadzFMait+mhSyZSgpy3XXV1tq93Zqx1KeEqwI=
-github.com/raveesh-me/dedo v0.40.0/go.mod h1:08sIAhwBWYQwCfI6cs5AWCjFdqOFwLAM78lnhhWk9kM=
-github.com/raveesh-me/dedo/lint v0.40.0 h1:jimjnR4H2EwWddscx27NSEaL/Cmuq9ZQglAZEDWVIV0=
-github.com/raveesh-me/dedo/lint v0.40.0/go.mod h1:LwDiE8zdW/EbHehUGl003EpZr/q1JioWF8Ds/vMEOT8=
+github.com/raveesh-me/dedo v0.41.0 h1:lmg5Tox75UHZkMN8gt0qddDlFjYjJYWsKjmQfeEImNw=
+github.com/raveesh-me/dedo v0.41.0/go.mod h1:08sIAhwBWYQwCfI6cs5AWCjFdqOFwLAM78lnhhWk9kM=
+github.com/raveesh-me/dedo/lint v0.41.0 h1:a3M0Zxtgj5CkryuCoUtszeD6djkPTKsVqaumUt/SXIc=
+github.com/raveesh-me/dedo/lint v0.41.0/go.mod h1:5RVl1YRwFgJcMHJ+cmTMdmbzZ4eOMBAfYAMQb45nOms=
 golang.org/x/mod v0.42.0 h1:ICeL3t2L30ljSPHHxDnR4fqVcBt/zR2zJAb9juavmQg=
 golang.org/x/mod v0.42.0/go.mod h1:u5fzIrRInkL8MaO1cbRkUHT64v303YIT5KEqpNr7jRs=
 golang.org/x/sync v0.24.0 h1:iqiDrGoDgyuvAKrhLQthUEzU/R378N78gXbBjxed7oA=
