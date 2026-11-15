@@ -11,6 +11,10 @@
 // scopes its RPC declares, their paragraphs in its description and their
 // x- extensions.
 //
+// The option headers=<path>, repeatable, reads a header file: the request
+// headers, such as a gateway's Version header, that every operation then
+// declares inline, after its path and query parameters. dedo assumes none.
+//
 // The option no_tag_groups leaves out x-tagGroups, which otherwise groups
 // the service tags by proto package.
 package main

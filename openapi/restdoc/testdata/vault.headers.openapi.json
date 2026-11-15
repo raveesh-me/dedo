@@ -1,0 +1,174 @@
+{
+  "openapi": "3.2.0",
+  "info": {
+    "title": "VaultService",
+    "version": "v1"
+  },
+  "tags": [
+    {
+      "name": "Vault",
+      "description": "Opens vaults."
+    }
+  ],
+  "x-tagGroups": [
+    {
+      "name": "Vault",
+      "tags": [
+        "Vault"
+      ]
+    }
+  ],
+  "paths": {
+    "/v1/vaults/{vaultsId}:open": {
+      "post": {
+        "operationId": "VaultService_OpenVault",
+        "summary": "OpenVault",
+        "description": "OpenVault needs either scope.\n\nRequires one of the token scopes: `vault.open`, `vault.admin`.",
+        "tags": [
+          "Vault"
+        ],
+        "parameters": [
+          {
+            "name": "vaultsId",
+            "in": "path",
+            "description": "Part of `name`, which has the form `vaults/{vaultsId}`.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Version",
+            "in": "header",
+            "description": "API Version. Send `v4`.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "v4"
+              ],
+              "example": "v4"
+            },
+            "example": "v4"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "description": "The request of OpenVault.",
+                "enum": [
+                  {}
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "X-Flow-ID": {
+                "description": "Correlates the call across services. Send one to set it.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpenVaultResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden. The token lacks every required scope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Status"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": [
+              "vault.open",
+              "vault.admin"
+            ]
+          }
+        ],
+        "x-rpc-procedure": "/acme.vault.v1.VaultService/OpenVault"
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "OpenVaultResponse": {
+        "type": "object",
+        "description": "The response of OpenVault.",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "The vault, vaults/{vault}."
+          }
+        }
+      },
+      "Status": {
+        "type": "object",
+        "description": "An error. details holds a google.rpc.ErrorInfo whose reason is one of the operation's declared reasons.",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "format": "int32",
+            "description": "The google.rpc.Code.",
+            "example": 5
+          },
+          "details": {
+            "type": "array",
+            "description": "Messages that carry the error's details, each with the type URL of its message in @type.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "@type": {
+                  "type": "string",
+                  "description": "The type URL of the detail's message, whose fields are the detail's other properties.",
+                  "example": "type.googleapis.com/google.rpc.ErrorInfo"
+                }
+              },
+              "additionalProperties": {}
+            },
+            "example": [
+              {
+                "@type": "type.googleapis.com/google.rpc.ErrorInfo",
+                "reason": "NOT_FOUND"
+              }
+            ]
+          },
+          "message": {
+            "type": "string",
+            "description": "A developer-facing explanation.",
+            "example": "The resource was not found."
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ]
+      }
+    },
+    "securitySchemes": {
+      "bearer": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "An access token carrying the operation's scopes."
+      }
+    }
+  }
+}

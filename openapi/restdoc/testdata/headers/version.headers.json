@@ -1,0 +1,11 @@
+{
+  "headers": [
+    {
+      "name": "Version",
+      "description": "API Version. Send `v4`.",
+      "required": true,
+      "schema": {"type": "string", "enum": ["v4"], "example": "v4"},
+      "example": "v4"
+    }
+  ]
+}

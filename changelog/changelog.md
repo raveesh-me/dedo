@@ -8,6 +8,10 @@ Version bumps, dependency updates and changes to benchmarks or examples alone ar
 
 ## [Unreleased]
 
+### Added
+
+- Request headers in the REST reference. `protoc-gen-dedo-openapi` takes `headers=<path>`, repeatable: a JSON file of the request headers every operation declares, which the platform in front of a service requires and its protos cannot say, such as a gateway's `Version` header, `{"headers": [{"name": "Version", "description": "API Version. Send v4.", "required": true, "schema": {"type": "string", "enum": ["v4"], "example": "v4"}, "example": "v4"}]}`. Each entry is an OpenAPI parameter object without its `in`: `name`, `description` and `schema.type` (`string`, `integer`, `number` or `boolean`) required, `required`, `schema.enum`, `schema.example` and `example` optional. Every operation gets each header inline, `"in": "header"`, after its path and query parameters, in file order, as HighLevel's Marketplace specs declare theirs. dedo assumes no header. A header named like a path or query parameter of an operation, ignoring case, one name twice, `Accept`, `Content-Type` or `Authorization`, which OpenAPI ignores, an example that is not of the type or not one of the enum's values, an unreadable file or a field the format does not have fails the run. `protoc-gen-dedo-mcp` is unchanged: a tool call carries no HTTP headers. Without `headers=`, the output is unchanged. [#173](https://github.com/raveesh-me/dedo/pull/173)
+
 ## [v0.41.0] - 2026-11-15
 
 ### Added

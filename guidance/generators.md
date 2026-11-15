@@ -55,6 +55,30 @@ Both generators take `min_audience`, an `Audience` value with or without its `AU
 
 Both generators also take `access=<path>`, once per file: the access requirements per scope that an auth generator supplies, so that a condition on a scope, such as "only for agencies on the Founders plan", is declared once, in the auth contract, and the REST reference and the MCP tools say it without dedo knowing anything of auth or the contract declaring it twice. An access file (package `accessdoc`) is JSON keyed by scope: `{"scopes": {"taxes/tariff-codes.readonly": {"description": "Only for: Agencies on the Founders plan (`founders`).", "extensions": {"x-commerce-conditions": [...]}, "meta": {"conditions": [...]}}}}`, each field optional. An RPC gets the entry of each scope in its `scopes`: the descriptions as paragraphs of its operation's description, after the scopes, and of its tool's, before its errors, in scope order and then file order; the extensions, each named `x-…` and none of dedo's own, on its operation; and the meta in its tool's `_meta`. A scope no documented RPC declares is ignored. One extension or meta key twice for an RPC, an unreadable file or a field the format does not have fails the run. The refusal itself is not in the file: declare its reason in the method's `errors`, as any other. The path is relative to where `buf generate` runs, so generate the access file first, in a run of its own (commerce-auth's `protoc-gen-commerce-iam` writes one with `opt: access=access.json`), and commit it with the rest.
 
+`protoc-gen-dedo-openapi` also takes `headers=<path>`, once per file: the request headers that every operation declares, which the platform in front of the service requires and the protos cannot say, such as a gateway's `Version` header. dedo assumes none. A header file is JSON, each entry an OpenAPI parameter object without its `in`: `name`, `description` and `schema.type` (`string`, `integer`, `number` or `boolean`) required, `required`, `schema.enum`, `schema.example` and `example` optional:
+
+```json
+{
+  "headers": [
+    {
+      "name": "Version",
+      "description": "API Version. Send `v4`.",
+      "required": true,
+      "schema": {"type": "string", "enum": ["v4"], "example": "v4"},
+      "example": "v4"
+    }
+  ]
+}
+```
+
+```yaml
+    opt:
+      - title=Your API
+      - headers=docs/headers.json
+```
+
+Every operation gets each header inline, `"in": "header"`, after its path and query parameters, in file order. A header named like a path or query parameter of an operation, ignoring case, fails the run, and so do one name twice, `Accept`, `Content-Type` or `Authorization` (OpenAPI ignores them; the security scheme documents the token), an example that is not of the type or not one of the enum's values, an unreadable file and a field the format does not have. Give each header an example: HighLevel's public API quality gate requires a description and an example on every parameter, and a header name in kebab-case or Header-Case, such as `Version`. The MCP tools are unchanged: a tool call carries no HTTP headers. The path is relative to where `buf generate` runs.
+
 ## Server
 
 Generated MCP tools do nothing until the server mounts dedo's runtime. In the Go module of the server:
