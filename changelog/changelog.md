@@ -8,6 +8,18 @@ Version bumps, dependency updates and changes to benchmarks or examples alone ar
 
 ## [Unreleased]
 
+### Added
+
+- Examples and descriptions for the googleapis types. `protoc-gen-dedo-openapi` and `protoc-gen-dedo-mcp` give every field of a `google.type` message (`PostalAddress`, `Date`, `DateTime`, `TimeZone`, `Decimal`, `Money`, `LatLng`, `TimeOfDay`, `Interval`, `PhoneNumber`, `Color`, `Fraction`, `Quaternion`, `Expr` and `LocalizedText`) a realistic example, such as `regionCode: "US"`, `postalCode: "94043"` and `addressLines: ["1600 Amphitheatre Parkway"]`, since a service cannot add protovalidate examples to those protos; a list of such messages gets an example composed of them. A field keeps its googleapis comment as its description, and gets dedo's shortened one when the plugin request carries no comments for googleapis' files. The error schema's `details` and a `google.protobuf.Any`'s `@type` now have descriptions, and that `@type` an example. HighLevel's public API quality gate requires a description and an example on every property (its rules 12 and 13). The new package `googletype` holds the examples and descriptions. [#171](https://github.com/raveesh-me/dedo/pull/171)
+
+### Changed
+
+- `protoc-gen-dedo-openapi` declares a body that is always the empty JSON object as `enum: [{}]`: the request body of a `body: "*"` binding whose every field the path binds, the schema of a message without fields, and `google.protobuf.Empty`. Each used to be an object schema without properties, which HighLevel's public API quality gate reports as an empty body (its rules 27 and 31). The request body stays required and the response a 200, as Vanguard serves them: it rejects such a request without a body (400, "zero-length payload is not a valid JSON object") and answers an empty response with 200 and `{}`, never 204, so leaving the body out or documenting a 204 would be untrue. Regenerate and commit the reference. [#171](https://github.com/raveesh-me/dedo/pull/171)
+
+### Fixed
+
+- `protoc-gen-dedo-openapi`'s example of a list or map of messages sets at most one member of each oneof, the first that has an example, as a value of the message does. It used to set every member that had one. [#171](https://github.com/raveesh-me/dedo/pull/171)
+
 ## [v0.40.0] - 2026-11-15
 
 ### Breaking

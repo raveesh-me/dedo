@@ -47,6 +47,8 @@ managed:
       - server=https://api.example.com
 ```
 
+`protoc-gen-dedo-openapi` documents what a service's protos cannot say. Every field of a `google.type` message gets an example, and, where the plugin request carries no googleapis comments, a description (package `googletype`). A body that is always `{}`, the request body of a `body: "*"` binding whose every field the path binds, or a response without fields, is declared as `enum: [{}]`: a required body and a 200, which is how Vanguard serves it.
+
 `protoc-gen-dedo-openapi` groups the service tags of each package in `x-tagGroups`, which sites such as Docusaurus's OpenAPI plugin build their navigation from; `no_tag_groups` in its `opt` leaves it out.
 
 Both generators take `min_audience`, an `Audience` value with or without its `AUDIENCE_` prefix, and leave out every service whose `audience` is narrower; a service that declares none stays, for lint to report. Without it, they leave out only `AUDIENCE_COMPONENT_INTERNAL` services. A reference published to everyone adds `min_audience=EXTERNAL_PUBLIC` to `opt`, so internal services stay out of it. For a service it leaves out, `protoc-gen-dedo-mcp` still generates `<Service>MCPTools()`, returning no tools, so the server's code keeps compiling.

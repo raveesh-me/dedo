@@ -172,7 +172,7 @@ type Schema struct {
 	Required             []string           `json:"required,omitempty"`
 	Items                *Schema            `json:"items,omitempty"`
 	AdditionalProperties *Schema            `json:"additionalProperties,omitempty"`
-	Enum                 []string           `json:"enum,omitempty"`
+	Enum                 []any              `json:"enum,omitempty"`
 	Pattern              string             `json:"pattern,omitempty"`
 	Example              any                `json:"example,omitempty"`
 	ReadOnly             bool               `json:"readOnly,omitempty"`

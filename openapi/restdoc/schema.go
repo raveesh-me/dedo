@@ -10,6 +10,7 @@ import (
 	"google.golang.org/protobuf/types/descriptorpb"
 
 	dedov1 "github.com/raveesh-me/dedo/gen/go/dedo/v1"
+	"github.com/raveesh-me/dedo/googletype"
 )
 
 // schemas builds component schemas on demand, following the proto3 JSON
@@ -123,7 +124,7 @@ func (s *schemas) object(m *protogen.Message, skip map[string]bool) *Schema {
 			continue
 		}
 		fs := s.field(f.Desc)
-		fs.Description = cleanComment(f.Comments.Leading)
+		fs.Description = fieldDescription(f)
 		applyFieldOptions(fs, f.Desc)
 		fs.Example = fieldExample(f.Desc)
 		out.Properties[f.Desc.JSONName()] = fs
@@ -131,7 +132,19 @@ func (s *schemas) object(m *protogen.Message, skip map[string]bool) *Schema {
 			out.Required = append(out.Required, f.Desc.JSONName())
 		}
 	}
+	if len(out.Properties) == 0 {
+		out.Enum = emptyObject()
+	}
 	return out
+}
+
+// emptyObject is the enum of an object that is always {}: a message without
+// fields, or a body whose every field the path binds. The runtime still
+// requires such a body and answers such a response with 200 and {}, so the
+// schema says exactly what is sent, rather than leaving the body out or
+// documenting a 204.
+func emptyObject() []any {
+	return []any{map[string]any{}}
 }
 
 // field returns the schema of a field's value.
@@ -150,7 +163,7 @@ func (s *schemas) single(fd protoreflect.FieldDescriptor) *Schema {
 	case protoreflect.MessageKind, protoreflect.GroupKind:
 		return s.ref(fd.Message())
 	case protoreflect.EnumKind:
-		var values []string
+		var values []any
 		for i := 0; i < fd.Enum().Values().Len(); i++ {
 			values = append(values, string(fd.Enum().Values().Get(i).Name()))
 		}
@@ -192,7 +205,7 @@ func wellKnown(md protoreflect.MessageDescriptor) *Schema {
 	case "google.protobuf.FieldMask":
 		return &Schema{Type: "string", Description: "Comma-separated lowerCamelCase field paths."}
 	case "google.protobuf.Empty":
-		return &Schema{Type: "object"}
+		return &Schema{Type: "object", Description: "An empty JSON object.", Enum: emptyObject()}
 	case "google.protobuf.Struct":
 		return &Schema{Type: "object", AdditionalProperties: &Schema{}}
 	case "google.protobuf.Value":
@@ -200,7 +213,11 @@ func wellKnown(md protoreflect.MessageDescriptor) *Schema {
 	case "google.protobuf.ListValue":
 		return &Schema{Type: "array", Items: &Schema{}}
 	case "google.protobuf.Any":
-		return &Schema{Type: "object", Properties: map[string]*Schema{"@type": {Type: "string"}}, AdditionalProperties: &Schema{}}
+		return &Schema{Type: "object", Properties: map[string]*Schema{"@type": {
+			Type:        "string",
+			Description: "The type URL of the message the object holds, whose fields are the object's other properties.",
+			Example:     "type.googleapis.com/google.rpc.ErrorInfo",
+		}}, AdditionalProperties: &Schema{}}
 	case "google.protobuf.StringValue", "google.protobuf.BytesValue",
 		"google.protobuf.Int64Value", "google.protobuf.UInt64Value":
 		return &Schema{Type: []string{"string", "null"}}
@@ -259,6 +276,17 @@ func messageDescription(m *protogen.Message) string {
 		return d
 	}
 	return cleanComment(m.Comments.Leading)
+}
+
+// fieldDescription is a field's leading comment, or, for a googleapis field
+// when the request carries no comments for its file, dedo's description of
+// it.
+func fieldDescription(f *protogen.Field) string {
+	if d := cleanComment(f.Comments.Leading); d != "" {
+		return d
+	}
+	doc, _ := googletype.Lookup(f.Desc.FullName())
+	return doc.Description
 }
 
 // cleanComment trims the comment markers' leading space from every line.

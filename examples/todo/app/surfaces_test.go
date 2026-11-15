@@ -74,6 +74,49 @@ func TestRESTReference(t *testing.T) {
 	}
 }
 
+// An empty body is documented as it is served: the reference declares a
+// required body of exactly {} where the path binds every field, and a 200
+// of exactly {} for an empty response, because the REST runtime rejects a
+// missing body and answers 200 with {}, never 204.
+func TestRESTEmptyBodies(t *testing.T) {
+	e := newEnv(t)
+	create(t, e, "a", "A")
+	create(t, e, "b", "B")
+	var doc struct {
+		Paths map[string]map[string]struct {
+			RequestBody struct {
+				Required bool `json:"required"`
+				Content  map[string]struct {
+					Schema struct {
+						Enum []any `json:"enum"`
+					} `json:"schema"`
+				} `json:"content"`
+			} `json:"requestBody"`
+		} `json:"paths"`
+	}
+	if err := json.Unmarshal([]byte(get(t, e.url+"/openapi.json")), &doc); err != nil {
+		t.Fatal(err)
+	}
+	remove := doc.Paths["/commerce/todo/v1/todos/{todo}:remove"]["post"].RequestBody
+	if !remove.Required || len(remove.Content["application/json"].Schema.Enum) != 1 {
+		t.Errorf("RemoveTodo body = %+v, want a required {}", remove)
+	}
+
+	res, body := e.rest(t, http.MethodPost, "/commerce/todo/v1/todos/a:remove", app.WriterToken, "")
+	if res.StatusCode != http.StatusBadRequest {
+		t.Errorf("remove without a body: %d %s, want 400", res.StatusCode, body)
+	}
+	for _, c := range []struct{ method, path, body string }{
+		{http.MethodPost, "/commerce/todo/v1/todos/a:remove", "{}"},
+		{http.MethodDelete, "/commerce/todo/v1/todos/b", ""},
+	} {
+		res, body := e.rest(t, c.method, c.path, app.WriterToken, c.body)
+		if res.StatusCode != http.StatusOK || body != "{}" {
+			t.Errorf("%s %s: %d %q, want 200 {}", c.method, c.path, res.StatusCode, body)
+		}
+	}
+}
+
 // bearer adds a token to every request of the MCP client.
 type bearer struct{ token string }
 

@@ -24,6 +24,7 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 
 	dedov1 "github.com/raveesh-me/dedo/gen/go/dedo/v1"
+	"github.com/raveesh-me/dedo/googletype"
 )
 
 // maxDepth bounds recursive messages.
@@ -209,7 +210,10 @@ func wellKnown(md protoreflect.MessageDescriptor) Object {
 	case "google.protobuf.ListValue":
 		return Object{"type": "array"}
 	case "google.protobuf.Any":
-		return Object{"type": "object", "properties": Object{"@type": Object{"type": "string"}}}
+		return Object{"type": "object", "properties": Object{"@type": Object{
+			"type":        "string",
+			"description": "The type URL of the message the object holds, whose fields are the object's other properties.",
+		}}}
 	case "google.protobuf.StringValue", "google.protobuf.BytesValue":
 		return Object{"type": "string"}
 	case "google.protobuf.BoolValue":
@@ -282,7 +286,15 @@ func messageDescription(msg *protogen.Message) string {
 	return clean(msg.Comments.Leading)
 }
 
-func comment(f *protogen.Field) string { return clean(f.Comments.Leading) }
+// comment is a field's leading comment, or, for a googleapis field when the
+// request carries no comments for its file, dedo's description of it.
+func comment(f *protogen.Field) string {
+	if c := clean(f.Comments.Leading); c != "" {
+		return c
+	}
+	doc, _ := googletype.Lookup(f.Desc.FullName())
+	return doc.Description
+}
 
 func clean(c protogen.Comments) string {
 	lines := strings.Split(strings.TrimSpace(string(c)), "\n")

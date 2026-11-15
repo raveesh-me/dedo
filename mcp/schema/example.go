@@ -10,15 +10,18 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
+
+	"github.com/raveesh-me/dedo/googletype"
 )
 
 // Examples come from protovalidate's example rules, which validation
 // ignores, as the REST reference's do: the first example of a scalar, an
 // enum, a timestamp, a duration or a wrapper, or of a repeated field's
-// items, becomes the JSON Schema keyword examples. Unlike the reference, a
-// tool schema derives none: an enum already lists its values, and a field
-// mask or message would need proto field names that the examples, written
-// for the JSON mapping, do not have.
+// items, becomes the JSON Schema keyword examples. A field of a google.type
+// message, whose proto declares none, gets the one package googletype
+// knows. Unlike the reference, a tool schema derives none: an enum already
+// lists its values, and a field mask or message would need proto field
+// names that the examples, written for the JSON mapping, do not have.
 
 // withExamples adds a field's example to its schema, if it declares one.
 func withExamples(s Object, f *protogen.Field) Object {
@@ -38,9 +41,20 @@ func fieldExample(f *protogen.Field) any {
 		if item := valueExample(fd, rules.GetRepeated().GetItems()); item != nil {
 			return []any{item}
 		}
-		return nil
+		return knownExample(fd)
 	}
-	return valueExample(fd, rules)
+	if ex := valueExample(fd, rules); ex != nil {
+		return ex
+	}
+	return knownExample(fd)
+}
+
+// knownExample is the example dedo knows for a field of a googleapis
+// message, such as google.type.PostalAddress.postal_code; nil for any
+// other.
+func knownExample(fd protoreflect.FieldDescriptor) any {
+	doc, _ := googletype.Lookup(fd.FullName())
+	return doc.Example
 }
 
 // valueExample returns the example of one value of a field, as proto3 JSON
